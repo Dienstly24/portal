@@ -247,19 +247,45 @@ Artikel zu den drei Fragen, die der Betrieb im Alltag am haeufigsten
 beantwortet - die Antworten liegen bereits in der KI-Wissensbasis und in
 den Tickets.
 
-### 6.3 Tracking (Abschnitt 30/31)
+### 6.3 Tracking (Abschnitt 30/31) - ERLEDIGT
 
-**Es ist derzeit kein Analysewerkzeug eingebunden** - weder GA4 noch
-Matomo. Das ist kein Versehen: die Inhaltsrichtlinie (SEC-4) laesst seit
-dem 03.09.2026 nur noch eigene Skripte mit Nonce zu, ein Fremdskript
-braucht also eine bewusste Entscheidung samt Datenschutzerklaerung und
-Einwilligung.
+**Entscheidung des Betreibers vom 18.09.2026: Matomo auf dem EIGENEN
+Server**, nicht Google Analytics 4. Begruendung in `config/analytics.php`,
+Einrichtung in `docs/ANLEITUNG_MATOMO_AR.md`.
 
-**Vorbereitet ist die Messung trotzdem**: alle Kontaktknoepfe der
-Leistungsseiten tragen `data-cta` (`telefon`, `whatsapp`, `formular`) und
-`data-cta-seite` (Slug). Sobald ein Werkzeug eingebunden ist, ist die
-Messung ein Einzeiler in `resources/js/ui.js` - ohne jede Aenderung an den
-Vorlagen.
+Der Ausschlag gab die Inhaltsrichtlinie: GA4 braucht ein Skript von
+`googletagmanager.com`, also genau die Fremdhost-Freigabe, die Audit SEC-4
+am 03.09.2026 unter erheblichem Aufwand entfernt hat. Dazu kommt, dass GA4
+Kennungen setzt und damit eine Einwilligung braucht - wer ablehnt, wird
+nicht gemessen. Matomo laeuft hier ohne Kennungen (`disableCookies`) und
+misst deshalb alle Besucher gleich.
+
+Gemessen wird (`resources/views/partials/matomo.blade.php`):
+
+- Seitenaufrufe der oeffentlichen Website
+- die Kontaktwege als Ereignisse: ein einziger Zuhoerer am Dokument wertet
+  `data-cta`/`data-cta-seite` aus, neue Knoepfe zaehlen ohne Codeaenderung
+  mit
+- der Uebergang ins Portal ueber `enableLinkTracking` - **ohne dass im
+  Portal selbst irgendetwas gemessen wird**
+
+**Nie gemessen werden Beraterwelt, Kundenportal und Partnerportal.** Dort
+stehen Kundendaten in Seitentiteln und Adressen (`/admin/customers/4711`),
+und ein Messwerkzeug schreibt beides mit. Das ist keine Einstellung, die
+jemand vergessen kann: das Partial steht ausschliesslich in den vier
+Vorlagen der Website, und ein Test prueft beides - dass die
+Anwendungsbereiche nichts ausliefern und dass die Vorlage dort nicht
+eingebunden ist.
+
+**Ohne Einrichtung wird kein Byte ausgeliefert** und kein Host in die
+Richtlinie geschrieben. `App\Support\Matomo` prueft die Adresse so streng
+wie SEC-5 den `legal_external_base`: nur https, ohne Zugangsdaten, ohne
+Abfrage, ohne Fragment, Seitennummer nur als Zahl. Ein Tippfehler in der
+`.env` darf keinen fremden Skript-Host in `script-src` schreiben - im
+Zweifel bleibt die Messung aus. Lieber keine Zahlen als ein fremder
+Skript-Host.
+
+Tests: `MatomoMessungTest` (12 Faelle).
 
 ### 6.4 Alles ausserhalb des Repositories
 
@@ -284,8 +310,8 @@ fuer den Betreiber).
 5. **Bewertungsprozess** aufsetzen: nach jeder abgeschlossenen Leistung
    einmalig um eine Bewertung bitten - nie Gating, nie gekauft.
 6. **Lokale Seite Hamburg** bauen (nach Punkt 2).
-7. **Analysewerkzeug** entscheiden (GA4 oder Matomo self-hosted) und
-   `data-cta` verdrahten.
+7. **Matomo auf dem VPS installieren** (entschieden am 18.09.2026, Code
+   ist fertig) - `docs/ANLEITUNG_MATOMO_AR.md`.
 8. **Seriöse Verzeichnis-Eintraege**: Handelsregister-nahe Portale,
    Hamburger Branchenverzeichnisse, thematische Fachportale.
 9. **Ratgeber** mit drei vollstaendigen Artikeln starten.

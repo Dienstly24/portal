@@ -3426,12 +3426,34 @@ Betreiber-Anleitung `docs/ANLEITUNG_SEO_AR.md`. Die Kurzfassung:
   das Business-Profil vollstaendig ist - sonst ist sie eine Seite ohne
   Signal dahinter, die Vorstufe einer Doorway Page) und der Ratgeber (drei
   duenne Artikel schaden mehr als sie nutzen).
-- **Messung ist VORBEREITET, nicht eingebaut**: es gibt kein Analysewerkzeug
-  im Projekt, und das ist kein Versehen - seit SEC-4 laesst die
-  Inhaltsrichtlinie nur eigene Skripte mit Nonce zu, ein Fremdskript braucht
-  eine bewusste Entscheidung samt Datenschutzerklaerung. Alle Kontaktknoepfe
-  tragen `data-cta` (telefon/whatsapp/formular) und `data-cta-seite`; sobald
-  ein Werkzeug da ist, ist die Messung ein Einzeiler in `ui.js`.
+- **Messung: MATOMO AUF DEM EIGENEN SERVER** (Betreiber-Entscheidung
+  18.09.2026, gegen GA4). Ausschlag gab die Inhaltsrichtlinie: GA4 braucht
+  ein Skript von `googletagmanager.com` - genau die Fremdhost-Freigabe, die
+  SEC-4 unter erheblichem Aufwand entfernt hat. Dazu setzt GA4 Kennungen und
+  braucht eine Einwilligung; wer ablehnt, wird nicht gemessen. Matomo laeuft
+  hier OHNE Kennungen (`disableCookies`) und misst alle Besucher gleich.
+  `config/analytics.php`, `App\Support\Matomo`,
+  `resources/views/partials/matomo.blade.php`; Einrichtung
+  `docs/ANLEITUNG_MATOMO_AR.md`.
+  **GEMESSEN WIRD NUR DIE OEFFENTLICHE WEBSITE** - nie Beraterwelt, nie
+  Kunden-, nie Partnerportal: dort stehen Kundendaten in Seitentiteln und
+  Adressen (`/admin/customers/4711`), ein Messwerkzeug schreibt sie mit. Das
+  ist keine Einstellung, die jemand vergessen kann - das Partial steht
+  ausschliesslich in den vier Vorlagen der Website, und ein Test prueft
+  BEIDES (kein `_paq` in den Anwendungsbereichen UND keine Einbindung in
+  deren Layouts).
+  **OHNE EINRICHTUNG KEIN BYTE**: leere `MATOMO_URL`/`MATOMO_SITE_ID` = kein
+  Skript, kein Host in der Richtlinie. Die Adresse wird so streng geprueft
+  wie `legal_external_base` bei SEC-5 (nur https, keine Zugangsdaten, keine
+  Abfrage, keine Fragment, Seitennummer nur als Zahl) - ein Tippfehler in
+  der .env darf keinen fremden Skript-Host in `script-src` schreiben. Im
+  Zweifel bleibt die Messung aus.
+  Die Kontaktwege zaehlt EIN Zuhoerer am Dokument ueber `data-cta`/
+  `data-cta-seite` - neue Knoepfe zaehlen ohne Codeaenderung mit, und ein
+  `onclick` waere seit SEC-4 durch `script-src-attr 'none'` ohnehin
+  wirkungslos. Der Uebergang ins Portal laeuft ueber `enableLinkTracking`:
+  der KLICK wird gezaehlt, im Portal selbst wird nichts gemessen.
+  Tests: `MatomoMessungTest`.
 - **ZWEI FEHLER FAND ERST DER BROWSER**, beide nur in der ARABISCHEN
   Fassung und beide ohne jede Fehlermeldung: die Brotkrumen standen auf
   DEUTSCH (`lang/ar.json` kannte die Woerter nicht - `__()` gibt dann den
@@ -3442,7 +3464,7 @@ Betreiber-Anleitung `docs/ANLEITUNG_SEO_AR.md`. Die Kurzfassung:
   abgetippte Nummer erreicht niemanden. Nummer jetzt `dir="ltr"`, beides
   als Test festgehalten. LEHRE: eine Oberflaechenaenderung, die in beiden
   Sprachen erscheint, muss in BEIDEN angeschaut werden.
-- Tests: `SeoSichtbarkeitTest`, ergaenzend `StructuredDataTest`.
+- Tests: `SeoSichtbarkeitTest`, `MatomoMessungTest`, ergaenzend `StructuredDataTest`.
 
 ## Offene Themen / wartet auf den Betreiber
 

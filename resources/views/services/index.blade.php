@@ -117,6 +117,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;col
     <a href="{{ route('login') }}">{{ __('Kundenportal') }}</a>
 </div>
 @include('website.partials.whatsapp')
+@include('partials.matomo')
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
 @stack('cspScripts')
 </body>
