@@ -465,4 +465,80 @@ class EinwilligungUndHamburgTest extends TestCase
         $this->assertStringNotContainsString('kein Cookie-Banner erforderlich', $html);
         $this->assertStringNotContainsString('Cookie-Banner ist daher nicht erforderlich', $html);
     }
+
+    /**
+     * DER BANNER DARF NICHTS VERDECKEN (Betreiber-Vorgabe: weder eine
+     * Ablehnung noch eine unbeantwortete Frage darf jemanden am
+     * Anmelden hindern).
+     *
+     * Am 19.09.2026 im Browser gemessen und genau so vorgefunden: auf
+     * dem iPhone lag die Leiste ueber dem GESAMTEN Anmeldeformular samt
+     * Knopf, und zwar unerreichbar - die Anmeldeseite war 808 px hoch,
+     * das Fenster 664 px, also 144 px Bildlauf moeglich; der Knopf bei
+     * 522 px blieb danach immer noch unter der Leiste. Anmelden war
+     * ohne Beantworten der Cookie-Frage schlicht unmoeglich.
+     *
+     * Eine Layout-Ueberdeckung laesst sich hier nicht messen - dieser
+     * Test haelt deshalb die zwei Eigenschaften fest, aus denen die
+     * Erreichbarkeit folgt, und die eine kuenftige Aenderung still
+     * entfernen koennte.
+     */
+    public function test_der_banner_reserviert_seinen_platz(): void
+    {
+        $this->matomoEinrichten();
+
+        $html = $this->get('/login')->assertOk()->getContent();
+
+        // Er misst seine Hoehe und haengt sie unten an den Seiteninhalt.
+        $this->assertStringContainsString('raumReservieren', $html);
+        $this->assertStringContainsString('banner.offsetHeight', $html);
+        $this->assertStringContainsString("document.body.style.paddingBottom = 'calc(", $html);
+        // Und gibt sie wieder frei, sobald entschieden ist - sonst
+        // bliebe am Seitenende dauerhaft ein leerer Streifen stehen.
+        $this->assertStringContainsString('raumFreigeben', $html);
+    }
+
+    /**
+     * Die drei Knoepfe muessen in jeder Lage sichtbar bleiben. Lag der
+     * ganze Kasten im Bildlauf, rutschte auf dem Telefon ausgerechnet
+     * "Ablehnen" unter die Kante - und eine Ablehnung, die schwerer zu
+     * erreichen ist als eine Zustimmung, ist keine freiwillige
+     * Einwilligung (Art. 4 Nr. 11, Art. 7 Abs. 3 DSGVO).
+     */
+    public function test_nur_der_text_scrollt_nie_die_knoepfe(): void
+    {
+        $this->matomoEinrichten();
+
+        $html = $this->get('/login')->assertOk()->getContent();
+
+        $this->assertStringContainsString('.d24-consent-text{max-height:', $html);
+        $this->assertStringContainsString('overflow-y:auto', $html);
+
+        // Der Knopfblock liegt AUSSERHALB des scrollenden Textblocks.
+        $text = strpos($html, '<div class="d24-consent-text">');
+        $knoepfe = strpos($html, '<div class="d24-consent-knoepfe">');
+        $ende = strpos($html, '</div>', $text);
+        $this->assertNotFalse($text);
+        $this->assertNotFalse($knoepfe);
+        $this->assertGreaterThan($ende, $knoepfe,
+            'Die Knoepfe stehen im scrollenden Textblock - "Ablehnen" kann dadurch unter die Bildschirmkante rutschen.');
+    }
+
+    /**
+     * Die Anmeldung ist kein Ort fuer eine Abfrage ueber einen Dienst,
+     * der dort gar nicht laeuft: im Portal wird NIE gemessen. Der
+     * Banner steht dort trotzdem, weil die Entscheidung fuer beide
+     * Adressen gilt - aber ein Messskript darf die Anmeldeseite nie
+     * erreichen.
+     */
+    public function test_auf_der_anmeldeseite_wird_nie_gemessen(): void
+    {
+        $this->matomoEinrichten();
+
+        $html = $this->get('/login')->assertOk()->getContent();
+
+        $this->assertStringContainsString('d24-consent', $html);
+        $this->assertStringNotContainsString('_paq', $html);
+        $this->assertStringNotContainsString('matomo.js', $html);
+    }
 }

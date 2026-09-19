@@ -36,6 +36,11 @@
 <div id="d24-consent" class="d24-consent" role="dialog" aria-modal="false"
      aria-labelledby="d24-consent-titel" dir="{{ $consentRtl ? 'rtl' : 'ltr' }}" hidden>
   <div class="d24-consent-box">
+    {{-- NUR DER TEXT SCROLLT, die Knoepfe nie. Lag der ganze Kasten im
+         Bildlauf, rutschte auf dem Telefon ausgerechnet "Ablehnen" unter
+         die Kante - und eine Ablehnung, die schwerer zu erreichen ist als
+         eine Zustimmung, ist keine freiwillige Einwilligung. --}}
+    <div class="d24-consent-text">
     <h2 id="d24-consent-titel">{{ $consentRtl ? 'ملفات تعريف الارتباط وحماية البيانات' : 'Cookies & Datenschutz' }}</h2>
     <p>{{ $consentRtl
         ? 'نستخدم ملفات تعريف الارتباط الضرورية لكي يعمل موقعنا وبوابتنا. وبموافقتكم يمكننا استخدام ملفات وتقنيات اختيارية لتحليل استخدام الموقع وتحسين خدماتنا.'
@@ -65,6 +70,8 @@
           <span>{{ $consentRtl ? 'اختياري' : 'Optional' }}</span>
         </label>
       </div>
+    </div>
+
     </div>
 
     <div class="d24-consent-knoepfe">
@@ -99,7 +106,12 @@
    Browser gesehen, von keinem Test bemerkt. Das Partial traegt sein
    CSS selbst, die Regel aus `app.css` gilt hier nicht. */
 .d24-consent [hidden]{display:none!important;}
-.d24-consent-box{max-width:1000px;margin:0 auto;color:#c9d1cc;max-height:80vh;overflow-y:auto;}
+.d24-consent-box{max-width:1000px;margin:0 auto;color:#c9d1cc;}
+/* Der Deckel sitzt auf dem TEXT, nicht auf dem Kasten: die Leiste soll
+   nie mehr als ein Drittel des Bildschirms einnehmen (der reservierte
+   Raum geht dem Seiteninhalt verloren), aber die drei Knoepfe muessen
+   in jeder Lage sichtbar bleiben. Laengerer Text scrollt in sich. */
+.d24-consent-text{max-height:34vh;overflow-y:auto;}
 .d24-consent-box h2{margin:0 0 6px;font-size:15px;color:#fff;font-weight:700;}
 .d24-consent-box p{margin:0;font-size:13.5px;line-height:1.6;}
 .d24-consent-details{margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px;display:grid;gap:10px;}
@@ -116,7 +128,16 @@
 .d24-consent-fuss{margin-top:11px;font-size:12px;}
 .d24-consent-fuss a{color:#3ddc8e;text-decoration:none;}
 .d24-consent-fuss a:hover{text-decoration:underline;}
-@media(max-width:560px){.d24-consent-knoepfe button{flex:1 1 100%;}}
+/* Auf dem Telefon ZWEI Reihen statt drei: die Zustimmung steht breit,
+   darunter teilen sich Ablehnen und Einstellungen eine Zeile. Drei
+   gestapelte Knoepfe machten die Leiste 57 % des Bildschirms hoch -
+   und dieser Platz fehlt der Seite darunter. Gleich gross und gleich
+   erreichbar bleiben sie trotzdem. */
+@media(max-width:560px){
+  .d24-consent-knoepfe{gap:8px;}
+  .d24-consent-knoepfe .d24-consent-primaer{flex:1 1 100%;}
+  .d24-consent-knoepfe button:not(.d24-consent-primaer){flex:1 1 0;min-width:0;padding-inline:8px;}
+}
 </style>
 
 <script @cspNonce>
@@ -183,6 +204,7 @@
     function anwenden(liste) {
         schreiben(VERSION + ':' + liste.join(','));
         banner.hidden = true;
+        raumFreigeben();
         /* Nur NEU freigegebene Kategorien starten - und jede genau
            einmal. Ein Ablehnen startet nichts; was bereits laeuft,
            laesst sich per JavaScript ohnehin nicht zurueckholen,
@@ -196,12 +218,42 @@
         document.dispatchEvent(new CustomEvent('d24:consent', { detail: { erteilt: liste } }));
     }
 
+    /* DER BANNER DARF NICHTS VERDECKEN (Betreiber-Vorgabe: eine
+       Ablehnung - und erst recht eine unbeantwortete Frage - darf
+       niemanden am Anmelden, Absenden oder Kontaktieren hindern).
+       Er liegt `position:fixed` ueber der Seite; ohne Ausgleich lag er
+       auf dem Telefon exakt ueber dem Anmeldeformular samt Knopf. Statt
+       je Vorlage etwas anzupassen, reserviert er sich seinen Platz
+       selbst: seine gemessene Hoehe kommt unten an den Seiteninhalt.
+       GEMESSEN, nicht geschaetzt - die Hoehe haengt an Sprache,
+       Schriftgroesse und daran, ob die Einstellungen offen sind. */
+    var raumVorher = null;
+
+    function raumReservieren() {
+        if (banner.hidden) { return; }
+        if (raumVorher === null) { raumVorher = document.body.style.paddingBottom; }
+        var hoehe = banner.offsetHeight;
+        var eigen = raumVorher || '0px';
+        document.body.style.paddingBottom = 'calc(' + eigen + ' + ' + hoehe + 'px)';
+    }
+
+    function raumFreigeben() {
+        if (raumVorher === null) { return; }
+        document.body.style.paddingBottom = raumVorher;
+        raumVorher = null;
+    }
+
     function zeigen(mitDetails) {
         document.getElementById('d24-consent-details').hidden = ! mitDetails;
         document.getElementById('d24-consent-speichern').hidden = ! mitDetails;
         document.getElementById('d24-consent-einstellungen').hidden = !! mitDetails;
         banner.hidden = false;
+        raumReservieren();
     }
+
+    /* Drehen des Geraets, Schriftgroesse, Textumbruch: die Hoehe aendert
+       sich nach dem Anzeigen noch. */
+    window.addEventListener('resize', raumReservieren);
 
     document.getElementById('d24-consent-alle').addEventListener('click', function () {
         anwenden(@json(\App\Support\Consent::OPTIONAL));

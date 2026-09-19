@@ -3535,7 +3535,29 @@ Betreiber-Anleitung in `docs/ANLEITUNG_MATOMO_AR.md` (Abschnitte 7/7a).
   Unterseiten bleiben bei `Organization`, sonst behauptete jede Seite
   eine eigene Filiale. Wirksam wird sie erst mit dem vollstaendigen
   Google-Unternehmensprofil.
-- Tests: `EinwilligungUndHamburgTest` (28 Faelle).
+- **NACHTRAG 19.09.2026 - die Anmeldeseite war blockiert.** Der erste
+  Durchgang hatte nur die oeffentliche Website im Browser angesehen, die
+  Anmeldeseite nicht, obwohl der Banner auch dort steht. Auf dem iPhone
+  lag die Leiste ueber dem GESAMTEN Anmeldeformular samt Knopf, und zwar
+  unerreichbar (Seite 808 px, Fenster 664 px, also 144 px Bildlauf; der
+  Knopf bei 522 px blieb darunter) - Anmelden war ohne Beantworten der
+  Cookie-Frage unmoeglich, genau der ausgeschlossene Zustand. Am Desktop
+  war alles in Ordnung; nur deshalb fiel es nicht auf. Behoben im Partial
+  selbst, ohne eine einzige Vorlage anzufassen: (1) der Banner MISST
+  seine Hoehe und reserviert sie unten am Seiteninhalt (und gibt sie beim
+  Entscheiden wieder frei; erneut bei `resize`, weil Sprache,
+  Schriftgroesse und offene Einstellungen die Hoehe aendern); (2) nur der
+  TEXT scrollt, nie die Knoepfe - vorher konnte ausgerechnet "Ablehnen"
+  unter die Kante rutschen, und eine Ablehnung, die schwerer zu erreichen
+  ist als eine Zustimmung, ist keine freiwillige Einwilligung
+  (Art. 4 Nr. 11 DSGVO); (3) zwei Knopfreihen statt drei auf schmalen
+  Bildschirmen (48 % statt 57 % Bildschirmhoehe). EHRLICH ZUR GRENZE:
+  eine Leiste am unteren Rand verdeckt auf dem Telefon zwangslaeufig den
+  unteren Teil des Sichtfensters, solange sie steht - zugesagt ist, dass
+  NICHTS unerreichbar wird. LEHRE: eine Aenderung, die auf mehreren
+  Layouts erscheint, muss auf JEDEM davon im Browser angesehen werden -
+  dieselbe Klasse Versaeumnis wie die arabische Fassung am 02.10.2026.
+- Tests: `EinwilligungUndHamburgTest` (31 Faelle).
 
 ## Offene Themen / wartet auf den Betreiber
 
