@@ -3660,6 +3660,96 @@ Betreiber-Anleitung in `docs/ANLEITUNG_MATOMO_AR.md` (Abschnitte 7/7a).
 - Tests: `EinwilligungUndHamburgTest` (34 Faelle),
   `GoogleBewertungTest` (19 Faelle).
 
+## Markenlogo in Gmail: BIMI (Betreiber-Auftrag 22.09.2026)
+
+Vollstaendig in `docs/BIMI_MARKENLOGO_IN_GMAIL.md`, arabische
+Betreiber-Anleitung `docs/ANLEITUNG_BIMI_AR.md`. Die Kurzfassung:
+
+- **BIMI ist eine KETTE** (SPF/DKIM -> DMARC auf DURCHSETZUNG -> SVG Tiny
+  PS ueber HTTPS -> Zertifikat -> DNS-Eintrag `default._bimi`). Reisst ein
+  Glied, sieht der Betreiber IMMER dasselbe: in Gmail steht weiter das "D".
+  Kein Fehler, kein Bounce, keine Logzeile - dieselbe Klasse stiller
+  Ausfall wie beim KI-Assistenten. Deshalb
+  `php artisan bimi:pruefen --domain=dienstly24.de` (`CheckBimi`, STRENG
+  LESEND): prueft die Kette in Betriebsreihenfolge, Exitcode 1 =
+  handlungsbeduerftig.
+- **GEMESSEN am 22.09.2026** (DNS, nicht geschaetzt): SPF ein Eintrag mit
+  Hostinger-Include, DKIM `hostingermail1` vorhanden (und KEIN weiterer
+  Selector), **DMARC steht auf `p=quarantine`** mit `rua=kv@dienstly24.de`
+  - die BIMI-Voraussetzung ist damit ERFUELLT, und der einzige Schritt des
+  Vorhabens, der Zustellbarkeit haette kosten koennen, ist bereits getan.
+  `docs/EMAIL_ZUSTELLBARKEIT_SPF_DKIM_DMARC.md` nannte noch `p=none`
+  (Stand 14.07.2026) - dort korrigiert.
+- **Es gibt sogar schon einen BIMI-Eintrag** - und er ist wirkungslos:
+  `v=BIMI1; l=https://dienstly24.de/dienstly-bimi-logo.svg;` **ohne `a=`**.
+  Gmail zeigt das Logo NUR mit Zertifikat (VMC/CMC). Das erklaert den
+  gemeldeten Zustand vollstaendig: Eintrag da, Logo trotzdem nie sichtbar.
+- **Das Logo lag da und haette nie bestanden.** `public/dienstly-bimi-logo.svg`
+  war ein gewoehnlicher Nachzeichnungs-Export: 42 KB (Grenze 32), kein
+  `baseProfile="tiny-ps"` (allein das ist ein Ablehnungsgrund), `DOCTYPE`
+  (externer Verweis - genau das schliesst "Portable/Secure" aus), kein
+  `<title>`, Masse in `pt`, rein schwarz. Im Browser sah die Datei richtig
+  aus; das ist die Falle. Neu aus `logo-icon.png` erzeugt: quadratisch,
+  tiny-ps, `<title>Dienstly24</title>`, deckender Hintergrund, zwei
+  Markenfarben (`#131A17`/`#17A65B`), 3,9 KB - gerendert und bei 512/96/32
+  Pixeln angesehen.
+  **GRENZE DES FORMATS, ehrlich benannt**: SVG Tiny PS kennt KEINE
+  Verlaeufe und KEINE Rasterbilder - die Metall-/Edelstein-Textur der Marke
+  ist darin nicht abbildbar. Was existiert, ist eine FLAECHIGE Fassung
+  derselben Marke; ob die Zertifizierungsstelle sie als "unser Logo"
+  akzeptiert, ist VOR dem Kauf zu fragen (beim CMC ist genau diese
+  Uebereinstimmung der Pruefgegenstand).
+- **Der Auslieferungsort ist offen, und das ist kein Nebenpunkt**: der
+  Eintrag zeigt auf `dienstly24.de` (ohne www), und die A-Eintraege von
+  `dienstly24.de`, `www` und `portal` liegen auf VERSCHIEDENEN Adressen -
+  vor dem Website-Umzug bedient diese Anwendung den Host also
+  wahrscheinlich gar nicht. Die neue Datei landet dort dann NICHT von
+  selbst. Dazu: sobald die Anwendung den Host bedient, leitet
+  `RedirectWebsiteHost` per 301 auf `www` um, und **eine Weiterleitung ist
+  fuer BIMI riskant** - mehrere Pruefer folgen ihr nicht. In `l=` gehoert
+  die Adresse, die DIREKT mit 200 antwortet. `bimi:pruefen` folgt deshalb
+  bewusst keiner Weiterleitung und vergleicht das Ausgelieferte mit der
+  Datei auf dem Server.
+- **`App\Support\BimiLogo` ist die EINE Quelle der Regeln** (Groesse,
+  tiny-ps, quadratische viewBox, absolute Pixelmasse, verbotene Elemente,
+  Verweise nach draussen). Pruefbefehl UND Waechter-Test lesen sie.
+  Der Test ist kein Schmuck: das Zertifikat wird auf GENAU DIESE Datei
+  ausgestellt - wer sie spaeter durch einen beliebigen Grafikprogramm-Export
+  ersetzt, macht das bezahlte Zertifikat lautlos ungueltig.
+- **Versandwege geprueft (am Code, nicht geraten)**: die Anwendung hat GENAU
+  EINEN Mailer, alle 21 Mailables laufen darueber, und der einzige, der die
+  Absenderadresse anfasst (`SupportInquiryMail`), setzt sie ausdruecklich
+  auf `mail.from.address` und den Fragesteller nur als `replyTo` - genau
+  die Bauweise, die DMARC verlangt. Die Postfach-Anbindungen (Gmail-OAuth,
+  Microsoft Graph, IMAP) LESEN nur und sind fuer SPF/DKIM/DMARC ohne
+  Belang. Dass genau EIN DKIM-Selector existiert, bestaetigt das im DNS.
+- **NICHTS AN SPF/DKIM/DMARC GEAENDERT** - und es ist auch nichts zu
+  aendern. Auch der geaenderte Logo-Umfang beruehrt den Versand nicht: die
+  Datei ist von keinem Programmteil und keiner Mail-Vorlage verlinkt.
+- **Abnahme VOR dem Kauf (Nachtrag 22.09.2026)**: der Pruefer wurde auf
+  die Regeln erweitert, an denen SVG-Exporte in der Praxis scheitern und
+  die man im Browser NICHT sieht - wohlgeformtes XML (die
+  Zertifizierungsstelle PARST die Datei, der Browser repariert still),
+  fehlendes `xmlns`, `x`/`y` am Wurzelelement (Illustrator schreibt
+  `x="0px" y="0px"` - einer der haeufigsten Ablehnungsgruende),
+  `<title>` als ERSTES Kindelement und hoechstens 64 Zeichen, und CSS in
+  jeder Form (`<style>`, `style=`, `class=` - SVG Tiny 1.2 kennt kein
+  CSS). Jede Regel hat eine Gegenprobe im Test. Das BIMI-DNS ist
+  vollstaendig abgesucht (auch `_bimi`, `bimi`, `v1._bimi`,
+  `selector1._bimi`, `www`, `portal`, `.com`, TXT UND CNAME): genau EIN
+  Eintrag, kein Widerspruch.
+  **Zwei Punkte sind aus der Arbeitsumgebung prinzipiell nicht messbar**
+  (kein HTTPS nach draussen, kein Postfach) und deshalb je ein Befehl auf
+  dem Server: `bimi:pruefen` folgt bewusst KEINER Weiterleitung (eine 301
+  ist ein Blocker mit Ziel - Pruefstellen folgen ihr nicht), trennt
+  401/403 als "geschuetzt" und prueft die AUSGELIEFERTE Datei erneut;
+  `bimi:testmail <adresse>` verschickt genau EINE echte Nachricht, denn
+  die AUSRICHTUNG (DKIM `d=` gleich der Von-Domain) steht nirgends im DNS
+  - sie steht nur in `Authentication-Results` beim Empfaenger. Der Befehl
+  verweigert den Versand, wenn der Mailer auf `log` steht: ein
+  "abgeschickt", bei dem nichts ankommt, waere die gefaehrlichste Ausgabe.
+- Tests: `BimiLogoTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026
@@ -3709,6 +3799,38 @@ Betreiber-Anleitung in `docs/ANLEITUNG_MATOMO_AR.md` (Abschnitte 7/7a).
   Eskalation zu Claude nur bei Bedarf). Kein offener Punkt mehr - hier nur als
   Betriebszustand dokumentiert.
 
+- **BIMI / Markenlogo in Gmail: es fehlt genau EIN gekaufter Baustein.**
+  Logo-Datei, Pruefbefehl und Doku sind fertig
+  (`docs/ANLEITUNG_BIMI_AR.md`); SPF, DKIM und DMARC stehen richtig, und
+  ein BIMI-Eintrag existiert bereits. Offen ist:
+  1. **Wo wird die Logodatei ausgeliefert?** Der Eintrag zeigt auf
+     `https://dienstly24.de/dienstly-bimi-logo.svg`; dieser Host laeuft
+     laut A-Eintraegen nicht auf diesem Server. Vor allem anderen im
+     Browser oeffnen und pruefen, ob dort die NEUE Datei liegt - sonst
+     dorthin hochladen oder `l=` auf den Host zeigen lassen, der die
+     Anwendung ausliefert (und der direkt mit 200 antwortet, nicht per
+     301).
+  2. **Zertifikat kaufen - aber erst nach einer Vorab-Anfrage.** Gmail
+     zeigt das Logo NUR mit VMC oder CMC -
+     dem bestehenden Eintrag fehlt das `a=`, und genau daran scheitert es
+     heute. Ohne eingetragene Marke ist der CMC der realistische Weg (ca.
+     600-1.400 EUR/Jahr, DigiCert/GlobalSign/Sectigo; Nachweis von
+     12 Monaten Logo-Benutzung). VOR der Beauftragung der Stelle die
+     flaechige SVG-Fassung vorlegen und bestaetigen lassen - eine
+     Ablehnung nach der Zahlung waere teuer. Hier wird nichts gekauft.
+     ZWEI Dinge gehoeren in diese Vorab-Anfrage, beide folgen aus dem
+     Impressum: **Dienstly24 ist ein Einzelunternehmen** (Inhaber Ahmad
+     Albhre), also kein Registerauszug, sondern Gewerbeanmeldung plus
+     persoenliche Identifizierung - moeglich, aber zu klaeren; und der
+     12-Monats-Nachweis muss sich auf GENAU die eingereichte, flaechige
+     Fassung beziehen. VMC scheidet aus, solange keine eingetragene
+     BILDmarke existiert (eine Wortmarke genuegt nicht); im Repository
+     gibt es dafuer keinerlei Hinweis. Mehrere Stellen verlangen
+     ausserdem DMARC auf Durchsetzung seit **30 zusammenhaengenden
+     Tagen** - das laeuft hier bereits.
+  Danach den vorhandenen TXT-Eintrag `default._bimi` um `a=` ergaenzen
+  (ersetzen, nie einen zweiten anlegen) und
+  `php artisan bimi:pruefen --domain=dienstly24.de` laufen lassen.
 - **E-Mail-Zustellbarkeit (Spam bei Outlook):** SPF, DKIM und DMARC sind
   inzwischen **korrekt gesetzt** (geprüft 14.07.2026: SPF `include:_spf.mail.hostinger.com`,
   DKIM `hostingermail1._domainkey` = verifiziert, DMARC `p=none`). Die frühere
