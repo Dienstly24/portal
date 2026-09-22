@@ -337,9 +337,17 @@ class CheckBimi extends Command
             $this->zeile(true, 'die AUSGELIEFERTE Datei entspricht SVG Tiny PS');
         }
 
+        // AUSGELIEFERT ZAEHLT, NICHT GESPEICHERT. Am 22.09.2026 lieferte das
+        // CDN vor dieser Domain die ALTE Datei aus, waehrend auf dem Server
+        // laengst die neue lag - ein Zertifikat gilt aber fuer die Fassung,
+        // die die Pruefstelle abholt. Deshalb ist der Unterschied ein
+        // Blocker und kein Hinweis.
         $lokal = is_file(BimiLogo::pfad()) ? (string) file_get_contents(BimiLogo::pfad()) : '';
         if ($lokal !== '' && $lokal !== $inhalt) {
-            $this->hinweise[] = 'Die ausgelieferte Datei weicht von der Datei auf diesem Server ab. Ein Zertifikat gilt fuer GENAU eine Fassung - hier ist zu klaeren, welche die richtige ist.';
+            $this->blocker[] = 'Die AUSGELIEFERTE Datei ist nicht die Datei auf diesem Server ('
+                .number_format(strlen($inhalt) / 1024, 1, ',', '.').' KB gegen '
+                .number_format(strlen($lokal) / 1024, 1, ',', '.').' KB). Dazwischen liegt ein Cache '
+                .'oder ein anderer Auslieferungsort - das Zertifikat gilt fuer die AUSGELIEFERTE Fassung.';
         }
     }
 

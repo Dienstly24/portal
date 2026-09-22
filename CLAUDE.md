@@ -3748,6 +3748,28 @@ Betreiber-Anleitung `docs/ANLEITUNG_BIMI_AR.md`. Die Kurzfassung:
   - sie steht nur in `Authentication-Results` beim Empfaenger. Der Befehl
   verweigert den Versand, wenn der Mailer auf `log` steht: ein
   "abgeschickt", bei dem nichts ankommt, waere die gefaehrlichste Ausgabe.
+- **DIE DATEI LAG ZWEIMAL IM REPOSITORY - und die falsche wurde
+  ausgetauscht** (auf dem Server gemessen 22.09.2026). `public/` bedient
+  diese Anwendung, `website/` ist die statische Uebergangs-Site, die aufs
+  Hostinger-WEBHOSTING hochgeladen wird. Gemessen: `www.dienstly24.de` ist
+  ein CNAME auf `www.dienstly24.de.cdn.hstgr.net`, und das CDN lieferte
+  42.343 Bytes mit `sha256 9d7d2a0c...` aus - exakt die Datei aus
+  `website/`. Auch mit `x-hcdn-cache-status: MISS` UND `BYPASS` kam
+  dasselbe zurueck: **der Ursprung hinter dem CDN ist NICHT der VPS**, der
+  Website-Umzug ist weiterhin offen. Der Austausch in `public/` allein
+  haette im Posteingang also GAR NICHTS geaendert. Beide Kopien sind jetzt
+  gleich, ein Waechter-Test vergleicht ihre Hashes, und `bimi:pruefen`
+  meldet einen Unterschied zwischen AUSGELIEFERTER und gespeicherter Datei
+  als BLOCKER (vorher Hinweis - ein Hinweis wird ueberlesen, und das
+  Zertifikat gilt fuer die ausgelieferte Fassung). `website/LIESMICH.txt`
+  nennt die Datei jetzt beim Upload samt CDN-Cache leeren: das CDN sendet
+  `max-age=31536000, immutable`, ohne Leeren bleibt die alte Fassung ein
+  Jahr stehen.
+- **Der kurze Weg ist der Portal-Host**: `portal.dienstly24.de` zeigt auf
+  den VPS, hat ein gueltiges Zertifikat und liefert die Datei direkt aus
+  nginx - ohne CDN, ohne Weiterleitung, mit `image/svg+xml`. BIMI verlangt
+  nicht, dass das Logo unter `www` liegt. `l=https://portal.dienstly24.de/dienstly-bimi-logo.svg`
+  ist heute wahr und bleibt es nach dem Website-Umzug.
 - Tests: `BimiLogoTest`.
 
 ## Offene Themen / wartet auf den Betreiber
@@ -3803,13 +3825,13 @@ Betreiber-Anleitung `docs/ANLEITUNG_BIMI_AR.md`. Die Kurzfassung:
   Logo-Datei, Pruefbefehl und Doku sind fertig
   (`docs/ANLEITUNG_BIMI_AR.md`); SPF, DKIM und DMARC stehen richtig, und
   ein BIMI-Eintrag existiert bereits. Offen ist:
-  1. **Wo wird die Logodatei ausgeliefert?** Der Eintrag zeigt auf
-     `https://dienstly24.de/dienstly-bimi-logo.svg`; dieser Host laeuft
-     laut A-Eintraegen nicht auf diesem Server. Vor allem anderen im
-     Browser oeffnen und pruefen, ob dort die NEUE Datei liegt - sonst
-     dorthin hochladen oder `l=` auf den Host zeigen lassen, der die
-     Anwendung ausliefert (und der direkt mit 200 antwortet, nicht per
-     301).
+  1. **Wo wird die Logodatei ausgeliefert? GEMESSEN, entschieden.**
+     `www.dienstly24.de` haengt am Hostinger-CDN, dessen Ursprung NICHT
+     dieser VPS ist - dort liegt die statische Uebergangs-Site. Zwei
+     Wege: entweder `l=` auf `https://portal.dienstly24.de/dienstly-bimi-logo.svg`
+     umstellen (VPS, direkt, 200, kein CDN - der kurze Weg), oder die
+     neue Datei aufs WEBHOSTING hochladen UND den CDN-Cache in hPanel
+     leeren (er steht auf einem Jahr).
   2. **Zertifikat kaufen - aber erst nach einer Vorab-Anfrage.** Gmail
      zeigt das Logo NUR mit VMC oder CMC -
      dem bestehenden Eintrag fehlt das `a=`, und genau daran scheitert es

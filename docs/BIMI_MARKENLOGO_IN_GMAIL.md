@@ -407,3 +407,90 @@ mindestens **30 zusammenhaengenden Tagen**.
 laufen lassen, dann - bei gruenem Ergebnis - eine Vorab-Anfrage an eine
 Stelle mit der SVG-Datei und der Unternehmensform im Text, und erst nach
 deren Zusage bestellen.
+
+---
+
+## 10. Der eigentliche Befund (22.09.2026, auf dem Server gemessen)
+
+Die Messung auf dem Produktivserver hat die Frage aus Abschnitt 4.1
+beantwortet - und dabei einen Fehler dieses Vorhabens aufgedeckt.
+
+### 10.1 Was gemessen wurde
+
+```
+dig CNAME www.dienstly24.de   -> www.dienstly24.de.cdn.hstgr.net
+dig A     dienstly24.de       -> 92.113.x.x        (Hostinger)
+IP dieses VPS                 -> 187.127.70.161
+
+# oeffentlich, ueber das CDN:
+HTTP/2 200 · content-type: image/svg+xml · server: hcdn
+last-modified: Thu, 30 Jul 2026 · 42.343 Bytes · sha256 9d7d2a0c...
+
+# auf dem VPS, direkt (Host-Header):
+HTTP/1.1 200 · content-type: image/svg+xml · 3.901 Bytes · sha256 d0a33d98...
+```
+
+Entscheidend ist die Gegenprobe: auch mit `x-hcdn-cache-status: MISS` und
+mit `BYPASS` - das CDN holt also beim Ursprung nach - kamen weiterhin
+**42.343 Bytes** zurueck. **Der Ursprung hinter dem CDN ist NICHT dieser
+VPS.** `www.dienstly24.de` wird bis heute vom alten Webhosting mit der
+statischen Uebergangs-Site bedient; der vHost fuer `www` auf dem VPS
+existiert, bekommt aber keinen oeffentlichen Aufruf. Der Website-Umzug
+(`docs/WEBSITE_MERGE_UMSETZUNG.md`) ist also noch offen - das ist der
+Zustand, nicht ein Defekt.
+
+### 10.2 Der Fehler dieses Vorhabens: die Datei liegt ZWEIMAL im Repository
+
+`sha256 9d7d2a0c...` ist exakt der Hash von **`website/dienstly-bimi-logo.svg`**
+im Repository - dem Ordner der statischen Uebergangs-Site, der auf das
+Webhosting hochgeladen wird. Ausgetauscht wurde in der ersten Runde nur
+`public/dienstly-bimi-logo.svg`, also die Fassung, die diese Anwendung
+ausliefert und die oeffentlich niemand abruft.
+
+Im Ergebnis war die Datei "behoben" und im Posteingang haette sich nichts
+geaendert. Beide Kopien sind jetzt gleich, und ein Waechter-Test
+(`test_beide_kopien_der_logodatei_sind_identisch`) vergleicht ihre
+Hashes - eine der beiden zu aendern und die andere zu vergessen macht ein
+bezahltes Zertifikat lautlos ungueltig.
+
+Ebenfalls nachgezogen: `bimi:pruefen` meldet einen Unterschied zwischen
+AUSGELIEFERTER und gespeicherter Datei jetzt als **Blocker** statt als
+Hinweis. Genau dieser Fall lag vor, und ein Hinweis wird ueberlesen.
+
+### 10.3 Zwei Wege, und einer davon geht sofort
+
+**Weg A - Logo auf dem Portal-Host (empfohlen, keine Fremdabhaengigkeit).**
+`portal.dienstly24.de` zeigt auf den VPS (187.127.70.161), hat ein
+gueltiges Zertifikat und liefert die Datei direkt aus nginx aus - ohne
+CDN, ohne Weiterleitung, mit `image/svg+xml`. BIMI verlangt nicht, dass
+das Logo unter `www` liegt; es muss oeffentlich, per https und direkt mit
+200 erreichbar sein. Dann lautet `l=`:
+
+```
+l=https://portal.dienstly24.de/dienstly-bimi-logo.svg
+```
+
+Das ist heute wahr und bleibt nach dem Website-Umzug wahr. Ein Aufruf
+genuegt als Nachweis:
+
+```
+curl -sSI https://portal.dienstly24.de/dienstly-bimi-logo.svg
+```
+
+**Weg B - bei `www` bleiben.** Dann muss die neue Datei auf das
+**Webhosting** (nicht den VPS), also in dasselbe Verzeichnis wie die
+uebrige statische Site, und danach muss der **CDN-Cache in hPanel geleert
+werden**. Ohne das Leeren bleibt die alte Fassung stehen: das CDN liefert
+`cache-control: max-age=31536000, immutable` aus - ein Jahr. Der Hinweis
+steht jetzt auch in `website/LIESMICH.txt`, wo der Upload beschrieben ist.
+
+**Nicht verwechseln:** die Kopie auf dem VPS unter `website/` wird von
+`git reset --hard` beim naechsten Deploy ueberschrieben. Das ist ab jetzt
+harmlos, weil das Repository die richtige Fassung fuehrt - aber es ersetzt
+NICHT den Upload aufs Webhosting.
+
+### 10.4 Damit bleibt genau ein Punkt offen
+
+SPF, DKIM, DMARC, Logo-Datei, Logo-Format und der BIMI-Eintrag sind in
+Ordnung bzw. entschieden. Was Gmail noch fehlt, ist das **Zertifikat**
+(`a=`) - Abschnitt 5 und 9.3.

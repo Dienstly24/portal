@@ -28,6 +28,32 @@ class BimiLogoTest extends TestCase
         $this->assertTrue($ergebnis['ok']);
     }
 
+    /**
+     * DIE DATEI LIEGT ZWEIMAL IM REPOSITORY, und genau daran ist die erste
+     * Runde gescheitert (am Server gemessen 22.09.2026): `public/` bedient
+     * diese Anwendung, `website/` ist die statische Uebergangs-Site, die auf
+     * das Hostinger-Webhosting hochgeladen wird. Oeffentlich ausgeliefert
+     * wird ueber das CDN die Datei aus `website/` - der Austausch in
+     * `public/` allein aenderte im Posteingang also GAR NICHTS.
+     *
+     * Eine der beiden Dateien zu aendern und die andere zu vergessen ist
+     * dadurch kein Schoenheitsfehler, sondern macht ein bezahltes Zertifikat
+     * ungueltig, ohne dass irgendwo ein Fehler erscheint.
+     */
+    public function test_beide_kopien_der_logodatei_sind_identisch(): void
+    {
+        $dieser = base_path('website/dienstly-bimi-logo.svg');
+
+        $this->assertFileExists($dieser,
+            'Die statische Uebergangs-Site braucht dieselbe Datei - sie ist die oeffentlich ausgelieferte.');
+
+        $this->assertSame(
+            hash_file('sha256', BimiLogo::pfad()),
+            hash_file('sha256', $dieser),
+            'public/ und website/ tragen verschiedene BIMI-Logos. Oeffentlich ausgeliefert wird website/.'
+        );
+    }
+
     public function test_das_logo_bleibt_unter_der_groessengrenze(): void
     {
         $this->assertLessThanOrEqual(BimiLogo::MAX_BYTES, filesize(BimiLogo::pfad()),

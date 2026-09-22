@@ -11,6 +11,14 @@ WICHTIG - beim naechsten Upload auf Hostinger unbedingt:
 3. Danach testen: Formular absenden (legt ein Ticket im Portal an),
    WhatsApp-Button, keine fonts.googleapis.com-Requests mehr (DevTools).
 
+4. NEU 22.09.2026 - "dienstly-bimi-logo.svg" MIT hochladen und danach den
+   CDN-Cache in hPanel leeren. Genau diese Datei liefert das Hostinger-CDN
+   unter www.dienstly24.de aus (gemessen), NICHT die Datei auf dem VPS. Sie
+   steht im DNS-Eintrag "default._bimi" und zeigt das Markenlogo in Gmail.
+   Die alte Fassung war zu gross und formal ungueltig; ausgetauscht wird
+   sie NUR hierueber. Der Cache steht auf einem Jahr - ohne Leeren bleibt
+   die alte Datei oeffentlich stehen.
+
 Was der Hotfix aendert:
 - Kontaktformular sendet an das Portal-System (Ticket + Support-Mail)
   statt "mailto:" (P0-1). Spam-Schutz: Token + Honeypot + Filter.
