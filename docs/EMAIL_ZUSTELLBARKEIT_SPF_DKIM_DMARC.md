@@ -21,6 +21,14 @@ dig +short TXT _dmarc.dienstly24.de
 - **DKIM** ✅ aktiv und verifiziert.
 - **DMARC** ✅ vorhanden (`p=none`, Monitoring-Modus).
 
+> **Nachtrag 22.09.2026 (bei der BIMI-Bestandsaufnahme gemessen):** Die
+> Richtlinie steht inzwischen auf **`p=quarantine`** mit Berichtsadresse
+> `rua=mailto:kv@dienstly24.de` - nicht mehr auf `p=none`. Der Abschnitt
+> unten ("Zuerst im Beobachtungsmodus") beschreibt damit den WEG, nicht den
+> Stand. Fuer BIMI ist die Voraussetzung dadurch bereits erfuellt, siehe
+> `docs/BIMI_MARKENLOGO_IN_GMAIL.md`. Eine Verschaerfung auf `p=reject` ist
+> dafuer NICHT noetig.
+
 Damit ist die frueher vermutete Hauptursache („leerer DKIM-Schluessel")
 **widerlegt** – SPF, DKIM und DMARC sind gesetzt. Die Spam-Einstufung bei
 Outlook liegt daher **nicht** an fehlender Authentifizierung, sondern an der
