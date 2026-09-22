@@ -83,6 +83,25 @@ class BimiLogoTest extends TestCase
             'Verweis nach draussen' => [$kopf.'<a href="https://example.com"><rect fill="#fff"/></a></svg>', 'href'],
             'Ereignis-Attribut' => [$kopf.'<rect onclick="x()" fill="#fff"/></svg>', 'on'],
             'eingebettetes Bild' => [$kopf.'<rect fill="url(data:image/png;base64,AAA)"/></svg>', 'base64'],
+            'x/y im Wurzelelement' => [
+                '<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny-ps" '
+                .'x="0px" y="0px" viewBox="0 0 100 100" width="100" height="100"><title>Dienstly24</title></svg>',
+                'x-Attribut',
+            ],
+            'fehlendes xmlns' => [
+                '<svg version="1.2" baseProfile="tiny-ps" viewBox="0 0 100 100" width="100" height="100">'
+                .'<title>Dienstly24</title></svg>',
+                'xmlns',
+            ],
+            'Titel nicht als erstes Kind' => [
+                '<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny-ps" '
+                .'viewBox="0 0 100 100" width="100" height="100"><rect fill="#fff" width="100" height="100"/>'
+                .'<title>Dienstly24</title></svg>',
+                'direkt nach <svg>',
+            ],
+            'style-Attribut' => [$kopf.'<rect style="fill:#fff"/></svg>', 'style-Attribut'],
+            'class-Attribut' => [$kopf.'<rect class="a" fill="#fff"/></svg>', 'class-Attribut'],
+            'nicht wohlgeformtes XML' => [$kopf.'<rect fill="#fff"></svg>', 'wohlgeformtes XML'],
             'nicht quadratisch' => [
                 '<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny-ps" '
                 .'viewBox="0 0 200 100" width="200" height="100"><title>Dienstly24</title></svg>',
@@ -120,5 +139,28 @@ class BimiLogoTest extends TestCase
     public function test_der_pruefbefehl_ist_registriert(): void
     {
         $this->assertArrayHasKey('bimi:pruefen', Artisan::all());
+        $this->assertArrayHasKey('bimi:testmail', Artisan::all());
+    }
+
+    /**
+     * Die Testmail ist der EINZIGE Weg, die Ausrichtung (Alignment) zu
+     * belegen - der DNS sagt nur, was erlaubt WAERE. Genau deshalb darf sie
+     * nicht stillschweigend ins Leere laufen: steht der Versandweg auf "log",
+     * kommt beim Empfaenger nichts an, und ein "abgeschickt" waere die
+     * gefaehrlichste Ausgabe von allen.
+     */
+    public function test_die_testmail_verweigert_den_versand_ohne_echten_versandweg(): void
+    {
+        config(['mail.default' => 'log']);
+
+        $this->artisan('bimi:testmail', ['adresse' => 'jemand@example.com'])
+            ->expectsOutputToContain('es geht KEINE echte Mail raus')
+            ->assertExitCode(1);
+    }
+
+    public function test_die_testmail_lehnt_eine_kaputte_adresse_ab(): void
+    {
+        $this->artisan('bimi:testmail', ['adresse' => 'keine-adresse'])
+            ->assertExitCode(1);
     }
 }

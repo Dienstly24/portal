@@ -287,3 +287,123 @@ meldet das als Blocker.
 - Das einzige verbleibende Risiko ist **Geld**: eine Zertifikatsgebuehr mit
   Jahresbindung fuer eine Anzeige, die Gmail zusaetzlich von der Reputation
   abhaengig macht.
+
+---
+
+## 9. Nachtrag 22.09.2026: die technische Abnahme VOR dem Kauf
+
+Betreiber-Vorgabe: "wir wollen 100 % sicher sein, bevor wir Geld ausgeben",
+ausdruecklich OHNE Aenderung an SPF/DKIM/DMARC, ohne `p=reject` und ohne
+Zertifikatskauf. Genau das ist hier gemacht worden.
+
+### 9.1 Was von hier aus gemessen wurde
+
+- **BIMI-DNS, vollstaendig abgesucht.** Neben `default._bimi.dienstly24.de`
+  wurden `_bimi`, `bimi`, `v1._bimi`, `selector1._bimi`, die
+  Unterdomains `www` und `portal` sowie `dienstly24.com` geprueft - TXT
+  UND CNAME. Ergebnis: **genau EIN BIMI-Eintrag, kein zweiter, kein
+  CNAME, kein Widerspruch.** Ihm fehlt weiterhin nur das `a=`.
+- **SVG Tiny PS, echte Pruefung statt Augenschein.** Der Pruefer
+  (`App\Support\BimiLogo`) wurde auf die Regeln erweitert, an denen
+  Exporte in der Praxis scheitern, und jede davon hat eine Gegenprobe im
+  Test:
+  - **wohlgeformtes XML** - eine Zertifizierungsstelle PARST die Datei.
+    Ein nicht geschlossenes Tag repariert der Browser still, der Parser
+    nicht;
+  - **`xmlns`** muss gesetzt sein;
+  - **kein `x`/`y` am Wurzelelement** - Illustrator schreibt dort
+    `x="0px" y="0px"`, und das ist einer der haeufigsten
+    Ablehnungsgruende ueberhaupt;
+  - **`<title>` als ERSTES Kindelement**, hoechstens 64 Zeichen;
+  - **kein CSS**: weder `<style>` noch `style=` noch `class=` - SVG
+    Tiny 1.2 kennt kein CSS, ein Illustrator-Export bringt alles drei mit;
+  - die Liste verbotener Elemente ist vervollstaendigt (u. a. `marker`,
+    `symbol`, `cursor`, `stop`, `view`, `solidColor`, Schrift-Elemente).
+  Die ausgelieferte Datei besteht alle Punkte: **3.901 Bytes**,
+  `viewBox="0 0 370 370"`, `<title>Dienstly24</title>` als erstes Kind,
+  zwei Flaechenfarben, kein CSS, kein Verweis nach draussen.
+
+### 9.2 Was von hier aus NICHT gemessen werden konnte
+
+Die Arbeitsumgebung hat **keinen HTTPS-Zugang nach draussen** (die
+Verbindung wird schon vom Netz-Zwischendienst mit 403 abgewiesen, nicht
+erst vom Zielserver). Damit sind zwei Punkte offen und **nur auf dem
+Server** zu beantworten:
+
+1. **Der Abruf der Logo-Adresse** (Punkt 4 der Vorgabe).
+2. **Die echte Nachricht** (Punkte 7 und 8) - eine Mail laesst sich von
+   hier weder versenden noch im Gmail-Postfach nachsehen.
+
+Beides ist jetzt je ein Befehl. **Sie aendern nichts an der
+Konfiguration**; der zweite verschickt genau eine Nachricht.
+
+```
+cd /var/www/dienstly24/portal
+php artisan bimi:pruefen --domain=dienstly24.de
+php artisan bimi:testmail <eine-echte-gmail-adresse>
+```
+
+`bimi:pruefen` beantwortet Punkt 4 vollstaendig und ausdruecklich:
+er folgt **keiner Weiterleitung** (eine 301 wird als Blocker mit Ziel
+gemeldet - mehrere Pruefstellen holen die Datei genauso und bekommen
+dann nichts), meldet **401/403 getrennt** als "geschuetzt", verlangt
+`Content-Type: image/svg+xml`, prueft die **ausgelieferte** Datei noch
+einmal gegen SVG Tiny PS und vergleicht sie mit der Datei auf dem
+Server.
+
+`bimi:testmail` beantwortet Punkte 7 und 8. Warum eine echte Nachricht
+noetig ist: der DNS sagt nur, was erlaubt WAERE. Ob die Signatur
+tatsaechlich gesetzt wird, ob sie unterwegs bricht und ob die
+signierende Domain zur Domain im sichtbaren Von-Feld passt
+(**Ausrichtung**), zeigt nur die Kopfzeile `Authentication-Results` beim
+Empfaenger. Der Befehl schreibt hin, worauf zu achten ist:
+`spf=pass`, `dkim=pass` **mit `d=dienstly24.de`** und `dmarc=pass`.
+Steht bei DKIM eine fremde `d=`-Domain, besteht die Signatur zwar, ist
+aber NICHT ausgerichtet - und genau daran scheitert BIMI, ohne dass
+irgendwo ein Fehler erscheint.
+
+### 9.3 VMC oder CMC - fuer DIESEN Betrieb
+
+| | **VMC** | **CMC** |
+|---|---|---|
+| Marke noetig | **ja**, eingetragen und aktiv, als **Bildmarke** (eine reine Wortmarke genuegt nicht) | **nein** |
+| Anerkannte Aemter | u. a. DPMA (DE), EUIPO (EU), USPTO, UKIPO, INPI, BOIP - rund 17 Aemter | entfaellt |
+| Stattdessen | | Nachweis, dass **genau dieses Logo seit mindestens 12 Monaten** oeffentlich benutzt wird |
+| Ergebnis in Gmail | Logo **und** blauer Haken | Logo, **kein** Haken |
+| Preis je Jahr | ca. 1.000-1.500 EUR | ca. 600-1.400 EUR |
+| Aussteller | DigiCert, GlobalSign, Sectigo | dieselben |
+
+**Beide Arten verlangen zusaetzlich immer**: Identitaetspruefung der
+Organisation (Registerauszug bzw. Gewerbeanmeldung, Anschrift,
+Rueckruf unter einer verifizierbaren Nummer), meist **notariell
+beglaubigter Ausweis oder eine Video-Identifizierung** des Inhabers,
+Nachweis der Kontrolle ueber die Domain, die fertige SVG-Tiny-PS-Datei -
+und **DMARC auf Durchsetzung**, bei mehreren Stellen ausdruecklich seit
+mindestens **30 zusammenhaengenden Tagen**.
+
+**Fuer Dienstly24 heisst das konkret:**
+
+- **VMC: NEIN, solange keine eingetragene Bildmarke existiert.** Im
+  Repository gibt es keinerlei Hinweis auf eine Marke (kein ®, keine
+  Registernummer in Impressum, AGB oder Erstinformation). Ob eine
+  besteht, weiss nur der Betreiber. Eine Anmeldung dauert nach den
+  vorliegenden Angaben sechs bis zwoelf Monate und kostet zusaetzlich -
+  der blaue Haken ist nicht der Auftrag, das Logo ist es.
+- **CMC: moeglich, aber UNTERLAGEN-abhaengig.** Zwei Punkte sind hier
+  besonders zu klaeren, und beide folgen aus dem Impressum:
+  1. **Dienstly24 ist ein Einzelunternehmen** (Inhaber: Ahmad Albhre),
+     kein eingetragenes Unternehmen im Handelsregister. Die Stellen
+     pruefen die Existenz der Organisation; bei Einzelunternehmen geht
+     das, verlaeuft aber ueber Gewerbeanmeldung und persoenliche
+     Identifizierung statt ueber einen Registerauszug. Das ist eine
+     Rueckfrage an die Stelle, keine Absage.
+  2. **Der Nachweis der 12-monatigen Benutzung muss sich auf GENAU die
+     eingereichte Fassung beziehen.** Die flaechige SVG-Fassung ist
+     zwangslaeufig eine Vereinfachung des texturierten Originals (siehe
+     Abschnitt 4) - das ist der Punkt, der vor der Beauftragung schriftlich
+     bestaetigt gehoert.
+
+**Empfehlung, in dieser Reihenfolge:** erst die beiden Server-Befehle
+laufen lassen, dann - bei gruenem Ergebnis - eine Vorab-Anfrage an eine
+Stelle mit der SVG-Datei und der Unternehmensform im Text, und erst nach
+deren Zusage bestellen.

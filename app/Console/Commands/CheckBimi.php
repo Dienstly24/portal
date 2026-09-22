@@ -284,6 +284,10 @@ class CheckBimi extends Command
         $url ??= 'https://'.config('website.canonical_host', $domain).'/dienstly-bimi-logo.svg';
         $this->line('  '.$url);
 
+        if (! str_starts_with(strtolower($url), 'https://')) {
+            $this->blocker[] = 'Die Logo-Adresse ist kein https - BIMI verlangt https.';
+        }
+
         $antwort = $this->hole($url);
         if (! $antwort) {
             $this->blocker[] = 'Das Logo ist unter '.$url.' nicht erreichbar.';
@@ -292,15 +296,34 @@ class CheckBimi extends Command
             return;
         }
 
-        [$status, $typ, $inhalt] = $antwort;
+        [$status, $typ, $inhalt, $ziel] = $antwort;
+
+        // KEINE WEITERLEITUNG: der Abruf laeuft bewusst ohne Folgen von
+        // Umleitungen. Mehrere Pruefstellen holen die Datei genauso - eine
+        // 301 auf www sieht im Browser richtig aus und liefert ihnen nichts.
+        if ($status >= 300 && $status < 400) {
+            $this->blocker[] = 'Die Logo-Adresse antwortet mit einer Weiterleitung (HTTP '.$status.' nach '
+                .($ziel !== '' ? $ziel : 'unbekannt').'). In l= gehoert die Adresse, die DIREKT mit 200 antwortet.';
+            $this->zeile(false, 'HTTP '.$status.' -> '.$ziel);
+
+            return;
+        }
+
+        if ($status === 401 || $status === 403) {
+            $this->blocker[] = 'Die Logo-Adresse ist geschuetzt (HTTP '.$status.') - sie muss ohne Anmeldung abrufbar sein.';
+            $this->zeile(false, 'HTTP '.$status.' (Anmeldung/Sperre)');
+
+            return;
+        }
+
         if ($status !== 200) {
-            $this->blocker[] = 'Das Logo antwortet mit HTTP '.$status.' - es muss oeffentlich und ohne Anmeldung abrufbar sein.';
+            $this->blocker[] = 'Das Logo antwortet mit HTTP '.$status.'.';
             $this->zeile(false, 'HTTP '.$status);
 
             return;
         }
 
-        $this->zeile(true, 'HTTP 200, Content-Type: '.($typ ?: '(fehlt)'));
+        $this->zeile(true, 'HTTP 200, Content-Type: '.($typ !== '' ? $typ : '(fehlt)'));
 
         if (! str_contains(strtolower($typ), 'image/svg+xml')) {
             $this->blocker[] = 'Der Server liefert den Content-Type "'.$typ.'" statt image/svg+xml.';
@@ -310,6 +333,9 @@ class CheckBimi extends Command
         foreach ($ergebnis['fehler'] as $fehler) {
             $this->blocker[] = 'Ausgeliefertes Logo: '.$fehler;
         }
+        if ($ergebnis['ok']) {
+            $this->zeile(true, 'die AUSGELIEFERTE Datei entspricht SVG Tiny PS');
+        }
 
         $lokal = is_file(BimiLogo::pfad()) ? (string) file_get_contents(BimiLogo::pfad()) : '';
         if ($lokal !== '' && $lokal !== $inhalt) {
@@ -317,13 +343,13 @@ class CheckBimi extends Command
         }
     }
 
-    /** @return array{0:int,1:string,2:string}|null */
+    /** @return array{0:int,1:string,2:string,3:string}|null */
     private function hole(string $url): ?array
     {
         try {
             $antwort = Http::timeout(10)->connectTimeout(5)->withoutRedirecting()->get($url);
 
-            return [$antwort->status(), (string) $antwort->header('Content-Type'), $antwort->body()];
+            return [$antwort->status(), (string) $antwort->header('Content-Type'), $antwort->body(), (string) $antwort->header('Location')];
         } catch (\Throwable) {
             return null;
         }

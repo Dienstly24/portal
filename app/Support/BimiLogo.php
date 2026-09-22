@@ -31,10 +31,14 @@ class BimiLogo
 
     /** Elemente, die SVG Tiny PS ausdruecklich verbietet. */
     private const VERBOTENE_ELEMENTE = [
-        'script', 'a', 'image', 'foreignObject', 'style', 'switch',
+        'script', 'a', 'image', 'foreignObject', 'style', 'switch', 'cursor',
         'animate', 'animateColor', 'animateMotion', 'animateTransform', 'set',
-        'filter', 'clipPath', 'mask', 'pattern', 'text', 'textArea', 'tspan',
-        'linearGradient', 'radialGradient', 'use', 'video', 'audio', 'iframe',
+        'animation', 'discard', 'handler', 'listener', 'prefetch', 'mpath',
+        'filter', 'clipPath', 'mask', 'pattern', 'marker', 'symbol', 'view',
+        'text', 'textArea', 'tspan', 'tbreak', 'flowRoot', 'solidColor',
+        'font', 'font-face', 'glyph', 'missing-glyph', 'altGlyph',
+        'linearGradient', 'radialGradient', 'stop', 'use', 'video', 'audio',
+        'iframe', 'embed', 'object',
     ];
 
     public static function pfad(): string
@@ -67,10 +71,36 @@ class BimiLogo
             $fehler[] = 'Die Datei enthaelt eine DOCTYPE-Zeile (externer Verweis) - in SVG Tiny PS nicht erlaubt.';
         }
 
+        // Wohlgeformtes XML: eine Zertifizierungsstelle PARST die Datei, sie
+        // sieht sie nicht an. Ein nicht geschlossenes Tag faellt im Browser
+        // nicht auf (er repariert still), beim Parser sehr wohl.
+        $vorher = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+        if (simplexml_load_string($svg) === false) {
+            $meldung = libxml_get_errors()[0] ?? null;
+            $fehler[] = 'Die Datei ist kein wohlgeformtes XML'
+                .($meldung ? ' (Zeile '.$meldung->line.': '.trim($meldung->message).')' : '').'.';
+        }
+        libxml_clear_errors();
+        libxml_use_internal_errors($vorher);
+
         if (! preg_match('/<svg\b[^>]*>/i', $svg, $svgTag)) {
             return ['ok' => false, 'fehler' => ['Kein <svg>-Element gefunden.'], 'hinweise' => [], 'groesse' => $groesse];
         }
         $tag = $svgTag[0];
+
+        if (! preg_match('/xmlns\s*=\s*"http:\\/\\/www\\.w3\\.org\\/2000\\/svg"/i', $tag)) {
+            $fehler[] = 'Im <svg>-Element fehlt xmlns="http://www.w3.org/2000/svg".';
+        }
+
+        // Illustrator schreibt x="0px" y="0px" in die Wurzel. Das ist in
+        // SVG Tiny PS nicht zulaessig und einer der haeufigsten
+        // Ablehnungsgruende - im Browser sieht die Datei trotzdem richtig aus.
+        foreach (['x', 'y'] as $attribut) {
+            if (preg_match('/\s'.$attribut.'\s*=\s*"/i', $tag)) {
+                $fehler[] = 'Das <svg>-Element hat ein '.$attribut.'-Attribut - im Wurzelelement nicht erlaubt.';
+            }
+        }
 
         if (! preg_match('/baseProfile\s*=\s*"tiny-ps"/i', $tag)) {
             $fehler[] = 'Es fehlt baseProfile="tiny-ps" im <svg>-Element - allein das fuehrt zur Ablehnung.';
@@ -85,6 +115,14 @@ class BimiLogo
             $fehler[] = 'Es fehlt ein <title>-Element mit dem Firmennamen.';
         } elseif (trim($titel[1]) === '') {
             $fehler[] = 'Das <title>-Element ist leer - es muss den Firmennamen tragen.';
+        } elseif (mb_strlen(trim($titel[1])) > 64) {
+            $fehler[] = 'Das <title>-Element ist laenger als 64 Zeichen.';
+        }
+
+        // Der Titel muss das ERSTE Kindelement sein, nicht irgendwo stehen.
+        $rest = (string) preg_replace('/<!--.*?-->/s', '', substr($svg, (int) strpos($svg, $tag) + strlen($tag)));
+        if (preg_match('/<([a-zA-Z][\w:-]*)/', $rest, $erstes) && strtolower($erstes[1]) !== 'title') {
+            $fehler[] = 'Das <title>-Element muss direkt nach <svg> stehen, hier kommt zuerst <'.$erstes[1].'>.';
         }
 
         // Quadratisch: die viewBox muss gleich breit wie hoch sein.
@@ -123,6 +161,17 @@ class BimiLogo
 
         if (preg_match('/data:[^;]*;base64/i', $svg)) {
             $fehler[] = 'Die Datei enthaelt ein eingebettetes Rasterbild (data:...base64) - nicht erlaubt.';
+        }
+
+        // CSS gibt es in SVG Tiny 1.2 nicht - weder als <style>-Element (oben
+        // bereits verboten) noch als Attribut. Ein Illustrator-Export bringt
+        // beides mit, und die Zertifizierungsstelle lehnt es ab.
+        if (preg_match('/\bstyle\s*=\s*"/i', $svg)) {
+            $fehler[] = 'Die Datei enthaelt ein style-Attribut - SVG Tiny 1.2 kennt kein CSS.';
+        }
+
+        if (preg_match('/\bclass\s*=\s*"/i', $svg)) {
+            $fehler[] = 'Die Datei enthaelt ein class-Attribut - CSS-Klassen sind nicht erlaubt.';
         }
 
         // Hinweise: kein Ablehnungsgrund, aber im Posteingang sichtbar.
