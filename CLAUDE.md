@@ -32,6 +32,19 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
    `composer stan` und `composer lint` gruen; bei Leistungsfragen eine
    Messung vorher/nachher, bei Sicherheitsfragen eine Gegenprobe aus der
    Rolle des Angreifers.
+8. **Project Knowledge Base `docs/project-knowledge/`** (angelegt
+   23.09.2026, Grundsatz CONTINUOUS AUDIT): strukturierte Karten
+   (Architektur, Backend, Frontend, Datenbank, Routen, Auth), das
+   **Feature-Register** (`FEATURE_MAP.md`, F-xxx), das **Issue-Register**
+   (`KNOWN_ISSUES.md`, KI-xxx - die EINE Quelle fuer Befunde, Eintraege
+   werden nie geloescht, nur OPEN -> FIXED -> VERIFIED), der Fahrplan
+   (`REPAIR_ROADMAP.md`) und `CHANGELOG.md`. Zu Beginn jeder Sitzung
+   `README.md` dort lesen (Ablauf steht darin) und pruefen, was seit dem
+   letzten CHANGELOG-Eintrag gemergt wurde. Jede Aenderung zieht die
+   betroffenen Dateien dort im SELBEN PR mit (gehoert zur Definition of
+   Done wie diese Datei); das Routen-Inventar wird mit
+   `scripts/wissensbasis-routen.php` neu erzeugt, nie von Hand gepflegt.
+   Bei Widerspruch gilt der Code.
 
 ## Deploy
 
@@ -3919,3 +3932,5 @@ Betreiber-Anleitung `docs/ANLEITUNG_BIMI_AR.md`. Die Kurzfassung:
 
 Ausführliche Berichte und Konzepte liegen unter `docs/` (Audit, Phasen,
 Production-Readiness, Konzepte). Bei Bedarf dort nachschlagen.
+Die strukturierte Gesamtsicht (Karten, Feature-/Issue-Register, Fahrplan,
+Changelog) steht in `docs/project-knowledge/` - siehe Arbeitsweise Punkt 8.
