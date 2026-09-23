@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Commission;
 use App\Services\LexofficeService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
 
 /**
  * Provisions-Freigabe (Architekturplan Abschnitte 10/13, Priorität 6).
@@ -13,8 +14,14 @@ use Illuminate\Http\Request;
  * automatisch erfasste Gutschriften (CommissionWorkflowService) werden
  * hier geprüft und erst dann als Beleg erzeugt.
  */
-class CommissionController extends Controller
+class CommissionController extends Controller implements HasMiddleware
 {
+    /** Provisionsdaten sehen nur Berechtigte - geprueft an Route UND hier. */
+    public static function middleware(): array
+    {
+        return ['can:provisionen-verwalten'];
+    }
+
     /** So viele offene Gutschriften zeigt die Seite hoechstens. */
     private const OFFENE_GRENZE = 100;
 

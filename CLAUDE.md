@@ -1551,7 +1551,8 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   tragen Referenz-Nr., Vermittler-ID und eine Klartext-Kopie von
   Vertrag/Kunde - bei einer Rueckfrage zu einem Storno ist belegbar, dass
   der Vertrag existierte. Oberflaeche `/admin/vermittler-abrechnung`
-  (**nur admin/manager** - hier stehen Provisionsbetraege): Import mit
+  (**nur mit dem Recht `provisionen-verwalten`** - hier stehen
+  Provisionsbetraege; bis 23.09.2026 genuegte die Rolle manager): Import mit
   sofortigem Ergebnis, Prüfliste (unklare Datensaetze werden per
   Sofort-Suche von Hand zugeordnet, nie automatisch), Auswertung je
   Produkt/Kunde plus Bestaetigungsquote des Vermittlers. In der
@@ -2186,10 +2187,44 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Monatsbericht `/admin/provisionen/bericht` (je Empfaenger: Neukunden,
   Vertraege je Sparte, Provision/Abzuege/Netto) mit Export Excel
   (`XlsxWriter`, ohne Fremdpaket, CSV-Fallback) + PDF (Druckansicht);
-  Leistungs-Dashboard `/admin/provisionen/dashboard`. ALLES nur
-  role:admin,manager - Mitarbeiter/Partner sehen keinerlei Betraege,
+  Leistungs-Dashboard `/admin/provisionen/dashboard`. ALLES nur mit dem
+  Recht `provisionen-verwalten` (seit 23.09.2026, vorher
+  role:admin,manager) - Mitarbeiter/Partner sehen keinerlei Betraege,
   Saetze, Berichte oder Statistiken; KEINE Benachrichtigungen an
   Empfaenger (interner Prozess). Tests: `ProvisionManagementTest`.
+
+## Provisionen sieht nur der Admin (Betreiber-Vorgabe 23.09.2026)
+
+- **Gemeldet am Screenshot der Vertragsakte**: die Box "🤝 Vermittler /
+  Abrechnung" zeigte den Provisionsbetrag JEDEM, der den Vertrag oeffnen
+  durfte - also auch Mitarbeitern und Support. Die Box hatte keinerlei
+  Pruefung; die Schwester-Box "Interne Provisionen" darunter schon. Kunden
+  waren nie betroffen (keine Relation von `Customer`, Portal-Views
+  serialisieren keine Vertragsmodelle - Test belegt es erneut).
+- **EINE Regel fuer alles, was Geld zeigt**: das Recht
+  `provisionen-verwalten` (Gate im `AppServiceProvider`: admin ODER
+  `users.can_manage_commissions`, das der Admin einzeln vergibt). Bisher
+  gab es ZWEI Regeln: das Recht fuer Provisionsmanagement/Interne
+  Provisionen, die ROLLE manager fuer Gutschriften (`/admin/commissions`),
+  Ausgangs-Provisionen (`/admin/provisionen`) und TARIFCHECK24-Abgleich
+  (`/admin/vermittler-abrechnung`). Jetzt gilt ueberall das Recht - an der
+  ROUTE und im CONTROLLER (`HasMiddleware`), ein Manager ohne Haken bekommt
+  403.
+- Ebenso nur mit dem Recht: Vermittler-Box in der Vertragsakte,
+  Provisions-Vorschau und -Reiter in den Berichten, Gutschriften-Hinweis
+  auf Dashboard und im E-Mail-Eingang, "Vorgangsliste einlesen" im
+  Dokumenten-Eingang, Provisionssumme/-historie der Partnerakte und die
+  Provisions-SAETZE im Mitarbeiter- und Partnerformular.
+- **Ausgeblendete Saetze werden NIE als "leer" gespeichert**: ohne Recht
+  fehlen die Felder im Formular, und "nicht mitgeschickt" als "loeschen"
+  zu lesen, haette beim naechsten Umbenennen die Saetze still vernichtet.
+- **Bewusst unveraendert**: Partner-Stammdaten bleiben admin/manager (ohne
+  Betraege); das Partnerportal zeigt dem Partner weiterhin SEINE eigenen
+  Gutschriften (`/partner/provisionen`) - das ist seine Abrechnung, keine
+  interne Zahl. Referenz-Nr. und Vermittler-ID im Vertragsformular bleiben
+  sichtbar - Kennungen, keine Betraege, und die Mitarbeiter pflegen sie.
+- Tests: `ProvisionenNurFuerBerechtigteTest` (scheitert ohne die Aenderung
+  in 4 von 5 Faellen).
 
 ## Architektur-Aufraeumen ARCH-1 bis ARCH-8 (04.09.2026)
 

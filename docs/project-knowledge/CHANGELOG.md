@@ -8,6 +8,37 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 23.09.2026 - Provisionen nur mit dem Recht `provisionen-verwalten` (KI-022)
+
+- **Task**: Betreiber-Frage am Screenshot: "Provisionen sieht nur der Admin -
+  keine Mitarbeiter, keine Kunden?" Pruefung ergab: Kunden sicher; Mitarbeiter
+  und Support sahen den Betrag in der Vertragsakte; Manager erreichten drei
+  Provisionsbereiche ueber ihre Rolle.
+- **Files Changed**: `routes/web.php`; `ProvisionController`,
+  `CommissionController`, `VermittlerAbrechnungController` (HasMiddleware),
+  `ReportController`, `EmployeeController`, `PartnerController`;
+  `AdminNavigation`; Views `contract_vermittler_box`, `reports`,
+  `reports_neukunden`, `dashboard`, `email_inbox`, `inbox_doc_row`,
+  `partner_show`, `partners`, `employee_edit`, `_partner_fields`;
+  neuer Test `ProvisionenNurFuerBerechtigteTest`, 4 Tests nachgezogen
+  (Umleitung -> 403); CLAUDE.md, AUTH_SYSTEM, SECURITY_AUDIT, KNOWN_ISSUES,
+  ROUTES_INVENTORY (neu erzeugt).
+- **Components Affected**: Vertragsakte, Berichte, Provisionsbereiche,
+  Mitarbeiter-/Partnerformular, Dokumenten-Eingang, Navigation.
+- **Database Changes**: keine. **API Changes**: 22 Routen von
+  `role:admin,manager` auf `can:provisionen-verwalten`; ohne Recht 403 statt
+  Umleitung.
+- **Potential Side Effects**: Manager OHNE Haken "Provisionen verwalten"
+  verlieren Gutschriften, Ausgangs-Provisionen und Vermittler-Abrechnung -
+  gewollt; der Admin vergibt das Recht einzeln.
+- **Tests Performed**: neuer Test ohne Fix 4/5 rot, mit Fix gruen; volle
+  Suite 3069 bestanden, 0 fehlgeschlagen (5 OCR-Faelle lokal ohne tesseract
+  uebersprungen, CI hat es); Pint gruen; `composer stan` lokal nicht
+  ausfuehrbar (KI-018), CI ist Massstab.
+- **Result**: FIXED.
+
+---
+
 ## 23.09.2026 - Reparaturrunde 1: was sich im Code beheben liess
 
 - **Task**: Betreiber-Auftrag "Behebe, was sich beheben laesst" - alle Befunde aus

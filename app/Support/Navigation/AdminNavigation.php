@@ -248,12 +248,10 @@ final class AdminNavigation
                 'admin.provisionsmanagement.*', 'admin.commissions_internal.*',
                 'admin.commissions*', 'admin.provisions*', 'admin.vermittler.*',
             ], 'commissions'];
-        } elseif ($this->isManagement()) {
-            // Ohne das Recht bleibt der Weg zu den Auszahlungen an die eigenen
-            // Vermittler - die Provisions-EINGAENGE der Pools sieht er nicht.
-            $items[] = ['provisionen', 'Provisionen', 'admin.commissions', 'money',
-                ['admin.commissions*', 'admin.provisions*', 'admin.vermittler.*'], 'commissions'];
         }
+        // Ohne das Recht KEIN Provisions-Menue, auch nicht fuer Manager
+        // (Betreiber-Vorgabe 23.09.2026: Provisionen sieht nur der Admin bzw.
+        // wem er das Recht ausdruecklich gibt).
 
         if ($this->isManagement()) {
             $items[] = ['partner', 'Partner', 'admin.partners', 'partner', ['admin.partners*', 'admin.partner*']];

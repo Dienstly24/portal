@@ -2,7 +2,11 @@
      (Betreiber-Auftrag 20.08.2026). Sie beantwortet genau drei Fragen:
      Unter welcher Nummer kennt der Vermittler diesen Vertrag? Hat er ihn
      abgerechnet? Und wann haben wir das zuletzt geprueft?
-     Die Box ist REIN LESEND - gepflegt wird im Vertragsformular darunter. --}}
+     Die Box ist REIN LESEND - gepflegt wird im Vertragsformular darunter.
+     NUR mit dem Recht `provisionen-verwalten` (Betreiber-Vorgabe 23.09.2026):
+     die Vertragsakte oeffnen auch Mitarbeiter und Support, die Box zeigt aber
+     den Provisionsbetrag - vorher sahen ihn alle, die den Vertrag sahen. --}}
+@can('provisionen-verwalten')
 @php
     $vStatus = $contract->vermittlerStatus();
     $vLast = $contract->vermittlerSettlements()->first();
@@ -105,3 +109,4 @@
     </details>
     @endif
 </div>
+@endcan

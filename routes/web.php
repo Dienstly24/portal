@@ -894,12 +894,21 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/partners', [PartnerController::class, 'store'])->name('partners.store');
         Route::get('/partners/{id}', [PartnerController::class, 'show'])->name('partners.show');
         Route::put('/partners/{id}', [PartnerController::class, 'update'])->name('partners.update');
+    });
+
+    // PROVISIONEN (Gutschriften, Auszahlungen an eigene Vermittler,
+    // TARIFCHECK24-Abgleich): NUR ueber das RECHT `provisionen-verwalten`
+    // (Admin oder ausdruecklich vergebenes Recht) - Betreiber-Vorgabe
+    // 23.09.2026 "Provisionen sieht nur der Admin". Vorher genuegte hier die
+    // ROLLE manager; das Recht wird dagegen einzeln vergeben. Dieselbe
+    // Pruefung steht zusaetzlich in den Controllern.
+    Route::middleware('can:provisionen-verwalten')->group(function () {
         Route::get('/commissions', [CommissionController::class, 'index'])->name('commissions');
         Route::post('/commissions/{id}/book', [CommissionController::class, 'book'])->name('commissions.book');
         Route::post('/commissions/{id}/reject', [CommissionController::class, 'reject'])->name('commissions.reject');
         // Vermittler-Provisionen (Ausgang an Mitarbeiter/Partner) -
-        // Provisions-Management: NUR admin/manager, Mitarbeiter/Partner haben
-        // keinerlei Zugriff auf Betraege, Saetze, Berichte oder Statistiken.
+        // Mitarbeiter/Partner haben keinerlei Zugriff auf Betraege, Saetze,
+        // Berichte oder Statistiken.
         Route::get('/provisionen', [ProvisionController::class, 'index'])->name('provisions');
         Route::post('/provisionen', [ProvisionController::class, 'store'])->name('provisions.store');
         Route::get('/provisionen/saetze', [ProvisionController::class, 'rates'])->name('provisions.rates');

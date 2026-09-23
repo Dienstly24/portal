@@ -15,6 +15,7 @@ use App\Services\Vermittler\VermittlerListeReader;
 use App\Services\Vermittler\VermittlerReportService;
 use App\Services\Vermittler\VermittlerVorgangslisteImporter;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -22,11 +23,18 @@ use Illuminate\Support\Str;
  * Vermittler-Abrechnung: CSV-Import, Zuordnung und Auswertung
  * (Betreiber-Auftrag 20.08.2026).
  *
- * Zugriff NUR admin/manager - hier stehen Provisionsbetraege, dieselbe
- * Zugriffsregel wie beim uebrigen Provisions-Management.
+ * Zugriff NUR ueber das Recht `provisionen-verwalten` (Route UND hier) -
+ * hier stehen Provisionsbetraege, dieselbe Regel wie im uebrigen
+ * Provisionsbereich (Betreiber-Vorgabe 23.09.2026).
  */
-class VermittlerAbrechnungController extends Controller
+class VermittlerAbrechnungController extends Controller implements HasMiddleware
 {
+    /** Provisionsdaten sehen nur Berechtigte - geprueft an Route UND hier. */
+    public static function middleware(): array
+    {
+        return ['can:provisionen-verwalten'];
+    }
+
     /** Uebersicht: Datei hochladen + bisherige Laeufe. */
     public function index()
     {

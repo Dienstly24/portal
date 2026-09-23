@@ -48,6 +48,10 @@ Offen bleiben die bekannten Betriebs-/Rechtspunkte KI-001..004, KI-008, KI-009.
   seit 23.09.2026 auch nicht mehr (KI-006).
 - Mitarbeiter loescht per DELETE eine Ankuendigung der Leitung -> vorher
   erfolgreich, jetzt 403 (KI-019).
+- Mitarbeiter/Support oeffnet einen Vertrag mit Vermittler-Abrechnung ->
+  sah vorher den Provisionsbetrag, jetzt keine Box (KI-022). Manager ohne
+  Recht ruft `/admin/provisionen`, `/admin/commissions`,
+  `/admin/vermittler-abrechnung` direkt auf -> vorher 200, jetzt 403.
 
 ## Nicht aus dem Repo pruefbar (UNKNOWN)
 

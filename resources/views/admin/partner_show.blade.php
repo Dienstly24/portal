@@ -36,12 +36,15 @@
         </ul>
         @endif
 
+        @can('provisionen-verwalten')
         <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;">
             <div class="muted">Gebuchte Provisionen gesamt</div>
             <div style="font-size:20px;font-weight:700;">{{ number_format($partner->bookedTotal(), 2, ',', '.') }} €</div>
         </div>
+        @endcan
     </div>
 
+    @can('provisionen-verwalten')
     <div class="card card-flush">
         <div class="card-head-bar">Provisionshistorie</div>
         <table>
@@ -67,6 +70,7 @@
             </tbody>
         </table>
     </div>
+    @endcan
 </div>
 
 {{-- Modal: Partner bearbeiten --}}

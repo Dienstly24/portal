@@ -10,7 +10,7 @@
 <div style="display:flex;gap:8px;margin-bottom:20px;">
     <a href="{{ route('admin.reports') }}" class="rep-tab">Übersicht</a>
     <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab rep-tab-active">Neukunden</a>
-    @if($isManager)
+    @if($darfProvisionen)
     <a href="{{ route('admin.provisions') }}" class="rep-tab">Vermittler-Provisionen</a>
     @endif
 </div>
@@ -118,7 +118,7 @@
         </table>
     </div>
 
-    @if($isManager)
+    @if($darfProvisionen)
     {{-- Provisions-Vorschau + Ein-Klick-Erfassung --}}
     <div class="card card-flush">
         <div class="card-header" style="padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;">

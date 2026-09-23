@@ -41,6 +41,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-019 | MEDIUM | security | Jeder Mitarbeiter konnte jede Ankuendigung loeschen | FIXED |
 | KI-020 | LOW | correctness | Termin: `assigned_to` ungeprueft (500er unter MySQL) | FIXED |
 | KI-021 | LOW | ux-i18n | Registrierungsseite AR: Haekchen ueber dem Text | FIXED |
+| KI-022 | HIGH | security | Provisionsbetrag in der Vertragsakte fuer jedes Personal sichtbar | FIXED |
 
 FIXED wird zu VERIFIED, sobald der PR gemergt und die CI (inkl. MySQL-Lauf
 und PHPStan) auf `main` gruen ist.
@@ -201,6 +202,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `resources/views/auth/register-pending.blade.php`
 - **Description** Im Browser (390 px, Arabisch) gefunden: das Haekchen wanderte nach rechts, der Freiraum blieb links (`padding-left`) - das Zeichen lag auf dem ersten Wort.
 - **Fix (23.09.2026)**: `padding-inline-start`; Test in `ArabischeUebersetzungVollstaendigTest`; Screenshot nach dem Fix geprueft.
+- **Discovered** 23.09.2026
+
+### KI-022 - Provisionsbetrag in der Vertragsakte fuer jedes Personal sichtbar
+- **Category** security · **Severity** HIGH · **Status** FIXED
+- **Location** `resources/views/admin/partials/contract_vermittler_box.blade.php`, `routes/web.php` (Gruppe Partner & Provisionen), `AdminNavigation::vertrieb`
+- **Description** Vom Betreiber am Screenshot gemeldet ("Provisionen nur fuer den Admin"). Die Box "Vermittler / Abrechnung" hatte keine Pruefung: jeder Mitarbeiter und Support mit Zugriff auf den Vertrag sah den Provisionsbetrag. Dazu reichte fuer Gutschriften, Ausgangs-Provisionen und Vermittler-Abrechnung die ROLLE manager statt des Rechts `provisionen-verwalten`. Kunden waren nicht betroffen.
+- **Fix (23.09.2026)**: ueberall das Recht (Route + Controller + Views); Saetze bleiben erhalten, wenn jemand ohne Recht speichert. Test `ProvisionenNurFuerBerechtigteTest` (ohne Fix 4/5 rot).
 - **Discovered** 23.09.2026
 
 

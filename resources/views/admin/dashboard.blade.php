@@ -45,7 +45,9 @@
      alles, was auf eine menschliche Entscheidung wartet, auf einen Blick. --}}
 @php
     $inboxSuggested = \App\Models\EmailMessage::where('match_status', 'suggested')->count();
-    $inboxCommissions = \App\Models\Commission::pendingReview()->count();
+    // Provisionsgutschriften nur fuer Berechtigte (`provisionen-verwalten`).
+    $inboxCommissions = \Illuminate\Support\Facades\Gate::allows('provisionen-verwalten')
+        ? \App\Models\Commission::pendingReview()->count() : 0;
     $inboxDocRequests = \App\Models\DocumentRequest::awaitingReview()->count();
 @endphp
 @if($inboxSuggested + $inboxCommissions + $inboxDocRequests > 0)

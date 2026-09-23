@@ -16,6 +16,7 @@ use App\Services\Reporting\DashboardAnalyticsService;
 use App\Support\Bundesland;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ReportController extends Controller
 {
@@ -191,9 +192,12 @@ class ReportController extends Controller
             ->sortByDesc('customers')->values();
 
         // ---- Provisions-Vorschau je Werber (nur Verwaltung) ----
+        // Werber-Pflege bleibt Sache der Verwaltung ($isManager); die
+        // BETRAEGE nur mit dem Recht `provisionen-verwalten`.
         $isManager = in_array(auth()->user()->role, ['admin', 'manager']);
+        $darfProvisionen = Gate::allows('provisionen-verwalten');
         $provisionRows = collect();
-        if ($isManager) {
+        if ($darfProvisionen) {
             $userRates = User::whereIn('id', $all->pluck('acquired_by')->filter()->unique())->get()->keyBy('id');
             $partnerRates = Partner::whereIn('id', $all->pluck('acquired_by_partner_id')->filter()->unique())->get()->keyBy('id');
             // Bereits gebuchte Provisionen fuer die NEUKUNDEN dieses Zeitraums.
@@ -235,7 +239,7 @@ class ReportController extends Controller
 
         return view('admin.reports_neukunden', compact(
             'customers', 'stats', 'leaderboard', 'provisionRows', 'employees', 'partners',
-            'insurers', 'from', 'to', 'month', 'isManager'
+            'insurers', 'from', 'to', 'month', 'isManager', 'darfProvisionen'
         ));
     }
 

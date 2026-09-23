@@ -114,7 +114,7 @@
                 // Texterkennung die Tabelle einmal nicht sicher, soll der
                 // Eingang trotzdem keine Sackgasse sein.
                 $istListe = $doc->type === 'vermittler_vorgangsliste';
-                $listeMoeglich = in_array(auth()->user()?->role, ['admin','manager'], true)
+                $listeMoeglich = \Illuminate\Support\Facades\Gate::allows('provisionen-verwalten')
                     && !$doc->aiInProgress()
                     && ($istListe || $doc->type === 'sonstiges');
             @endphp

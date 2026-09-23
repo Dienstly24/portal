@@ -298,12 +298,11 @@ class NewCustomerReportTest extends TestCase
     {
         $employee = $this->employee();
 
-        // Rollen-Middleware leitet Nicht-Verwaltung zum Dashboard um.
-        $this->actingAs($employee)->get(route('admin.provisions'))
-            ->assertRedirect(route('admin.dashboard'));
+        // Recht `provisionen-verwalten` fehlt -> 403 (Betreiber-Vorgabe 23.09.2026).
+        $this->actingAs($employee)->get(route('admin.provisions'))->assertForbidden();
         $this->actingAs($employee)->post(route('admin.provisions.store'), [
             'empfaenger' => 'u:'.$employee->id, 'amount' => '10',
-        ])->assertRedirect(route('admin.dashboard'));
+        ])->assertForbidden();
 
         $this->assertSame(0, Provision::count());
     }

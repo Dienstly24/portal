@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Services\TwoFactorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -267,6 +268,27 @@ class EmployeeController extends Controller
         return back()->with('success', 'Kunde aus dem Portfolio entfernt.');
     }
 
+    /**
+     * Provisions-Saetze nur mit dem Recht `provisionen-verwalten`
+     * (Betreiber-Vorgabe 23.09.2026). Ohne das Recht bleiben sie UNBERUEHRT:
+     * das Formular zeigt die Felder dann gar nicht, und "nicht mitgeschickt"
+     * als "leeren" zu lesen, wuerde die Saetze beim naechsten Speichern still
+     * loeschen.
+     *
+     * @return array<string,float|null>
+     */
+    private function provisionsSaetze(Request $request): array
+    {
+        if (! Gate::allows('provisionen-verwalten')) {
+            return [];
+        }
+
+        return [
+            'provision_fixed' => $request->filled('provision_fixed') ? round((float) $request->provision_fixed, 2) : null,
+            'provision_percent' => $request->filled('provision_percent') ? round((float) $request->provision_percent, 2) : null,
+        ];
+    }
+
     public function update(Request $request, $id) {
         $employee = User::findOrFail($id);
         // Eigene Rechte aendert niemand ueber diese Maske. `destroy()` und
@@ -297,8 +319,7 @@ class EmployeeController extends Controller
                 'role' => in_array($request->role, ['employee', 'manager']) ? $request->role : $employee->role,
                 'access_level' => $request->access_level ?? 'full',
                 ...$this->vergebbareRechte($request, $employee),
-                'provision_fixed' => $request->filled('provision_fixed') ? round((float) $request->provision_fixed, 2) : null,
-                'provision_percent' => $request->filled('provision_percent') ? round((float) $request->provision_percent, 2) : null,
+                ...$this->provisionsSaetze($request),
             ]);
 
             // Zuweisungen NUR ändern, wenn das Formular sie explizit mitschickt.

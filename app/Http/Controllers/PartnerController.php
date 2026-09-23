@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Partner;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Partnerverwaltung (Architekturplan Abschnitt 16 / Priorität 6).
@@ -61,6 +62,12 @@ class PartnerController extends Controller
             ->values()
             ->all();
         $data['is_active'] = $request->boolean('is_active', true);
+
+        // Provisions-Saetze nur mit dem Recht `provisionen-verwalten`
+        // (Betreiber-Vorgabe 23.09.2026) - ohne Recht bleibt der Bestand.
+        if (! Gate::allows('provisionen-verwalten')) {
+            unset($data['provision_fixed'], $data['provision_percent']);
+        }
 
         return $data;
     }
