@@ -216,7 +216,7 @@ und PHPStan) auf `main` gruen ist.
 - **Category** correctness · **Severity** HIGH · **Status** FIXED
 - **Location** `VermittlerStatusMap`, `VermittlerReportService`, `contract_vermittler_box.blade.php`, Rechnungsabgleich
 - **Description** Vom Betreiber gemeldet. (1) Code 1 wurde als "bestaetigt / In Abrechnung gefunden" (gruen) gedeutet - er heisst OFFEN; die Vertragsakte zeigte "Provision 75,00 EUR" neben einem Haken, als waere gezahlt. Code 3 (verifiziert) war unbekannt und landete in der Pruefliste. Auswertung und Bestaetigungsquote zaehlten offene Positionen als bestaetigt. (2) Eine Rechnung liess sich weder als PDF noch als Bild hochladen - es gab nur ein Suchfeld.
-- **Fix (23.09.2026)**: Codes 1/2/3/4 = offen/storniert/verifiziert/bezahlt; neuer Status "Bezahlt - durch Rechnung belegt"; Rechnungs-Upload (PDF/Bild/Text, zweistufig) prueft nur bekannte Ids/Referenz-Nr. und den Betrag je Zeile; Box trennt "erwartet" von "belegt". Test `VermittlerRechnungTest` (ohne Fix 12/12 rot).
+- **Fix (23.09.2026)**: Codes 1/2/3/4 = offen/storniert/verifiziert/bezahlt; Code 4 = "Bezahlt" (die Monats-CSV genuegt, Betreiber-Entscheidung); optional "auch durch Rechnung belegt" per Rechnungs-Upload (PDF/Bild/Text, zweistufig) prueft nur bekannte Ids/Referenz-Nr. und den Betrag je Zeile; Box trennt "erwartet" von "belegt". Test `VermittlerRechnungTest` (ohne Fix 12/12 rot).
 - **Discovered** 23.09.2026
 
 

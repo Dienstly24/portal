@@ -1614,11 +1614,17 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   75,00 EUR" mit Haken, obwohl die Position OFFEN war, und die
   Bestaetigungsquote zaehlte offene Positionen mit. Der gespeicherte Wert
   `in_abrechnung` bleibt (Altbestand), er BEDEUTET jetzt "offen".
-  **Code 4 ist eine Meldung, kein Beleg**: bezahlt heisst erst
-  `bezahlt_belegt`, und das setzt ausschliesslich die RECHNUNG
-  (`VermittlerRechnungAbgleich`, Karte "Rechnung / Gutschrift pruefen" auf
-  `/admin/vermittler-abrechnung`): PDF (Textebene), Foto/Screenshot (OCR)
-  oder Text; ZWEISTUFIG (Entwurf `vermittler_invoices` -> "Ergebnis
+  **DIE MONATLICHE CSV IST DER ARBEITSWEG** (Betreiber-Entscheidung
+  23.09.2026, am echten Export `tc24-sales-leads-export` gemessen: 1805
+  Zeilen seit 07/2023 in 4,2 s, Windows-1252 und "16,5" korrekt, zweiter
+  Lauf derselben Datei = 1805 unveraendert): der Betrieb laedt jeden Monat
+  die GESAMTE Datei neu, neue Vorgaenge kommen dazu, geaenderte Status
+  werden nachgezogen. **Code 4 = "Bezahlt" (gruen) - das genuegt**, eine
+  Rechnung ist freiwillig. Die RECHNUNG ist die optionale Zusatzpruefung
+  des tatsaechlich ueberwiesenen Betrags und setzt `bezahlt_belegt`
+  (`VermittlerRechnungAbgleich`, Karte "Rechnung / Gutschrift pruefen –
+  freiwillig" auf `/admin/vermittler-abrechnung`): PDF (Textebene),
+  Foto/Screenshot (OCR) oder Text; ZWEISTUFIG (Entwurf `vermittler_invoices` -> "Ergebnis
   uebernehmen"); die Datei bleibt als Beleg auf der privaten Platte.
   NIE RATEN: gesucht werden NUR Ids/Referenz-Nr., die aus einer CSV bekannt
   sind; bestaetigt ist eine Position nur, wenn auf ihrer Zeile GENAU die
@@ -1627,7 +1633,13 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Rechnung entsteht nie ein Datensatz; unbekannte Positionen stehen als
   Rest-Betrag da. Eine spaetere CSV stuft eine BELEGTE Zahlung nie zurueck
   (nur Storno/Widerspruch gewinnen). Die Box in der Vertragsakte trennt
-  "Provision (erwartet laut CSV)" von "Zahlung: belegt / noch nicht belegt".
+  "Provision (erwartet laut CSV)" von "Zahlung" (bezahlt laut CSV / auch
+  durch Rechnung belegt / storniert / noch nicht bezahlt).
+  **Bekannte Folge**: Vorgaenge aus der CSV, zu denen im Portal kein
+  Vertrag mit dieser Referenz-Nr. existiert (v.a. Altbestand 2023-2025,
+  119 Zeilen ohne Referenz-Nr.), stehen als "ID nicht gefunden" in der
+  Pruefliste. Die Datei traegt keinen Kundennamen - daraus einen Vertrag
+  anzulegen waere eine Akte ohne Menschen darin; das bleibt bewusst aus.
   Tests: `VermittlerRechnungTest`.
 - **Interne Provisionen: Fremd-Abrechnungen an den eigenen Vertrag binden**
   (Betreiber-Auftrag 26.08.2026, Anleitung

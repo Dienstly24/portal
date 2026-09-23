@@ -117,7 +117,7 @@ class VermittlerRechnungTest extends TestCase
             ->assertOk()
             ->assertDontSee('In Abrechnung gefunden')
             ->assertSee('Provision (erwartet laut CSV)')
-            ->assertSee('Noch nicht belegt');
+            ->assertSee('Noch nicht bezahlt');
     }
 
     public function test_code_3_ist_verifiziert_statt_pruefung(): void
@@ -129,13 +129,44 @@ class VermittlerRechnungTest extends TestCase
         $this->assertSame(0, VermittlerSettlement::needsReview()->count());
     }
 
-    public function test_code_4_heisst_bezahlt_gemeldet_aber_noch_nicht_belegt(): void
+    /** Betreiber-Entscheidung 23.09.2026: Code 4 der CSV GENUEGT - keine Rechnung noetig. */
+    public function test_code_4_ist_bezahlt_ohne_rechnung(): void
     {
         $contract = $this->contract('1417-2871-8270-57');
         $this->csv([['id' => '9786070', 'status' => '4', 'ref' => '1417-2871-8270-57']]);
 
-        $this->assertSame(Contract::VERMITTLER_ABGERECHNET, $contract->refresh()->vermittlerStatus());
-        $this->assertStringContainsString('Rechnung fehlt', $contract->vermittlerStatusLabel());
+        $contract->refresh();
+        $this->assertSame(Contract::VERMITTLER_ABGERECHNET, $contract->vermittlerStatus());
+        $this->assertSame('Bezahlt', $contract->vermittlerStatusLabel());
+        $this->assertSame('active', $contract->vermittlerStatusBadge());
+
+        $this->actingAs($this->admin())->get(route('admin.contract.edit', $contract->id))
+            ->assertOk()->assertSee('✅ Bezahlt')->assertSee('laut TARIFCHECK24-CSV')
+            ->assertDontSee('Noch nicht bezahlt');
+    }
+
+    /** Der Monatsrhythmus: dieselbe Gesamt-Datei mit geaenderten Status. */
+    public function test_monatliche_gesamtdatei_zieht_status_nach(): void
+    {
+        $offen = $this->contract('1417-2871-8270-60', 'Kunde Offen');
+        $storno = $this->contract('1417-2871-8270-61', 'Kunde Storno');
+        $this->csv([
+            ['id' => '9790001', 'status' => '1', 'ref' => '1417-2871-8270-60'],
+            ['id' => '9790002', 'status' => '1', 'ref' => '1417-2871-8270-61'],
+        ]);
+
+        // Folgemonat: alte Zeilen mit neuem Status + ein neuer Vorgang.
+        $neu = $this->contract('1417-2871-8270-62', 'Kunde Neu');
+        $this->csv([
+            ['id' => '9790001', 'status' => '4', 'ref' => '1417-2871-8270-60'],
+            ['id' => '9790002', 'status' => '2', 'ref' => '1417-2871-8270-61', 'storno' => 'Kein Vertrag zustande gekommen'],
+            ['id' => '9790003', 'status' => '1', 'ref' => '1417-2871-8270-62'],
+        ]);
+
+        $this->assertSame(Contract::VERMITTLER_ABGERECHNET, $offen->refresh()->vermittlerStatus());
+        $this->assertSame(Contract::VERMITTLER_STORNIERT, $storno->refresh()->vermittlerStatus());
+        $this->assertSame(Contract::VERMITTLER_IN_ABRECHNUNG, $neu->refresh()->vermittlerStatus());
+        $this->assertSame(3, VermittlerSettlement::count(), 'Keine Zeile doppelt.');
     }
 
     // ------------------------------------------------ Upload in allen Formen

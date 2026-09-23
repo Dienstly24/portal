@@ -775,8 +775,10 @@ class Contract extends Model
     // eine offene Position ist aber noch nichts (Betreiber-Vorgabe).
     public const VERMITTLER_IN_ABRECHNUNG = 'in_abrechnung';
     public const VERMITTLER_VERIFIZIERT = 'verifiziert';
-    // Code 4: der Vermittler meldet "bezahlt" - belegt ist es erst durch die
-    // Rechnung/Gutschrift (VERMITTLER_BEZAHLT_BELEGT).
+    // Code 4: "bezahlt" laut Monats-CSV des Vermittlers. Das GENUEGT als
+    // Zahlungsstand (Betreiber-Entscheidung 23.09.2026: die CSV ist der
+    // Arbeitsweg, Rechnungen sind freiwillig). Eine hochgeladene Rechnung
+    // mit passendem Betrag setzt zusaetzlich VERMITTLER_BEZAHLT_BELEGT.
     public const VERMITTLER_ABGERECHNET = 'abgerechnet';
     public const VERMITTLER_BEZAHLT_BELEGT = 'bezahlt_belegt';
     public const VERMITTLER_STORNIERT = 'storniert';
@@ -790,8 +792,8 @@ class Contract extends Model
         self::VERMITTLER_ID_ZUGEORDNET => ['label' => 'ID zugeordnet',              'icon' => '🔗', 'badge' => 'open'],
         self::VERMITTLER_IN_ABRECHNUNG => ['label' => 'Offen – noch nicht bestätigt', 'icon' => '⏳', 'badge' => 'pending'],
         self::VERMITTLER_VERIFIZIERT => ['label' => 'Verifiziert – Zahlung ausstehend', 'icon' => '☑', 'badge' => 'open'],
-        self::VERMITTLER_ABGERECHNET => ['label' => 'Bezahlt laut Abrechnung – Rechnung fehlt', 'icon' => '💶', 'badge' => 'open'],
-        self::VERMITTLER_BEZAHLT_BELEGT => ['label' => 'Bezahlt – durch Rechnung belegt', 'icon' => '✅', 'badge' => 'active'],
+        self::VERMITTLER_ABGERECHNET => ['label' => 'Bezahlt', 'icon' => '✅', 'badge' => 'active'],
+        self::VERMITTLER_BEZAHLT_BELEGT => ['label' => 'Bezahlt – auch durch Rechnung belegt', 'icon' => '✅', 'badge' => 'active'],
         self::VERMITTLER_STORNIERT => ['label' => 'Storniert',                  'icon' => '⛔', 'badge' => 'danger'],
         self::VERMITTLER_NICHT_GEFUNDEN => ['label' => 'Nicht in Abrechnung gefunden', 'icon' => '❓', 'badge' => 'pending'],
         self::VERMITTLER_PRUEFUNG => ['label' => 'Prüfung erforderlich',       'icon' => '⚠',  'badge' => 'danger'],

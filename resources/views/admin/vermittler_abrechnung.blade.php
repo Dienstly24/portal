@@ -60,7 +60,8 @@
         Dieselbe Datei erneut einzulesen erzeugt keine Doppelbuchungen.
         <br><br>
         <b>Status-Codes:</b> 1 = offen · 2 = storniert · 3 = verifiziert · 4 = bezahlt.
-        Status 4 ist die Meldung des Vermittlers – <b>belegt</b> ist die Zahlung erst, wenn die Rechnung unten den Betrag bestätigt.
+        <b>Monatlich einfach die neue Gesamt-Datei einlesen</b>: neue Vorgänge kommen dazu, geänderte Status werden
+        nachgezogen, Unverändertes bleibt unberührt.
     </div>
 
     <form method="POST" action="{{ route('admin.vermittler.import') }}" enctype="multipart/form-data">
@@ -84,11 +85,12 @@
 {{-- Rechnung/Gutschrift (23.09.2026): der BELEG der Zahlung. Vorher gab es
      hierfuer keinen Upload - der Rechnungsabgleich kannte nur ein Suchfeld. --}}
 <div class="card" style="max-width:980px;">
-    <div style="font-weight:700;font-size:14px;margin-bottom:6px;">🧾 Rechnung / Gutschrift prüfen (PDF, Bild)</div>
+    <div style="font-weight:700;font-size:14px;margin-bottom:6px;">🧾 Rechnung / Gutschrift prüfen (PDF, Bild) <span class="muted-xs" style="font-weight:400;">– freiwillig</span></div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
         Die Rechnung von TARIFCHECK24 als <b>PDF, Foto/Screenshot (PNG, JPG) oder Text</b> hochladen. Das System sucht darin
         die <b>Ids und Referenz-Nummern aus der monatlichen CSV</b> und vergleicht den Betrag jeder Position mit der
-        erwarteten Provision. Erst danach gilt ein Vertrag als <b>„Bezahlt – durch Rechnung belegt"</b>.
+        erwarteten Provision. <b>Nicht nötig für den Alltag</b> – der Status „bezahlt" kommt bereits aus der CSV.
+        Sinnvoll, wenn Sie prüfen wollen, ob der tatsächlich überwiesene Betrag stimmt.
         <br><br>
         Sie sehen das Ergebnis zuerst als <b>Vorschau</b>; übernommen wird erst nach Ihrer Bestätigung.
         Abweichende Beträge gehen in die Prüfliste, nichts wird geraten.

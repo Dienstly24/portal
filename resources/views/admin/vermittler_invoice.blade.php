@@ -108,7 +108,7 @@
     <form method="POST" action="{{ route('admin.vermittler.invoice_confirm', $invoice->id) }}" style="margin-top:18px;">
         @csrf
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">
-            Beim Übernehmen werden <b>{{ $invoice->rows_confirmed }}</b> Verträge als „Bezahlt – durch Rechnung belegt" markiert.
+            Beim Übernehmen werden <b>{{ $invoice->rows_confirmed }}</b> Verträge als „Bezahlt – auch durch Rechnung belegt" markiert.
             @if($invoice->rows_deviation > 0)
                 <b>{{ $invoice->rows_deviation }}</b> Abweichungen kommen in die Prüfliste.
             @endif

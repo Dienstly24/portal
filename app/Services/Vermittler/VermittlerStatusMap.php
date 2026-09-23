@@ -21,8 +21,8 @@ class VermittlerStatusMap
      *  1 = offen      - ueber die Provision ist noch NICHTS entschieden
      *  2 = storniert  - dazu liefert der Vermittler einen Stornogrund
      *  3 = verifiziert - vom Vermittler bestaetigt, Zahlung steht aus
-     *  4 = bezahlt    - laut Vermittler ausgezahlt; BELEGT ist das erst,
-     *                   wenn die Rechnung/Gutschrift den Betrag nennt
+     *  4 = bezahlt    - laut Vermittler ausgezahlt; das genuegt als
+     *                   Zahlungsstand, eine Rechnung ist freiwillig
      *
      * Vorher stand hier "1 = bestaetigt" und Code 3 fehlte ganz: jede offene
      * Position erschien gruen als "In Abrechnung gefunden", und jede

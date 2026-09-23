@@ -9,7 +9,7 @@
 @can('provisionen-verwalten')
 @php
     $vStatus = $contract->vermittlerStatus();
-    $vLast = $contract->vermittlerSettlements()->with('invoice')->first();
+    $vLast = $contract->vermittlerSettlements()->with(['invoice', 'import'])->first();
     $vEvents = $contract->vermittlerEvents()->with('user')->get();
 @endphp
 <div class="card" style="max-width:980px;">
@@ -45,9 +45,6 @@
                     @if($vLast->isStorno())<span style="color:#A32D2D;font-weight:600;"> (storniert)</span>@endif
                 @else — @endif
             </div>
-            @if($vLast && $vLast->status_code !== null)
-            <div class="muted-xs">CSV-Status: {{ \App\Services\Vermittler\VermittlerStatusMap::codeLabel($vLast->status_code) }}</div>
-            @endif
         </div>
         <div>
             <div class="muted-2xs">Zahlung</div>
@@ -57,12 +54,17 @@
                     @if($vLast->invoice)<a href="{{ route('admin.vermittler.invoice', $vLast->invoice_id) }}">Rechnung {{ $vLast->invoice->invoice_number ?: $vLast->invoice->filename }}</a> · @endif
                     {{ $vLast->payment_confirmed_at?->lokal()->format('d.m.Y') }}
                 </div>
-            @elseif($vLast && $vLast->invoice_id)
+            @elseif($vLast && $vLast->invoice_id && ! $vLast->paymentConfirmed())
                 <div style="font-weight:600;color:#A32D2D;">⚠ Rechnung weicht ab</div>
                 <div class="muted-xs">Rechnung nennt {{ $vLast->invoice_amount !== null ? number_format((float) $vLast->invoice_amount, 2, ',', '.').' €' : 'keinen lesbaren Betrag' }}</div>
+            @elseif($vLast && $vLast->isStorno())
+                <div style="font-weight:600;color:#A32D2D;">⛔ Keine Zahlung (storniert)</div>
+            @elseif($vLast && $vLast->contractStatus() === \App\Models\Contract::VERMITTLER_ABGERECHNET)
+                <div style="font-weight:600;color:var(--emerald-deep);">✅ Bezahlt</div>
+                <div class="muted-xs">laut TARIFCHECK24-CSV{{ $vLast->import?->created_at ? ' vom '.$vLast->import->created_at->lokal()->format('d.m.Y') : '' }}</div>
             @else
-                <div style="font-weight:600;color:#B5651D;">Noch nicht belegt</div>
-                <div class="muted-xs">Belegt erst durch die Rechnung</div>
+                <div style="font-weight:600;color:#B5651D;">Noch nicht bezahlt</div>
+                <div class="muted-xs">CSV-Status: {{ $vLast ? \App\Services\Vermittler\VermittlerStatusMap::codeLabel($vLast->status_code) : '—' }}</div>
             @endif
         </div>
         <div>
