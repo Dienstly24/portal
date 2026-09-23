@@ -38,10 +38,12 @@ $c = $colors[$a->priority];
                 @if($a->expires_at) · Läuft ab: {{ $a->expires_at->lokal()->format('d.m.Y') }} @endif
             </div>
         </div>
+        @if(\App\Http\Controllers\TarifrechnerController::darfAnkuendigungLoeschen(auth()->user(), $a))
         <form method="POST" action="{{ route('admin.announcements.destroy', $a->id) }}" data-h-submit="14579d00be">
             @csrf @method('DELETE')
             <button type="submit" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:18px;">🗑</button>
         </form>
+        @endif
     </div>
 </div>
 @endforeach

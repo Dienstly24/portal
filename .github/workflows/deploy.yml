@@ -103,7 +103,7 @@ jobs:
           --health-retries=10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: PHP 8.3 einrichten
         uses: shivammathur/setup-php@v2
@@ -113,7 +113,7 @@ jobs:
           coverage: none
 
       - name: Composer-Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: vendor
           key: composer-${{ hashFiles('composer.lock') }}
@@ -128,7 +128,7 @@ jobs:
           php artisan key:generate
 
       - name: Node einrichten & Assets bauen
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: 'npm'
@@ -168,7 +168,7 @@ jobs:
     name: Codeformat und statische Analyse
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: PHP 8.3 einrichten
         uses: shivammathur/setup-php@v2
@@ -178,7 +178,7 @@ jobs:
           coverage: none
 
       - name: Composer-Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: vendor
           key: composer-${{ hashFiles('composer.lock') }}
@@ -199,7 +199,7 @@ jobs:
           php artisan key:generate
 
       # PHPStan laeuft auf Stufe 5 gegen phpstan-baseline.neon: der
-      # Altbestand (922 Meldungen) ist eingefroren, JEDE NEUE Meldung macht
+      # Altbestand ist dort eingefroren, JEDE NEUE Meldung macht
       # den Job rot. Die Baseline ist ein Uebergang - wer eine Datei
       # anfasst, streicht ihre Eintraege am besten gleich mit.
       # Lokal: composer stan

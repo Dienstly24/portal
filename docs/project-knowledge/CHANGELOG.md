@@ -1,0 +1,76 @@
+# Changelog
+
+Aenderungsprotokoll ab Anlage der Wissensbasis (23.09.2026). Aeltere
+Aenderungen: `git log`, `CLAUDE.md` (datierte Abschnitte) und `docs/*.md`.
+Neueste Eintraege oben. Format je Eintrag:
+Date · Task · Files Changed · Components Affected · Database Changes ·
+API Changes · Potential Side Effects · Tests Performed · Result.
+
+---
+
+## 23.09.2026 - Reparaturrunde 1: was sich im Code beheben liess
+
+- **Task**: Betreiber-Auftrag "Behebe, was sich beheben laesst" - alle Befunde aus
+  KNOWN_ISSUES, die ohne Server-, Konto- oder Rechtshandlung behebbar sind.
+- **Files Changed**:
+  - `lang/ar.json` (+21), `resources/views/auth/register-pending.blade.php` (RTL-Abstand)
+  - `app/Http/Controllers/EmployeeController.php` (Rechte-Liste der Mail)
+  - `app/Support/Sprache.php` (neu), `app/Providers/AppServiceProvider.php`,
+    `app/Http/Middleware/SetLocale.php`, `config/app.php`, `.env.example`
+  - `app/Http/Controllers/TarifrechnerController.php`, `resources/views/admin/announcements.blade.php`
+  - `app/Http/Controllers/AppointmentController.php`
+  - `resources/views/website/legal/datenschutz.blade.php` (Turnstile-Absatz)
+  - entfernt: 4 Auth-Controller, `auth/verify-email`, `auth/confirm-password`,
+    `layouts/guest`, `App\View\Components\GuestLayout`, 10 Blade-Komponenten,
+    2 Breeze-Tests; `routes/auth.php`, `EnsurePasswordChanged` (Ausnahmeliste)
+  - `package.json`/`package-lock.json` (autoprefixer raus), `.github/workflows/deploy.yml`
+  - 7 neue Testdateien (siehe TESTING_STATUS), Wissensbasis nachgezogen
+- **Components Affected**: Auth-Routen, Mitarbeiter-Anlage, Ankuendigungen,
+  Termine, Sprachwahl (Konsole/Queue), Datenschutzerklaerung, Portal (AR).
+- **Database Changes**: keine. **API Changes**: 5 Routen entfernt
+  (`verification.notice/verify/send`, `password.confirm` GET+POST) - von keiner
+  Seite und keiner Middleware benutzt; 509 -> 504 Routen.
+- **Potential Side Effects**: Konsole/Queue laufen jetzt auf Deutsch (vorher
+  Englisch) - gewollt. Mitarbeiter sehen den Loeschknopf nur noch an eigenen
+  Ankuendigungen. Ein Termin mit fremder/unbekannter `assigned_to`-Kennung wird
+  abgelehnt statt 500.
+- **Tests Performed**: jeder neue Test gegen den alten Stand (rot) und den
+  neuen (gruen); Gegenproben fuer die Waechter; volle Suite 3069/3069, 0
+  uebersprungen; Pint gruen; `npm run build` gruen; Browser (Chromium, 390 px
+  AR und 1440 px): AR-Registrierungsseite, Ankuendigungen je Rolle,
+  `/verify-email` 404. `composer stan` lokal nicht moeglich (KI-018) -> CI.
+- **Result**: FIXED: KI-006, KI-007, KI-010, KI-011, KI-014, KI-015, KI-016,
+  KI-017, neu gefunden und behoben KI-019, KI-020, KI-021; KI-012 IN_PROGRESS.
+  Bewusst NICHT angefasst: KI-001 (Betreiber-Entscheidung, gehoert in die
+  Aufgabe "Employee & Support Customer Access Architecture") und alle Punkte,
+  die Server, Konten oder Anwalt brauchen.
+
+---
+
+## 23.09.2026 - Project Knowledge Base angelegt, Voll-Audit
+
+- **Task**: Betreiber-Auftrag "Projekt als dauerhaftes System mit
+  technischem Gedaechtnis fuehren": Voll-Inventur, Wissensbasis,
+  Feature-/Issue-Register, Architektur, Audit, Fahrplan.
+- **Ausgangsstand**: `main` @ 04c0823 (nach PR #353, BIMI).
+- **Files Changed**:
+  - neu `docs/project-knowledge/` (README, PROJECT_OVERVIEW, ARCHITECTURE,
+    FRONTEND_MAP, BACKEND_MAP, DATABASE_MAP, API_MAP, ROUTES_INVENTORY
+    (generiert), AUTH_SYSTEM, USER_FLOWS, FEATURE_MAP, INTEGRATIONS,
+    DEPLOYMENT, UI_UX_AUDIT, SECURITY_AUDIT, PERFORMANCE_AUDIT,
+    TESTING_STATUS, TECHNICAL_DEBT, KNOWN_ISSUES, REPAIR_ROADMAP, CHANGELOG)
+  - neu `scripts/wissensbasis-routen.php` (erzeugt das Routen-Inventar, rein lesend)
+  - `CLAUDE.md`: Arbeitsweise Punkt 8 + Verweis unter "Weitere Doku"
+- **Components Affected**: keine Laufzeitkomponente (nur Dokumentation +
+  ein Hilfsskript, das von keiner Route/keinem Befehl geladen wird).
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: keine im Betrieb. Pint prueft das neue Skript
+  (gruen).
+- **Tests Performed**: volle Testsuite `php artisan test`: 3044/3044 gruen, 0 uebersprungen (Details in
+  [TESTING_STATUS.md](TESTING_STATUS.md)), `vendor/bin/pint --test` fuer das
+  Skript, `composer audit`, `npm audit --omit=dev --audit-level=high`,
+  `npm run build`, `php artisan route:list`. `composer stan` in dieser
+  Umgebung NICHT ausfuehrbar (KI-018) - CI prueft es.
+- **Result**: Wissensbasis angelegt; 18 offene Befunde registriert
+  (0 CRITICAL, 3 HIGH - alle Betrieb/Recht, keiner im Code), 13 historische
+  als VERIFIED uebernommen; Fahrplan R-01..R-19.

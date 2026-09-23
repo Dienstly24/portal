@@ -32,6 +32,19 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
    `composer stan` und `composer lint` gruen; bei Leistungsfragen eine
    Messung vorher/nachher, bei Sicherheitsfragen eine Gegenprobe aus der
    Rolle des Angreifers.
+8. **Project Knowledge Base `docs/project-knowledge/`** (angelegt
+   23.09.2026, Grundsatz CONTINUOUS AUDIT): strukturierte Karten
+   (Architektur, Backend, Frontend, Datenbank, Routen, Auth), das
+   **Feature-Register** (`FEATURE_MAP.md`, F-xxx), das **Issue-Register**
+   (`KNOWN_ISSUES.md`, KI-xxx - die EINE Quelle fuer Befunde, Eintraege
+   werden nie geloescht, nur OPEN -> FIXED -> VERIFIED), der Fahrplan
+   (`REPAIR_ROADMAP.md`) und `CHANGELOG.md`. Zu Beginn jeder Sitzung
+   `README.md` dort lesen (Ablauf steht darin) und pruefen, was seit dem
+   letzten CHANGELOG-Eintrag gemergt wurde. Jede Aenderung zieht die
+   betroffenen Dateien dort im SELBEN PR mit (gehoert zur Definition of
+   Done wie diese Datei); das Routen-Inventar wird mit
+   `scripts/wissensbasis-routen.php` neu erzeugt, nie von Hand gepflegt.
+   Bei Widerspruch gilt der Code.
 
 ## Deploy
 
@@ -609,9 +622,26 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Rechtliches). Feld leeren = Portal zeigt eigene Fallback-Seiten.
 - **Login/Registrierung** (`resources/views/auth/`): Single-Screen (kein
   Scroll), Glas-Karte, `logo-white.png` ohne weißen Kasten, DE/AR-Umschalter.
+  **Keine Breeze-Reste mehr** (23.09.2026): die Seiten "E-Mail bestaetigen"
+  (`verify-email`) und "Passwort bestaetigen" (`confirm-password`) samt
+  Controllern, Routen, `layouts/guest` und den Starter-Komponenten sind
+  entfernt - `User` implementiert bewusst NICHT `MustVerifyEmail` (SEC-1)
+  und keine Route verlangte `password.confirm`. Wer eine Passwort-
+  Bestaetigung vor einer heiklen Aktion braucht, baut sie neu und
+  deutschsprachig. Test: `BreezeResteEntferntTest`.
 - **Arabisch/RTL**: `lang/ar.json`, `SetLocale`-Middleware,
   `dir="rtl"`-Layout. Neue UI-Strings mit `__()` wrappen und in `ar.json`
-  ergänzen.
+  ergänzen. **Seit 23.09.2026 ist das ein Test** (`ArabischeUebersetzung-
+  VollstaendigTest`): jeder `__()`-Text in portal/auth/website/services/
+  support/partials braucht einen Eintrag - vorher standen 21 Kundentexte auf
+  Deutsch in der arabischen Oberflaeche, darunter die komplette Seite nach
+  der Registrierung. Abstaende, die der Leserichtung folgen muessen, mit
+  `padding-inline-start` statt `padding-left` (sonst liegt in RTL das
+  Symbol auf dem Text). Die Sprachliste steht an EINER Stelle
+  (`App\Support\Sprache`, de/ar); `AppServiceProvider` stellt beim Start
+  jede andere Sprache auf `de` - auch in Konsole und Warteschlange, wo
+  `SetLocale` nicht laeuft (vorher liefen dort Laeufe und Mails auf
+  Englisch, weil die alte `.env`-Vorlage `APP_LOCALE=en` trug).
 - **Banner-Verwaltung**: `BannerController`, Statistik-Dashboard unter
   `/admin/banners/statistik`. Routen auf `role:admin,manager` beschränkt.
   **Social-Publishing (Phase 1, Betreiber-Auftrag 04.08.2026)**: je Banner
@@ -3919,3 +3949,5 @@ Betreiber-Anleitung `docs/ANLEITUNG_BIMI_AR.md`. Die Kurzfassung:
 
 Ausführliche Berichte und Konzepte liegen unter `docs/` (Audit, Phasen,
 Production-Readiness, Konzepte). Bei Bedarf dort nachschlagen.
+Die strukturierte Gesamtsicht (Karten, Feature-/Issue-Register, Fahrplan,
+Changelog) steht in `docs/project-knowledge/` - siehe Arbeitsweise Punkt 8.

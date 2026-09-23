@@ -39,7 +39,6 @@ class EnsurePasswordChanged
         'logout',
         'locale.switch',
         'legal',
-        'password.confirm',
         // Die regulaeren Passwort-Formulare erfuellen die Forderung ebenso -
         // beide laufen ueber User::setPassword() und heben den Zwang auf.
         // Wer den Wechsel dort erledigt, soll nicht abgewiesen werden.
