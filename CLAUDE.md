@@ -1603,9 +1603,32 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   ist) und steht im Abschnitt "Eingelesene Vermittler-Vorgangslisten" -
   GELOESCHT wird nie etwas. Der Knopf erscheint zusaetzlich bei
   "Sonstiges Dokument" (mit Rueckfrage) als Rueckfallebene, falls die
-  Erkennung die Tabelle einmal nicht als Liste einstuft. Verarbeitung bleibt
-  admin/manager (sie fuehrt auf die Seite mit den Provisionsbetraegen).
+  Erkennung die Tabelle einmal nicht als Liste einstuft. Verarbeitung nur mit
+  dem Recht `provisionen-verwalten` (sie fuehrt auf die Seite mit den
+  Provisionsbetraegen; bis 23.09.2026 genuegte die Rolle manager).
   Tests: `VermittlerVorgangslisteTest`.
+  **STATUS-CODES UND RECHNUNG ALS BELEG (Betreiber-Meldung 23.09.2026)**:
+  TARIFCHECK24 meint **1 = offen, 2 = storniert, 3 = verifiziert,
+  4 = bezahlt**. Vorher stand "1 = bestaetigt" (gruen "In Abrechnung
+  gefunden") und Code 3 fehlte ganz - die Vertragsakte zeigte "Provision
+  75,00 EUR" mit Haken, obwohl die Position OFFEN war, und die
+  Bestaetigungsquote zaehlte offene Positionen mit. Der gespeicherte Wert
+  `in_abrechnung` bleibt (Altbestand), er BEDEUTET jetzt "offen".
+  **Code 4 ist eine Meldung, kein Beleg**: bezahlt heisst erst
+  `bezahlt_belegt`, und das setzt ausschliesslich die RECHNUNG
+  (`VermittlerRechnungAbgleich`, Karte "Rechnung / Gutschrift pruefen" auf
+  `/admin/vermittler-abrechnung`): PDF (Textebene), Foto/Screenshot (OCR)
+  oder Text; ZWEISTUFIG (Entwurf `vermittler_invoices` -> "Ergebnis
+  uebernehmen"); die Datei bleibt als Beleg auf der privaten Platte.
+  NIE RATEN: gesucht werden NUR Ids/Referenz-Nr., die aus einer CSV bekannt
+  sind; bestaetigt ist eine Position nur, wenn auf ihrer Zeile GENAU die
+  erwartete Provision steht - anderer Betrag = Pruefliste, mehrere Betraege
+  = "nicht eindeutig", storniert + in der Rechnung = Widerspruch. Aus einer
+  Rechnung entsteht nie ein Datensatz; unbekannte Positionen stehen als
+  Rest-Betrag da. Eine spaetere CSV stuft eine BELEGTE Zahlung nie zurueck
+  (nur Storno/Widerspruch gewinnen). Die Box in der Vertragsakte trennt
+  "Provision (erwartet laut CSV)" von "Zahlung: belegt / noch nicht belegt".
+  Tests: `VermittlerRechnungTest`.
 - **Interne Provisionen: Fremd-Abrechnungen an den eigenen Vertrag binden**
   (Betreiber-Auftrag 26.08.2026, Anleitung
   `docs/ANLEITUNG_PROVISIONEN_IMPORT_AR.md`): Ein DRITTER Provisions-Strang

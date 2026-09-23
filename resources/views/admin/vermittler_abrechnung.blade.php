@@ -21,7 +21,9 @@
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;max-width:980px;">
     @foreach([
         ['Eingereicht', $performance['eingereicht'], 'var(--graphite)'],
-        ['Abgerechnet', $performance['abgerechnet'], 'var(--emerald-deep)'],
+        ['Offen', $performance['offen'], '#B5651D'],
+        ['Verifiziert / bezahlt', $performance['abgerechnet'], 'var(--emerald-deep)'],
+        ['Durch Rechnung belegt', $performance['belegt'], 'var(--emerald-deep)'],
         ['Storniert', $performance['storniert'], '#A32D2D'],
         ['Nicht gefunden', $performance['nicht_gefunden'], '#B5651D'],
         ['Prüfung', $performance['pruefung'], '#A32D2D'],
@@ -56,6 +58,9 @@
         Die Spalte <b>Referenz-Nr. darf fehlen</b> – dann findet das System den Vertrag über die bereits gespeicherte Zuordnung
         Referenz-Nr. ↔ Vermittler-ID. Pflicht ist allein die Spalte <b>Id</b>.
         Dieselbe Datei erneut einzulesen erzeugt keine Doppelbuchungen.
+        <br><br>
+        <b>Status-Codes:</b> 1 = offen · 2 = storniert · 3 = verifiziert · 4 = bezahlt.
+        Status 4 ist die Meldung des Vermittlers – <b>belegt</b> ist die Zahlung erst, wenn die Rechnung unten den Betrag bestätigt.
     </div>
 
     <form method="POST" action="{{ route('admin.vermittler.import') }}" enctype="multipart/form-data">
@@ -74,6 +79,58 @@
         </label>
         <button type="submit" class="btn btn-primary">Datei einlesen und abgleichen</button>
     </form>
+</div>
+
+{{-- Rechnung/Gutschrift (23.09.2026): der BELEG der Zahlung. Vorher gab es
+     hierfuer keinen Upload - der Rechnungsabgleich kannte nur ein Suchfeld. --}}
+<div class="card" style="max-width:980px;">
+    <div style="font-weight:700;font-size:14px;margin-bottom:6px;">🧾 Rechnung / Gutschrift prüfen (PDF, Bild)</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
+        Die Rechnung von TARIFCHECK24 als <b>PDF, Foto/Screenshot (PNG, JPG) oder Text</b> hochladen. Das System sucht darin
+        die <b>Ids und Referenz-Nummern aus der monatlichen CSV</b> und vergleicht den Betrag jeder Position mit der
+        erwarteten Provision. Erst danach gilt ein Vertrag als <b>„Bezahlt – durch Rechnung belegt"</b>.
+        <br><br>
+        Sie sehen das Ergebnis zuerst als <b>Vorschau</b>; übernommen wird erst nach Ihrer Bestätigung.
+        Abweichende Beträge gehen in die Prüfliste, nichts wird geraten.
+    </div>
+    @unless($ocrAvailable)
+    <div style="background:#FEF3C7;border:1px solid #E8C36A;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;">
+        Die Texterkennung (OCR) ist auf diesem Server nicht aktiv – Fotos und gescannte PDF können nicht gelesen werden.
+        Ein PDF mit Textebene (Original-Download aus dem Portal) funktioniert unabhängig davon.
+    </div>
+    @endunless
+    <form method="POST" action="{{ route('admin.vermittler.invoice_upload') }}" enctype="multipart/form-data">
+        @csrf
+        <div class="field" style="max-width:520px;">
+            <label>Rechnung (PDF, PNG, JPG, TXT) *</label>
+            <input type="file" name="rechnung_datei" accept=".pdf,.png,.jpg,.jpeg,.webp,.csv,.txt,application/pdf,image/*" required aria-label="Rechnung (PDF, PNG, JPG, TXT)">
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:14px;">Rechnung prüfen</button>
+    </form>
+
+    @if($invoices->isNotEmpty())
+    <div class="scroll-x" style="margin-top:18px;">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+            <thead><tr style="text-align:left;color:var(--ink-soft);">
+                <th style="padding:8px;">Rechnung</th><th style="padding:8px;">Hochgeladen</th>
+                <th style="padding:8px;">Gefunden</th><th style="padding:8px;">Belegt</th>
+                <th style="padding:8px;">Abweichung</th><th style="padding:8px;">Zustand</th>
+            </tr></thead>
+            <tbody>
+            @foreach($invoices as $inv)
+            <tr style="border-top:1px solid var(--line);">
+                <td style="padding:8px;"><a href="{{ route('admin.vermittler.invoice', $inv->id) }}">{{ $inv->invoice_number ?: $inv->filename }}</a></td>
+                <td style="padding:8px;">{{ $inv->created_at?->lokal()->format('d.m.Y H:i') }}</td>
+                <td style="padding:8px;">{{ $inv->rows_found }}</td>
+                <td style="padding:8px;">{{ $inv->rows_confirmed }}</td>
+                <td style="padding:8px;">{{ $inv->rows_deviation }}</td>
+                <td style="padding:8px;">{{ $inv->isDraft() ? 'Entwurf' : 'Übernommen' }}</td>
+            </tr>
+            @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
 </div>
 
 {{-- Vorgangsliste: der Schritt VOR der Abrechnung. Genau hier entsteht die

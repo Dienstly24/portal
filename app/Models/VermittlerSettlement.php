@@ -22,7 +22,8 @@ class VermittlerSettlement extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'import_id', 'vermittler_id', 'produkt', 'statement_date', 'status_code',
+        'import_id', 'invoice_id', 'invoice_amount', 'payment_confirmed_at',
+        'vermittler_id', 'produkt', 'statement_date', 'status_code',
         'provision', 'tracking_id', 'storno_reason', 'reference_number',
         'reference_key', 'contract_id', 'customer_id', 'contract_label',
         'customer_label', 'match_result', 'import_result', 'match_note', 'row_hash',
@@ -31,6 +32,8 @@ class VermittlerSettlement extends Model
     protected $casts = [
         'statement_date' => 'date',
         'provision' => 'decimal:2',
+        'invoice_amount' => 'decimal:2',
+        'payment_confirmed_at' => 'datetime',
     ];
 
     /**
@@ -58,6 +61,14 @@ class VermittlerSettlement extends Model
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
     /** @return BelongsTo<VermittlerImport, $this> */
     public function import(): BelongsTo { return $this->belongsTo(VermittlerImport::class, 'import_id'); }
+    /** @return BelongsTo<VermittlerInvoice, $this> */
+    public function invoice(): BelongsTo { return $this->belongsTo(VermittlerInvoice::class, 'invoice_id'); }
+
+    /** Ist die Zahlung durch eine Rechnung BELEGT (nicht nur gemeldet)? */
+    public function paymentConfirmed(): bool
+    {
+        return $this->payment_confirmed_at !== null;
+    }
 
     /** Ergebnis des letzten Imports (ersatzweise der dauerhafte Zustand). */
     public function importResult(): string

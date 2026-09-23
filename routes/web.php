@@ -934,6 +934,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
             // Dieselbe Verarbeitung direkt aus dem Dokumenten-Eingang heraus:
             // dort liegt die Datei bereits, dort arbeiten die Mitarbeiter.
             Route::post('/dokument/{id}/einlesen', [VermittlerAbrechnungController::class, 'importFromDocument'])->whereUuid('id')->name('from_document');
+            // Rechnung/Gutschrift als Beleg der Zahlung (23.09.2026): PDF,
+            // Bild oder Text -> Entwurf -> Bestaetigung.
+            Route::post('/rechnung', [VermittlerAbrechnungController::class, 'uploadInvoice'])->name('invoice_upload');
+            Route::get('/rechnung/{id}', [VermittlerAbrechnungController::class, 'showInvoice'])->whereUuid('id')->name('invoice');
+            Route::post('/rechnung/{id}/bestaetigen', [VermittlerAbrechnungController::class, 'confirmInvoice'])->whereUuid('id')->name('invoice_confirm');
+            Route::get('/rechnung/{id}/datei', [VermittlerAbrechnungController::class, 'invoiceFile'])->whereUuid('id')->name('invoice_file');
             Route::get('/pruefung', [VermittlerAbrechnungController::class, 'review'])->name('review');
             Route::get('/bericht', [VermittlerAbrechnungController::class, 'report'])->name('report');
             Route::get('/vertrag-suche', [VermittlerAbrechnungController::class, 'contractSearch'])->name('contract_search');

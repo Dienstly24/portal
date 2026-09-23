@@ -769,8 +769,16 @@ class Contract extends Model
     public const VERMITTLER_NEU = 'neu';
     public const VERMITTLER_REFERENZ = 'referenz_hinterlegt';
     public const VERMITTLER_ID_ZUGEORDNET = 'id_zugeordnet';
+    // Gespeicherter Wert bleibt 'in_abrechnung' (Altbestand), BEDEUTUNG seit
+    // 23.09.2026: Status-Code 1 des Vermittlers = OFFEN. Er stand vorher als
+    // gruenes "In Abrechnung gefunden" da und las sich wie "Geld kommt" -
+    // eine offene Position ist aber noch nichts (Betreiber-Vorgabe).
     public const VERMITTLER_IN_ABRECHNUNG = 'in_abrechnung';
+    public const VERMITTLER_VERIFIZIERT = 'verifiziert';
+    // Code 4: der Vermittler meldet "bezahlt" - belegt ist es erst durch die
+    // Rechnung/Gutschrift (VERMITTLER_BEZAHLT_BELEGT).
     public const VERMITTLER_ABGERECHNET = 'abgerechnet';
+    public const VERMITTLER_BEZAHLT_BELEGT = 'bezahlt_belegt';
     public const VERMITTLER_STORNIERT = 'storniert';
     public const VERMITTLER_NICHT_GEFUNDEN = 'nicht_gefunden';
     public const VERMITTLER_PRUEFUNG = 'pruefung';
@@ -780,8 +788,10 @@ class Contract extends Model
         self::VERMITTLER_NEU => ['label' => 'Neu',                        'icon' => '·',  'badge' => 'closed'],
         self::VERMITTLER_REFERENZ => ['label' => 'Referenz hinterlegt',        'icon' => '📌', 'badge' => 'open'],
         self::VERMITTLER_ID_ZUGEORDNET => ['label' => 'ID zugeordnet',              'icon' => '🔗', 'badge' => 'open'],
-        self::VERMITTLER_IN_ABRECHNUNG => ['label' => 'In Abrechnung gefunden',     'icon' => '✓',  'badge' => 'active'],
-        self::VERMITTLER_ABGERECHNET => ['label' => 'Bestätigt / Abgerechnet',    'icon' => '✅', 'badge' => 'active'],
+        self::VERMITTLER_IN_ABRECHNUNG => ['label' => 'Offen – noch nicht bestätigt', 'icon' => '⏳', 'badge' => 'pending'],
+        self::VERMITTLER_VERIFIZIERT => ['label' => 'Verifiziert – Zahlung ausstehend', 'icon' => '☑', 'badge' => 'open'],
+        self::VERMITTLER_ABGERECHNET => ['label' => 'Bezahlt laut Abrechnung – Rechnung fehlt', 'icon' => '💶', 'badge' => 'open'],
+        self::VERMITTLER_BEZAHLT_BELEGT => ['label' => 'Bezahlt – durch Rechnung belegt', 'icon' => '✅', 'badge' => 'active'],
         self::VERMITTLER_STORNIERT => ['label' => 'Storniert',                  'icon' => '⛔', 'badge' => 'danger'],
         self::VERMITTLER_NICHT_GEFUNDEN => ['label' => 'Nicht in Abrechnung gefunden', 'icon' => '❓', 'badge' => 'pending'],
         self::VERMITTLER_PRUEFUNG => ['label' => 'Prüfung erforderlich',       'icon' => '⚠',  'badge' => 'danger'],

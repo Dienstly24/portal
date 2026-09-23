@@ -11,6 +11,12 @@
 @include('admin.commissions_internal._tabs', ['active' => 'rechnung'])
 @include('admin.commissions_internal._flash')
 
+<div style="background:var(--emerald-soft);border-radius:10px;padding:12px 16px;margin-bottom:16px;max-width:1000px;font-size:13px;">
+    <b>Rechnung als PDF oder Foto?</b> Eine Rechnung/Gutschrift von TARIFCHECK24 laden Sie unter
+    <a href="{{ route('admin.vermittler.index') }}"><b>Vermittler-Abrechnung → Rechnung prüfen</b></a> hoch –
+    dort wird jede Position automatisch mit der CSV verglichen.
+</div>
+
 <div class="card" style="max-width:1000px;">
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">
         Gesucht wird über <b>Interne Vertragsnummer</b>, <b>Referenz-Nr.</b>, <b>Vermittler-Id</b>,

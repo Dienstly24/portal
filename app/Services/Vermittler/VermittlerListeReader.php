@@ -103,6 +103,24 @@ class VermittlerListeReader
         return $this->parser->parse($text);
     }
 
+    /**
+     * Nur der TEXT einer Datei - fuer Belege, die keine Tabelle mit
+     * festen Spalten sind (Rechnung/Gutschrift des Vermittlers). CSV/TXT
+     * kommen unveraendert zurueck, PDF ueber die Textebene, Bilder und
+     * gescannte PDF ueber die Texterkennung.
+     *
+     * @throws \RuntimeException wenn sich die Datei nicht lesen laesst.
+     */
+    public function textFromBinary(string $binary, string $mime, string $filename): string
+    {
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        if (in_array($extension, ['csv', 'txt'], true)) {
+            return $binary;
+        }
+
+        return $this->text($binary, $mime, $extension);
+    }
+
     private function text(string $binary, string $mime, string $extension): string
     {
         // Der Dateityp kommt notfalls aus der Endung: ein gespeichertes
@@ -120,13 +138,13 @@ class VermittlerListeReader
         if (! $this->ocr->isAvailable()) {
             throw new \RuntimeException(
                 'Für Bilder und gescannte PDF wird die Texterkennung (OCR) benötigt, sie ist auf diesem Server aber nicht aktiv. '
-                .'Bitte die Liste als CSV exportieren – das ist ohnehin der genauere Weg.'
+                .'Bitte die Datei als PDF mit Textebene bzw. die Liste als CSV verwenden.'
             );
         }
 
         $text = $this->ocr->extract($binary, $mime);
         if (trim($text) === '') {
-            throw new \RuntimeException('Aus der Datei liess sich kein Text lesen. Bitte einen schärferen Screenshot oder einen CSV-Export verwenden.');
+            throw new \RuntimeException('Aus der Datei liess sich kein Text lesen. Bitte einen schärferen Screenshot, das Original-PDF oder einen CSV-Export verwenden.');
         }
 
         return $text;

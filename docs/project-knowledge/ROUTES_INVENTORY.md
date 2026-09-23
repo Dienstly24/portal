@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 23.09.2026 aus `php artisan route:list --json` (504 Routen).
+Generiert am 23.09.2026 aus `php artisan route:list --json` (508 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -367,6 +367,10 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/vermittler-abrechnung/dokument/{id}/einlesen` | admin.vermittler.from_document | auth role:staff can:provisionen-verwalten |
 | POST | `admin/vermittler-abrechnung/import` | admin.vermittler.import | auth role:staff can:provisionen-verwalten |
 | GET | `admin/vermittler-abrechnung/pruefung` | admin.vermittler.review | auth role:staff can:provisionen-verwalten |
+| POST | `admin/vermittler-abrechnung/rechnung` | admin.vermittler.invoice_upload | auth role:staff can:provisionen-verwalten |
+| GET | `admin/vermittler-abrechnung/rechnung/{id}` | admin.vermittler.invoice | auth role:staff can:provisionen-verwalten |
+| POST | `admin/vermittler-abrechnung/rechnung/{id}/bestaetigen` | admin.vermittler.invoice_confirm | auth role:staff can:provisionen-verwalten |
+| GET | `admin/vermittler-abrechnung/rechnung/{id}/datei` | admin.vermittler.invoice_file | auth role:staff can:provisionen-verwalten |
 | GET | `admin/vermittler-abrechnung/vertrag-suche` | admin.vermittler.contract_search | auth role:staff can:provisionen-verwalten |
 | POST | `admin/vermittler-abrechnung/vorgangsliste` | admin.vermittler.vorgangsliste | auth role:staff can:provisionen-verwalten |
 | GET | `admin/vermittler-abrechnung/{id}` | admin.vermittler.show | auth role:staff can:provisionen-verwalten |

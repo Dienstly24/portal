@@ -40,6 +40,8 @@ class CommissionStatus
         '1' => self::OFFEN, 'neu' => self::OFFEN, 'erfasst' => self::OFFEN,
         'bestaetigt' => self::OFFEN, 'bestätigt' => self::OFFEN,
         'faellig' => self::FAELLIG, 'fällig' => self::FAELLIG, 'due' => self::FAELLIG,
+        // TARIFCHECK24 Code 3 "verifiziert": bestaetigt, Zahlung steht aus.
+        'verifiziert' => self::FAELLIG, '3' => self::FAELLIG,
         'bezahlt' => self::BEZAHLT, 'paid' => self::BEZAHLT, 'gezahlt' => self::BEZAHLT,
         'ausgezahlt' => self::BEZAHLT, 'abgerechnet' => self::BEZAHLT, '4' => self::BEZAHLT,
         'teilweise bezahlt' => self::TEILWEISE, 'teilzahlung' => self::TEILWEISE,

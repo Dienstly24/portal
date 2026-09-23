@@ -450,7 +450,10 @@ class VermittlerAbrechnungTest extends TestCase
         $this->contract($customer, ['reference_number' => '1477-0000-0000-02', 'type' => 'hausrat']);
 
         $this->import($this->csv([
-            ['id' => '9001', 'referenz' => '1477-0000-0000-01', 'status' => '1', 'provision' => '75'],
+            // Status 4 (bezahlt gemeldet). Bis 23.09.2026 stand hier "1" und
+            // zaehlte als abgerechnet - Code 1 heisst aber OFFEN
+            // (VermittlerRechnungTest haelt das fest).
+            ['id' => '9001', 'referenz' => '1477-0000-0000-01', 'status' => '4', 'provision' => '75'],
             ['id' => '9002', 'referenz' => '1477-0000-0000-02', 'status' => '2', 'provision' => '75', 'storno' => 'Widerruf'],
         ]));
 

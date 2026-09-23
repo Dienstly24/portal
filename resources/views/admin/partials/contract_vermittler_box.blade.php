@@ -9,7 +9,7 @@
 @can('provisionen-verwalten')
 @php
     $vStatus = $contract->vermittlerStatus();
-    $vLast = $contract->vermittlerSettlements()->first();
+    $vLast = $contract->vermittlerSettlements()->with('invoice')->first();
     $vEvents = $contract->vermittlerEvents()->with('user')->get();
 @endphp
 <div class="card" style="max-width:980px;">
@@ -33,14 +33,37 @@
             <div class="muted-2xs">Produkt (Abrechnung)</div>
             <div style="font-weight:600;">{{ $vLast?->produkt ?: '—' }}</div>
         </div>
+        {{-- ERWARTET ist nicht BEZAHLT (Betreiber-Meldung 23.09.2026): hier
+             stand nur "Provision 75,00 €" neben einem gruenen Haken - das las
+             sich wie eine Zahlung, obwohl die CSV die Position als OFFEN
+             fuehrte. Bezahlt ist erst, was eine Rechnung belegt. --}}
         <div>
-            <div class="muted-2xs">Provision</div>
+            <div class="muted-2xs">Provision (erwartet laut CSV)</div>
             <div style="font-weight:600;">
                 @if($vLast && $vLast->provision !== null)
                     {{ number_format((float) $vLast->provision, 2, ',', '.') }} €
                     @if($vLast->isStorno())<span style="color:#A32D2D;font-weight:600;"> (storniert)</span>@endif
                 @else — @endif
             </div>
+            @if($vLast && $vLast->status_code !== null)
+            <div class="muted-xs">CSV-Status: {{ \App\Services\Vermittler\VermittlerStatusMap::codeLabel($vLast->status_code) }}</div>
+            @endif
+        </div>
+        <div>
+            <div class="muted-2xs">Zahlung</div>
+            @if($vLast && $vLast->paymentConfirmed())
+                <div style="font-weight:600;color:var(--emerald-deep);">✅ {{ number_format((float) $vLast->invoice_amount, 2, ',', '.') }} € belegt</div>
+                <div class="muted-xs">
+                    @if($vLast->invoice)<a href="{{ route('admin.vermittler.invoice', $vLast->invoice_id) }}">Rechnung {{ $vLast->invoice->invoice_number ?: $vLast->invoice->filename }}</a> · @endif
+                    {{ $vLast->payment_confirmed_at?->lokal()->format('d.m.Y') }}
+                </div>
+            @elseif($vLast && $vLast->invoice_id)
+                <div style="font-weight:600;color:#A32D2D;">⚠ Rechnung weicht ab</div>
+                <div class="muted-xs">Rechnung nennt {{ $vLast->invoice_amount !== null ? number_format((float) $vLast->invoice_amount, 2, ',', '.').' €' : 'keinen lesbaren Betrag' }}</div>
+            @else
+                <div style="font-weight:600;color:#B5651D;">Noch nicht belegt</div>
+                <div class="muted-xs">Belegt erst durch die Rechnung</div>
+            @endif
         </div>
         <div>
             <div class="muted-2xs">Letzter Abgleich</div>
@@ -75,7 +98,7 @@
             <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
                 <thead><tr style="text-align:left;color:var(--ink-soft);">
                     <th style="padding:6px 8px;">Datum</th><th style="padding:6px 8px;">Produkt</th>
-                    <th style="padding:6px 8px;">Status</th><th style="padding:6px 8px;">Provision</th>
+                    <th style="padding:6px 8px;">Status</th><th style="padding:6px 8px;">Provision (erwartet)</th><th style="padding:6px 8px;">Laut Rechnung</th>
                     <th style="padding:6px 8px;">Import</th>
                 </tr></thead>
                 <tbody>
@@ -85,6 +108,7 @@
                         <td style="padding:6px 8px;">{{ $row->produkt ?: '—' }}</td>
                         <td style="padding:6px 8px;">{{ $row->statusLabel() }}{{ $row->storno_reason ? ' – ' . $row->storno_reason : '' }}</td>
                         <td style="padding:6px 8px;">{{ $row->provision !== null ? number_format((float) $row->provision, 2, ',', '.') . ' €' : '—' }}</td>
+                        <td style="padding:6px 8px;">{{ $row->invoice_amount !== null ? number_format((float) $row->invoice_amount, 2, ',', '.') . ' €' . ($row->paymentConfirmed() ? ' ✅' : ' ⚠') : '—' }}</td>
                         <td style="padding:6px 8px;color:var(--ink-soft);">{{ $row->import?->filename ?: '—' }}</td>
                     </tr>
                 @endforeach

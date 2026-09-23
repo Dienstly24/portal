@@ -16,14 +16,22 @@ use App\Models\Contract;
 class VermittlerStatusMap
 {
     /**
-     * code => Abrechnungsstatus des Vertrags.
-     *  1 = bestaetigt, steht zur Abrechnung an ("In Abrechnung gefunden")
-     *  2 = storniert (dazu liefert der Vermittler einen Stornogrund)
-     *  4 = abgerechnet/ausgezahlt (taucht in der Gutschrift auf)
+     * code => Abrechnungsstatus des Vertrags (Betreiber-Vorgabe 23.09.2026,
+     * TARIFCHECK24):
+     *  1 = offen      - ueber die Provision ist noch NICHTS entschieden
+     *  2 = storniert  - dazu liefert der Vermittler einen Stornogrund
+     *  3 = verifiziert - vom Vermittler bestaetigt, Zahlung steht aus
+     *  4 = bezahlt    - laut Vermittler ausgezahlt; BELEGT ist das erst,
+     *                   wenn die Rechnung/Gutschrift den Betrag nennt
+     *
+     * Vorher stand hier "1 = bestaetigt" und Code 3 fehlte ganz: jede offene
+     * Position erschien gruen als "In Abrechnung gefunden", und jede
+     * verifizierte landete als unbekannter Code in der Pruefliste.
      */
     public const CODES = [
         '1' => Contract::VERMITTLER_IN_ABRECHNUNG,
         '2' => Contract::VERMITTLER_STORNIERT,
+        '3' => Contract::VERMITTLER_VERIFIZIERT,
         '4' => Contract::VERMITTLER_ABGERECHNET,
     ];
 
@@ -37,9 +45,11 @@ class VermittlerStatusMap
     public const TEXT_STATUSES = [
         'offen' => Contract::VERMITTLER_ID_ZUGEORDNET,
         'in bearbeitung' => Contract::VERMITTLER_ID_ZUGEORDNET,
-        'bestaetigt' => Contract::VERMITTLER_IN_ABRECHNUNG,
-        'bestätigt' => Contract::VERMITTLER_IN_ABRECHNUNG,
+        'verifiziert' => Contract::VERMITTLER_VERIFIZIERT,
+        'bestaetigt' => Contract::VERMITTLER_VERIFIZIERT,
+        'bestätigt' => Contract::VERMITTLER_VERIFIZIERT,
         'storniert' => Contract::VERMITTLER_STORNIERT,
+        'bezahlt' => Contract::VERMITTLER_ABGERECHNET,
         'abgerechnet' => Contract::VERMITTLER_ABGERECHNET,
     ];
 
@@ -52,9 +62,10 @@ class VermittlerStatusMap
 
     /** Klartext des Codes, wie ihn der Vermittler meint. */
     public const CODE_LABELS = [
-        '1' => 'Bestätigt (zur Abrechnung)',
+        '1' => 'Offen',
         '2' => 'Storniert',
-        '4' => 'Abgerechnet / ausgezahlt',
+        '3' => 'Verifiziert',
+        '4' => 'Bezahlt',
     ];
 
     /**
@@ -88,8 +99,10 @@ class VermittlerStatusMap
         Contract::VERMITTLER_REFERENZ => 2,
         Contract::VERMITTLER_ID_ZUGEORDNET => 3,
         Contract::VERMITTLER_IN_ABRECHNUNG => 4,
-        Contract::VERMITTLER_ABGERECHNET => 5,
-        Contract::VERMITTLER_STORNIERT => 5,
+        Contract::VERMITTLER_VERIFIZIERT => 5,
+        Contract::VERMITTLER_ABGERECHNET => 6,
+        Contract::VERMITTLER_STORNIERT => 6,
+        Contract::VERMITTLER_BEZAHLT_BELEGT => 7,
         Contract::VERMITTLER_PRUEFUNG => 9,
     ];
 

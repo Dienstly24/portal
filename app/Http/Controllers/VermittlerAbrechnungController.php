@@ -6,12 +6,14 @@ use App\Models\ActivityLog;
 use App\Models\Contract;
 use App\Models\Document;
 use App\Models\VermittlerImport;
+use App\Models\VermittlerInvoice;
 use App\Models\VermittlerSettlement;
 use App\Services\CommissionImport\CommissionSourceProfile;
 use App\Services\CommissionImport\TableReader;
 use App\Services\Vermittler\VermittlerAbrechnungImporter;
 use App\Services\Vermittler\VermittlerLinkService;
 use App\Services\Vermittler\VermittlerListeReader;
+use App\Services\Vermittler\VermittlerRechnungAbgleich;
 use App\Services\Vermittler\VermittlerReportService;
 use App\Services\Vermittler\VermittlerVorgangslisteImporter;
 use Illuminate\Http\Request;
@@ -43,6 +45,7 @@ class VermittlerAbrechnungController extends Controller implements HasMiddleware
             'openCount' => VermittlerSettlement::needsReview()->count(),
             'performance' => app(VermittlerReportService::class)->performance(),
             'ocrAvailable' => app(VermittlerListeReader::class)->ocrAvailable(),
+            'invoices' => VermittlerInvoice::with('uploader')->latest()->limit(20)->get(),
         ]);
     }
 
@@ -97,6 +100,97 @@ class VermittlerAbrechnungController extends Controller implements HasMiddleware
 
         return redirect()->route('admin.vermittler.show', $import->id)
             ->with('success', 'Import abgeschlossen: '.$import->rows_total.' Datensätze gelesen.');
+    }
+
+    /**
+     * Rechnung/Gutschrift des Vermittlers hochladen (PDF, Bild oder Text) und
+     * gegen die eingelesene Abrechnung pruefen (Betreiber-Auftrag
+     * 23.09.2026). Ergebnis ist ein ENTWURF - geschrieben wird erst mit
+     * `confirmInvoice`. Die Datei bleibt als Beleg auf der privaten Platte.
+     */
+    public function uploadInvoice(Request $request, VermittlerListeReader $reader, VermittlerRechnungAbgleich $abgleich)
+    {
+        $request->validate([
+            'rechnung_datei' => 'required|file|mimes:pdf,png,jpg,jpeg,webp,csv,txt|max:20480',
+        ], [], ['rechnung_datei' => 'Rechnung']);
+
+        $file = $request->file('rechnung_datei');
+        $binary = (string) file_get_contents($file->getPathname());
+        $hash = hash('sha256', $binary);
+        $name = (string) $file->getClientOriginalName();
+
+        $bereits = VermittlerInvoice::where('file_hash', $hash)
+            ->where('status', VermittlerInvoice::STATUS_BESTAETIGT)->first();
+        if ($bereits) {
+            return redirect()->route('admin.vermittler.invoice', $bereits->id)
+                ->with('error', 'Diese Rechnung wurde bereits am '.$bereits->confirmed_at?->lokal()->format('d.m.Y')
+                    .' übernommen. Es wurde nichts doppelt gebucht.');
+        }
+
+        try {
+            $text = $reader->textFromBinary($binary, (string) $file->getMimeType(), $name);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Die Rechnung konnte nicht gelesen werden: '.$e->getMessage());
+        }
+
+        $extension = strtolower($file->getClientOriginalExtension() ?: 'bin');
+        $path = 'vermittler-rechnungen/'.$hash.'.'.$extension;
+        // put() meldet einen Fehlschlag auch ohne Ausnahme mit false - dann
+        // laeuft der Abgleich trotzdem, nur ohne abgelegten Beleg.
+        if (! Storage::disk('local')->put($path, $binary)) {
+            $path = null;
+        }
+
+        $invoice = $abgleich->analyze($text, $name, $hash, $path, $extension, auth()->id());
+
+        ActivityLog::record('vermittler_rechnung_gelesen', 'vermittler_invoice', $invoice->id, [
+            'filename' => $invoice->filename,
+            'rows_found' => $invoice->rows_found,
+        ]);
+
+        if ($invoice->rows_found === 0) {
+            return redirect()->route('admin.vermittler.invoice', $invoice->id)
+                ->with('error', 'In der Rechnung wurde keine bekannte Id oder Referenz-Nr. gefunden. '
+                    .'Zuerst muss die monatliche CSV eingelesen sein - die Rechnung wird nur gegen Vorgänge geprüft, die wir kennen.');
+        }
+
+        return redirect()->route('admin.vermittler.invoice', $invoice->id)
+            ->with('success', 'Rechnung gelesen: '.$invoice->rows_found.' Positionen gefunden. Bitte prüfen und bestätigen.');
+    }
+
+    public function showInvoice(string $id)
+    {
+        $invoice = VermittlerInvoice::with(['uploader', 'confirmer'])->findOrFail($id);
+
+        return view('admin.vermittler_invoice', ['invoice' => $invoice]);
+    }
+
+    public function confirmInvoice(string $id, VermittlerRechnungAbgleich $abgleich)
+    {
+        $invoice = VermittlerInvoice::findOrFail($id);
+        if (! $invoice->isDraft()) {
+            return back()->with('error', 'Diese Rechnung ist bereits übernommen.');
+        }
+
+        $abgleich->confirm($invoice, auth()->id());
+
+        ActivityLog::record('vermittler_rechnung_bestaetigt', 'vermittler_invoice', $invoice->id, [
+            'rows_confirmed' => $invoice->rows_confirmed,
+            'rows_deviation' => $invoice->rows_deviation,
+        ]);
+
+        return redirect()->route('admin.vermittler.invoice', $invoice->id)
+            ->with('success', $invoice->rows_confirmed.' Zahlung(en) durch die Rechnung belegt'
+                .($invoice->rows_deviation > 0 ? ', '.$invoice->rows_deviation.' Abweichung(en) in die Prüfliste gestellt' : '').'.');
+    }
+
+    /** Die Rechnung selbst - nur ueber diesen Controller, nie ueber eine oeffentliche URL. */
+    public function invoiceFile(string $id)
+    {
+        $invoice = VermittlerInvoice::findOrFail($id);
+        abort_if(! $invoice->file_path || ! Storage::disk('local')->exists($invoice->file_path), 404);
+
+        return Storage::disk('local')->download($invoice->file_path, $invoice->filename);
     }
 
     /**
