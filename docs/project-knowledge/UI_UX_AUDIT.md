@@ -1,9 +1,10 @@
 # UI/UX Audit
 
-Stand: 23.09.2026. **In dieser Sitzung wurde keine Browser-Pruefung
-durchgefuehrt** - die Befunde unten stammen aus Code-Analyse (neu) und den
-Browser-Laeufen der letzten Audits (16.09., 19.09.2026). Eine neue
-Browser-Runde ist im Fahrplan (R-06).
+Stand: 23.09.2026. Befunde aus Code-Analyse und den Browser-Laeufen der
+letzten Audits (16.09., 19.09.2026). In der Reparaturrunde 23.09.2026 im
+Browser geprueft (Chromium, 390 px AR + 1440 px): Registrierungs-Bestaetigung
+arabisch (dabei KI-021 gefunden und behoben), Ankuendigungen je Rolle,
+`/verify-email` -> 404. Eine VOLLE Browser-Runde bleibt im Fahrplan (R-18).
 
 ## Stand laut letzter Browser-Pruefung (16.09.2026)
 
@@ -27,10 +28,12 @@ und angemeldet: keine Konsolen-/Netzwerkfehler, kein waagerechter Bildlauf,
 
 | Befund | Wirkung | Issue |
 |---|---|---|
-| 28 `__()`-Texte in Kundenbereichen ohne arabische Uebersetzung, darunter die komplette Seite "Bitte bestaetigen Sie Ihre E-Mail-Adresse" nach der Registrierung, "Fruehere Nachrichten laden" im Chat und "Cookie-Einstellungen" im Website-Fuss | arabischer Kunde liest mitten im Ablauf Deutsch | KI-007 |
-| Breeze-Reste `verify-email`/`confirm-password` auf Englisch, erreichbar per URL | fremdes Aussehen, englisch, tote Funktion | KI-016 |
+| 21 kundensichtbare `__()`-Texte ohne arabische Uebersetzung (u.a. ganze Seite nach der Registrierung) | arabischer Kunde las Deutsch | KI-007 **behoben** |
+| Breeze-Reste `verify-email`/`confirm-password` auf Englisch | tote Funktion | KI-016 **behoben** |
+| Haekchen der Registrierungsseite lag in AR auf dem Text | Lesbarkeit | KI-021 **behoben** |
 | ~4900 `style="..."` in Vorlagen, groesste Vorlagen >1500 Zeilen | Konsistenz schwer zu halten, jede Aenderung riskant | TD-02 |
-| Mitarbeiter-Anlage: Formular zeigt einem Manager Rechte, die er nicht vergeben kann; Mail nennt sie trotzdem | irrefuehrende Rueckmeldung | KI-006 |
+| Mitarbeiter-Anlage: Mail nannte nicht vergebene Rechte | irrefuehrend | KI-006 **behoben** (das Formular zeigt die Kaesten weiterhin allen - offen als Verbesserung) |
+| Loeschknopf an fremden Ankuendigungen | Mitarbeiter konnte Leitungs-Mitteilungen loeschen | KI-019 **behoben** |
 
 ## Pruefregeln (verbindlich)
 

@@ -16,24 +16,24 @@ Legende Aufwand: S (< 1/2 Tag), M (1-2 Tage), L (mehrere Tage).
 | R-02 | Sicherung in Betrieb nehmen (Passwort, zweiter Ort, Cron) + `restore.sh --pruefen` auf dem Server | KI-004 | Betreiber | S |
 | R-03 | Planer-Cron + Worker `default` UND `lang` pruefen (`/admin/systemzustand`, `queue:health`) | KI-013 | Betreiber | S |
 | R-04 | Netz: `scripts/netz-pruefen.sh --vorschlag`, Firewall mit offener Zweitsitzung | KI-003 | Betreiber | S |
-| R-05 | Rechtstexte: Turnstile + Hoster in Datenschutzerklaerung, NESA-Angaben, AGB-Haftung; KI-/Signatur-Rechtsfragen | KI-012, KI-008, KI-009 | Betreiber + Anwalt | M |
+| R-05 | Rechtstexte: Hoster, NESA-Angaben, AGB-Haftung pruefen; Turnstile-Absatz (seit 23.09.2026 im Code) anwaltlich gegenlesen; KI-/Signatur-Rechtsfragen | KI-012, KI-008, KI-009 | Betreiber + Anwalt | M |
 
 ## Stufe 1 - kleine, sichere Code-Korrekturen (sofort umsetzbar)
 
 | R | Aufgabe | Issue | Aufwand |
 |---|---|---|---|
-| R-06 | 28 arabische Uebersetzungen + Waechter-Test "jeder Kundentext hat `ar.json`-Eintrag" | KI-007 | S |
-| R-07 | Einladungsmail listet nur tatsaechlich vergebene Rechte (+ Test) | KI-006 | S |
-| R-08 | Standard-Locale `de` in `config/app.php` und `.env.example` (+ Test fuer Konsolen-Kontext) | KI-014 | S |
-| R-09 | Waechter-Test: kein Portal-/Partner-Endpunkt liefert interne Provisions-Kennungen | KI-010 | S |
-| R-10 | Funktionstests fuer Termine, Ankuendigungen, Tarifrechner | KI-011 | S |
+| R-06 | ~~Arabische Uebersetzungen + Waechter-Test~~ **erledigt 23.09.2026** | KI-007, KI-021 | - |
+| R-07 | ~~Einladungsmail nur mit vergebenen Rechten~~ **erledigt 23.09.2026** | KI-006 | - |
+| R-08 | ~~Standard-Locale `de`~~ **erledigt 23.09.2026** | KI-014 | - |
+| R-09 | ~~Waechter-Test interne Kennungen~~ **erledigt 23.09.2026** | KI-010 | - |
+| R-10 | ~~Funktionstests Termine/Ankuendigungen/Tarifrechner~~ **erledigt 23.09.2026** (dabei KI-019, KI-020 behoben) | KI-011 | - |
 
 ## Stufe 2 - Aufraeumen
 
 | R | Aufgabe | Issue | Aufwand |
 |---|---|---|---|
-| R-11 | Breeze-Reste, ungenutzte Mail-Anbieter-Konfiguration und `autoprefixer` entfernen (mit 404-Test) | KI-016, KI-017 | S |
-| R-12 | CI-Action-Versionen vereinheitlichen, Kommentar korrigieren | KI-015 | S |
+| R-11 | ~~Breeze-Reste und `autoprefixer` entfernen~~ **erledigt 23.09.2026** (Mail-Anbieter-Konfiguration bewusst belassen) | KI-016, KI-017 | - |
+| R-12 | ~~CI-Versionen vereinheitlichen~~ **erledigt 23.09.2026** | KI-015 | - |
 | R-13 | "Employee & Support Customer Access Architecture": Default `can_see_all_customers=false`, Altkonten-Liste, Spezifikation + Sicherheitstests | KI-001 | M (Betreiber-Entscheidung vorab) |
 
 ## Stufe 3 - Struktur (laufend, je PR ein Stueck)
@@ -55,7 +55,8 @@ Website-DNS-Umzug + Rueckbau statische Seite (TD-09) · Redis.
 
 ## Empfohlene naechste Arbeitspakete
 
-1. **R-06 + R-07 + R-08** in einem PR (klein, kundensichtbar, testbar).
-2. **R-09 + R-10** (Tests, kein Verhaltenswechsel).
-3. **R-11 + R-12** (Aufraeumen).
-4. Parallel: Betreiber arbeitet Stufe 0 ab; Ergebnisse hier + in KNOWN_ISSUES eintragen.
+Stufe 1 und 2 (ausser R-13) sind am 23.09.2026 erledigt. Als Naechstes:
+
+1. **Betreiber: Stufe 0** (R-01..R-05) - das sind jetzt die groessten Risiken.
+2. **R-13** nach Entscheidung des Betreibers (Zugriffsarchitektur).
+3. **R-18** Browser-Runde als Nachweis, dann **R-14** (erster Strukturschnitt).

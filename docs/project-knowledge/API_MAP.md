@@ -1,6 +1,6 @@
 # API Map - Routen und Endpunkte
 
-Stand: 23.09.2026, **509 Routen** (`php artisan route:list`). Vollstaendige
+Stand: 23.09.2026, **504 Routen** (nach Entfernen der Breeze-Reste, KI-016) (`php artisan route:list`). Vollstaendige
 Liste mit Schutz je Route: [ROUTES_INVENTORY.md](ROUTES_INVENTORY.md)
 (generiert, nie von Hand pflegen).
 
@@ -17,7 +17,7 @@ laufen durch die Web-Middleware-Gruppe. `api/*` liefert bei Fehlern JSON
 | `portal/*` | 52 | auth + role:customer |
 | `partner/*` | 6 | auth + role:partner |
 | `unterschreiben/*` | 10 | oeffentlich, Token + Limiter `signatur` |
-| Auth (`login`, `register*`, `forgot-password*`, `reset-password*`, `zugang/*`, `passwort-festlegen`, `sicherheit/*`, `verify-email*`, `confirm-password`, `password`, `logout`) | ~30 | guest bzw. auth |
+| Auth (`login`, `register*`, `forgot-password*`, `reset-password*`, `zugang/*`, `passwort-festlegen`, `sicherheit/*`, `password`, `logout`) | ~25 | guest bzw. auth |
 | Website (`/`, `website`, `leistungen*`, `{page}`, `ar/*`, `versicherungsmakler-hamburg`, `kontakt*`, `robots.txt`, `sitemap.xml`, `{page}.html`, `index.html`) | ~20 | oeffentlich |
 | `api/*` | 6 | oeffentlich, gedrosselt, CSRF-Ausnahme fuer 2 POSTs |
 | `webhooks/*` | 2 | oeffentlich, HMAC im Adapter, throttle 300/min |

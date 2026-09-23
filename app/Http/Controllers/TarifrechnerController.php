@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Announcement;
 use App\Models\TarifrechnerLink;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class TarifrechnerController extends Controller
@@ -103,7 +104,18 @@ class TarifrechnerController extends Controller
     }
 
     public function destroyAnnouncement($id) {
-        Announcement::findOrFail($id)->delete();
+        $announcement = Announcement::findOrFail($id);
+        // KI-019: vorher konnte JEDER Mitarbeiter JEDE Ankuendigung loeschen,
+        // auch die der Leitung. Loeschen darf der Ersteller oder die Leitung.
+        abort_unless(self::darfAnkuendigungLoeschen(auth()->user(), $announcement), 403);
+        $announcement->delete();
         return back()->with('success', 'Ankündigung gelöscht.');
+    }
+
+    /** Die EINE Regel fuer Loeschknopf und Loeschroute. */
+    public static function darfAnkuendigungLoeschen(User $user, Announcement $announcement): bool
+    {
+        return in_array($user->role, ['admin', 'manager'], true)
+            || (int) $announcement->created_by === (int) $user->id;
     }
 }

@@ -91,5 +91,8 @@ manuell geprueft (alle gescoped oder nur admin/manager).
 
 ## 7. Offene Punkte
 
-KI-001 (Default `can_see_all_customers`), KI-006 (Rechte-Liste in der
-Einladungsmail), Breeze-Reste `verify-email`/`confirm-password` (TD-05).
+KI-001 (Default `can_see_all_customers`, Betreiber-Entscheidung).
+Behoben 23.09.2026: KI-006 (Einladungsmail nennt nur vergebene Rechte),
+KI-016 (Breeze-Seiten `verify-email`/`confirm-password` samt Routen entfernt -
+es gibt KEINE E-Mail-Verifikation per `MustVerifyEmail` und keine Route mit
+`password.confirm`).

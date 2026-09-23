@@ -14,32 +14,40 @@ Stand der Pruefung: 23.09.2026 (`main` @ 04c0823). Ergebnis des ersten
 Voll-Audits: **kein CRITICAL-Befund im Code.** Die hoechsten Risiken liegen im
 BETRIEB (Server-Zustand nicht belegt) und in RECHTLICHEN Voraussetzungen.
 
-## Uebersicht offen
+## Uebersicht
 
-| ID | Sev | Kategorie | Kurz |
-|---|---|---|---|
-| KI-002 | HIGH | ops/security | Turnstile-Schluessel in Produktion nicht belegt - Registrierung ggf. komplett blockiert |
-| KI-004 | HIGH | ops | Sicherung auf dem Server nicht belegt in Betrieb |
-| KI-008 | HIGH | legal | KI-Assistent/KI-Training: DPA, Datenschutzerklaerung, Verarbeitungsverzeichnis |
-| KI-012 | MEDIUM | legal | Rechtstexte: 5 offene TODOs + Turnstile fehlt in Datenschutzerklaerung |
-| KI-003 | MEDIUM | security | Netzseite: keine Host-Firewall, Origin-Direktzugriff ungeprueft |
-| KI-007 | MEDIUM | ux-i18n | 28 kundensichtbare Texte ohne arabische Uebersetzung |
-| KI-009 | MEDIUM | legal | E-Signatur: Formerfordernis je Geschaeftsfall ungeklaert |
-| KI-013 | MEDIUM | ops | Worker und Cron in Produktion nicht aus dem Repo belegbar |
-| KI-001 | LOW | security | `users.can_see_all_customers` Default `true` in der Migration |
-| KI-006 | LOW | correctness | Einladungsmail nennt Rechte, die nicht vergeben wurden |
-| KI-010 | LOW | security | Interne Provisions-Kennungen am `contracts`-Datensatz ohne `$hidden` |
-| KI-011 | LOW | testing | Termine, Ankuendigungen, Tarifrechner ohne Funktionstests |
-| KI-014 | LOW | ops | Standard-Locale `en` in Konsole/Queue |
-| KI-015 | LOW | maintenance | CI: gemischte Action-Versionen, veralteter Kommentar |
-| KI-016 | LOW | maintenance | Tote Breeze-Reste und ungenutzte Konfiguration |
-| KI-017 | LOW | maintenance | `autoprefixer` ungenutzt, wird trotzdem aktualisiert |
-| KI-005 | LOW | feature-gap | BIMI: Zertifikat + Auslieferungsort fehlen |
-| KI-018 | LOW | maintenance | `phpstan/phpstan` in netzbeschraenkten Umgebungen nicht installierbar |
+Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba`).
+
+| ID | Sev | Kategorie | Kurz | Status |
+|---|---|---|---|---|
+| KI-002 | HIGH | ops/security | Turnstile-Schluessel in Produktion nicht belegt | OPEN (Betreiber) |
+| KI-004 | HIGH | ops | Sicherung auf dem Server nicht belegt in Betrieb | OPEN (Betreiber) |
+| KI-008 | HIGH | legal | KI-Assistent/KI-Training: DPA, Datenschutz, Verzeichnis | OPEN (Betreiber) |
+| KI-012 | MEDIUM | legal | Rechtstexte: TODOs; Turnstile-Absatz jetzt vorhanden | IN_PROGRESS |
+| KI-003 | MEDIUM | security | Netzseite: keine Host-Firewall, Origin ungeprueft | OPEN (Betreiber) |
+| KI-009 | MEDIUM | legal | E-Signatur: Formerfordernis ungeklaert | OPEN (Betreiber) |
+| KI-013 | MEDIUM | ops | Worker und Cron nicht aus dem Repo belegbar | OPEN (Betreiber) |
+| KI-001 | LOW | security | `can_see_all_customers` Default `true` | OPEN (Betreiber-Entscheidung) |
+| KI-005 | LOW | feature-gap | BIMI: Zertifikat + Auslieferungsort | OPEN (Betreiber) |
+| KI-018 | LOW | maintenance | phpstan in netzbeschraenkter Umgebung nicht installierbar | OPEN (Hinweis) |
+| KI-007 | MEDIUM | ux-i18n | 21 Kundentexte ohne arabische Uebersetzung | FIXED |
+| KI-006 | LOW | correctness | Einladungsmail nennt nicht vergebene Rechte | FIXED |
+| KI-010 | LOW | security | Interne Kennungen am Vertragsdatensatz | FIXED (Waechter-Test) |
+| KI-011 | LOW | testing | Termine, Ankuendigungen, Tarifrechner ohne Tests | FIXED |
+| KI-014 | LOW | ops | Standard-Locale `en` in Konsole/Queue | FIXED |
+| KI-015 | LOW | maintenance | CI: gemischte Action-Versionen | FIXED |
+| KI-016 | LOW | maintenance | Tote Breeze-Reste | FIXED (Mail-Anbieter-Konfiguration: WONT_FIX) |
+| KI-017 | LOW | maintenance | `autoprefixer` ungenutzt | FIXED |
+| KI-019 | MEDIUM | security | Jeder Mitarbeiter konnte jede Ankuendigung loeschen | FIXED |
+| KI-020 | LOW | correctness | Termin: `assigned_to` ungeprueft (500er unter MySQL) | FIXED |
+| KI-021 | LOW | ux-i18n | Registrierungsseite AR: Haekchen ueber dem Text | FIXED |
+
+FIXED wird zu VERIFIED, sobald der PR gemergt und die CI (inkl. MySQL-Lauf
+und PHPStan) auf `main` gruen ist.
 
 ---
 
-## Offene Befunde im Detail
+## Befunde im Detail
 
 ### KI-001 - `can_see_all_customers` Default `true`
 - **Category** security · **Severity** LOW · **Status** OPEN (Betreiber-Entscheidung)
@@ -84,22 +92,24 @@ BETRIEB (Server-Zustand nicht belegt) und in RECHTLICHEN Voraussetzungen.
 - **Recommended Fix** siehe CLAUDE.md "Offene Themen / BIMI". **Discovered** 22.09.2026
 
 ### KI-006 - Einladungsmail nennt nicht vergebene Rechte
-- **Category** correctness · **Severity** LOW · **Status** OPEN
+- **Category** correctness · **Severity** LOW · **Status** FIXED
 - **Location** `app/Http/Controllers/EmployeeController.php` (`store`, Liste `$permLabels`)
 - **Description** Die Rechte fuer das Konto kommen aus `vergebbareRechte()` (ein Manager kann nur eigene Rechte weitergeben), die Rechte-LISTE in `EmployeeWelcomeMail` dagegen aus `$request->has(...)`. Das Formular zeigt einem Manager alle fuenf Rechte an.
 - **Impact** Kreuzt ein Manager ein Recht an, das er selbst nicht hat, wird es korrekt NICHT vergeben, die Mail behauptet es aber.
 - **Recommended Fix** `$permLabels` aus den tatsaechlich gespeicherten Werten des neuen Kontos bilden (`$employee->can_*`).
 - **Verification** Test: Manager ohne `can_send_emails` kreuzt es an -> Mail enthaelt es nicht.
 - **Discovered** 23.09.2026 · **Last Verified** 23.09.2026
+- **Fix (23.09.2026)**: `$permLabels` aus dem gespeicherten Konto (`$employee->can_*`). Test `EinladungsmailRechteTest` (scheiterte vorher).
 
 ### KI-007 - Fehlende arabische Uebersetzungen
-- **Category** ux-i18n · **Severity** MEDIUM · **Status** OPEN
+- **Category** ux-i18n · **Severity** MEDIUM · **Status** FIXED
 - **Location** `lang/ar.json`; betroffen u.a. `auth/register-pending` (10 Saetze - die ganze Seite nach der Registrierung), `portal/dashboard` (Banner), `portal/messages` ("Fruehere Nachrichten laden", "Wird geladen"), `partials/doc_preview`, `website` ("Cookie-Einstellungen" im Fuss), `services/thanks`, `auth/register`.
 - **Root Cause** Neue `__()`-Texte ohne `ar.json`-Eintrag; kein Test deckt Vollstaendigkeit ab.
 - **Impact** Arabischsprachige Kunden sehen mitten im Ablauf deutschen Text (ausgerechnet nach der Registrierung).
 - **Recommended Fix** 28 Schluessel uebersetzen + Waechter-Test "jeder `__()`-Text in portal/auth/website/services/partials steht in `ar.json`" (Breeze-Reste ausnehmen oder loeschen, KI-016).
 - **Verification** Pruefskript aus dieser Sitzung (Regex ueber `__('...')`) meldet 0.
 - **Discovered** 23.09.2026
+- **Fix (23.09.2026)**: 21 Uebersetzungen in `lang/ar.json`; die 7 englischen Breeze-Texte entfielen mit KI-016. Waechter `ArabischeUebersetzungVollstaendigTest` (portal, auth, website, services, support, partials; scheiterte vorher). Im Browser (390 px, AR) geprueft.
 
 ### KI-008 - KI: rechtliche Voraussetzungen
 - **Category** legal · **Severity** HIGH · **Status** OPEN (Betreiber)
@@ -112,23 +122,26 @@ BETRIEB (Server-Zustand nicht belegt) und in RECHTLICHEN Voraussetzungen.
 - **Description** Einfache elektronische Signatur; welche Vorgaenge Schriftform brauchen (Sect. 126a BGB), ist anwaltlich zu klaeren; Nachweisdaten ins Verarbeitungsverzeichnis. **Discovered** 09.09.2026
 
 ### KI-010 - Interne Kennungen am Vertragsdatensatz
-- **Category** security · **Severity** LOW · **Status** OPEN
+- **Category** security · **Severity** LOW · **Status** FIXED
 - **Location** `app/Models/Contract.php` (kein `$hidden`); Spalten `vermittler_id`, `vermittler_*`, `internal_contract_number`, `commission_status`, `pool`; Relationen `contractCommissions()`, `provisions()`, `vermittlerSettlements()`
 - **Description** Die strukturelle Trennung "Kunde hat keine Beziehung zu Provisionen" gilt fuer `Customer`, nicht fuer `Contract`. Im Portal ist heute nichts betroffen (Views geben Felder einzeln aus, kein `@json($contract)`, Test prueft HTML). Ein kuenftiger JSON-Endpunkt im Portal, der ein Vertragsmodell serialisiert, wuerde diese Werte ausliefern.
 - **Recommended Fix** Waechter-Test: kein Portal-/Partner-Endpunkt liefert diese Schluessel; alternativ API-Resource fuer Portal-Vertraege. `$hidden` nur nach Pruefung der Admin-JSON-Nutzung.
 - **Discovered** 23.09.2026
+- **Fix (23.09.2026)**: Waechter `PortalOhneInterneKennungenTest` ruft JEDE GET-Seite des Kundenportals (plus Vertragsdetail) und das Partnerportal ab und verbietet `vermittler_id`, `internal_contract_number`, `pool`. Gegenprobe: ein eingebautes `json_encode($contract)` laesst ihn scheitern. `$hidden` bewusst NICHT gesetzt (Admin-JSON unveraendert).
 
 ### KI-011 - Fehlende Funktionstests
-- **Category** testing · **Severity** LOW · **Status** OPEN
+- **Category** testing · **Severity** LOW · **Status** FIXED
 - **Location** `AppointmentController`, Ankuendigungen (`AdminController`), `TarifrechnerController` - nur indirekt in Rechte-/Index-Tests beruehrt.
 - **Recommended Fix** je ein Feature-Test fuer Anlegen/Bearbeiten/Loeschen inkl. Portfolio-Scope. **Discovered** 23.09.2026
+- **Fix (23.09.2026)**: `TermineAnkuendigungenTarifrechnerTest` (12 Faelle). Beim Schreiben gefunden: KI-019, KI-020.
 
 ### KI-012 - Rechtstexte unvollstaendig
-- **Category** legal · **Severity** MEDIUM · **Status** OPEN (Betreiber/Anwalt)
+- **Category** legal · **Severity** MEDIUM · **Status** IN_PROGRESS
 - **Location** `resources/views/website/legal/`: `datenschutz` (Hoster Hostinger nennen; **Cloudflare Turnstile fehlt ganz** - Pflicht laut SEC-1), `erstinformation` (2x NESA bestaetigen), `agb` (Haftung pruefen), `widerruf` (Abschnitt deaktiviert).
 - **Impact** Abmahn-/Aufsichtsrisiko; Datenschutzerklaerung nennt einen eingesetzten Empfaenger nicht.
 - **Recommended Fix** Texte durch Anwalt/DSB; Turnstile-Absatz ergaenzen (Empfaenger Cloudflare, Zweck, Art. 6 Abs. 1 lit. f).
 - **Discovered** vor 30.07.2026 (TODOs), Turnstile-Luecke bestaetigt 23.09.2026
+- **Teilfix (23.09.2026)**: Absatz "Schutz der Registrierung (Cloudflare Turnstile)" in `website/legal/datenschutz`, erscheint NUR bei gesetztem Site-Key (wie Matomo). Test `DatenschutzTurnstileTest`. Offen bleiben die anwaltliche Pruefung des Wortlauts und die uebrigen TODOs (Hoster, NESA, AGB-Haftung, Widerruf).
 
 ### KI-013 - Worker/Cron nicht belegt
 - **Category** ops · **Severity** MEDIUM · **Status** OPEN (Betreiber-Pruefung)
@@ -137,33 +150,59 @@ BETRIEB (Server-Zustand nicht belegt) und in RECHTLICHEN Voraussetzungen.
 - **Discovered** 23.09.2026
 
 ### KI-014 - Standard-Locale `en`
-- **Category** ops · **Severity** LOW · **Status** OPEN
+- **Category** ops · **Severity** LOW · **Status** FIXED
 - **Location** `config/app.php` (`locale`, `fallback_locale` = `en`), `.env.example`
 - **Description** Web-Anfragen setzen de/ar per `SetLocale`. Konsole und Queue laufen ohne Middleware mit `en` - Validierungs-/`__()`-Texte in geplanten Laeufen und gequeueten Mails fallen auf Englisch bzw. auf den Schluessel zurueck. Produktionswert von `APP_LOCALE`: UNKNOWN.
 - **Recommended Fix** Default `de` (Konfiguration + `.env.example`), Mails mit fester Sprache weiter per `->locale()`.
 - **Discovered** 23.09.2026
+- **Fix (23.09.2026)**: `App\Support\Sprache` (EINE Liste de/ar), `AppServiceProvider` stellt beim Start jede andere Sprache auf `de` - greift auch bei einer alten Server-.env mit `APP_LOCALE=en`; Standard in `config/app.php` und `.env.example` = `de`; `SetLocale` nutzt dieselbe Liste. Test `StandardspracheTest` (Gegenprobe ohne den Aufruf: rot).
 
 ### KI-015 - CI-Pflege
-- **Category** maintenance · **Severity** LOW · **Status** OPEN
+- **Category** maintenance · **Severity** LOW · **Status** FIXED
 - **Location** `.github/workflows/deploy.yml`
 - **Description** `actions/checkout` @v4 und @v7, `actions/cache` @v4 und @v6, `actions/setup-node` @v4 und @v7 gemischt (Dependabot hat nur einzelne Jobs angehoben); Kommentar im Job `qualitaet` nennt "922 Meldungen", Baseline hat 290.
 - **Recommended Fix** Versionen vereinheitlichen, Kommentar korrigieren. **Discovered** 23.09.2026
+- **Fix (23.09.2026)**: checkout@v7, cache@v6, setup-node@v7 in allen Jobs; Kommentar ohne veraltete Zahl.
 
 ### KI-016 - Tote Reste
-- **Category** maintenance · **Severity** LOW · **Status** OPEN
+- **Category** maintenance · **Severity** LOW · **Status** FIXED
 - **Location** Routen `verify-email*`, `email/verification-notification`, `confirm-password` (keine Route nutzt `verified`/`password.confirm`); Views `auth/verify-email`, `auth/confirm-password`, `layouts/guest`; Komponenten `auth-session-status`, `danger-button`, `nav-link`, `responsive-nav-link`, `secondary-button` (0 Nutzungen) und `application-logo`, `input-*`, `text-input`, `primary-button` (nur von diesen Resten genutzt); `config/services.php`: postmark, resend, ses, slack.
 - **Impact** Sieht wie Funktion aus, ist keine (Lehre Workflow-Engine); englische Texte ohne Uebersetzung.
 - **Recommended Fix** Entfernen mit Test, dass die Routen 404 liefern; vorher `EnsurePasswordChanged`-Ausnahmeliste (`password.confirm`) mitziehen. **Discovered** 23.09.2026
+- **Fix (23.09.2026)**: 4 Controller, 2 Seiten, `layouts/guest`, `GuestLayout`, 10 Komponenten und 2 Breeze-Tests entfernt; Routen weg (504 statt 509); `password.confirm` aus der Ausnahmeliste von `EnsurePasswordChanged`. Test `BreezeResteEntferntTest` (404, Routen fehlen, keine Route verlangt `password.confirm`). **WONT_FIX**: postmark/resend/ses/slack in `config/services.php` - sie gehoeren zu den Standard-Mailern in `config/mail.php`; einseitig entfernt waere die Konfiguration inkonsistent, Nutzen gering.
 
 ### KI-017 - `autoprefixer` ungenutzt
-- **Category** maintenance · **Severity** LOW · **Status** OPEN
+- **Category** maintenance · **Severity** LOW · **Status** FIXED
 - **Location** `package.json` devDependencies; `postcss.config.js` ist leer
 - **Recommended Fix** Paket entfernen (`npm uninstall autoprefixer`), Build pruefen. **Discovered** 23.09.2026
+- **Fix (23.09.2026)**: `npm uninstall autoprefixer` (9 Pakete aus dem Lockfile), `npm run build` gruen.
 
 ### KI-018 - phpstan in netzbeschraenkter Umgebung
 - **Category** maintenance · **Severity** LOW · **Status** OPEN (Hinweis)
 - **Description** `phpstan/phpstan` wird nur als Zip ueber `api.github.com` verteilt; ist der Host gesperrt, hilft auch `--prefer-source` nicht. Folge: `composer stan` lokal nicht ausfuehrbar, die CI bleibt Massstab. Umgehung fuer Tests: Paket voruebergehend aus Lock/composer.json nehmen, danach `git checkout` (so am 23.09.2026 gemacht).
 - **Discovered** 23.09.2026
+
+### KI-019 - Jeder Mitarbeiter konnte jede Ankuendigung loeschen
+- **Category** security · **Severity** MEDIUM · **Status** FIXED
+- **Location** `TarifrechnerController::destroyAnnouncement`, `admin/announcements.blade.php`
+- **Description** Die Route stand fuer alle Staff-Rollen offen und prueft den Eigentuemer nicht; der Loeschknopf stand an jeder Ankuendigung. Ein Mitarbeiter konnte Mitteilungen der Leitung entfernen.
+- **Fix (23.09.2026)**: `darfAnkuendigungLoeschen()` (Ersteller oder admin/manager) als EINE Regel fuer Route UND Knopf. Test `TermineAnkuendigungenTarifrechnerTest` (scheiterte vorher mit 302 statt 403); im Browser: Mitarbeiter 1 Knopf (eigene), Leitung 2.
+- **Discovered** 23.09.2026
+
+### KI-020 - Termin nahm `assigned_to` ungeprueft an
+- **Category** correctness · **Severity** LOW · **Status** FIXED
+- **Location** `AppointmentController::store`
+- **Description** Eine unbekannte Nutzer-ID fuehrte zu einem Fremdschluessel-Fehler (500er, im Test nachgewiesen); auch ein Kundenkonto waere als "Zustaendiger" eintragbar gewesen.
+- **Fix (23.09.2026)**: Validierung `exists:users,id` beschraenkt auf Staff-Rollen. Test in `TermineAnkuendigungenTarifrechnerTest`.
+- **Discovered** 23.09.2026
+
+### KI-021 - Registrierungsseite (AR): Haekchen ueber dem Text
+- **Category** ux-i18n · **Severity** LOW · **Status** FIXED
+- **Location** `resources/views/auth/register-pending.blade.php`
+- **Description** Im Browser (390 px, Arabisch) gefunden: das Haekchen wanderte nach rechts, der Freiraum blieb links (`padding-left`) - das Zeichen lag auf dem ersten Wort.
+- **Fix (23.09.2026)**: `padding-inline-start`; Test in `ArabischeUebersetzungVollstaendigTest`; Screenshot nach dem Fix geprueft.
+- **Discovered** 23.09.2026
+
 
 ---
 

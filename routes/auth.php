@@ -1,16 +1,12 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\ConfirmablePasswordController;
-use App\Http\Controllers\Auth\EmailVerificationNotificationController;
-use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\PasswordSetupController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\TwoFactorController;
-use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -134,25 +130,10 @@ Route::middleware('auth')->group(function () {
     Route::post('sicherheit/bestaetigen', [TwoFactorController::class, 'challengeStore'])
         ->middleware('throttle:20,1')->name('two_factor.challenge.store');
 
-    Route::get('verify-email', EmailVerificationPromptController::class)
-        ->name('verification.notice');
-
-    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
-
-    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
-        ->name('verification.send');
-
-    Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
-        ->name('password.confirm');
-
-    // Throttle wie bei Login/Reset: sonst kann ein gekaperte Session (z.B. ueber
-    // einen geleakten Magic-Login-Link) das echte Passwort unbegrenzt raten und
-    // damit die Passwort-Bestaetigung aushebeln (Audit AUTH-3).
-    Route::post('confirm-password', [ConfirmablePasswordController::class, 'store'])
-        ->middleware('throttle:6,1');
+    // KEINE Seiten "E-Mail bestaetigen" / "Passwort bestaetigen" (Breeze-Reste,
+    // entfernt 23.09.2026, KI-016): User implementiert bewusst NICHT
+    // MustVerifyEmail - die Registrierung ist zweistufig (SEC-1) - und keine
+    // Route verlangte je `password.confirm`. Tests: BreezeResteEntferntTest.
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 

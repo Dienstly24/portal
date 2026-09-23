@@ -58,6 +58,12 @@ cd /var/www/dienstly24/portal && git fetch --all --prune \
 | Edge | Hoster-CDN `hcdn`, nicht Cloudflare (05.09.2026) |
 | Backup (`scripts/backup.sh`, GPG, zweiter Ort, Cron) | Skript bewiesen 16.09.2026; Inbetriebnahme auf dem Server **UNKNOWN** -> KI-004 |
 
+## Sprache (seit 23.09.2026, KI-014)
+
+`APP_LOCALE` soll auf dem Server `de` sein. Steht dort noch `en` aus der alten
+Vorlage, ist das unschaedlich: `App\Support\Sprache` stellt beim Start jede
+nicht unterstuetzte Sprache auf `de`.
+
 ## Betriebs-/Diagnosebefehle (auf dem Server)
 
 `php artisan ki:pruefen [--live]` · `queue:health` · `ocr:check` ·

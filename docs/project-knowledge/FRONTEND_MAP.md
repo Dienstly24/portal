@@ -48,14 +48,13 @@ Test: `DesignSystemTest`.
 | `layouts/admin.blade.php` | alle `/admin`-Seiten | Sidebar aus `App\Support\Navigation\AdminNavigation` (Gruppen: Dashboard, Postfach, Mein Tag, Kunden, Dokumente, Vertrieb, Marketing, Administration), Kopfzeilen-Suche, Glocke, Nav-Badges (`NavBadges`) |
 | `layouts/portal.blade.php` | `/portal` | Telefon-first (Topbar + Tabbar, safe-area), DE/AR, `dir="rtl"` |
 | `layouts/partner.blade.php` | `/partner` | schlank, lesend |
-| `layouts/guest.blade.php` | nur Breeze-Reste (`confirm-password`, `verify-email`) - siehe TD |
 | `website/layout.blade.php`, `website/legal-layout.blade.php` | Website | ohne Vite-Bundle, eigene Assets, Matomo-Partial, Cookie-Banner |
 | `signature/_layout.blade.php` | Unterschreiben | eigenstaendig, DE/AR/EN, RTL |
 
 Anmelde-/Registrierseiten (`resources/views/auth/*`) nutzen eigene
 Glas-Karten-Styles (`partials/auth_glass_styles`).
 
-## View-Bereiche (`resources/views`, 255 Dateien)
+## View-Bereiche (`resources/views`, ~242 Dateien)
 
 - `admin/` - Beraterwelt. Groesste Vorlagen: `documents_inbox` (1636 Z.),
   `customer_show` (1594), `tasks` (638), `customer_chat` (532), `compose_email` (526).
@@ -71,17 +70,19 @@ Glas-Karten-Styles (`partials/auth_glass_styles`).
 - `signature/` - Unterschreiben (verify, identity, sign, done, blocked).
 - `emails/` - tabellenbasiert, Inline-Styles, kein SVG.
 - `errors/` - 404/500 zweisprachig im Markendesign (ohne Vite).
-- `components/admin/*` - Navigation; `components/*.blade.php` - ueberwiegend
-  ungenutzte Breeze-Komponenten (siehe TECHNICAL_DEBT TD-05).
+- `components/admin/*` - Navigation (die Breeze-Komponenten sind seit 23.09.2026 entfernt).
 - `partials/` - `cookie_consent` (selbsttragend), `matomo`, `chat_core/_styles`,
   `doc_preview`, `favicon`.
 
 ## Sprachen
 
-- `lang/ar.json` (728 Schluessel), `lang/ar/validation.php`, `lang/de/validation.php`,
+- `lang/ar.json` (749 Schluessel), `lang/ar/validation.php`, `lang/de/validation.php`,
   `lang/{de,ar,en}/signing.php`.
 - UI-Texte in `__()`; Portal/Website/Auth muessen in `ar.json` stehen.
-  Stand 23.09.2026: 28 Schluessel fehlen (-> KI-007).
+  Waechter `ArabischeUebersetzungVollstaendigTest` verlangt fuer jeden `__()`-Text
+  in portal/auth/website/services/support/partials einen Eintrag (KI-007).
+- Abstaende, die der Leserichtung folgen sollen: `padding-inline-start` statt
+  `padding-left` (KI-021).
 - Arabisch = echte URLs `/ar/...` auf der Website, Sitzungs-/Profilsprache im Portal.
 - Ziffernfolgen (Telefon, IBAN) in RTL immer `dir="ltr"`.
 

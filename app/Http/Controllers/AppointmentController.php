@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\CustomerTimeline;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AppointmentController extends Controller
 {
@@ -35,6 +36,10 @@ class AppointmentController extends Controller
             'title' => 'required',
             'starts_at' => 'required|date',
             'ends_at' => 'required|date|after:starts_at',
+            // KI-020: ungeprueft endete eine unbekannte Kennung unter MySQL
+            // als 500er (Fremdschluessel), und ein Kunde haette als
+            // "Zustaendiger" eingetragen werden koennen.
+            'assigned_to' => ['nullable', Rule::exists('users', 'id')->whereIn('role', ['admin', 'manager', 'support', 'employee'])],
         ]);
         // Nur fuer Kunden im eigenen Portfolio anlegen (Audit SEC-P2) - sonst
         // koennte ueber eine fremde customer_id ein Termin samt Timeline-Eintrag

@@ -116,15 +116,18 @@ class EmployeeController extends Controller
             ...$this->vergebbareRechte($request),
         ]);
 
-        // بناء قائمة الصلاحيات للإيميل
+        // Rechte-Liste fuer die Mail aus dem GESPEICHERTEN Konto, nicht aus
+        // dem Formular (KI-006): ein angekreuztes Recht, das der Handelnde
+        // nicht weitergeben darf, wird nicht vergeben - und darf dann auch
+        // nicht in der Einladung stehen.
         $permLabels = [];
-        if ($request->has('can_manage_contracts')) $permLabels[] = '📄 Verträge verwalten';
-        if ($request->has('can_manage_tickets')) $permLabels[] = '💬 Tickets bearbeiten';
-        if ($request->has('can_approve_changes')) $permLabels[] = '✅ Änderungen genehmigen';
-        if ($request->has('can_send_emails')) $permLabels[] = '📧 E-Mails senden';
-        if ($request->has('can_import_export')) $permLabels[] = '📤 Import / Export';
-        if ($request->has('can_manage_commissions')) $permLabels[] = '💶 Provisionen verwalten';
-        if ($request->has('can_see_all_customers')) $permLabels[] = '👥 Zugriff auf alle Kunden';
+        if ($employee->can_manage_contracts) $permLabels[] = '📄 Verträge verwalten';
+        if ($employee->can_manage_tickets) $permLabels[] = '💬 Tickets bearbeiten';
+        if ($employee->can_approve_changes) $permLabels[] = '✅ Änderungen genehmigen';
+        if ($employee->can_send_emails) $permLabels[] = '📧 E-Mails senden';
+        if ($employee->can_import_export) $permLabels[] = '📤 Import / Export';
+        if ($employee->can_manage_commissions) $permLabels[] = '💶 Provisionen verwalten';
+        if ($employee->can_see_all_customers) $permLabels[] = '👥 Zugriff auf alle Kunden';
 
         // Einladung mit Passwort-Setzen-Link (kein Klartext-Passwort).
         $setPasswordUrl = PasswordSetupController::invitationUrl($employee);

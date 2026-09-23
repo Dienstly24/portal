@@ -8,6 +8,7 @@ Stand: 23.09.2026, `main` @ 04c0823.
 |---|---|---|---|---|---|---|
 | 1 | SQLite, PHP 8.4, ohne tesseract/poppler | 3044 | 3039 | 0 | 5 (OCR) | 155 s |
 | 2 | SQLite, PHP 8.4, MIT tesseract-ocr(+deu) + poppler | 3044 | **3044** | 0 | **0** | 160 s |
+| 3 | wie 2, nach der Reparaturrunde (KI-006/007/010/011/014/016/019/020/021, Turnstile-Absatz) | 3069 | **3069** | 0 | **0** | 140 s |
 
 Die 5 Uebersprungenen in Lauf 1 waren genau die OCR-Faelle
 (`tests/Unit/Ocr/TesseractTextExtractorTest` u.a.) - nach
@@ -53,12 +54,19 @@ Voraussetzung fuer den Deploy.
 | Indexe vorhanden | `DatabaseIndexTest` |
 | Kein Matomo in Anwendungsbereichen | `MatomoMessungTest` |
 | BIMI-Datei regelkonform | `BimiLogoTest` |
+| Jeder Kundentext hat eine arabische Uebersetzung | `ArabischeUebersetzungVollstaendigTest` |
+| Keine Portal-/Partnerseite zeigt interne Provisions-Kennungen | `PortalOhneInterneKennungenTest` |
+| Konsole/Queue sprechen de oder ar | `StandardspracheTest` |
+
+Neu am 23.09.2026 (jeder scheiterte vor seinem Fix bzw. bei der Gegenprobe):
+`ArabischeUebersetzungVollstaendigTest`, `BreezeResteEntferntTest`,
+`EinladungsmailRechteTest`, `StandardspracheTest`, `PortalOhneInterneKennungenTest`,
+`TermineAnkuendigungenTarifrechnerTest`, `DatenschutzTurnstileTest`. Entfernt:
+die Breeze-Tests `EmailVerificationTest`, `PasswordConfirmationTest` (ihre
+Funktion gibt es nicht mehr).
 
 ## Luecken
 
-- Keine Funktionstests: Termine, Ankuendigungen, Tarifrechner (KI-011).
-- Kein Test fuer Vollstaendigkeit von `lang/ar.json` (KI-007).
-- Kein Test, dass Portal-JSON keine internen Vertragskennungen liefert (KI-010).
 - Browser-Pruefungen sind manuell (Headless-Chromium), nicht Teil der CI.
 - Keine Last-/Lasttests; Leistung ueber Eigenschaftstests (`LeistungsmessungTest`).
 

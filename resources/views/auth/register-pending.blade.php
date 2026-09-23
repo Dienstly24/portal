@@ -24,7 +24,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;col
 .card p{color:#b7bcc4;font-size:14.5px;line-height:1.65;margin-bottom:14px;}
 .card strong{color:#fff;}
 .steps{list-style:none;margin:18px 0;padding:0;}
-.steps li{color:#dde0e5;font-size:14px;line-height:1.6;padding:9px 0 9px 30px;position:relative;border-bottom:1px solid var(--glass-line);}
+.steps li{color:#dde0e5;font-size:14px;line-height:1.6;padding:9px 0;padding-inline-start:30px;position:relative;border-bottom:1px solid var(--glass-line);}
 .steps li:last-child{border-bottom:none;}
 .steps li::before{content:'✓';position:absolute;{{ $rtl ? 'right' : 'left' }}:0;color:var(--emerald);font-weight:700;}
 .note{background:rgba(184,161,107,.12);border:1px solid var(--gold-line);border-radius:10px;padding:13px 16px;font-size:13px;color:#d8d2be;line-height:1.6;margin:16px 0;}

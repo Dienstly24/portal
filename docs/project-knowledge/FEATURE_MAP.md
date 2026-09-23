@@ -46,7 +46,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 
 ### F-006 Termine, Ankuendigungen
 - C `AppointmentController`, AdminController (announcements); T `appointments`, `announcements`
-- Tests: keine eigene Testdatei gefunden (-> KI-011) · Status **ACTIVE (ungetestet)**
+- Tests `TermineAnkuendigungenTarifrechnerTest` (seit 23.09.2026; dabei KI-019/KI-020 behoben: Ankuendigung loeschen nur Ersteller/Leitung, `assigned_to` validiert) · Status **ACTIVE**
 
 ### F-007 Aenderungsantraege mit Nachweis + Mitteilungen an Gesellschaften
 - C `SelfServiceController` (Portal), `ChangeRequestReviewController`, `ChangeNotificationController`; S `ChangeRequestService`, `ChangeRequest/*`; Job `VerifyChangeRequestProofJob`; T `customer_change_requests`, `change_request_documents`, `change_notifications`
@@ -54,8 +54,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 
 ### F-008 Mitarbeiterverwaltung, Rechte, Vertretungen, Team
 - C `EmployeeController`; T `users`, `substitutions`; V `admin/employee*`, `team_verwaltung`
-- Tests `RechteEskalationTest`, `CustomerBetreuerAssignmentTest`, `PartnerAssignmentRestrictionTest`
-- Status **ACTIVE** · Issues KI-001, KI-006
+- Tests `RechteEskalationTest`, `CustomerBetreuerAssignmentTest`, `PartnerAssignmentRestrictionTest`, `EinladungsmailRechteTest`
+- Status **ACTIVE** · Issues KI-001 (offen); KI-006 behoben 23.09.2026
 
 ### F-009 Aktivitaetserfassung und -bericht
 - Middleware `TrackStaffActivity`; S `Activity/*`; C `ActivityReportController`; T `work_sessions`, `activity_logs`; Planer `activity:close-stale`, `activity:prune`
@@ -173,8 +173,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 
 ### F-060 Kundenportal
 - C `PortalController` (1008 Z.), `PortalMessageController`, `SelfServiceController`; V `portal/*`, `layouts/portal`
-- Tests `PortalUxTest`, `PortalReviewTest`, `PortalAuthArabicTest`, `PortalChatUiTest`, `ResponsiveLayoutTest`, `MobileInteractionTest`
-- Status **ACTIVE** · Issues KI-007 (Uebersetzungen)
+- Tests `PortalUxTest`, `PortalReviewTest`, `PortalAuthArabicTest`, `PortalChatUiTest`, `ResponsiveLayoutTest`, `MobileInteractionTest`, `ArabischeUebersetzungVollstaendigTest`, `PortalOhneInterneKennungenTest`
+- Status **ACTIVE** · KI-007/KI-010 behoben 23.09.2026
 
 ### F-061 Portal-Zugang, Einladungen, Willkommens-Mail
 - S `Portal/PortalAccessService`; C `PortalAccessController`; Mail `CustomerWelcomeMail`; Planer `portal:send-invitations`, Portal-Erinnerung 09:00
@@ -188,7 +188,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 
 ### F-070 Login, Registrierung (zweistufig), Passwort-Wege, Magic-Login
 - `app/Http/Controllers/Auth/*`, `routes/auth.php`, `PasswordPolicy`
-- Tests `Auth/*`, `PasswordSecurityTest`, `PasswordFlowHardeningTest`, `Security/RegistrationHardeningTest` · Status **ACTIVE** (Turnstile-Schluessel: UNKNOWN, KI-002)
+- Tests `Auth/*` (inkl. `BreezeResteEntferntTest`), `PasswordSecurityTest`, `PasswordFlowHardeningTest`, `Security/RegistrationHardeningTest`, `DatenschutzTurnstileTest` · Status **ACTIVE** (Turnstile-Schluessel: UNKNOWN, KI-002)
 
 ### F-071 Zwei-Faktor-Anmeldung
 - `TwoFactorController`, `EnsureTwoFactor`, `Totp`, `QrCode`; Befehl `2fa:zuruecksetzen`
@@ -230,7 +230,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Tests `BimiLogoTest` · Status **PARTIAL** - Zertifikat (CMC/VMC) + Auslieferungsort offen (KI-005)
 
 ### F-087 Vergleichsportale (Tarifrechner-Links)
-- C `TarifrechnerController`; T `tarifrechner_links` · Tests: keine eigene Datei gefunden (KI-011) · Status **ACTIVE (ungetestet)**
+- C `TarifrechnerController`; T `tarifrechner_links` · Tests `TermineAnkuendigungenTarifrechnerTest` · Status **ACTIVE**
 
 ## I. Betrieb
 
@@ -256,4 +256,4 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 
 ### F-099 AI-Workflow-Engine
 - entfernt 20.08.2026 (5 Tabellen gedroppt, Code weg) · Status **DEPRECATED (entfernt)**
-- Reste: Breeze-Komponenten und -Seiten (`verify-email`, `confirm-password`, `layouts/guest`) -> TD-05 · Status **UNUSED**
+- Breeze-Reste (`verify-email`, `confirm-password`, `layouts/guest`, 10 Komponenten) am 23.09.2026 entfernt (KI-016) · Status **DEPRECATED (entfernt)**

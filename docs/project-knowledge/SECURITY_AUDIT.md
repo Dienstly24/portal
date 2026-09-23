@@ -7,7 +7,9 @@ Offene Befunde stehen ausschliesslich in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 ## Ergebnis dieser Pruefung
 
 **Kein CRITICAL- oder HIGH-Befund im Code.** Neu gefunden: KI-006, KI-010
-(beide LOW), KI-012 (Turnstile fehlt in der Datenschutzerklaerung).
+(beide LOW), KI-012 (Turnstile fehlt in der Datenschutzerklaerung) und in der
+Reparaturrunde KI-019 (MEDIUM: jeder Mitarbeiter konnte jede Ankuendigung
+loeschen). KI-006/-010/-019 sind behoben, KI-012 teilweise.
 Offen bleiben die bekannten Betriebs-/Rechtspunkte KI-001..004, KI-008, KI-009.
 
 ## Gepruefte Schutzschichten (23.09.2026)
@@ -15,7 +17,7 @@ Offen bleiben die bekannten Betriebs-/Rechtspunkte KI-001..004, KI-008, KI-009.
 | Bereich | Stand | Nachweis |
 |---|---|---|
 | Abhaengigkeiten | `composer audit`: 0 Hinweise (installierte Pakete, ohne phpstan/larastan - siehe KI-018); `npm audit --omit=dev --audit-level=high`: 0 | lokal 23.09. + CI-Job `audit` |
-| Rollen an Routen | 509 Routen ausgewertet; jede `/admin`-Route hat `auth` + `role:staff`, Provisionsbereiche zusaetzlich `can:provisionen-verwalten` | [ROUTES_INVENTORY.md](ROUTES_INVENTORY.md) |
+| Rollen an Routen | 509 Routen ausgewertet (nach KI-016: 504); jede `/admin`-Route hat `auth` + `role:staff`, Provisionsbereiche zusaetzlich `can:provisionen-verwalten` | [ROUTES_INVENTORY.md](ROUTES_INVENTORY.md) |
 | Datensatz-Zugriff | `ZugriffspruefungTest` (Routen mit ID im Pfad); **zusaetzlich manuell**: alle 8 Kunden-Sofortsuchen gescoped (`scopeCustomers`/`visibleCustomerIds`/`canSeeAllCustomers`) oder nur admin/manager | Code-Durchsicht |
 | SQL-Injection | alle `whereRaw/selectRaw/DB::raw` mit Variablen geprueft: Spaltennamen aus Whitelists (`CommissionAnalytics::groupedBy`, `Bundesland::filterQuery` wirft bei fremder Spalte), Werte gebunden | grep + Durchsicht |
 | XSS | 42 `{!! !!}`: JSON-LD aus PHP, QR-SVG (selbst erzeugt), `ServicePage::bodyHtml()` (escapet jede Zeile mit `e()`), `InternalMessage::renderedMessage()` (escapet, dann nur @-Hervorhebung), Text-Mails. Kein ungefilterter Nutzerinhalt gefunden | Durchsicht |
@@ -39,10 +41,13 @@ Offen bleiben die bekannten Betriebs-/Rechtspunkte KI-001..004, KI-008, KI-009.
   ist `role:admin,manager`, Employee wird umgeleitet. OK.
 - Portal-Kunde versucht, Provisionsdaten zu sehen -> keine Relation von
   `Customer`, Portal-Views serialisieren keine Vertragsmodelle. OK, aber
-  strukturell nur fuer `Customer` abgesichert (KI-010).
+  strukturell nur fuer `Customer` abgesichert - seit 23.09.2026 haelt
+  `PortalOhneInterneKennungenTest` ALLE Portal-/Partnerseiten fest (KI-010).
 - Manager versucht, per manipuliertem Formular ein Recht zu vergeben, das er
-  nicht hat -> wird nicht gespeichert (`vergebbareRechte`), Mail behauptet es
-  aber (KI-006).
+  nicht hat -> wird nicht gespeichert (`vergebbareRechte`); die Mail nennt es
+  seit 23.09.2026 auch nicht mehr (KI-006).
+- Mitarbeiter loescht per DELETE eine Ankuendigung der Leitung -> vorher
+  erfolgreich, jetzt 403 (KI-019).
 
 ## Nicht aus dem Repo pruefbar (UNKNOWN)
 

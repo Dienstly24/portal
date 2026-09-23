@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Sprache;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,7 +32,7 @@ class SetLocale
         // Leistungsseiten) lieferten dann <html lang="en"> und ein Google
         // widersprechendes hreflang-Signal (Audit I18N-1). Jetzt immer eine
         // der unterstuetzten Sprachen setzen.
-        app()->setLocale(in_array($locale, ['de', 'ar'], true) ? $locale : 'de');
+        app()->setLocale(Sprache::istUnterstuetzt($locale) ? $locale : Sprache::STANDARD);
 
         return $next($request);
     }

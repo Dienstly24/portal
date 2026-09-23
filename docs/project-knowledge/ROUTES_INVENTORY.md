@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 23.09.2026 aus `php artisan route:list --json` (509 Routen).
+Generiert am 23.09.2026 aus `php artisan route:list --json` (504 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -397,9 +397,6 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | GET | `ar/leistungen/{slug}` | ar.services.show | forceLocale:ar |
 | GET | `ar/versicherungsmakler-hamburg` | ar.website.hamburg | forceLocale:ar |
 | GET | `ar/{page}` | ar.legal | forceLocale:ar |
-| GET | `confirm-password` | password.confirm | auth |
-| POST | `confirm-password` |  | auth throttle:6,1 |
-| POST | `email/verification-notification` | verification.send | auth throttle:6,1 |
 | GET | `forgot-password` | password.request | guest |
 | POST | `forgot-password` | password.email | guest throttle:passwort-reset |
 | GET | `forgot-password/gesendet` | password.request.sent | guest |
@@ -505,8 +502,6 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | GET | `unterschreiben/{token}/seite/{page}` | signature.page | throttle:signatur |
 | POST | `unterschreiben/{token}/unterschreiben` | signature.sign | throttle:signatur |
 | GET | `up` |  |  |
-| GET | `verify-email` | verification.notice | auth |
-| GET | `verify-email/{id}/{hash}` | verification.verify | auth signed throttle:6,1 |
 | GET | `versicherungsmakler-hamburg` | website.hamburg |  |
 | GET | `webhooks/whatsapp` | webhooks.whatsapp.verify | throttle:300,1 |
 | POST | `webhooks/whatsapp` | webhooks.whatsapp.handle | throttle:300,1 |

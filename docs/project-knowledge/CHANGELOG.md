@@ -8,6 +8,45 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 23.09.2026 - Reparaturrunde 1: was sich im Code beheben liess
+
+- **Task**: Betreiber-Auftrag "Behebe, was sich beheben laesst" - alle Befunde aus
+  KNOWN_ISSUES, die ohne Server-, Konto- oder Rechtshandlung behebbar sind.
+- **Files Changed**:
+  - `lang/ar.json` (+21), `resources/views/auth/register-pending.blade.php` (RTL-Abstand)
+  - `app/Http/Controllers/EmployeeController.php` (Rechte-Liste der Mail)
+  - `app/Support/Sprache.php` (neu), `app/Providers/AppServiceProvider.php`,
+    `app/Http/Middleware/SetLocale.php`, `config/app.php`, `.env.example`
+  - `app/Http/Controllers/TarifrechnerController.php`, `resources/views/admin/announcements.blade.php`
+  - `app/Http/Controllers/AppointmentController.php`
+  - `resources/views/website/legal/datenschutz.blade.php` (Turnstile-Absatz)
+  - entfernt: 4 Auth-Controller, `auth/verify-email`, `auth/confirm-password`,
+    `layouts/guest`, `App\View\Components\GuestLayout`, 10 Blade-Komponenten,
+    2 Breeze-Tests; `routes/auth.php`, `EnsurePasswordChanged` (Ausnahmeliste)
+  - `package.json`/`package-lock.json` (autoprefixer raus), `.github/workflows/deploy.yml`
+  - 7 neue Testdateien (siehe TESTING_STATUS), Wissensbasis nachgezogen
+- **Components Affected**: Auth-Routen, Mitarbeiter-Anlage, Ankuendigungen,
+  Termine, Sprachwahl (Konsole/Queue), Datenschutzerklaerung, Portal (AR).
+- **Database Changes**: keine. **API Changes**: 5 Routen entfernt
+  (`verification.notice/verify/send`, `password.confirm` GET+POST) - von keiner
+  Seite und keiner Middleware benutzt; 509 -> 504 Routen.
+- **Potential Side Effects**: Konsole/Queue laufen jetzt auf Deutsch (vorher
+  Englisch) - gewollt. Mitarbeiter sehen den Loeschknopf nur noch an eigenen
+  Ankuendigungen. Ein Termin mit fremder/unbekannter `assigned_to`-Kennung wird
+  abgelehnt statt 500.
+- **Tests Performed**: jeder neue Test gegen den alten Stand (rot) und den
+  neuen (gruen); Gegenproben fuer die Waechter; volle Suite 3069/3069, 0
+  uebersprungen; Pint gruen; `npm run build` gruen; Browser (Chromium, 390 px
+  AR und 1440 px): AR-Registrierungsseite, Ankuendigungen je Rolle,
+  `/verify-email` 404. `composer stan` lokal nicht moeglich (KI-018) -> CI.
+- **Result**: FIXED: KI-006, KI-007, KI-010, KI-011, KI-014, KI-015, KI-016,
+  KI-017, neu gefunden und behoben KI-019, KI-020, KI-021; KI-012 IN_PROGRESS.
+  Bewusst NICHT angefasst: KI-001 (Betreiber-Entscheidung, gehoert in die
+  Aufgabe "Employee & Support Customer Access Architecture") und alle Punkte,
+  die Server, Konten oder Anwalt brauchen.
+
+---
+
 ## 23.09.2026 - Project Knowledge Base angelegt, Voll-Audit
 
 - **Task**: Betreiber-Auftrag "Projekt als dauerhaftes System mit

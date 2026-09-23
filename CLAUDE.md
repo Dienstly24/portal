@@ -622,9 +622,26 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Rechtliches). Feld leeren = Portal zeigt eigene Fallback-Seiten.
 - **Login/Registrierung** (`resources/views/auth/`): Single-Screen (kein
   Scroll), Glas-Karte, `logo-white.png` ohne weißen Kasten, DE/AR-Umschalter.
+  **Keine Breeze-Reste mehr** (23.09.2026): die Seiten "E-Mail bestaetigen"
+  (`verify-email`) und "Passwort bestaetigen" (`confirm-password`) samt
+  Controllern, Routen, `layouts/guest` und den Starter-Komponenten sind
+  entfernt - `User` implementiert bewusst NICHT `MustVerifyEmail` (SEC-1)
+  und keine Route verlangte `password.confirm`. Wer eine Passwort-
+  Bestaetigung vor einer heiklen Aktion braucht, baut sie neu und
+  deutschsprachig. Test: `BreezeResteEntferntTest`.
 - **Arabisch/RTL**: `lang/ar.json`, `SetLocale`-Middleware,
   `dir="rtl"`-Layout. Neue UI-Strings mit `__()` wrappen und in `ar.json`
-  ergänzen.
+  ergänzen. **Seit 23.09.2026 ist das ein Test** (`ArabischeUebersetzung-
+  VollstaendigTest`): jeder `__()`-Text in portal/auth/website/services/
+  support/partials braucht einen Eintrag - vorher standen 21 Kundentexte auf
+  Deutsch in der arabischen Oberflaeche, darunter die komplette Seite nach
+  der Registrierung. Abstaende, die der Leserichtung folgen muessen, mit
+  `padding-inline-start` statt `padding-left` (sonst liegt in RTL das
+  Symbol auf dem Text). Die Sprachliste steht an EINER Stelle
+  (`App\Support\Sprache`, de/ar); `AppServiceProvider` stellt beim Start
+  jede andere Sprache auf `de` - auch in Konsole und Warteschlange, wo
+  `SetLocale` nicht laeuft (vorher liefen dort Laeufe und Mails auf
+  Englisch, weil die alte `.env`-Vorlage `APP_LOCALE=en` trug).
 - **Banner-Verwaltung**: `BannerController`, Statistik-Dashboard unter
   `/admin/banners/statistik`. Routen auf `role:admin,manager` beschränkt.
   **Social-Publishing (Phase 1, Betreiber-Auftrag 04.08.2026)**: je Banner

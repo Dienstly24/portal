@@ -103,6 +103,7 @@ use App\Support\LocalTime;
 use App\Support\PasswordPolicy;
 use App\Support\ProductionDatabaseGuard;
 use App\Support\SessionPasswordHash;
+use App\Support\Sprache;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
@@ -395,6 +396,10 @@ class AppServiceProvider extends ServiceProvider
         // Booten: ohne .env gilt APP_ENV=production, und `composer install`
         // fuehrt package:discover aus, lange bevor es eine .env gibt.
         ProductionDatabaseGuard::registrieren($this->app);
+
+        // KI-014: die Anwendung spricht nur Deutsch und Arabisch - auch in
+        // Konsole und Warteschlange, wo SetLocale nicht laeuft.
+        Sprache::erzwingen($this->app);
 
         $this->registerRateLimiters();
 

@@ -10,6 +10,13 @@
 <h2>2. Erhebung und Speicherung personenbezogener Daten</h2>
 <p>Beim Besuch dieser Website erfasst unser Hosting-Anbieter automatisch bestimmte technische Informationen (z.&nbsp;B. IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Seite, verwendeter Browser).</p>
 <!-- TODO: Tatsächlichen Hoster (Hostinger) benennen und dessen Datenschutzhinweise verlinken. -->
+{{-- Haengt am TATSAECHLICHEN Betrieb wie der Matomo-Absatz (KI-012,
+     23.09.2026): steht ein Site-Key in der .env, laedt die Registrierung
+     das Turnstile-Skript von challenges.cloudflare.com - dann muss es hier
+     stehen, sonst nicht. Wortlaut vor Livegang anwaltlich pruefen lassen. --}}
+@if(trim((string) config('services.turnstile.site_key')) !== '')
+<p><strong>Schutz der Registrierung (Cloudflare Turnstile).</strong> Um die Registrierung im Kundenportal vor automatisierten Anmeldungen durch Bots zu schützen, setzen wir den Dienst Cloudflare Turnstile der Cloudflare, Inc. ein. Beim Aufruf der Registrierungsseite wird dazu ein Skript von Cloudflare geladen; dabei werden insbesondere Ihre IP-Adresse sowie technische Merkmale Ihres Browsers an Cloudflare übermittelt, um zu prüfen, ob die Anfrage von einem Menschen stammt. Rechtsgrundlage ist unser berechtigtes Interesse am Schutz vor missbräuchlichen Anmeldungen (Art. 6 Abs. 1 lit. f DSGVO). Andere Seiten der Website laden diesen Dienst nicht.</p>
+@endif
 <h2>3. Kontaktformular</h2>
 <p>Wenn Sie uns über das Kontaktformular eine Anfrage senden, werden Ihre Angaben aus dem Formular (Name, Kontaktdaten, gewünschte Leistung, Nachricht) zur Bearbeitung Ihrer Anfrage und für den Fall von Anschlussfragen in unserem Kundenverwaltungssystem gespeichert; Sie erhalten eine Eingangsbestätigung per E-Mail, sofern Sie eine E-Mail-Adresse angegeben haben. Diese Daten geben wir nicht ohne Ihre Einwilligung weiter.</p>
 <p><strong>Nachweis Ihrer Einwilligung:</strong> Zum Nachweis nach Art. 7 Abs. 1 DSGVO speichern wir beim Absenden den Zeitpunkt, Ihre IP-Adresse und den Wortlaut der Einwilligungserklärung, der Sie zugestimmt haben.</p>
