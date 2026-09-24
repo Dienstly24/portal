@@ -41,9 +41,9 @@
     <div style="display:flex;gap:8px;">
         <a href="{{ route('admin.reports') }}" class="rep-tab rep-tab-active">Übersicht</a>
         <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab">Neukunden</a>
-        @if(in_array(auth()->user()->role, ['admin','manager']))
+        @can('provisionen-verwalten')
             <a href="{{ route('admin.provisions') }}" class="rep-tab">Vermittler-Provisionen</a>
-        @endif
+        @endcan
     </div>
 </div>
 

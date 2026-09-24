@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Support\XlsxWriter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
 use League\Csv\EscapeFormula;
 use League\Csv\Writer;
 
@@ -24,12 +25,19 @@ use League\Csv\Writer;
  * Empfaenger, Monatsbericht mit Excel-/PDF-Export, Performance-Dashboard,
  * Betrags-Anpassungen nur mit Grund + lueckenlosem Audit-Log.
  *
- * Zugriff NUR admin/manager (Routen-Middleware role:admin,manager) -
- * Mitarbeiter und Partner sehen weder Betraege noch Berichte (interner
- * Verwaltungsprozess, keine Benachrichtigungen an Empfaenger).
+ * Zugriff NUR ueber das Recht `provisionen-verwalten` (Admin oder
+ * ausdruecklich vergebenes Recht, Betreiber-Vorgabe 23.09.2026) - an der
+ * Route UND hier. Mitarbeiter, Support, Manager ohne Recht und Partner sehen
+ * weder Betraege noch Berichte (keine Benachrichtigungen an Empfaenger).
  */
-class ProvisionController extends Controller
+class ProvisionController extends Controller implements HasMiddleware
 {
+    /** Provisionsdaten sehen nur Berechtigte - geprueft an Route UND hier. */
+    public static function middleware(): array
+    {
+        return ['can:provisionen-verwalten'];
+    }
+
     public function index(Request $request) {
         $query = Provision::with(['user', 'partner', 'customer.user', 'contract', 'creator', 'approver', 'payer'])
             ->orderByDesc('created_at');

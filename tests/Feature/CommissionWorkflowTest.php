@@ -182,8 +182,9 @@ class CommissionWorkflowTest extends TestCase
     {
         $employee = User::factory()->create(['role' => 'employee']);
 
-        // EnsureUserRole leitet unberechtigte Staff-Rollen zum Dashboard um.
-        $this->actingAs($employee)->get(route('admin.commissions'))->assertRedirect(route('admin.dashboard'));
+        // Gutschriften: Recht `provisionen-verwalten` (Betreiber-Vorgabe
+        // 23.09.2026) -> 403. Partnerliste: Rolle -> Umleitung zum Dashboard.
+        $this->actingAs($employee)->get(route('admin.commissions'))->assertForbidden();
         $this->actingAs($employee)->get(route('admin.partners'))->assertRedirect(route('admin.dashboard'));
     }
 }

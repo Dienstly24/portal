@@ -168,6 +168,7 @@
     </div>
 </div>
 
+@can('provisionen-verwalten')
 {{-- Provisions-Saetze fuer den Neukunden-Bericht: Vorschlag = fix je
      Neuvertrag + Prozent vom Jahresbeitrag. Beide optional. --}}
 <div class="card" style="max-width:700px;">
@@ -186,6 +187,7 @@
         </div>
     </div>
 </div>
+@endcan
 
 <div style="display:flex;gap:12px;max-width:700px;justify-content:space-between;">
     <div style="display:flex;gap:12px;">

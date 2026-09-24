@@ -34,6 +34,8 @@ class VermittlerMatchEvent extends Model
         'conflict' => 'Prüfung erforderlich',
         'not_found' => 'Nicht in Abrechnung gefunden',
         'manual_link' => 'Manuell zugeordnet',
+        'invoice_confirmed' => 'Zahlung durch Rechnung belegt',
+        'invoice_deviation' => 'Rechnung weicht ab',
     ];
 
     protected static function boot()

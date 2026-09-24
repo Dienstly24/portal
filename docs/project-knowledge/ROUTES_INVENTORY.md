@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 23.09.2026 aus `php artisan route:list --json` (504 Routen).
+Generiert am 23.09.2026 aus `php artisan route:list --json` (508 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -49,9 +49,9 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/chat` | admin.chat.store | auth role:staff |
 | GET | `admin/chat/{id}` | admin.chat.show | auth role:staff |
 | POST | `admin/chat/{id}/reply` | admin.chat.reply | auth role:staff |
-| GET | `admin/commissions` | admin.commissions | auth role:staff role:admin,manager |
-| POST | `admin/commissions/{id}/book` | admin.commissions.book | auth role:staff role:admin,manager |
-| POST | `admin/commissions/{id}/reject` | admin.commissions.reject | auth role:staff role:admin,manager |
+| GET | `admin/commissions` | admin.commissions | auth role:staff can:provisionen-verwalten |
+| POST | `admin/commissions/{id}/book` | admin.commissions.book | auth role:staff can:provisionen-verwalten |
+| POST | `admin/commissions/{id}/reject` | admin.commissions.reject | auth role:staff can:provisionen-verwalten |
 | GET | `admin/contracts` | admin.contracts | auth role:staff |
 | GET | `admin/contracts/create/{customerId}` | admin.contract.create | auth role:staff |
 | GET | `admin/contracts/new` | admin.contract.new | auth role:staff |
@@ -281,16 +281,16 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/postfach/{id}/zuordnung-bestaetigen` | admin.postfach.confirm_identity | auth role:staff |
 | POST | `admin/postfach/{id}/zustand` | admin.postfach.status | auth role:staff |
 | POST | `admin/postfach/{id}/zuweisen` | admin.postfach.reassign | auth role:staff |
-| GET | `admin/provisionen` | admin.provisions | auth role:staff role:admin,manager |
-| POST | `admin/provisionen` | admin.provisions.store | auth role:staff role:admin,manager |
-| GET | `admin/provisionen/bericht` | admin.provisions.report | auth role:staff role:admin,manager |
-| GET | `admin/provisionen/bericht/export` | admin.provisions.report.export | auth role:staff role:admin,manager |
-| GET | `admin/provisionen/dashboard` | admin.provisions.dashboard | auth role:staff role:admin,manager |
-| GET | `admin/provisionen/saetze` | admin.provisions.rates | auth role:staff role:admin,manager |
-| POST | `admin/provisionen/saetze` | admin.provisions.rates.save | auth role:staff role:admin,manager |
-| GET | `admin/provisionen/{id}` | admin.provisions.show | auth role:staff role:admin,manager |
-| POST | `admin/provisionen/{id}/betrag` | admin.provisions.amount | auth role:staff role:admin,manager |
-| POST | `admin/provisionen/{id}/status` | admin.provisions.status | auth role:staff role:admin,manager |
+| GET | `admin/provisionen` | admin.provisions | auth role:staff can:provisionen-verwalten |
+| POST | `admin/provisionen` | admin.provisions.store | auth role:staff can:provisionen-verwalten |
+| GET | `admin/provisionen/bericht` | admin.provisions.report | auth role:staff can:provisionen-verwalten |
+| GET | `admin/provisionen/bericht/export` | admin.provisions.report.export | auth role:staff can:provisionen-verwalten |
+| GET | `admin/provisionen/dashboard` | admin.provisions.dashboard | auth role:staff can:provisionen-verwalten |
+| GET | `admin/provisionen/saetze` | admin.provisions.rates | auth role:staff can:provisionen-verwalten |
+| POST | `admin/provisionen/saetze` | admin.provisions.rates.save | auth role:staff can:provisionen-verwalten |
+| GET | `admin/provisionen/{id}` | admin.provisions.show | auth role:staff can:provisionen-verwalten |
+| POST | `admin/provisionen/{id}/betrag` | admin.provisions.amount | auth role:staff can:provisionen-verwalten |
+| POST | `admin/provisionen/{id}/status` | admin.provisions.status | auth role:staff can:provisionen-verwalten |
 | GET | `admin/provisionsmanagement` | admin.provisionsmanagement.dashboard | auth role:staff can:provisionen-verwalten |
 | GET | `admin/provisionsmanagement/abrechnungen` | admin.provisionsmanagement.statements | auth role:staff can:provisionen-verwalten |
 | GET | `admin/provisionsmanagement/auswertungen` | admin.provisionsmanagement.analytics | auth role:staff can:provisionen-verwalten |
@@ -361,15 +361,19 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/tickets/{id}/restore` | admin.ticket.restore | auth role:staff role:admin,manager |
 | POST | `admin/tickets/{id}/status` | admin.ticket.status | auth role:staff |
 | POST | `admin/tickets/{id}/update` | admin.ticket.update | auth role:staff |
-| GET | `admin/vermittler-abrechnung` | admin.vermittler.index | auth role:staff role:admin,manager |
-| GET | `admin/vermittler-abrechnung/bericht` | admin.vermittler.report | auth role:staff role:admin,manager |
-| POST | `admin/vermittler-abrechnung/datensatz/{id}/zuordnen` | admin.vermittler.link | auth role:staff role:admin,manager |
-| POST | `admin/vermittler-abrechnung/dokument/{id}/einlesen` | admin.vermittler.from_document | auth role:staff role:admin,manager |
-| POST | `admin/vermittler-abrechnung/import` | admin.vermittler.import | auth role:staff role:admin,manager |
-| GET | `admin/vermittler-abrechnung/pruefung` | admin.vermittler.review | auth role:staff role:admin,manager |
-| GET | `admin/vermittler-abrechnung/vertrag-suche` | admin.vermittler.contract_search | auth role:staff role:admin,manager |
-| POST | `admin/vermittler-abrechnung/vorgangsliste` | admin.vermittler.vorgangsliste | auth role:staff role:admin,manager |
-| GET | `admin/vermittler-abrechnung/{id}` | admin.vermittler.show | auth role:staff role:admin,manager |
+| GET | `admin/vermittler-abrechnung` | admin.vermittler.index | auth role:staff can:provisionen-verwalten |
+| GET | `admin/vermittler-abrechnung/bericht` | admin.vermittler.report | auth role:staff can:provisionen-verwalten |
+| POST | `admin/vermittler-abrechnung/datensatz/{id}/zuordnen` | admin.vermittler.link | auth role:staff can:provisionen-verwalten |
+| POST | `admin/vermittler-abrechnung/dokument/{id}/einlesen` | admin.vermittler.from_document | auth role:staff can:provisionen-verwalten |
+| POST | `admin/vermittler-abrechnung/import` | admin.vermittler.import | auth role:staff can:provisionen-verwalten |
+| GET | `admin/vermittler-abrechnung/pruefung` | admin.vermittler.review | auth role:staff can:provisionen-verwalten |
+| POST | `admin/vermittler-abrechnung/rechnung` | admin.vermittler.invoice_upload | auth role:staff can:provisionen-verwalten |
+| GET | `admin/vermittler-abrechnung/rechnung/{id}` | admin.vermittler.invoice | auth role:staff can:provisionen-verwalten |
+| POST | `admin/vermittler-abrechnung/rechnung/{id}/bestaetigen` | admin.vermittler.invoice_confirm | auth role:staff can:provisionen-verwalten |
+| GET | `admin/vermittler-abrechnung/rechnung/{id}/datei` | admin.vermittler.invoice_file | auth role:staff can:provisionen-verwalten |
+| GET | `admin/vermittler-abrechnung/vertrag-suche` | admin.vermittler.contract_search | auth role:staff can:provisionen-verwalten |
+| POST | `admin/vermittler-abrechnung/vorgangsliste` | admin.vermittler.vorgangsliste | auth role:staff can:provisionen-verwalten |
+| GET | `admin/vermittler-abrechnung/{id}` | admin.vermittler.show | auth role:staff can:provisionen-verwalten |
 | GET | `admin/verwaltung` | admin.verwaltung | auth role:staff |
 | GET | `admin/vorlagen` | admin.templates | auth role:staff |
 | POST | `admin/vorlagen` | admin.templates.store | auth role:staff role:admin,manager |

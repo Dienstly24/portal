@@ -149,9 +149,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - R `can:provisionen-verwalten`
 - Tests `ProvisionsmanagementTest`, `ContractCommissionImportTest`, `CommissionReadServiceTest` · Status **ACTIVE**
 
-### F-051 Vermittler-Abrechnung TARIFCHECK24 + Vorgangsliste
-- C `VermittlerAbrechnungController`; S `Vermittler/*`; T `vermittler_*` · R admin/manager
-- Tests `VermittlerAbrechnungTest`, `VermittlerVorgangslisteTest` · Status **ACTIVE**
+### F-051 Vermittler-Abrechnung TARIFCHECK24 + Vorgangsliste + Rechnungsabgleich
+- C `VermittlerAbrechnungController`; S `Vermittler/*` (neu 23.09.2026: `VermittlerRechnungAbgleich`); T `vermittler_*` (neu: `vermittler_invoices`) · R Recht `provisionen-verwalten`
+- Status-Codes 1 offen / 2 storniert / 3 verifiziert / 4 bezahlt; "bezahlt" BELEGT erst die hochgeladene Rechnung (PDF/Bild/Text)
+- Tests `VermittlerAbrechnungTest`, `VermittlerVorgangslisteTest`, `VermittlerRechnungTest` · Status **ACTIVE**
 
 ### F-052 Ausgangs-Provisionen an Mitarbeiter/Partner
 - C `ProvisionController`; S `Provision/*`; T `provisions`, `provision_rates`, `provision_audit_logs` · R admin/manager

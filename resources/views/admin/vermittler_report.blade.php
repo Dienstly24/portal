@@ -11,13 +11,14 @@
 <div class="card" style="max-width:1100px;">
     <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Vermittler-Performance</div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">
-        Gegenüberstellung: was wir eingereicht haben und was der Vermittler tatsächlich abgerechnet hat.
+        Gegenüberstellung: was wir eingereicht haben und was der Vermittler gemeldet und was eine Rechnung belegt hat.
         Grundlage sind ausschließlich eingelesene Abrechnungen – es wird nichts geschätzt.
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
         @foreach([
             ['Eingereicht', $performance['eingereicht'], 'var(--graphite)'],
-            ['Abgerechnet', $performance['abgerechnet'], 'var(--emerald-deep)'],
+            ['Verifiziert / bezahlt', $performance['abgerechnet'], 'var(--emerald-deep)'],
+            ['Durch Rechnung belegt', $performance['belegt'], 'var(--emerald-deep)'],
             ['Storniert', $performance['storniert'], '#A32D2D'],
             ['Nicht gefunden', $performance['nicht_gefunden'], '#B5651D'],
             ['Prüfung', $performance['pruefung'], '#A32D2D'],
@@ -46,17 +47,19 @@
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Produkt</th><th style="padding:8px;">Datensätze</th>
-                <th style="padding:8px;">Bestätigt</th><th style="padding:8px;">Storniert</th>
-                <th style="padding:8px;">Provision</th><th style="padding:8px;">Storniert (entgangen)</th>
+                <th style="padding:8px;">Offen</th><th style="padding:8px;">Bestätigt</th><th style="padding:8px;">Storniert</th>
+                <th style="padding:8px;">Provision erwartet</th><th style="padding:8px;">Davon belegt (Rechnung)</th><th style="padding:8px;">Storniert (entgangen)</th>
             </tr></thead>
             <tbody>
             @foreach($products as $row)
                 <tr style="border-top:1px solid var(--line);">
                     <td style="padding:8px;font-weight:600;">{{ $row['produkt'] }}</td>
                     <td style="padding:8px;">{{ $row['anzahl'] }}</td>
+                    <td style="padding:8px;color:#B5651D;">{{ $row['offen'] }}</td>
                     <td style="padding:8px;color:var(--emerald-deep);">{{ $row['bestaetigt'] }}</td>
                     <td style="padding:8px;color:#A32D2D;">{{ $row['storniert'] }}</td>
-                    <td style="padding:8px;font-weight:600;">{{ number_format($row['provision'], 2, ',', '.') }} €</td>
+                    <td style="padding:8px;">{{ number_format($row['provision'], 2, ',', '.') }} €</td>
+                    <td style="padding:8px;font-weight:600;color:var(--emerald-deep);">{{ number_format($row['provision_belegt'], 2, ',', '.') }} €</td>
                     <td style="padding:8px;color:var(--ink-soft);">{{ number_format($row['provision_storno'], 2, ',', '.') }} €</td>
                 </tr>
             @endforeach
@@ -69,7 +72,8 @@
 <div class="card" style="max-width:1100px;">
     <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Nach Kunde</div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">
-        Die 50 Kunden mit der höchsten tatsächlich abgerechneten Provision. Stornierte Datensätze zählen nicht mit.
+        Die 50 Kunden mit der höchsten Provision. <b>Belegt</b> ist nur, was eine Rechnung bestätigt hat –
+        „erwartet" ist der Stand der CSV (offen, verifiziert oder bezahlt gemeldet). Stornierte Datensätze zählen nicht mit.
     </div>
     @if($customers === [])
         <div class="muted-sm">Noch keine zugeordneten Abrechnungsdaten.</div>
@@ -78,8 +82,8 @@
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Kunde</th><th style="padding:8px;">Datensätze</th>
-                <th style="padding:8px;">Bestätigt</th><th style="padding:8px;">Storniert</th>
-                <th style="padding:8px;">Provision</th>
+                <th style="padding:8px;">Offen</th><th style="padding:8px;">Bestätigt</th><th style="padding:8px;">Storniert</th>
+                <th style="padding:8px;">Provision erwartet</th><th style="padding:8px;">Davon belegt</th>
             </tr></thead>
             <tbody>
             @foreach($customers as $row)
@@ -93,9 +97,11 @@
                         @endif
                     </td>
                     <td style="padding:8px;">{{ $row['anzahl'] }}</td>
+                    <td style="padding:8px;color:#B5651D;">{{ $row['offen'] }}</td>
                     <td style="padding:8px;color:var(--emerald-deep);">{{ $row['bestaetigt'] }}</td>
                     <td style="padding:8px;color:#A32D2D;">{{ $row['storniert'] }}</td>
-                    <td style="padding:8px;font-weight:600;">{{ number_format($row['provision'], 2, ',', '.') }} €</td>
+                    <td style="padding:8px;">{{ number_format($row['provision'], 2, ',', '.') }} €</td>
+                    <td style="padding:8px;font-weight:600;color:var(--emerald-deep);">{{ number_format($row['provision_belegt'], 2, ',', '.') }} €</td>
                 </tr>
             @endforeach
             </tbody>

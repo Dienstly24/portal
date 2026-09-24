@@ -20,7 +20,7 @@
             <th style="padding:12px 20px;">Partner</th>
             <th>Partner-Nr.</th>
             <th>Erkennungs-Domains</th>
-            <th>Provisionen</th>
+            @can('provisionen-verwalten')<th>Provisionen</th>@endcan
             <th>Status</th>
             <th></th>
         </tr></thead>
@@ -33,7 +33,7 @@
             </td>
             <td style="font-size:13px;">{{ $p->partner_number ?? '—' }}</td>
             <td class="muted-xs">{{ implode(', ', $p->email_domains ?? []) ?: '—' }}</td>
-            <td style="font-size:13px;">{{ $p->commissions_count }}</td>
+            @can('provisionen-verwalten')<td style="font-size:13px;">{{ $p->commissions_count }}</td>@endcan
             <td><span class="badge {{ $p->is_active ? 'badge-active' : 'badge-pending' }}">{{ $p->is_active ? 'Aktiv' : 'Inaktiv' }}</span></td>
             <td style="padding-right:20px;white-space:nowrap;">
                 <a href="{{ route('admin.partners.show', $p->id) }}" class="btn btn-ghost btn-sm">Details</a>

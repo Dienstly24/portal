@@ -1551,7 +1551,8 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   tragen Referenz-Nr., Vermittler-ID und eine Klartext-Kopie von
   Vertrag/Kunde - bei einer Rueckfrage zu einem Storno ist belegbar, dass
   der Vertrag existierte. Oberflaeche `/admin/vermittler-abrechnung`
-  (**nur admin/manager** - hier stehen Provisionsbetraege): Import mit
+  (**nur mit dem Recht `provisionen-verwalten`** - hier stehen
+  Provisionsbetraege; bis 23.09.2026 genuegte die Rolle manager): Import mit
   sofortigem Ergebnis, Prüfliste (unklare Datensaetze werden per
   Sofort-Suche von Hand zugeordnet, nie automatisch), Auswertung je
   Produkt/Kunde plus Bestaetigungsquote des Vermittlers. In der
@@ -1602,9 +1603,44 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   ist) und steht im Abschnitt "Eingelesene Vermittler-Vorgangslisten" -
   GELOESCHT wird nie etwas. Der Knopf erscheint zusaetzlich bei
   "Sonstiges Dokument" (mit Rueckfrage) als Rueckfallebene, falls die
-  Erkennung die Tabelle einmal nicht als Liste einstuft. Verarbeitung bleibt
-  admin/manager (sie fuehrt auf die Seite mit den Provisionsbetraegen).
+  Erkennung die Tabelle einmal nicht als Liste einstuft. Verarbeitung nur mit
+  dem Recht `provisionen-verwalten` (sie fuehrt auf die Seite mit den
+  Provisionsbetraegen; bis 23.09.2026 genuegte die Rolle manager).
   Tests: `VermittlerVorgangslisteTest`.
+  **STATUS-CODES UND RECHNUNG ALS BELEG (Betreiber-Meldung 23.09.2026)**:
+  TARIFCHECK24 meint **1 = offen, 2 = storniert, 3 = verifiziert,
+  4 = bezahlt**. Vorher stand "1 = bestaetigt" (gruen "In Abrechnung
+  gefunden") und Code 3 fehlte ganz - die Vertragsakte zeigte "Provision
+  75,00 EUR" mit Haken, obwohl die Position OFFEN war, und die
+  Bestaetigungsquote zaehlte offene Positionen mit. Der gespeicherte Wert
+  `in_abrechnung` bleibt (Altbestand), er BEDEUTET jetzt "offen".
+  **DIE MONATLICHE CSV IST DER ARBEITSWEG** (Betreiber-Entscheidung
+  23.09.2026, am echten Export `tc24-sales-leads-export` gemessen: 1805
+  Zeilen seit 07/2023 in 4,2 s, Windows-1252 und "16,5" korrekt, zweiter
+  Lauf derselben Datei = 1805 unveraendert): der Betrieb laedt jeden Monat
+  die GESAMTE Datei neu, neue Vorgaenge kommen dazu, geaenderte Status
+  werden nachgezogen. **Code 4 = "Bezahlt" (gruen) - das genuegt**, eine
+  Rechnung ist freiwillig. Die RECHNUNG ist die optionale Zusatzpruefung
+  des tatsaechlich ueberwiesenen Betrags und setzt `bezahlt_belegt`
+  (`VermittlerRechnungAbgleich`, Karte "Rechnung / Gutschrift pruefen –
+  freiwillig" auf `/admin/vermittler-abrechnung`): PDF (Textebene),
+  Foto/Screenshot (OCR) oder Text; ZWEISTUFIG (Entwurf `vermittler_invoices` -> "Ergebnis
+  uebernehmen"); die Datei bleibt als Beleg auf der privaten Platte.
+  NIE RATEN: gesucht werden NUR Ids/Referenz-Nr., die aus einer CSV bekannt
+  sind; bestaetigt ist eine Position nur, wenn auf ihrer Zeile GENAU die
+  erwartete Provision steht - anderer Betrag = Pruefliste, mehrere Betraege
+  = "nicht eindeutig", storniert + in der Rechnung = Widerspruch. Aus einer
+  Rechnung entsteht nie ein Datensatz; unbekannte Positionen stehen als
+  Rest-Betrag da. Eine spaetere CSV stuft eine BELEGTE Zahlung nie zurueck
+  (nur Storno/Widerspruch gewinnen). Die Box in der Vertragsakte trennt
+  "Provision (erwartet laut CSV)" von "Zahlung" (bezahlt laut CSV / auch
+  durch Rechnung belegt / storniert / noch nicht bezahlt).
+  **Bekannte Folge**: Vorgaenge aus der CSV, zu denen im Portal kein
+  Vertrag mit dieser Referenz-Nr. existiert (v.a. Altbestand 2023-2025,
+  119 Zeilen ohne Referenz-Nr.), stehen als "ID nicht gefunden" in der
+  Pruefliste. Die Datei traegt keinen Kundennamen - daraus einen Vertrag
+  anzulegen waere eine Akte ohne Menschen darin; das bleibt bewusst aus.
+  Tests: `VermittlerRechnungTest`.
 - **Interne Provisionen: Fremd-Abrechnungen an den eigenen Vertrag binden**
   (Betreiber-Auftrag 26.08.2026, Anleitung
   `docs/ANLEITUNG_PROVISIONEN_IMPORT_AR.md`): Ein DRITTER Provisions-Strang
@@ -2186,10 +2222,44 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Monatsbericht `/admin/provisionen/bericht` (je Empfaenger: Neukunden,
   Vertraege je Sparte, Provision/Abzuege/Netto) mit Export Excel
   (`XlsxWriter`, ohne Fremdpaket, CSV-Fallback) + PDF (Druckansicht);
-  Leistungs-Dashboard `/admin/provisionen/dashboard`. ALLES nur
-  role:admin,manager - Mitarbeiter/Partner sehen keinerlei Betraege,
+  Leistungs-Dashboard `/admin/provisionen/dashboard`. ALLES nur mit dem
+  Recht `provisionen-verwalten` (seit 23.09.2026, vorher
+  role:admin,manager) - Mitarbeiter/Partner sehen keinerlei Betraege,
   Saetze, Berichte oder Statistiken; KEINE Benachrichtigungen an
   Empfaenger (interner Prozess). Tests: `ProvisionManagementTest`.
+
+## Provisionen sieht nur der Admin (Betreiber-Vorgabe 23.09.2026)
+
+- **Gemeldet am Screenshot der Vertragsakte**: die Box "🤝 Vermittler /
+  Abrechnung" zeigte den Provisionsbetrag JEDEM, der den Vertrag oeffnen
+  durfte - also auch Mitarbeitern und Support. Die Box hatte keinerlei
+  Pruefung; die Schwester-Box "Interne Provisionen" darunter schon. Kunden
+  waren nie betroffen (keine Relation von `Customer`, Portal-Views
+  serialisieren keine Vertragsmodelle - Test belegt es erneut).
+- **EINE Regel fuer alles, was Geld zeigt**: das Recht
+  `provisionen-verwalten` (Gate im `AppServiceProvider`: admin ODER
+  `users.can_manage_commissions`, das der Admin einzeln vergibt). Bisher
+  gab es ZWEI Regeln: das Recht fuer Provisionsmanagement/Interne
+  Provisionen, die ROLLE manager fuer Gutschriften (`/admin/commissions`),
+  Ausgangs-Provisionen (`/admin/provisionen`) und TARIFCHECK24-Abgleich
+  (`/admin/vermittler-abrechnung`). Jetzt gilt ueberall das Recht - an der
+  ROUTE und im CONTROLLER (`HasMiddleware`), ein Manager ohne Haken bekommt
+  403.
+- Ebenso nur mit dem Recht: Vermittler-Box in der Vertragsakte,
+  Provisions-Vorschau und -Reiter in den Berichten, Gutschriften-Hinweis
+  auf Dashboard und im E-Mail-Eingang, "Vorgangsliste einlesen" im
+  Dokumenten-Eingang, Provisionssumme/-historie der Partnerakte und die
+  Provisions-SAETZE im Mitarbeiter- und Partnerformular.
+- **Ausgeblendete Saetze werden NIE als "leer" gespeichert**: ohne Recht
+  fehlen die Felder im Formular, und "nicht mitgeschickt" als "loeschen"
+  zu lesen, haette beim naechsten Umbenennen die Saetze still vernichtet.
+- **Bewusst unveraendert**: Partner-Stammdaten bleiben admin/manager (ohne
+  Betraege); das Partnerportal zeigt dem Partner weiterhin SEINE eigenen
+  Gutschriften (`/partner/provisionen`) - das ist seine Abrechnung, keine
+  interne Zahl. Referenz-Nr. und Vermittler-ID im Vertragsformular bleiben
+  sichtbar - Kennungen, keine Betraege, und die Mitarbeiter pflegen sie.
+- Tests: `ProvisionenNurFuerBerechtigteTest` (scheitert ohne die Aenderung
+  in 4 von 5 Faellen).
 
 ## Architektur-Aufraeumen ARCH-1 bis ARCH-8 (04.09.2026)
 

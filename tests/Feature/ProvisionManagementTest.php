@@ -377,9 +377,9 @@ class ProvisionManagementTest extends TestCase
         $provision = Provision::first();
 
         $employee = $this->employee();
-        $dashboard = route('admin.dashboard');
 
-        // Alle Seiten: Rollen-Middleware leitet Nicht-Verwaltung um.
+        // Alle Seiten: Recht `provisionen-verwalten` fehlt -> 403
+        // (Betreiber-Vorgabe 23.09.2026).
         foreach ([
             route('admin.provisions'),
             route('admin.provisions.rates'),
@@ -388,22 +388,22 @@ class ProvisionManagementTest extends TestCase
             route('admin.provisions.dashboard'),
             route('admin.provisions.show', $provision->id),
         ] as $url) {
-            $this->actingAs($employee)->get($url)->assertRedirect($dashboard);
+            $this->actingAs($employee)->get($url)->assertForbidden();
         }
 
         // Alle Schreibwege ebenso.
         $this->actingAs($employee)->post(route('admin.provisions.store'), [
             'empfaenger' => 'u:'.$employee->id, 'amount' => '10',
-        ])->assertRedirect($dashboard);
+        ])->assertForbidden();
         $this->actingAs($employee)->post(route('admin.provisions.status', $provision->id), [
             'status' => 'ausgezahlt',
-        ])->assertRedirect($dashboard);
+        ])->assertForbidden();
         $this->actingAs($employee)->post(route('admin.provisions.amount', $provision->id), [
             'amount' => '999', 'grund' => 'x',
-        ])->assertRedirect($dashboard);
+        ])->assertForbidden();
         $this->actingAs($employee)->post(route('admin.provisions.rates.save'), [
             'empfaenger' => 'u:'.$employee->id, 'global_fixed' => '99',
-        ])->assertRedirect($dashboard);
+        ])->assertForbidden();
 
         $this->assertSame(1, Provision::count());
         $this->assertSame('110.00', (string) $provision->fresh()->amount);

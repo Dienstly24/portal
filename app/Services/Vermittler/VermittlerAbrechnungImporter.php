@@ -298,6 +298,15 @@ class VermittlerAbrechnungImporter
         }
 
         $newStatus = $match['status'];
+        // Eine durch die RECHNUNG belegte Zahlung nimmt keine CSV zurueck:
+        // die Monatsdatei ist oft aelter als die Gutschrift und meldet
+        // denselben Vorgang noch als "offen" oder "verifiziert". Nur ein
+        // Storno oder ein Widerspruch darf den Beleg ueberstimmen - beides
+        // ist neue Information, kein veralteter Stand.
+        if ($contract->vermittlerStatus() === Contract::VERMITTLER_BEZAHLT_BELEGT
+            && ! in_array($newStatus, [Contract::VERMITTLER_STORNIERT, Contract::VERMITTLER_PRUEFUNG], true)) {
+            $newStatus = null;
+        }
         if ($newStatus !== null && $newStatus !== $contract->vermittlerStatus()) {
             $update['vermittler_status'] = $newStatus;
             $update['vermittler_matched_at'] = now();

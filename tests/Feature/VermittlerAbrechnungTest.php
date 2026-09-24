@@ -450,7 +450,10 @@ class VermittlerAbrechnungTest extends TestCase
         $this->contract($customer, ['reference_number' => '1477-0000-0000-02', 'type' => 'hausrat']);
 
         $this->import($this->csv([
-            ['id' => '9001', 'referenz' => '1477-0000-0000-01', 'status' => '1', 'provision' => '75'],
+            // Status 4 (bezahlt gemeldet). Bis 23.09.2026 stand hier "1" und
+            // zaehlte als abgerechnet - Code 1 heisst aber OFFEN
+            // (VermittlerRechnungTest haelt das fest).
+            ['id' => '9001', 'referenz' => '1477-0000-0000-01', 'status' => '4', 'provision' => '75'],
             ['id' => '9002', 'referenz' => '1477-0000-0000-02', 'status' => '2', 'provision' => '75', 'storno' => 'Widerruf'],
         ]));
 
@@ -471,16 +474,22 @@ class VermittlerAbrechnungTest extends TestCase
     // Oberflaeche: Zugriff, Import, Suche
     // ---------------------------------------------------------------
 
-    public function test_only_admin_and_manager_reach_the_settlement_pages(): void
+    public function test_only_holders_of_the_commission_right_reach_the_settlement_pages(): void
     {
-        // Mitarbeiter werden wie ueberall im Provisions-Management auf das
-        // Dashboard zurueckgeleitet - sie sehen keine Provisionsbetraege.
+        // Betreiber-Vorgabe 23.09.2026: Provisionen sieht nur der Admin bzw.
+        // wem er das Recht `provisionen-verwalten` ausdruecklich gibt - die
+        // ROLLE manager allein genuegt nicht mehr.
         $employee = User::factory()->create(['role' => 'employee']);
-        $this->actingAs($employee)->get('/admin/vermittler-abrechnung')
-            ->assertRedirect(route('admin.dashboard'));
+        $this->actingAs($employee)->get('/admin/vermittler-abrechnung')->assertForbidden();
 
-        $manager = User::factory()->create(['role' => 'manager']);
-        $this->actingAs($manager)->get('/admin/vermittler-abrechnung')->assertOk();
+        $manager = User::factory()->create(['role' => 'manager', 'can_manage_commissions' => false]);
+        $this->actingAs($manager)->get('/admin/vermittler-abrechnung')->assertForbidden();
+
+        $berechtigt = User::factory()->create(['role' => 'manager', 'can_manage_commissions' => true]);
+        $this->actingAs($berechtigt)->get('/admin/vermittler-abrechnung')->assertOk();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->get('/admin/vermittler-abrechnung')->assertOk();
     }
 
     public function test_upload_shows_the_import_result(): void

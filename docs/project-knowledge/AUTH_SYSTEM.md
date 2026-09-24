@@ -43,9 +43,9 @@ in den eigenen Bereich um).
 
 Engere Gruppen in `/admin` (aus `route:list`, 23.09.2026):
 - **nur admin**: Kanaele, KI-Anbieter, E-Mail-Konten, Einstellungen, Kunden-Loeschen/Purge-Aktionen (8 Kundenrouten), einzelne Mitarbeiter-/Aktivitaets-/Werbe-Aktionen
-- **admin, manager**: Mitarbeiter, Partner, Banner, Leistungsseiten, Berichte (teilw.), Fehler, Systemzustand, Lexoffice, Vermittler-Abrechnung, Ausgangs-Provisionen, Gutschriften, KI-Wissensbasis/-Luecken/-Training, Tarifrechner, Team, Werbung, Import/Export, Aktivitaet
+- **admin, manager**: Mitarbeiter, Partner, Banner, Leistungsseiten, Berichte (teilw.), Fehler, Systemzustand, Lexoffice, KI-Wissensbasis/-Luecken/-Training, Tarifrechner, Team, Werbung, Import/Export, Aktivitaet
 - **admin, manager, support**: E-Mail-Posteingang, Anfragen
-- **Recht `can:provisionen-verwalten`**: Provisionsmanagement, Interne Provisionen (admin ODER `users.can_manage_commissions`)
+- **Recht `can:provisionen-verwalten`**: ALLES mit Provisionsbetraegen - Provisionsmanagement, Interne Provisionen, Vermittler-Abrechnung, Ausgangs-Provisionen, Gutschriften, Vermittler-Box der Vertragsakte, Provisions-Saetze (admin ODER `users.can_manage_commissions`; seit 23.09.2026 genuegt die Rolle manager nicht mehr, KI-022)
 - alle Staff: Kunden (Portfolio!), Vertraege, Dokumente, Postfach, Chat, Tasks, Termine, Signaturen, Aenderungsantraege
 
 ## 3. Einzelrechte (`users.can_*`)

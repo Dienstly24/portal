@@ -8,6 +8,60 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 24.09.2026 - CI wieder gruen: veralteter PHPStan-Baseline-Eintrag (KI-024)
+
+- **Task**: Betreiber-Meldung "Problem beim Mergen". Ursache: Job "Codeformat und statische Analyse" rot - seit PR #354 auch auf `main`, #354 wurde deshalb nie ausgeliefert.
+- **Files Changed**: `phpstan-baseline.neon` (2 veraltete Eintraege raus), `VermittlerAbrechnungController` (`LocalTime::for` statt Makro), `VermittlerRechnungAbgleich` (3 Typ-Befunde).
+- **Database/API Changes**: keine. **Potential Side Effects**: keine fachlichen.
+- **Tests Performed**: PHPStan lokal (Umgehung KI-018) 0 Fehler; volle Suite 3082 bestanden, 0 fehlgeschlagen; Pint gruen.
+- **Result**: FIXED.
+
+---
+
+## 23.09.2026 - TARIFCHECK24: Status-Codes richtig, Rechnung als Beleg (KI-023)
+
+- **Task**: Betreiber-Meldung: Rechnungen nicht als PDF/Bild hochladbar; Vertragsakte zeigte 75 EUR als gezahlt, obwohl offen. Ablauf: Referenz-Nr. -> monatliche CSV (Id + Status) -> Rechnung -> belegt bezahlt.
+- **Files Changed**: `VermittlerStatusMap`, `Contract` (Status `verifiziert`, `bezahlt_belegt`), `VermittlerAbrechnungImporter` (belegte Zahlung nicht zurueckstufen), `VermittlerReportService`, `CommissionStatus` (Code 3), `VermittlerListeReader::textFromBinary`, neu `VermittlerRechnungAbgleich`, `VermittlerInvoice`, Migration `2026_09_23_120000_vermittler_rechnungen`, Controller + 4 Routen, Views `vermittler_invoice`, `vermittler_abrechnung`, `vermittler_report`, `contract_vermittler_box`, `commissions_internal/invoice`; Tests `VermittlerRechnungTest` (neu), `VermittlerAbrechnungTest` (1 Fall nachgezogen).
+- **Database Changes**: neue Tabelle `vermittler_invoices`; `vermittler_settlements` + `invoice_id`, `invoice_amount`, `payment_confirmed_at`. Keine Datenumschreibung - der gespeicherte Wert `in_abrechnung` bleibt, nur seine Bedeutung/Beschriftung ist jetzt "offen".
+- **API Changes**: 4 neue Routen unter `/admin/vermittler-abrechnung/rechnung...` (Recht `provisionen-verwalten`).
+- **Potential Side Effects**: Vertraege mit Code 1 erscheinen jetzt orange "Offen" statt gruen; Code 3 geht nicht mehr in die Pruefliste; die Bestaetigungsquote sinkt auf den echten Wert.
+- **Tests Performed**: neuer Test ohne Fix 12/12 rot, mit Fix gruen; volle Suite 3081 bestanden, 0 fehlgeschlagen (5 OCR lokal uebersprungen); Pint gruen; Browser (Chromium 1280 px): Vorschau, Uebernahme, Vertragsakte in allen drei Zustaenden, keine JS-Fehler.
+- **Nachtrag (Betreiber-Entscheidung, selber Tag)**: die Monats-CSV ist der Arbeitsweg; Code 4 heisst "Bezahlt" (gruen) ohne Rechnung, der Rechnungs-Upload ist freiwillig. Echter Export (1805 Zeilen, 2023-2026) lokal eingelesen: 4,2 s, 0 fehlerhaft, Encoding/Dezimalkomma korrekt, zweiter Lauf idempotent. Neuer Test fuer den Monatsrhythmus (Status 1->4, 1->2, neuer Vorgang).
+- **Result**: FIXED.
+
+---
+
+## 23.09.2026 - Provisionen nur mit dem Recht `provisionen-verwalten` (KI-022)
+
+- **Task**: Betreiber-Frage am Screenshot: "Provisionen sieht nur der Admin -
+  keine Mitarbeiter, keine Kunden?" Pruefung ergab: Kunden sicher; Mitarbeiter
+  und Support sahen den Betrag in der Vertragsakte; Manager erreichten drei
+  Provisionsbereiche ueber ihre Rolle.
+- **Files Changed**: `routes/web.php`; `ProvisionController`,
+  `CommissionController`, `VermittlerAbrechnungController` (HasMiddleware),
+  `ReportController`, `EmployeeController`, `PartnerController`;
+  `AdminNavigation`; Views `contract_vermittler_box`, `reports`,
+  `reports_neukunden`, `dashboard`, `email_inbox`, `inbox_doc_row`,
+  `partner_show`, `partners`, `employee_edit`, `_partner_fields`;
+  neuer Test `ProvisionenNurFuerBerechtigteTest`, 4 Tests nachgezogen
+  (Umleitung -> 403); CLAUDE.md, AUTH_SYSTEM, SECURITY_AUDIT, KNOWN_ISSUES,
+  ROUTES_INVENTORY (neu erzeugt).
+- **Components Affected**: Vertragsakte, Berichte, Provisionsbereiche,
+  Mitarbeiter-/Partnerformular, Dokumenten-Eingang, Navigation.
+- **Database Changes**: keine. **API Changes**: 22 Routen von
+  `role:admin,manager` auf `can:provisionen-verwalten`; ohne Recht 403 statt
+  Umleitung.
+- **Potential Side Effects**: Manager OHNE Haken "Provisionen verwalten"
+  verlieren Gutschriften, Ausgangs-Provisionen und Vermittler-Abrechnung -
+  gewollt; der Admin vergibt das Recht einzeln.
+- **Tests Performed**: neuer Test ohne Fix 4/5 rot, mit Fix gruen; volle
+  Suite 3069 bestanden, 0 fehlgeschlagen (5 OCR-Faelle lokal ohne tesseract
+  uebersprungen, CI hat es); Pint gruen; `composer stan` lokal nicht
+  ausfuehrbar (KI-018), CI ist Massstab.
+- **Result**: FIXED.
+
+---
+
 ## 23.09.2026 - Reparaturrunde 1: was sich im Code beheben liess
 
 - **Task**: Betreiber-Auftrag "Behebe, was sich beheben laesst" - alle Befunde aus

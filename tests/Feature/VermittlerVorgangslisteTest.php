@@ -443,7 +443,7 @@ class VermittlerVorgangslisteTest extends TestCase
         $this->assertDatabaseCount('vermittler_imports', 0);
     }
 
-    public function test_only_admin_and_manager_may_import_a_list(): void
+    public function test_only_holders_of_the_commission_right_may_import_a_list(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);
         $path = tempnam(sys_get_temp_dir(), 'vl').'.csv';
@@ -451,7 +451,7 @@ class VermittlerVorgangslisteTest extends TestCase
 
         $this->actingAs($employee)->post('/admin/vermittler-abrechnung/vorgangsliste', [
             'liste_datei' => new UploadedFile($path, 'vorgaenge.csv', 'text/csv', null, true),
-        ])->assertRedirect(route('admin.dashboard'));
+        ])->assertForbidden(); // Recht `provisionen-verwalten` (23.09.2026)
 
         $this->assertDatabaseCount('vermittler_imports', 0);
     }

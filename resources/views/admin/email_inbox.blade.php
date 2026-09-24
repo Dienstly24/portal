@@ -15,9 +15,11 @@
 
 {{-- Weitere Freigabe-Warteschlangen im Blick (Abschnitt 11: EIN Arbeitsvorrat) --}}
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;">
+    @can('provisionen-verwalten')
     <a href="{{ route('admin.commissions') }}" class="card" style="padding:16px 20px;text-decoration:none;display:flex;justify-content:space-between;align-items:center;">
         <div><div class="muted-sm">Provisionen zu prüfen</div><div style="font-size:22px;font-weight:700;">{{ $queues['commissions'] }}</div></div><div style="font-size:22px;">💶</div>
     </a>
+    @endcan
     <a href="{{ route('admin.document_requests') }}" class="card" style="padding:16px 20px;text-decoration:none;display:flex;justify-content:space-between;align-items:center;">
         <div><div class="muted-sm">Dokument-Uploads zu prüfen</div><div style="font-size:22px;font-weight:700;">{{ $queues['document_requests'] }}</div></div><div style="font-size:22px;">📄</div>
     </a>

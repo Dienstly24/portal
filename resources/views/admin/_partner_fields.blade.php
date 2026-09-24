@@ -27,6 +27,7 @@
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Notizen</label>
         <textarea name="notes" rows="2" maxlength="5000" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Notizen">{{ old('notes', $partner->notes ?? '') }}</textarea>
     </div>
+    @can('provisionen-verwalten')
     {{-- Provisions-Saetze (Neukunden-Bericht): Vorschlag, wenn dieser Partner
          als Werber eines Neukunden eingetragen ist. Beide optional. --}}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -39,6 +40,7 @@
             <input type="number" name="provision_percent" step="0.01" min="0" max="100" value="{{ old('provision_percent', $partner->provision_percent ?? '') }}" placeholder="z. B. 10" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Provision % vom Jahresbeitrag">
         </div>
     </div>
+    @endcan
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
         <input type="hidden" name="is_active" value="0">
         <input type="checkbox" name="is_active" value="1" {{ old('is_active', $partner->is_active ?? true) ? 'checked' : '' }}> Aktiv

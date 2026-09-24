@@ -29,7 +29,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-013 | MEDIUM | ops | Worker und Cron nicht aus dem Repo belegbar | OPEN (Betreiber) |
 | KI-001 | LOW | security | `can_see_all_customers` Default `true` | OPEN (Betreiber-Entscheidung) |
 | KI-005 | LOW | feature-gap | BIMI: Zertifikat + Auslieferungsort | OPEN (Betreiber) |
-| KI-018 | LOW | maintenance | phpstan in netzbeschraenkter Umgebung nicht installierbar | OPEN (Hinweis) |
+| KI-018 | LOW | maintenance | phpstan in netzbeschraenkter Umgebung nicht installierbar | OPEN (Umgehung belegt, siehe Eintrag) |
 | KI-007 | MEDIUM | ux-i18n | 21 Kundentexte ohne arabische Uebersetzung | FIXED |
 | KI-006 | LOW | correctness | Einladungsmail nennt nicht vergebene Rechte | FIXED |
 | KI-010 | LOW | security | Interne Kennungen am Vertragsdatensatz | FIXED (Waechter-Test) |
@@ -41,6 +41,9 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-019 | MEDIUM | security | Jeder Mitarbeiter konnte jede Ankuendigung loeschen | FIXED |
 | KI-020 | LOW | correctness | Termin: `assigned_to` ungeprueft (500er unter MySQL) | FIXED |
 | KI-021 | LOW | ux-i18n | Registrierungsseite AR: Haekchen ueber dem Text | FIXED |
+| KI-022 | HIGH | security | Provisionsbetrag in der Vertragsakte fuer jedes Personal sichtbar | FIXED |
+| KI-024 | HIGH | ops | `main` seit PR #354 rot (PHPStan-Baseline verwies auf geloeschte Datei) - #354 nie ausgeliefert | FIXED |
+| KI-023 | HIGH | correctness | TARIFCHECK24-Status falsch gedeutet (1 = "bestaetigt", 3 unbekannt), kein Rechnungs-Upload | FIXED |
 
 FIXED wird zu VERIFIED, sobald der PR gemergt und die CI (inkl. MySQL-Lauf
 und PHPStan) auf `main` gruen ist.
@@ -182,6 +185,8 @@ und PHPStan) auf `main` gruen ist.
 - **Description** `phpstan/phpstan` wird nur als Zip ueber `api.github.com` verteilt; ist der Host gesperrt, hilft auch `--prefer-source` nicht. Folge: `composer stan` lokal nicht ausfuehrbar, die CI bleibt Massstab. Umgehung fuer Tests: Paket voruebergehend aus Lock/composer.json nehmen, danach `git checkout` (so am 23.09.2026 gemacht).
 - **Discovered** 23.09.2026
 
+- **Umgehung (24.09.2026, belegt)**: `composer install --prefer-source` scheitert nur an `phpstan/phpstan` (reines Release-Paket). Git-Klone der GESPERRTEN Versionen funktionieren: `git clone --depth 1 --branch <version> https://github.com/phpstan/phpstan.git vendor/phpstan/phpstan` und ebenso `larastan/larastan`, dann `php vendor/phpstan/phpstan/phpstan analyse --memory-limit=2G --autoload-file=<psr4-loader fuer Larastan\\Larastan\\ -> vendor/larastan/larastan/src>`. So am 24.09.2026 gelaufen (0 Fehler). Wer diese Pruefung auslaesst, pusht ungeprueften Code - genau so entstand KI-024.
+
 ### KI-019 - Jeder Mitarbeiter konnte jede Ankuendigung loeschen
 - **Category** security · **Severity** MEDIUM · **Status** FIXED
 - **Location** `TarifrechnerController::destroyAnnouncement`, `admin/announcements.blade.php`
@@ -201,6 +206,27 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `resources/views/auth/register-pending.blade.php`
 - **Description** Im Browser (390 px, Arabisch) gefunden: das Haekchen wanderte nach rechts, der Freiraum blieb links (`padding-left`) - das Zeichen lag auf dem ersten Wort.
 - **Fix (23.09.2026)**: `padding-inline-start`; Test in `ArabischeUebersetzungVollstaendigTest`; Screenshot nach dem Fix geprueft.
+- **Discovered** 23.09.2026
+
+### KI-022 - Provisionsbetrag in der Vertragsakte fuer jedes Personal sichtbar
+- **Category** security · **Severity** HIGH · **Status** FIXED
+- **Location** `resources/views/admin/partials/contract_vermittler_box.blade.php`, `routes/web.php` (Gruppe Partner & Provisionen), `AdminNavigation::vertrieb`
+- **Description** Vom Betreiber am Screenshot gemeldet ("Provisionen nur fuer den Admin"). Die Box "Vermittler / Abrechnung" hatte keine Pruefung: jeder Mitarbeiter und Support mit Zugriff auf den Vertrag sah den Provisionsbetrag. Dazu reichte fuer Gutschriften, Ausgangs-Provisionen und Vermittler-Abrechnung die ROLLE manager statt des Rechts `provisionen-verwalten`. Kunden waren nicht betroffen.
+- **Fix (23.09.2026)**: ueberall das Recht (Route + Controller + Views); Saetze bleiben erhalten, wenn jemand ohne Recht speichert. Test `ProvisionenNurFuerBerechtigteTest` (ohne Fix 4/5 rot).
+- **Discovered** 23.09.2026
+
+### KI-024 - `main` seit PR #354 rot, #354 nie ausgeliefert
+- **Category** ops · **Severity** HIGH · **Status** FIXED
+- **Location** `phpstan-baseline.neon`
+- **Description** PR #354 hat `VerifyEmailController.php` geloescht, der Baseline-Eintrag dazu blieb stehen. PHPStan bricht bei einem Eintrag fuer eine nicht vorhandene Datei SOFORT ab ("Invalid entry in ignoreErrors"). Der Job "Codeformat und statische Analyse" war damit auf `main` und auf jedem neuen PR rot - und weil der Deploy an den Tests haengt, wurde #354 NICHT ausgeliefert. Lokal fiel es nicht auf, weil phpstan hier nicht lief (KI-018).
+- **Fix (24.09.2026)**: Eintrag entfernt; dazu ein zweiter veralteter Eintrag (`VermittlerSettlement::$anzahl`, Ursache mit KI-023 behoben). PHPStan lokal nachgeholt: 5 neue Meldungen im Code von KI-023 an der Ursache behoben (keine neue Baseline-Zeile), danach 0 Fehler. LEHRE: wer eine Datei loescht, sucht sie auch in `phpstan-baseline.neon`.
+- **Discovered** 24.09.2026
+
+### KI-023 - TARIFCHECK24-Status falsch gedeutet, Rechnung nicht hochladbar
+- **Category** correctness · **Severity** HIGH · **Status** FIXED
+- **Location** `VermittlerStatusMap`, `VermittlerReportService`, `contract_vermittler_box.blade.php`, Rechnungsabgleich
+- **Description** Vom Betreiber gemeldet. (1) Code 1 wurde als "bestaetigt / In Abrechnung gefunden" (gruen) gedeutet - er heisst OFFEN; die Vertragsakte zeigte "Provision 75,00 EUR" neben einem Haken, als waere gezahlt. Code 3 (verifiziert) war unbekannt und landete in der Pruefliste. Auswertung und Bestaetigungsquote zaehlten offene Positionen als bestaetigt. (2) Eine Rechnung liess sich weder als PDF noch als Bild hochladen - es gab nur ein Suchfeld.
+- **Fix (23.09.2026)**: Codes 1/2/3/4 = offen/storniert/verifiziert/bezahlt; Code 4 = "Bezahlt" (die Monats-CSV genuegt, Betreiber-Entscheidung); optional "auch durch Rechnung belegt" per Rechnungs-Upload (PDF/Bild/Text, zweistufig) prueft nur bekannte Ids/Referenz-Nr. und den Betrag je Zeile; Box trennt "erwartet" von "belegt". Test `VermittlerRechnungTest` (ohne Fix 12/12 rot).
 - **Discovered** 23.09.2026
 
 
