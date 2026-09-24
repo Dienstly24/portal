@@ -210,7 +210,7 @@ class VermittlerRechnungAbgleich
                 'reference_number' => $settlement->reference_number,
                 'contract_id' => $settlement->contract_id,
                 'contract_label' => $settlement->contract?->typeLabel() ?? $settlement->contract_label,
-                'customer_label' => $settlement->contract?->customer?->user?->name ?? $settlement->customer_label,
+                'customer_label' => $settlement->contract->customer->user->name ?? $settlement->customer_label,
                 'produkt' => $settlement->produkt,
                 'status_code' => $settlement->status_code,
                 'expected_amount' => $expected,
@@ -290,7 +290,7 @@ class VermittlerRechnungAbgleich
     }
 
     /** Referenz-Nr. mit beliebigem Trenner zwischen den Bloecken. */
-    private function referencePattern(string $key): ?string
+    private function referencePattern(string $key): string
     {
         if (! preg_match('/^\d{14}$/', $key)) {
             return '/'.preg_quote($key, '/').'/';
@@ -316,7 +316,7 @@ class VermittlerRechnungAbgleich
         if (! preg_match_all(self::AMOUNT, $line, $m)) {
             return [];
         }
-        return array_values(array_map(fn ($v) => $this->toFloat($v), $m[1]));
+        return array_map(fn ($v) => $this->toFloat($v), $m[1]);
     }
 
     private function toFloat(string $value): float

@@ -16,6 +16,7 @@ use App\Services\Vermittler\VermittlerListeReader;
 use App\Services\Vermittler\VermittlerRechnungAbgleich;
 use App\Services\Vermittler\VermittlerReportService;
 use App\Services\Vermittler\VermittlerVorgangslisteImporter;
+use App\Support\LocalTime;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\Storage;
@@ -123,7 +124,7 @@ class VermittlerAbrechnungController extends Controller implements HasMiddleware
             ->where('status', VermittlerInvoice::STATUS_BESTAETIGT)->first();
         if ($bereits) {
             return redirect()->route('admin.vermittler.invoice', $bereits->id)
-                ->with('error', 'Diese Rechnung wurde bereits am '.$bereits->confirmed_at?->lokal()->format('d.m.Y')
+                ->with('error', 'Diese Rechnung wurde bereits am '.LocalTime::for($bereits->confirmed_at)?->format('d.m.Y')
                     .' übernommen. Es wurde nichts doppelt gebucht.');
         }
 
