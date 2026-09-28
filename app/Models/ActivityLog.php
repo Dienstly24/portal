@@ -46,6 +46,29 @@ class ActivityLog extends Model
     }
 
     /**
+     * Doppelte Kodierung an der WURZEL abfangen (Audit 28.09.2026, KI-036).
+     *
+     * Rund 85 Schreibstellen uebergeben `json_encode([...])` an eine Spalte
+     * mit Array-Cast - gespeichert wurde dann ein JSON-STRING im JSON
+     * (doppelt kodiert). Lesend faengt `metaArray()` das ab, aber jede
+     * Abfrage auf den Inhalt von `meta` waere falsch gewesen. Statt 85
+     * Stellen einzeln umzuschreiben, nimmt das Modell beide Formen an und
+     * speichert immer dieselbe: ein JSON-Objekt. Ein String, der KEIN
+     * JSON-Objekt ist, bleibt unveraendert (nichts wird geraten).
+     */
+    public function setMetaAttribute($value): void
+    {
+        if (is_string($value)) {
+            $entschluesselt = json_decode($value, true);
+            if (is_array($entschluesselt)) {
+                $value = $entschluesselt;
+            }
+        }
+
+        $this->attributes['meta'] = $value === null ? null : json_encode($value, JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
      * Meta robust als Array liefern: Alt-Eintraege wurden teils als
      * vor-serialisierter JSON-String gespeichert (doppelt kodiert),
      * neue Eintraege als echtes Array ueber den Cast.

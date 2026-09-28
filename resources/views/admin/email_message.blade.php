@@ -129,15 +129,25 @@ document.querySelectorAll('.assign-form').forEach(form => {
         const q = search.value.trim();
         if (q.length < 2) { results.style.display = 'none'; return; }
         timer = setTimeout(() => {
-            fetch('{{ route('admin.employees.customer-search') }}?q=' + encodeURIComponent(q), {headers: {'Accept': 'application/json'}})
-                .then(r => r.json())
-                .then(items => {
+            // Gemeinsame, portfolio-gescopte Kundensuche. Vorher der Endpunkt der
+            // Mitarbeiterverwaltung (nur admin/manager) - fuer Support kam 403
+            // zurueck, die Liste blieb leer, Zuordnen war unmoeglich (KI-029).
+            fetch('{{ route('admin.customers.search') }}?q=' + encodeURIComponent(q), {headers: {'Accept': 'application/json'}})
+                .then(r => r.ok ? r.json() : {customers: []})
+                .then(data => {
+                    const items = (data && data.customers) || [];
                     results.innerHTML = '';
                     if (!items.length) { results.style.display = 'none'; return; }
                     items.forEach(c => {
                         const div = document.createElement('div');
                         div.style.cssText = 'padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line);';
-                        div.innerHTML = '<strong>' + (c.name ?? '—') + '</strong> <span class="muted">(' + (c.number ?? '') + ')</span>';
+                        // Kundenname ist Fremddatum -> textContent (KI-028).
+                        const staerker = document.createElement('strong');
+                        staerker.textContent = c.name ?? '—';
+                        const nummer = document.createElement('span');
+                        nummer.className = 'muted';
+                        nummer.textContent = ' (' + (c.number ?? '') + ')';
+                        div.append(staerker, nummer);
                         div.onmouseover = () => div.style.background = '#F8F9FA';
                         div.onmouseout = () => div.style.background = '#fff';
                         div.onclick = () => {

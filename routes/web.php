@@ -175,7 +175,13 @@ Route::get('/sprache/{locale}', function (string $locale) {
     if ($user && $user->role === 'customer' && $user->customer) {
         $user->customer->update(['preferred_lang' => $locale]);
     }
-    return back();
+    // back() folgt dem Referer unbesehen - auch auf einen FREMDEN Host.
+    // Zurueck nur auf den eigenen, sonst auf die Startseite (Audit
+    // 28.09.2026, KI-032).
+    $zurueck = url()->previous();
+    $host = parse_url($zurueck, PHP_URL_HOST);
+
+    return redirect()->to($host === null || strcasecmp($host, request()->getHost()) === 0 ? $zurueck : '/');
 })->name('locale.switch');
 
 // Social-Media-Kurzlinks (/s/{code}): oeffentlich, zaehlt den Klick je

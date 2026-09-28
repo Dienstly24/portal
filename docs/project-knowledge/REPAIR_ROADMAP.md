@@ -28,6 +28,16 @@ Legende Aufwand: S (< 1/2 Tag), M (1-2 Tage), L (mehrere Tage).
 | R-09 | ~~Waechter-Test interne Kennungen~~ **erledigt 23.09.2026** | KI-010 | - |
 | R-10 | ~~Funktionstests Termine/Ankuendigungen/Tarifrechner~~ **erledigt 23.09.2026** (dabei KI-019, KI-020 behoben) | KI-011 | - |
 
+## Stufe 1b - System-Audit 28.09.2026
+
+| R | Aufgabe | Issue | Aufwand |
+|---|---|---|---|
+| R-20 | ~~Inline-Auslieferung, Einmal-Links, Mitarbeiterverwaltung, Signatur-Code/-Sperren, Such-Escaping, Support-Suche, WhatsApp-Aufteilung, Sprachumschalter, meta-Kodierung, SVG-CSS, Reset-Meldung, Registrierungs-Doppelklick~~ **erledigt 28.09.2026** | KI-025..032, KI-036..040 | - |
+| R-24 | ~~Admin-Reset, 2FA-Einrichtung, Widerruf der Zugangslinks, Einladungs-Lebenslauf~~ **erledigt 28.09.2026** | KI-041..043 | - |
+| R-21 | Entscheidung: ungepruefte Formularanfragen sichtbar als "nicht verifiziert" markieren und erst nach Bestaetigung im Portal zeigen | KI-033 | S-M (Betreiber-Entscheidung vorab) |
+| R-22 | Entscheidung: Abmeldelink per GET nur Bestaetigungsseite, Ein-Klick bleibt POST | KI-034 | S (Betreiber-Entscheidung vorab) |
+| R-23 | Entscheidung: eingerichteter zweiter Faktor gilt auch bei Schalter AUS | KI-035 | S (Betreiber-Entscheidung vorab) |
+
 ## Stufe 2 - Aufraeumen
 
 | R | Aufgabe | Issue | Aufwand |

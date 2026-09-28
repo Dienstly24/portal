@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
@@ -79,6 +80,23 @@ class EmployeeController extends Controller
         }
 
         return $werte;
+    }
+
+    /**
+     * NUR Personal-Konten (System-Audit 28.09.2026, KI-040).
+     *
+     * Die Mitarbeiterverwaltung lud bisher JEDES Konto ueber seine ID -
+     * auch Kunden- und Partnerkonten. Damit konnte ein Manager ueber
+     * /admin/employees/{id} das Portal-Konto eines Kunden sperren (der
+     * eigentliche Weg dafuer ist admin-only), einem Kundenkonto per
+     * "Speichern" die Rolle manager geben (= Zugang zur Beraterwelt) und
+     * ein Admin eine Kundenakte am CustomerDeletionService vorbei loeschen
+     * (customers.user_id kaskadiert). Fremde Konten sind hier jetzt 404 -
+     * als gaebe es sie in dieser Verwaltung nicht.
+     */
+    private function mitarbeiter($id): User
+    {
+        return User::whereIn('role', ['admin', 'manager', 'support', 'employee'])->findOrFail($id);
     }
 
     public function index() {
@@ -173,7 +191,7 @@ class EmployeeController extends Controller
     }
 
     public function edit($id) {
-        $employee = User::findOrFail($id);
+        $employee = $this->mitarbeiter($id);
         if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
             abort(403, 'Kein Zugriff auf Administrator-Konten.');
         }
@@ -188,7 +206,7 @@ class EmployeeController extends Controller
      * Entfernen einzelner Kunden.
      */
     public function show(Request $request, $id) {
-        $employee = User::findOrFail($id);
+        $employee = $this->mitarbeiter($id);
         if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
             abort(403, 'Kein Zugriff auf Administrator-Konten.');
         }
@@ -215,7 +233,7 @@ class EmployeeController extends Controller
      * Mitarbeiter zuweisen (ohne bestehende Zuweisungen zu loesen).
      */
     public function assignCustomers(Request $request, $id) {
-        $employee = User::findOrFail($id);
+        $employee = $this->mitarbeiter($id);
         if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
             abort(403, 'Kein Zugriff auf Administrator-Konten.');
         }
@@ -247,7 +265,7 @@ class EmployeeController extends Controller
 
     /** Einen einzelnen Kunden aus dem Portfolio des Mitarbeiters entfernen. */
     public function unassignCustomer($id, $customerId) {
-        $employee = User::findOrFail($id);
+        $employee = $this->mitarbeiter($id);
         if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
             abort(403, 'Kein Zugriff auf Administrator-Konten.');
         }
@@ -290,7 +308,7 @@ class EmployeeController extends Controller
     }
 
     public function update(Request $request, $id) {
-        $employee = User::findOrFail($id);
+        $employee = $this->mitarbeiter($id);
         // Eigene Rechte aendert niemand ueber diese Maske. `destroy()` und
         // `toggleActive()` halten das laengst so - hier fehlte der Satz, und
         // genau das war die Luecke: ein Manager OHNE
@@ -344,7 +362,7 @@ class EmployeeController extends Controller
     }
 
     public function destroy($id) {
-        $employee = User::findOrFail($id);
+        $employee = $this->mitarbeiter($id);
         if ($employee->id === auth()->id()) abort(403, 'Eigenes Konto kann nicht geloescht werden.');
         if ($employee->role === 'admin' && auth()->user()->role !== 'admin') abort(403);
         $name = $employee->name;
@@ -408,7 +426,7 @@ class EmployeeController extends Controller
     }
 
     public function toggleActive($id) {
-        $employee = User::findOrFail($id);
+        $employee = $this->mitarbeiter($id);
         if ($employee->id === auth()->id()) abort(403, 'Eigenes Konto kann nicht deaktiviert werden.');
         if ($employee->role === 'admin' && auth()->user()->role !== 'admin') abort(403);
         // is_active steht bewusst NICHT in User::$fillable (System-Spalte).
@@ -433,8 +451,8 @@ class EmployeeController extends Controller
             'to_employee' => 'required|exists:users,id|different:from_employee',
             'reason' => 'required|string|max:500',
         ]);
-        $from = User::findOrFail($request->from_employee);
-        $to = User::findOrFail($request->to_employee);
+        $from = $this->mitarbeiter($request->from_employee);
+        $to = $this->mitarbeiter($request->to_employee);
         $customerIds = $from->assignedCustomers()->pluck('customers.id')->toArray();
         if (empty($customerIds)) {
             return back()->with('success', 'Keine Kunden zum Uebertragen vorhanden.');
@@ -476,10 +494,24 @@ class EmployeeController extends Controller
         if (! $employee->isStaff()) {
             return back()->with('error', 'Dieses Konto ist kein Mitarbeiter-Konto.');
         }
+        // Dieselbe Grenze wie beim Bearbeiten: ein Manager hat keinen Zugriff
+        // auf Administrator-Konten. Seit KI-043 entwertet das erneute Senden
+        // die bisherigen Links des Kontos - ohne diese Zeile koennte ein
+        // Manager die Zugangslinks eines Administrators widerrufen und neue
+        // ausloesen, obwohl er dessen Konto sonst nicht anfassen darf.
+        if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
+            abort(403, 'Kein Zugriff auf Administrator-Konten.');
+        }
         if (! $employee->hasRealEmail()) {
             return back()->with('error', 'Fuer dieses Konto ist keine echte E-Mail-Adresse hinterlegt.');
         }
 
+        // Nur die NEUESTE Einladung gilt (KI-043). Vorher blieben alle
+        // frueheren Einladungen parallel 14 Tage gueltig - wer eine alte Mail
+        // hatte, konnte das Passwort setzen, bevor der Mitarbeiter die neue
+        // oeffnete. Widerruf VOR dem Bau des neuen Links, damit dieser den
+        // neuen Stand traegt.
+        $employee->zugangslinksWiderrufen();
         $setPasswordUrl = PasswordSetupController::invitationUrl($employee);
 
         try {
@@ -537,8 +569,10 @@ class EmployeeController extends Controller
 
     public function storeSubstitution(Request $request) {
         $request->validate([
-            'absent_user_id' => 'required|exists:users,id',
-            'substitute_user_id' => 'required|exists:users,id|different:absent_user_id',
+            // Nur Personal vertritt Personal (KI-040): `exists:users` liess
+            // auch Kunden- und Partnerkonten zu.
+            'absent_user_id' => ['required', Rule::exists('users', 'id')->whereIn('role', ['admin', 'manager', 'support', 'employee'])],
+            'substitute_user_id' => ['required', 'different:absent_user_id', Rule::exists('users', 'id')->whereIn('role', ['admin', 'manager', 'support', 'employee'])],
             'from_date' => 'required|date',
             'to_date' => 'required|date|after_or_equal:from_date',
             'reason' => 'nullable|string|max:255',

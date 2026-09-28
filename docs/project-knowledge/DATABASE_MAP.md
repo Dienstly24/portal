@@ -11,7 +11,7 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 ### Identitaet & Zugang
 | Tabelle | Zweck / Hinweise |
 |---|---|
-| `users` | alle Konten; `role`, Einzelrechte `can_*`, 2FA-Felder, `must_change_password`, `portal_password_set_at`, Provisionssaetze. **`can_see_all_customers` Default `true`** (-> KI-001) |
+| `users` | alle Konten; `role`, Einzelrechte `can_*`, 2FA-Felder, `must_change_password`, `portal_password_set_at`, `zugangslink_version` (Widerrufsstand aller Zugangslinks, KI-043), Provisionssaetze. **`can_see_all_customers` Default `true`** (-> KI-001) |
 | `password_reset_tokens`, `sessions` | Laravel-Standard (Session-Treiber `database`) |
 | `pending_registrations` | zweistufige Registrierung (SEC-1), Token als sha256 |
 | `substitutions` | Vertretungen (erweitern die Sichtbarkeit) |

@@ -178,6 +178,8 @@ $typeConfig = [
 
 <script @cspNonce>
 (function () {
+    // Fremddaten (Kundennamen, Anschriften) nie roh in innerHTML (KI-028).
+    function escHtml(t) { var d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML; }
     var assignedSet = new Set(JSON.parse(document.getElementById('assignedIdsData').textContent).map(String));
     var selected = {};                 // id -> {id,name,number}
     var lastResults = [];              // aktuell angezeigte, nicht bereits zugewiesene Treffer
@@ -220,8 +222,8 @@ $typeConfig = [
             var row = document.createElement('div');
             row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13.5px;border-bottom:1px solid var(--line);';
             var already = assignedSet.has(id);
-            var meta = '<div><strong>' + (c.name || '—') + '</strong> <span class="muted">' + (c.number || '') + '</span>'
-                + (c.address ? '<div class="muted-xs">' + c.address + '</div>' : '') + '</div>';
+            var meta = '<div><strong>' + escHtml(c.name || '—') + '</strong> <span class="muted">' + escHtml(c.number || '') + '</span>'
+                + (c.address ? '<div class="muted-xs">' + escHtml(c.address) + '</div>' : '') + '</div>';
             if (already) {
                 row.innerHTML = '<span style="width:16px;"></span>' + meta
                     + '<span style="margin-left:auto;font-size:11.5px;background:#EEF0F3;color:#5F5E5A;border-radius:10px;padding:2px 9px;white-space:nowrap;">bereits zugewiesen</span>';

@@ -8,6 +8,40 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 28.09.2026 - PR #358: KI-042, KI-043, Einladungs-Lebenslauf, Nachpruefung KI-025..041
+
+- **Task**: Betreiber-Auftrag nach der Threat-Model-Runde: KI-042 und KI-043 beheben, KI-025..041 erneut auf Umgehungen pruefen. KI-033/034/035 und die Mehrfachnutzung des Magic-Links bewusst NICHT angefasst.
+- **Files Changed**: `Auth\TwoFactorController`, `TwoFactorService` (KI-042); `User` (Widerrufsstand, Adress-Hook, `setzeVerwaltungsPasswort`), `EinmalLink`, `CustomerWelcomeMail`, `PasswordSetupController`, `PortalAccessService`, `AdminController`, `EmployeeController::resendInvitation` (KI-043); Tests neu `ZweiFaktorEinrichtungUmgehungTest`, `ZugangslinkWiderrufTest`, `MitarbeiterEinladungErneutSendenTest`, erweitert `EinmalLinkTest`, `SignaturCodeUndGleichzeitigkeitTest` (Sperre selbst), `SuchlistenFremddatenTest` (Waechter verbreitert), `SprachumschalterWeiterleitungTest` (14 Randfaelle).
+- **Database Changes**: Migration `2026_09_28_140000_zugangslink_version_an_users` - `users.zugangslink_version` (unsigned int, Default 0).
+- **API Changes**: keine neuen Routen. Verhalten: Zugangslinks tragen `v`; alte Links werden nach Adress-/Passwortaenderung durch die Verwaltung, Reset und erneutem Senden ungueltig (403); `POST /sicherheit/zwei-faktor` leitet bei eingerichtetem Faktor zur Abfrage; Manager -> Einladung an Administrator 403.
+- **Potential Side Effects**: Kunden, die eine AELTERE Willkommensmail anklicken, nachdem eine neuere verschickt wurde, sehen 403 mit Hinweis - gewollt. Ersteinrichtung der 2FA sperrt nach 5 falschen Codes fuer 300 s (wie die Abfrage). Bereits verschickte Links ohne `v` gelten bis zum ersten Widerruf an ihrem Konto.
+- **Tests Performed**: jeder neue Test ohne Fix bzw. per Mutation rot nachgewiesen; volle Suite, PHPStan, Pint, `composer audit`, `npm audit` (siehe TESTING_STATUS Lauf 7); Sperre der E-Signatur zusaetzlich mit zwei echten PHP-Prozessen.
+- **Result**: KI-042, KI-043 FIXED.
+
+---
+
+## 28.09.2026 - Pre-Merge-Review PR #358: KI-041
+
+- **Task**: unabhaengige Nachpruefung vor dem Merge (Betreiber-Auftrag): jeder Fix auf Umgehungswege geprueft.
+- **Files Changed**: `PortalAccessService::resetPortal` (setzt `password_changed_at`), `EinmalLink` (Kommentar), Tests `EinmalLinkTest` (+1), `InlineDateiauslieferungTest` (+1 Gegenprobe Nachweis-Upload mit gefaelschtem Typ - kein Fund, Waechter).
+- **Database/API Changes**: keine.
+- **Tests Performed**: neuer Test ohne Fix rot; volle Suite, PHPStan, Pint gruen (siehe TESTING_STATUS Lauf 6).
+- **Result**: KI-041 FIXED.
+
+---
+
+## 28.09.2026 - System-Audit: KI-025 bis KI-040
+
+- **Task**: Betreiber-Auftrag "vollstaendige, tiefe Pruefung" (Full Audit -> Verifikation -> Erstbericht -> Reparatur -> Tests -> Nachpruefung -> Schlussbericht). Bericht: `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md`.
+- **Files Changed**: neu `app/Support/InlineDatei.php`, `app/Support/EinmalLink.php`; `Admin\CustomerDocumentController`, `PortalController`, `CustomerMessageController`, `PortalMessageController` (KI-025); `MagicLoginController`, `PasswordSetupController`, `CustomerWelcomeMail` (KI-026); `SignatureSigningController`, `SignatureSigningService`, `lang/{de,ar,en}/signing.php` (KI-027/030); `layouts/admin`, `layouts/portal`, `employee_edit`, `employee_show`, `email_inbox`, `email_message`, `banners` (KI-028/029); `WhatsAppWebhookController`, `WhatsAppAdapter` (KI-031); `routes/web.php` Sprachumschalter (KI-032); `ActivityLog` (KI-036); `SvgSanitizer` (KI-037); `NewPasswordController` (KI-038); `RegisteredUserController` (KI-039); `EmployeeController`, `PostfachController` (KI-040); `lang/ar.json`.
+- **Database Changes**: keine (keine Migration).
+- **API Changes**: keine neuen Routen. Verhalten: "Anzeigen" liefert Nicht-PDF/Nicht-Rasterbild als Download; `/admin/employees/{id}` fuer Nicht-Personal 404; Signatur-Code gedrosselt; Webhook stoesst je Rufnummer einen eigenen Job an.
+- **Potential Side Effects**: Kunden, die nach dem Setzen ihres Passworts erneut den Magic-Link der Willkommensmail klicken, bekommen 403 mit dem Hinweis, sich mit Passwort anzumelden (gewollt). Word-/Excel-Dateien oeffneten schon vorher nicht im Browser - unveraendert Download.
+- **Tests Performed**: Ausgangslage 3087/3087; danach 3121/3121 (34 neue, jeder neue Test ohne den Fix rot nachgewiesen), 0 uebersprungen; PHPStan 0; Pint gruen; `composer audit`/`npm audit` 0; Chromium: Kopfzeilen-Suche (kein eingeschleustes HTML), E-Mail-Eingang als Support (Suche 200, Zuordnen aktiv), keine JS-Fehler.
+- **Result**: FIXED (KI-025..032, 036..040); KI-033..035 OPEN (Betreiber-Entscheidung).
+
+---
+
 ## 24.09.2026 - CI wieder gruen: veralteter PHPStan-Baseline-Eintrag (KI-024)
 
 - **Task**: Betreiber-Meldung "Problem beim Mergen". Ursache: Job "Codeformat und statische Analyse" rot - seit PR #354 auch auf `main`, #354 wurde deshalb nie ausgeliefert.

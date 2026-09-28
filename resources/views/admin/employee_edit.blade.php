@@ -68,6 +68,8 @@
 </div>
 <script @cspNonce>
 (function () {
+    // Fremddaten (Kundennamen, Anschriften) nie roh in innerHTML (KI-028).
+    function escHtml(t) { var d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML; }
     var preselected = JSON.parse(document.getElementById('preselectedData').textContent);
     var selected = {};
     var box = document.getElementById('assignSelected');
@@ -84,7 +86,7 @@
             var c = selected[id];
             var chip = document.createElement('span');
             chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:var(--emerald-soft);border:1px solid var(--emerald);border-radius:20px;padding:5px 12px;font-size:12.5px;';
-            chip.innerHTML = '👤 ' + c.name + ' <span class="muted">' + (c.number || '') + '</span>';
+            chip.innerHTML = '👤 ' + escHtml(c.name) + ' <span class="muted">' + escHtml(c.number || '') + '</span>';
             var x = document.createElement('a');
             x.textContent = '✕';
             x.style.cssText = 'cursor:pointer;color:#A32D2D;font-weight:700;';
@@ -113,7 +115,7 @@
                     list.forEach(function (c) {
                         var row = document.createElement('div');
                         row.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:13.5px;border-bottom:1px solid var(--line);';
-                        row.innerHTML = '<strong>' + c.name + '</strong> · ' + (c.number || '') + ' <span class="muted">' + (c.email || '') + '</span>' + (selected[c.id] ? ' ✅' : '');
+                        row.innerHTML = '<strong>' + escHtml(c.name) + '</strong> · ' + escHtml(c.number || '') + ' <span class="muted">' + escHtml(c.email || '') + '</span>' + (selected[c.id] ? ' ✅' : '');
                         row.onmouseover = function () { row.style.background = 'var(--canvas)'; };
                         row.onmouseout = function () { row.style.background = '#fff'; };
                         row.onclick = function () {

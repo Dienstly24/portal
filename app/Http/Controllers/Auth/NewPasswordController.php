@@ -68,9 +68,13 @@ class NewPasswordController extends Controller
         return $status == Password::PASSWORD_RESET
                     ? redirect()->route('login')->with('status', 'Ihr Passwort wurde geändert. Sie können sich jetzt anmelden. Offene Sitzungen auf anderen Geräten wurden beendet.')
                     : back()->withInput($request->only('email'))
+                        // INVALID_USER bekommt BEWUSST dieselbe Meldung wie ein
+                        // ungueltiger Link: "kein Konto gefunden" verriet mit
+                        // einem beliebigen Token, ob es zu einer Adresse ein
+                        // Konto gibt - genau das, was "Passwort vergessen"
+                        // absichtlich verschweigt (Audit 28.09.2026, KI-038).
                         ->withErrors(['email' => match ($status) {
-                            Password::INVALID_TOKEN => 'Dieser Link ist abgelaufen oder ungültig. Bitte fordern Sie einen neuen Link an.',
-                            Password::INVALID_USER => 'Zu dieser E-Mail-Adresse haben wir kein Konto gefunden.',
+                            Password::INVALID_TOKEN, Password::INVALID_USER => 'Dieser Link ist abgelaufen oder ungültig. Bitte fordern Sie einen neuen Link an.',
                             default => 'Das Passwort konnte nicht geändert werden. Bitte fordern Sie einen neuen Link an.',
                         }]);
     }

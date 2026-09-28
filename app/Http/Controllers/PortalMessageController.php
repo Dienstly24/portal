@@ -11,6 +11,7 @@ use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\Ai\Assistant\ConversationResumeService;
 use App\Services\CustomerMessageNotifier;
 use App\Support\ChatFeed;
+use App\Support\InlineDatei;
 use App\Support\UploadRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -155,10 +156,9 @@ class PortalMessageController extends Controller
         abort_unless($attachment->isViewable(), 404);
         $disk = Storage::disk($attachment->disk ?: 'local');
         abort_unless($disk->exists($attachment->file_path), 404);
-        return $disk->response($attachment->file_path, $attachment->file_name, [
-            'Content-Type' => $attachment->mimeType(),
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        // Der Typ wird am INHALT bestimmt, nicht aus der Angabe der
+        // Plattform - die ist die Behauptung des Absenders (KI-025).
+        return InlineDatei::antwort($disk, $attachment->file_path, $attachment->file_name);
     }
 
     private function findOwnAttachment($id): CustomerMessageAttachment

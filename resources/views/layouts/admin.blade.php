@@ -276,12 +276,15 @@ function globalSearch(q) {
         .then(r => r.json())
         .then(data => {
             if (!data.length) { results.style.display = 'none'; return; }
+            // Titel und Zusatz sind FREMDDATEN (Kundenname aus der
+            // Registrierung, Ticket-Betreff aus oeffentlichen Formularen) -
+            // deshalb escapen (Audit 28.09.2026, KI-028).
             results.innerHTML = data.map(item => `
-                <a href="${item.url}" class="gs-treffer" style="display:flex;align-items:center;gap:10px;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #E5E1D6;">
-                    <span style="font-size:18px;">${item.icon}</span>
+                <a href="${escapeHtml(item.url)}" class="gs-treffer" style="display:flex;align-items:center;gap:10px;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #E5E1D6;">
+                    <span style="font-size:18px;">${escapeHtml(item.icon)}</span>
                     <div>
-                        <div style="font-weight:600;font-size:13px;">${item.title}</div>
-                        <div style="font-size:11px;color:#6B7280;">${item.sub || ''}</div>
+                        <div style="font-weight:600;font-size:13px;">${escapeHtml(item.title)}</div>
+                        <div style="font-size:11px;color:#6B7280;">${escapeHtml(item.sub || '')}</div>
                     </div>
                 </a>
             `).join('');
@@ -318,9 +321,9 @@ function loadNotifications() {
                 return;
             }
             list.innerHTML = data.items.map(function(n) { return ''
-                + '<a href="' + n.url + '" data-h-click="notif-gelesen" data-a0="' + n.id + '" '
+                + '<a href="' + escapeHtml(n.url) + '" data-h-click="notif-gelesen" data-a0="' + escapeHtml(n.id) + '" '
                 + 'style="display:flex;gap:10px;padding:11px 16px;text-decoration:none;color:#152826;border-bottom:1px solid #E5E1D6;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
-                + '<span style="font-size:18px;line-height:1.2;flex:none;">' + n.icon + '</span>'
+                + '<span style="font-size:18px;line-height:1.2;flex:none;">' + escapeHtml(n.icon) + '</span>'
                 + '<span style="min-width:0;">'
                 + '<span style="display:block;font-size:12.5px;font-weight:600;">' + escapeHtml(n.title) + '</span>'
                 + '<span style="display:block;font-size:12px;color:#6B7280;margin-top:2px;">' + escapeHtml(n.preview) + '</span>'

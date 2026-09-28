@@ -49,6 +49,8 @@ return [
     'verify_wrong' => 'Der Code stimmt nicht oder ist abgelaufen. Bitte fordern Sie einen neuen an.',
     'verify_spam' => 'Keine E-Mail erhalten? Bitte sehen Sie auch im Spam-Ordner nach.',
     'verify_send_failed' => 'Der Code konnte nicht versendet werden. Bitte später erneut versuchen.',
+    'verify_too_many' => 'Zu viele Codes oder Fehlversuche. Bitte warten Sie eine Stunde und fordern Sie dann einen neuen Code an.',
+    'verify_wait' => 'Ein Code ist bereits unterwegs. Bitte warten Sie eine Minute, bevor Sie einen neuen anfordern.',
     'verify_first' => 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.',
 
     // Zusaetzliche Identitaetspruefung

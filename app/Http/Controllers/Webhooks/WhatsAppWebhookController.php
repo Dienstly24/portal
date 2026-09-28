@@ -84,23 +84,29 @@ class WhatsAppWebhookController extends Controller
         }
 
         // Das Konto steht IN der Nutzlast (Rufnummern-Kennung) - so findet
-        // auch bei mehreren Nummern jede Zustellung ihr Konto.
-        $phoneId = WhatsAppAdapter::phoneNumberIdFrom($payload);
-        $account = $phoneId
-            ? $this->accounts()->firstWhere(fn (ChannelAccount $a) => $a->credential('phone_number_id') === $phoneId)
-            : null;
+        // auch bei mehreren Nummern jede Zustellung ihr Konto. Eine
+        // Zustellung kann Ereignisse MEHRERER eigener Nummern tragen; jede
+        // Nummer bekommt ihren eigenen Teil (KI-031), sonst landeten alle
+        // beim Konto der ersten.
+        $konten = $this->accounts();
+        $angenommen = false;
 
-        // ERST PRUEFEN, DANN SPEICHERN: eine gefaelschte Nachricht darf
-        // nie in einer Kundenakte landen. Ohne passendes Konto gibt es
-        // kein App-Secret - also keine Pruefung und damit keine Annahme.
-        if (! $account || ! $adapter->verifyWebhook($roh, $request->headers->all(), $account)) {
-            return response('', 403);
+        foreach (WhatsAppAdapter::splitByPhoneNumberId($payload) as $phoneId => $teil) {
+            $account = $konten->firstWhere(fn (ChannelAccount $a) => $a->credential('phone_number_id') === (string) $phoneId);
+
+            // ERST PRUEFEN, DANN SPEICHERN: eine gefaelschte Nachricht darf
+            // nie in einer Kundenakte landen. Ohne passendes Konto gibt es
+            // kein App-Secret - also keine Pruefung und damit keine Annahme.
+            if (! $account || ! $adapter->verifyWebhook($roh, $request->headers->all(), $account)) {
+                continue;
+            }
+
+            // Die eigentliche Arbeit laeuft asynchron.
+            ProcessWhatsAppWebhookJob::dispatch($account->id, $teil);
+            $angenommen = true;
         }
 
-        // Die eigentliche Arbeit laeuft asynchron.
-        ProcessWhatsAppWebhookJob::dispatch($account->id, $payload);
-
-        return response('', 200);
+        return response('', $angenommen ? 200 : 403);
     }
 
     /** @return Collection<int,ChannelAccount> */

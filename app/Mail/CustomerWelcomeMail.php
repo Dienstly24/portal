@@ -2,9 +2,11 @@
 
 namespace App\Mail;
 
+use App\Http\Controllers\Auth\MagicLoginController;
 use App\Http\Controllers\SupportFormController;
 use App\Models\Customer;
 use App\Models\SystemSetting;
+use App\Support\EinmalLink;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -67,7 +69,7 @@ class CustomerWelcomeMail extends Mailable
         try {
             if ($customer->user) {
                 $this->magicLoginUrl = URL::temporarySignedRoute(
-                    'magic.login', now()->addDays(90), ['user' => $customer->user->id]
+                    'magic.login', now()->addDays(MagicLoginController::GUELTIG_TAGE), EinmalLink::parameter($customer->user)
                 );
             }
             $this->supportUrl = route('support.form', ['t' => SupportFormController::tokenFor($customer)]);

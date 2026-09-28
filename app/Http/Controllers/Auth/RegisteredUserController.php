@@ -12,6 +12,7 @@ use App\Services\CustomerNumberGenerator;
 use App\Services\Security\TurnstileVerifier;
 use App\Support\PasswordPolicy;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -181,7 +182,31 @@ class RegisteredUserController extends Controller
                 ->withErrors(['email' => __('Für diese E-Mail-Adresse besteht bereits ein Konto. Bitte melden Sie sich an.')]);
         }
 
-        $user = DB::transaction(function () use ($pending, $request) {
+        // DOPPELKLICK (Audit 28.09.2026, KI-039): zwei Aufrufe desselben
+        // Links im selben Moment passieren beide die Pruefung oben; der
+        // zweite scheiterte am Unique-Index auf users.email mit HTTP 500 -
+        // obwohl das Konto laengst angelegt war. Die Transaktion rollt ihn
+        // vollstaendig zurueck (keine zweite Akte, keine zweite
+        // Kundennummer); gezeigt wird dieselbe Antwort wie oben.
+        try {
+            $user = $this->kontoAusVormerkung($pending, $request);
+        } catch (UniqueConstraintViolationException) {
+            return redirect()->route('login')
+                ->withErrors(['email' => __('Für diese E-Mail-Adresse besteht bereits ein Konto. Bitte melden Sie sich an.')]);
+        }
+
+        event(new Registered($user));
+        Auth::login($user);
+        // Session-Fixation: nach jedem Anmelden eine neue Sitzungs-ID.
+        $request->session()->regenerate();
+
+        return redirect()->route('portal.dashboard')
+            ->with('success', __('Willkommen! Ihre E-Mail-Adresse ist bestätigt.'));
+    }
+
+    private function kontoAusVormerkung(PendingRegistration $pending, Request $request): User
+    {
+        return DB::transaction(function () use ($pending, $request) {
             $user = User::create([
                 'name' => $pending->fullName(),
                 'email' => $pending->email,
@@ -230,14 +255,6 @@ class RegisteredUserController extends Controller
 
             return $user;
         });
-
-        event(new Registered($user));
-        Auth::login($user);
-        // Session-Fixation: nach jedem Anmelden eine neue Sitzungs-ID.
-        $request->session()->regenerate();
-
-        return redirect()->route('portal.dashboard')
-            ->with('success', __('Willkommen! Ihre E-Mail-Adresse ist bestätigt.'));
     }
 
     /**

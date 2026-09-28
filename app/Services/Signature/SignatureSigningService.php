@@ -11,6 +11,7 @@ use App\Support\SignatureFieldType;
 use App\Support\SignatureGroup;
 use App\Support\SignatureStatus;
 use App\Support\Unterschriftsbild;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -111,6 +112,25 @@ class SignatureSigningService
      * @param  array<string,string>  $drawings  Handschrift je GRUPPE (Feldart), nicht je Feld
      */
     public function sign(SignatureRequest $request, SignatureSigner $signer, array $values, array $drawings = []): array
+    {
+        // GLEICHZEITIGES ABSENDEN (KI-030): die Pruefung "schon
+        // unterschrieben?" war ohne Sperre - zwei Anfragen im selben Moment
+        // (Doppelklick, zweiter Reiter) liefen beide durch. Folge: der
+        // Vorgang wurde zweimal abgeschlossen (PDF und Abschluss-Mails
+        // doppelt), und die zweite Zeichnung ueberschrieb die Bilddatei
+        // NACH dem Abschluss - das gespeicherte Bild waere nicht mehr das
+        // im PDF. Die Sperre gilt je Unterzeichner; der Zustand wird
+        // INNERHALB neu gelesen.
+        return Cache::lock('signatur-unterschrift:'.$signer->id, 60)
+            ->block(15, function () use ($request, $signer, $values, $drawings) {
+                $signer->refresh();
+
+                return $this->signUnterSperre($request, $signer, $values, $drawings);
+            });
+    }
+
+    /** @return array<int,string> Fehlermeldungen; leer = unterschrieben */
+    private function signUnterSperre(SignatureRequest $request, SignatureSigner $signer, array $values, array $drawings): array
     {
         // IDEMPOTENZ: ein zweiter Klick (Doppel-Absenden, Neuladen der Seite,
         // zweiter Reiter) darf nie ein zweites Mal schreiben und nie einen
@@ -354,6 +374,21 @@ class SignatureSigningService
      * kein unterschriebenes Dokument gibt.
      */
     public function complete(SignatureRequest $request): void
+    {
+        // Genau EIN Abschluss je Vorgang (KI-030): unterschreiben zwei
+        // Personen im selben Moment, sehen beide Nachlaeufe "alle fertig".
+        // Ohne Sperre entstand das PDF zweimal und jede Abschluss-Mail ging
+        // doppelt hinaus.
+        Cache::lock('signatur-abschluss:'.$request->id, 120)->block(30, function () use ($request) {
+            $request->refresh();
+            if ($request->completed_at !== null || $request->status === SignatureStatus::COMPLETED) {
+                return;
+            }
+            $this->completeUnterSperre($request);
+        });
+    }
+
+    private function completeUnterSperre(SignatureRequest $request): void
     {
         try {
             $result = $this->pdf->build($request);

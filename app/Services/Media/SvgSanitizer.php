@@ -66,11 +66,37 @@ class SvgSanitizer
                 }
                 if (stripos($value, 'javascript:') !== false) {
                     $el->removeAttributeNode($attr);
+
+                    continue;
+                }
+                // Externe Verweise in CSS (`style="background:url(https://...)"`)
+                // laden beim Betrachten eine fremde Adresse nach - ein
+                // Zaehlpixel. Interne Verweise (`url(#verlauf)`) bleiben.
+                if (self::hatExterneUrl($value)) {
+                    $el->removeAttributeNode($attr);
+                }
+            }
+            // <style>-Bloecke: Farben/Klassen aus Grafikprogrammen bleiben,
+            // nur @import und externe url() fliegen raus (Audit 28.09.2026,
+            // KI-037). <style> ganz zu entfernen haette jedes Logo aus
+            // Illustrator entfaerbt.
+            if (strtolower($el->localName) === 'style') {
+                $css = (string) $el->textContent;
+                $bereinigt = preg_replace('/@import[^;]*;?/i', '', $css);
+                $bereinigt = preg_replace('/url\(\s*+[\'"]?+\s*+(?!#)[^)]*\)/i', 'none', (string) $bereinigt);
+                if ($bereinigt !== $css) {
+                    $el->textContent = (string) $bereinigt;
                 }
             }
         };
         $walk($dom->documentElement);
 
         return $dom->saveXML($dom->documentElement);
+    }
+
+    /** `url(...)` mit einem Ziel ausserhalb der Datei (alles ausser `#anker`). */
+    private static function hatExterneUrl(string $wert): bool
+    {
+        return (bool) preg_match('/url\(\s*+[\'"]?+\s*+(?!#)[^)\s\'"]/i', $wert);
     }
 }
