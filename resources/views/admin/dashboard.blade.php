@@ -25,7 +25,10 @@
         <div class="metric-icon icon-blue">📄</div>
         <div class="metric-label">Aktive Verträge</div>
         <div class="metric-value">{{ $activeContracts }}</div>
-        <div class="metric-sub">Eigenbestand@if(($activeExternalContracts ?? 0) > 0) · zzgl. {{ $activeExternalContracts }} {{ $activeExternalContracts === 1 ? 'Fremdvertrag' : 'Fremdverträge' }}@endif</div>
+        <div class="metric-sub">Eigenbestand
+            {{-- Leerzeichen vor @if ist Pflicht: "Wort@if" erkennt Blade nicht als Direktive. --}}
+            @if(($activeExternalContracts ?? 0) > 0) · zzgl. {{ $activeExternalContracts }} {{ $activeExternalContracts === 1 ? 'Fremdvertrag' : 'Fremdverträge' }}@endif
+        </div>
     </a>
     <a href="{{ route('admin.tickets', ['status' => 'aktiv']) }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-amber">💬</div>
