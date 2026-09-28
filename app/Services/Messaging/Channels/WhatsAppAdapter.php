@@ -106,6 +106,42 @@ class WhatsAppAdapter extends AbstractChannelAdapter
      * Pluszeichen und Leerzeichen. Ein Zeichenvergleich waere deshalb
      * IMMER ungleich - und der Echo-Schutz waere lautlos wirkungslos.
      */
+    /**
+     * Eine Zustellung nach Rufnummern-Kennung aufteilen (Audit 28.09.2026,
+     * KI-031).
+     *
+     * Meta buendelt Ereignisse; stehen Nachrichten ZWEIER eigener Nummern
+     * in einer Zustellung, wurde bisher alles dem Konto der ERSTEN Nummer
+     * zugeschlagen - die Antwort ging dann ueber die falsche Nummer
+     * hinaus. Jede Teil-Nutzlast enthaelt nur die `changes` ihrer Nummer.
+     * Eintraege OHNE Kennung bleiben bei der ersten Nummer (bisheriges
+     * Verhalten) - es wird nichts geraten und nichts verworfen.
+     *
+     * @return array<string, array> Rufnummern-Kennung => Teil-Nutzlast
+     */
+    public static function splitByPhoneNumberId(array $payload): array
+    {
+        $erste = self::phoneNumberIdFrom($payload);
+        if ($erste === null) {
+            return [];
+        }
+
+        $teile = [];
+        foreach (($payload['entry'] ?? []) as $entry) {
+            foreach (($entry['changes'] ?? []) as $change) {
+                $id = (string) ($change['value']['metadata']['phone_number_id'] ?? $erste);
+                $teile[$id] ??= [];
+                $teile[$id][$entry['id'] ?? ''] ??= array_merge($entry, ['changes' => []]);
+                $teile[$id][$entry['id'] ?? '']['changes'][] = $change;
+            }
+        }
+
+        return array_map(
+            fn (array $eintraege) => array_merge($payload, ['entry' => array_values($eintraege)]),
+            $teile
+        );
+    }
+
     private function digits(string $nummer): string
     {
         return preg_replace('/\D+/', '', $nummer) ?? '';

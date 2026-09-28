@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Support\EinmalLink;
 use App\Support\PasswordPolicy;
 use App\Support\SessionPasswordHash;
 use Illuminate\Http\Request;
@@ -65,7 +66,7 @@ class PasswordSetupController extends Controller
 
     public function create(Request $request, string $user)
     {
-        $account = $this->accountForSignedLink($user);
+        $account = $this->accountForSignedLink($request, $user);
 
         return view('auth.set-password', [
             'mode' => 'invitation',
@@ -77,7 +78,7 @@ class PasswordSetupController extends Controller
 
     public function store(Request $request, string $user)
     {
-        $account = $this->accountForSignedLink($user);
+        $account = $this->accountForSignedLink($request, $user);
 
         $request->validate(
             ['password' => ['required', 'confirmed', PasswordPolicy::forRole($account->role)]],
@@ -106,12 +107,21 @@ class PasswordSetupController extends Controller
      * abgewiesen - ein alter Einladungslink darf ein gesperrtes Konto
      * nicht wiederbeleben.
      */
-    private function accountForSignedLink(string $user): User
+    private function accountForSignedLink(Request $request, string $user): User
     {
         $account = User::find($user);
 
         if ($account === null || (isset($account->is_active) && ! $account->is_active)) {
             abort(403, __('Dieser Link ist nicht mehr gültig.'));
+        }
+
+        // Einmal-Wirkung (KI-026): wurde das Passwort NACH dem Versand
+        // bereits gesetzt, ist der Link verbraucht. Vorher konnte jeder mit
+        // der alten Einladungsmail das Passwort 14 Tage lang beliebig oft
+        // neu setzen - auch das eines Mitarbeiters, der laengst eingerichtet
+        // war.
+        if (! EinmalLink::nochGueltig($request, $account, self::INVITATION_DAYS)) {
+            abort(403, __('Dieser Link wurde bereits verwendet. Bitte melden Sie sich mit Ihrem Passwort an oder nutzen Sie „Passwort vergessen".'));
         }
 
         return $account;

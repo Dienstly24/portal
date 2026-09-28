@@ -3850,6 +3850,47 @@ Betreiber-Anleitung `docs/ANLEITUNG_BIMI_AR.md`. Die Kurzfassung:
   "abgeschickt", bei dem nichts ankommt, waere die gefaehrlichste Ausgabe.
 - Tests: `BimiLogoTest`.
 
+## System-Audit 28.09.2026: drei Regeln, die daraus bleiben
+
+Vollstaendig in `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md`, Befunde KI-025
+bis KI-040 im Issue-Register.
+
+- **Eine Datei wird nur ueber `App\Support\InlineDatei` "angezeigt".**
+  Dokumente kommen auch aus E-Mails fremder Absender und aus WhatsApp; die
+  CSP gilt nur fuer HTML-Antworten. Eine SVG, die inline ausgeliefert
+  wurde, lief OHNE CSP im Ursprung der Beraterwelt (KI-025). Inline nur
+  PDF/JPEG/PNG/WebP/GIF, am INHALT bestimmt - nie am Dateinamen, nie an
+  der Typangabe einer Plattform (die ist die Behauptung des Absenders).
+  Alles andere ist ein Download.
+- **Ein Zugangslink wirkt nur bis zum ersten eigenen Passwort**
+  (`App\Support\EinmalLink`, KI-026). Magic-Login und Einladungslink
+  prueften nur Signatur und Ablauf - eine alte Mail blieb 90 bzw. 14 Tage
+  ein zweiter Schluessel. Der Ausstellungszeitpunkt steckt signiert im
+  Link (`expires` minus Gueltigkeit); verglichen wird mit
+  `password_changed_at`, das NUR `User::setPassword()` schreibt. Wer das
+  Feld an anderer Stelle setzt, macht damit alle offenen Links ungueltig.
+- **Ein Konto per ID in einer Personal-Maske braucht einen Rollenfilter.**
+  `EmployeeController` lud `User::findOrFail($id)` - also auch Kunden- und
+  Partnerkonten: ein Manager machte per "Speichern" aus einem Kundenkonto
+  einen Manager (KI-040). `exists:users,id` allein ist fuer Zuweisungen
+  (Postfach, Vertretung, Tickets) NIE genug - es muss "aktives Personal"
+  heissen.
+- Nebenbei: `ActivityLog.meta` nimmt jetzt Array ODER JSON-String und
+  speichert immer ein JSON-Objekt (KI-036) - die ~85 alten
+  `json_encode(...)`-Aufrufe sind damit unschaedlich; neue Stellen bitte
+  trotzdem `ActivityLog::record()` benutzen. Die E-Signatur sperrt
+  gleichzeitiges Absenden (`Cache::lock`, KI-030) und drosselt den
+  Bestaetigungscode je Unterzeichner (KI-027).
+- **Offen fuer den Betreiber** (Designfragen, bewusst nicht eigenmaechtig
+  geaendert): KI-033 ungepruefte Formularanfragen landen per E-Mail-Adresse
+  in der Kundenakte und im Portal; KI-034 Abmeldung schon beim GET;
+  KI-035 2FA-Schalter AUS entwertet eingerichtete zweite Faktoren.
+- Tests: `InlineDateiauslieferungTest`, `EinmalLinkTest`,
+  `MitarbeiterverwaltungNurPersonalTest`, `SignaturCodeUndGleichzeitigkeitTest`,
+  `SuchlistenFremddatenTest`, `SprachumschalterWeiterleitungTest`,
+  `RegistrierungDoppelklickTest`, `ActivityLogMetaKodierungTest`,
+  `SvgSanitizerExterneVerweiseTest`, `WhatsAppChannelTest` (Zwei-Nummern-Fall).
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

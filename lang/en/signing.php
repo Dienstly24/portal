@@ -37,6 +37,8 @@ return [
     'verify_wrong' => 'The code is wrong or has expired. Please request a new one.',
     'verify_spam' => 'No email? Please also check your spam folder.',
     'verify_send_failed' => 'The code could not be sent. Please try again later.',
+    'verify_too_many' => 'Too many codes or failed attempts. Please wait an hour, then request a new code.',
+    'verify_wait' => 'A code is already on its way. Please wait a minute before requesting a new one.',
     'verify_first' => 'Please confirm your email address first.',
 
     'dob_title' => 'Please confirm your date of birth',

@@ -8,6 +8,18 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 28.09.2026 - System-Audit: KI-025 bis KI-040
+
+- **Task**: Betreiber-Auftrag "vollstaendige, tiefe Pruefung" (Full Audit -> Verifikation -> Erstbericht -> Reparatur -> Tests -> Nachpruefung -> Schlussbericht). Bericht: `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md`.
+- **Files Changed**: neu `app/Support/InlineDatei.php`, `app/Support/EinmalLink.php`; `Admin\CustomerDocumentController`, `PortalController`, `CustomerMessageController`, `PortalMessageController` (KI-025); `MagicLoginController`, `PasswordSetupController`, `CustomerWelcomeMail` (KI-026); `SignatureSigningController`, `SignatureSigningService`, `lang/{de,ar,en}/signing.php` (KI-027/030); `layouts/admin`, `layouts/portal`, `employee_edit`, `employee_show`, `email_inbox`, `email_message`, `banners` (KI-028/029); `WhatsAppWebhookController`, `WhatsAppAdapter` (KI-031); `routes/web.php` Sprachumschalter (KI-032); `ActivityLog` (KI-036); `SvgSanitizer` (KI-037); `NewPasswordController` (KI-038); `RegisteredUserController` (KI-039); `EmployeeController`, `PostfachController` (KI-040); `lang/ar.json`.
+- **Database Changes**: keine (keine Migration).
+- **API Changes**: keine neuen Routen. Verhalten: "Anzeigen" liefert Nicht-PDF/Nicht-Rasterbild als Download; `/admin/employees/{id}` fuer Nicht-Personal 404; Signatur-Code gedrosselt; Webhook stoesst je Rufnummer einen eigenen Job an.
+- **Potential Side Effects**: Kunden, die nach dem Setzen ihres Passworts erneut den Magic-Link der Willkommensmail klicken, bekommen 403 mit dem Hinweis, sich mit Passwort anzumelden (gewollt). Word-/Excel-Dateien oeffneten schon vorher nicht im Browser - unveraendert Download.
+- **Tests Performed**: Ausgangslage 3087/3087; danach 3121/3121 (34 neue, jeder neue Test ohne den Fix rot nachgewiesen), 0 uebersprungen; PHPStan 0; Pint gruen; `composer audit`/`npm audit` 0; Chromium: Kopfzeilen-Suche (kein eingeschleustes HTML), E-Mail-Eingang als Support (Suche 200, Zuordnen aktiv), keine JS-Fehler.
+- **Result**: FIXED (KI-025..032, 036..040); KI-033..035 OPEN (Betreiber-Entscheidung).
+
+---
+
 ## 24.09.2026 - CI wieder gruen: veralteter PHPStan-Baseline-Eintrag (KI-024)
 
 - **Task**: Betreiber-Meldung "Problem beim Mergen". Ursache: Job "Codeformat und statische Analyse" rot - seit PR #354 auch auf `main`, #354 wurde deshalb nie ausgeliefert.

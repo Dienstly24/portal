@@ -291,7 +291,7 @@ form textarea{min-height:90px;resize:vertical;}
                 const list = document.getElementById('p-bell-list');
                 if (!data.items.length) { list.innerHTML = '<p style="padding:14px;font-size:13px;color:#6B7280;">Keine Benachrichtigungen.</p>'; return; }
                 list.innerHTML = data.items.map(function(n) { return ''
-                    + '<a href="' + n.url + '" data-h-click="portal-notif-gelesen" data-a0="' + n.id + '" style="display:block;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #EEE;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
+                    + '<a href="' + esc(n.url) + '" data-h-click="portal-notif-gelesen" data-a0="' + esc(n.id) + '" style="display:block;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #EEE;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
                     + '<span style="display:block;font-size:12.5px;font-weight:600;">' + esc(n.title) + '</span>'
                     + '<span style="display:block;font-size:12px;color:#6B7280;margin-top:2px;">' + esc(n.body) + '</span>'
                     + '<span style="display:block;font-size:11px;color:#9CA3AF;margin-top:2px;">' + esc(n.time) + '</span></a>';

@@ -1,6 +1,16 @@
 # Security Audit
 
-Stand: 23.09.2026. Baut auf SEC-1..5 (03.09.), Audit 15.09. und Nachlauf 16.09.
+**Nachtrag 28.09.2026 (System-Audit, `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md`)**:
+drei HIGH-Befunde gefunden und behoben - KI-025 (SVG/HTML aus fremden
+Anhaengen inline, SVG ohne CSP -> Stored XSS in der Beraterwelt), KI-026
+(Magic-Login/Einladungslink nach eigenem Passwort weiter gueltig), KI-040
+(Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager). Dazu
+KI-027..032/036..039 (MEDIUM/LOW, behoben) und drei Designfragen fuer den
+Betreiber (KI-033..035). Neue Regeln: Dateien "anzeigen" nur ueber
+`App\Support\InlineDatei`; Zugangslinks ueber `App\Support\EinmalLink`;
+Konten per ID in Personal-Masken nur mit Rollenfilter.
+
+Stand davor: 23.09.2026. Baut auf SEC-1..5 (03.09.), Audit 15.09. und Nachlauf 16.09.
 auf (`docs/SICHERHEIT_SEC_1_BIS_5.md`, `docs/AUDIT_2026-09-15_BEHEBUNG.md`).
 Offene Befunde stehen ausschliesslich in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
@@ -52,6 +62,23 @@ Offen bleiben die bekannten Betriebs-/Rechtspunkte KI-001..004, KI-008, KI-009.
   sah vorher den Provisionsbetrag, jetzt keine Box (KI-022). Manager ohne
   Recht ruft `/admin/provisionen`, `/admin/commissions`,
   `/admin/vermittler-abrechnung` direkt auf -> vorher 200, jetzt 403.
+
+## Angreifer-Gegenproben 28.09.2026
+
+- Externer E-Mail-Absender schickt `rechnung.svg` mit `<script>`; Mitarbeiter
+  klickt "Anzeigen" -> vorher `image/svg+xml` inline ohne CSP, jetzt Download
+  (`InlineDateiauslieferungTest`).
+- Weitergeleitete Willkommensmail, Kunde hat laengst eigenes Passwort ->
+  vorher angemeldet, jetzt 403 (`EinmalLinkTest`).
+- Manager `PUT /admin/employees/{kunden-user-id}` mit `role=manager` ->
+  vorher Kundenkonto wurde Manager, jetzt 404
+  (`MitarbeiterverwaltungNurPersonalTest`).
+- Link einer Signaturanfrage ohne Postfach: Codes im Minutentakt anfordern und
+  raten -> vorher unbegrenzt, jetzt 1/min, 5/h, 10 Fehlversuche/h.
+- Registrierung mit Namen `<img src=https://...>` -> Kopfzeilen-Suche zeigte
+  eingeschleustes Bild, jetzt Text (Chromium nachgeprueft).
+- `POST /reset-password` mit geratenem Token -> vorher "kein Konto gefunden"
+  (Enumeration), jetzt dieselbe Meldung wie bei ungueltigem Link.
 
 ## Nicht aus dem Repo pruefbar (UNKNOWN)
 

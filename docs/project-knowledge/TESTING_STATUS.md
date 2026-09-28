@@ -9,6 +9,12 @@ Stand: 23.09.2026, `main` @ 04c0823.
 | 1 | SQLite, PHP 8.4, ohne tesseract/poppler | 3044 | 3039 | 0 | 5 (OCR) | 155 s |
 | 2 | SQLite, PHP 8.4, MIT tesseract-ocr(+deu) + poppler | 3044 | **3044** | 0 | **0** | 160 s |
 | 3 | wie 2, nach der Reparaturrunde (KI-006/007/010/011/014/016/019/020/021, Turnstile-Absatz) | 3069 | **3069** | 0 | **0** | 140 s |
+| 4 | 28.09.2026, System-Audit: Ausgangslage vor jeder Aenderung (`main` @ 8251cec) | 3087 | **3087** | 0 | **0** | 126 s |
+| 5 | 28.09.2026, nach den Reparaturen KI-025..KI-040 (+34 neue Tests) | 3121 | **3121** | 0 | **0** | 130 s |
+
+Lauf 4/5 zusaetzlich: `composer stan` 0 Fehler (phpstan ueber die Umgehung
+aus KI-018 installiert), `composer lint` gruen, `composer audit` 0,
+`npm audit` 0, `npm run build` gruen.
 
 Die 5 Uebersprungenen in Lauf 1 waren genau die OCR-Faelle
 (`tests/Unit/Ocr/TesseractTextExtractorTest` u.a.) - nach

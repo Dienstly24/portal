@@ -317,6 +317,12 @@ class PostfachController extends Controller
         $unterhaltung = $this->inbox->scope($user)->whereKey($id)->firstOrFail();
         $data = $request->validate(['employee_id' => 'required|exists:users,id']);
         $ziel = User::findOrFail($data['employee_id']);
+        // Nur an aktives PERSONAL (Audit 28.09.2026, KI-040): `exists:users`
+        // liess auch ein Kunden- oder Partnerkonto als "Zustaendigen" zu -
+        // die Unterhaltung verschwand dann aus jeder Mitarbeiter-Ansicht.
+        if (! $ziel->isStaff() || (isset($ziel->is_active) && ! $ziel->is_active)) {
+            return back()->with('error', 'Unterhaltungen koennen nur aktiven Mitarbeitern zugewiesen werden.');
+        }
         $this->assignments->reassign($unterhaltung, $ziel, $user);
 
         return back()->with('success', 'Zuständigkeit geändert. Der Betreuer des Kunden bleibt unverändert.');
