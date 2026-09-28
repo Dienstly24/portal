@@ -23,6 +23,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-025 | HIGH | security | Stored XSS: SVG/HTML aus E-Mail-/WhatsApp-Anhaengen inline (SVG ohne CSP) | FIXED |
 | KI-026 | HIGH | security | Magic-Login/Einladungslink nach eigenem Passwort weiter benutzbar | FIXED |
 | KI-041 | MEDIUM | security | Admin-Reset des Portals liess alte Magic-/Einladungslinks gueltig (Umgehung von KI-026) | FIXED |
+| KI-042 | MEDIUM | security | 2FA-Einrichtung als zweiter Pruefweg ohne Sperre/Protokoll (Raten, Ersatzcodes ersetzt) | FIXED |
+| KI-043 | MEDIUM | security | Zugangslinks ueberlebten Adress-/Passwortaenderung durch die Verwaltung und erneutes Senden | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
 | KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
@@ -266,6 +268,22 @@ und PHPStan) auf `main` gruen ist.
 - **Description** Gefunden in der unabhaengigen Nachpruefung vor dem Merge von PR #358: KI-026 entwertet Links erst, wenn der KUNDE ein Passwort setzt. "Portal zuruecksetzen" - die Antwort des Betriebs auf "jemand anderes hat meine Mail" - setzte nur ein neues Startpasswort; ein alter Magic-Link blieb bis zu 90 Tage gueltig.
 - **Fix (28.09.2026)**: `resetPortal()` setzt `password_changed_at` (eine Sekunde zurueck, damit der Link der neuen Willkommensmail gilt). Test `EinmalLinkTest::test_portal_reset_entwertet_alte_links` (ohne Fix rot).
 - **Discovered** 28.09.2026 (Pre-Merge-Review)
+- **Nachtrag (KI-043)**: der Mechanismus ist ersetzt - `resetPortal()` widerruft ueber `users.zugangslink_version` statt ueber `password_changed_at` (der Sekunden-Vergleich liess einen Link aus derselben Sekunde gelten). Das Verhalten ist dasselbe, der Test benutzt jetzt den Link der echten Mail.
+
+### KI-042 - 2FA-Einrichtung als zweiter Pruefweg
+- **Category** security · **Severity** MEDIUM · **Status** FIXED
+- **Location** `Auth\TwoFactorController::setupStore`, `TwoFactorService::confirmSetup`, `EnsureTwoFactor::ALLOWED_ROUTES`
+- **Description** Die Einrichtung ist in jedem Zustand erreichbar und pruefte den Code auch bei einem BESTAETIGTEN Faktor - gegen dasselbe Geheimnis wie die Abfrage, aber ohne deren Sperre (5/300 s je Konto+IP) und ohne `two_factor_failed`. Mit gestohlenem Passwort: 10 statt 1 Versuch je Minute, unsichtbar; ein Treffer liess herein und ersetzte die Ersatzcodes.
+- **Fix (28.09.2026)**: eingerichteter Faktor -> Umleitung zur Abfrage ohne Codepruefung; `confirmSetup` lehnt einen bestaetigten Faktor ab; die Ersteinrichtung zaehlt Fehlversuche im SELBEN Limiter-Schluessel wie die Abfrage und protokolliert sie (`weg: einrichtung`). Test `ZweiFaktorEinrichtungUmgehungTest` (ohne Fix 5/6 rot; der sechste sichert die normale Ersteinrichtung).
+- **Discovered** 28.09.2026 (Threat-Model-Runde vor dem Merge, `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md` Teil F)
+
+### KI-043 - Zugangslinks ueberlebten Aenderungen durch die Verwaltung
+- **Category** security · **Severity** MEDIUM · **Status** FIXED
+- **Location** `AdminController::customerUpdate/storeCustomer`, `PortalAccessService`, `EmployeeController::resendInvitation`, `App\Support\EinmalLink`
+- **Description** Nach Aenderung der Login-Adresse und/oder einem von der Verwaltung gesetzten Passwort meldete der Magic-Link an die ALTE Adresse weiter an (Tippfehler bei der Anlage -> Fremder hat 90 Tage Zugang). "Einladung erneut senden" liess alle frueheren Einladungen 14 Tage parallel gueltig.
+- **Fix (28.09.2026)**: Widerrufsstand `users.zugangslink_version`; jeder Link traegt ihn signiert als `v` (`EinmalLink::parameter()`), gilt nur bei Gleichheit. Widerruf (`User::zugangslinksWiderrufen()`, atomar in der DB) bei neuer Login-Adresse (Modell-Hook), Verwaltungspasswort (`User::setzeVerwaltungsPasswort()`), Portal-Reset und jeder neuen Einladung. Manager duerfen die Einladung eines Administrators nicht mehr erneut senden (Grenze aus dem Bearbeiten). Bestandslinks ohne `v` gelten bis zum ersten Widerruf. Tests `ZugangslinkWiderrufTest`, `MitarbeiterEinladungErneutSendenTest` (Mutationen belegt).
+- **Bewusst offen (Betreiber-Entscheidung)**: ein unbenutzter bzw. ohne eigenes Passwort benutzter Magic-Link ist bis zum Ablauf (90 Tage) mehrfach verwendbar; kein Einmal-Verbrauch.
+- **Discovered** 28.09.2026 (Threat-Model-Runde vor dem Merge)
 
 ### KI-027 - Bestaetigungscode der E-Signatur ohne echte Grenze
 - **Category** security · **Severity** MEDIUM · **Status** FIXED

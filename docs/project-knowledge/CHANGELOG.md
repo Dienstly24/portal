@@ -8,6 +8,18 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 28.09.2026 - PR #358: KI-042, KI-043, Einladungs-Lebenslauf, Nachpruefung KI-025..041
+
+- **Task**: Betreiber-Auftrag nach der Threat-Model-Runde: KI-042 und KI-043 beheben, KI-025..041 erneut auf Umgehungen pruefen. KI-033/034/035 und die Mehrfachnutzung des Magic-Links bewusst NICHT angefasst.
+- **Files Changed**: `Auth\TwoFactorController`, `TwoFactorService` (KI-042); `User` (Widerrufsstand, Adress-Hook, `setzeVerwaltungsPasswort`), `EinmalLink`, `CustomerWelcomeMail`, `PasswordSetupController`, `PortalAccessService`, `AdminController`, `EmployeeController::resendInvitation` (KI-043); Tests neu `ZweiFaktorEinrichtungUmgehungTest`, `ZugangslinkWiderrufTest`, `MitarbeiterEinladungErneutSendenTest`, erweitert `EinmalLinkTest`, `SignaturCodeUndGleichzeitigkeitTest` (Sperre selbst), `SuchlistenFremddatenTest` (Waechter verbreitert), `SprachumschalterWeiterleitungTest` (14 Randfaelle).
+- **Database Changes**: Migration `2026_09_28_140000_zugangslink_version_an_users` - `users.zugangslink_version` (unsigned int, Default 0).
+- **API Changes**: keine neuen Routen. Verhalten: Zugangslinks tragen `v`; alte Links werden nach Adress-/Passwortaenderung durch die Verwaltung, Reset und erneutem Senden ungueltig (403); `POST /sicherheit/zwei-faktor` leitet bei eingerichtetem Faktor zur Abfrage; Manager -> Einladung an Administrator 403.
+- **Potential Side Effects**: Kunden, die eine AELTERE Willkommensmail anklicken, nachdem eine neuere verschickt wurde, sehen 403 mit Hinweis - gewollt. Ersteinrichtung der 2FA sperrt nach 5 falschen Codes fuer 300 s (wie die Abfrage). Bereits verschickte Links ohne `v` gelten bis zum ersten Widerruf an ihrem Konto.
+- **Tests Performed**: jeder neue Test ohne Fix bzw. per Mutation rot nachgewiesen; volle Suite, PHPStan, Pint, `composer audit`, `npm audit` (siehe TESTING_STATUS Lauf 7); Sperre der E-Signatur zusaetzlich mit zwei echten PHP-Prozessen.
+- **Result**: KI-042, KI-043 FIXED.
+
+---
+
 ## 28.09.2026 - Pre-Merge-Review PR #358: KI-041
 
 - **Task**: unabhaengige Nachpruefung vor dem Merge (Betreiber-Auftrag): jeder Fix auf Umgehungswege geprueft.

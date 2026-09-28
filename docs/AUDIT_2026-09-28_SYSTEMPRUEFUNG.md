@@ -334,3 +334,110 @@ ein Kunde OHNE Startpasswort, der nie ein eigenes Passwort setzt, kann den
 Magic-Link bis zum Ablauf wiederverwenden (der Link IST dann sein einziger
 Zugang); "Einladung erneut senden" beim Personal entwertet die alte
 Einladung nicht (Personal hat zusaetzlich den zweiten Faktor).
+
+**Nachtrag Teil F**: die letzte Zeile oben ("Einladung erneut senden ...
+entwertet die alte Einladung nicht") ist seit KI-043 ueberholt.
+
+---
+
+## Teil F - Threat-Model-Runde und Behebung KI-042 / KI-043 (PR #358)
+
+Auf Betreiber-Auftrag wurden die Restrisiken aus Teil E einzeln aus der
+Rolle des Angreifers bewertet. Dabei fielen zwei bestaetigte Befunde auf,
+die hier behoben sind. KI-033, KI-034, KI-035 und die Mehrfachnutzung des
+Magic-Links bleiben bewusst unveraendert (Betreiber-Entscheidung).
+
+### KI-042 - 2FA-Einrichtung als zweiter Pruefweg (MEDIUM, behoben)
+
+- **Ursache**: Die Einrichtungs-Routen sind in jedem Zustand erreichbar
+  (`EnsureTwoFactor::ALLOWED_ROUTES`). `setupStore` pruefte den Code auch bei
+  einem BESTAETIGTEN zweiten Faktor - gegen dasselbe Geheimnis wie die
+  Abfrage, aber ohne deren Sperre (5 Fehlversuche/300 s je Konto+IP) und ohne
+  `two_factor_failed`-Protokoll. Mit gestohlenem Passwort: 10 Versuche/Minute
+  (nur Routen-Throttle) statt 1/Minute, unsichtbar; ein Treffer liess herein
+  und erzeugte neue Ersatzcodes (die des Mitarbeiters ungueltig).
+- **Nachweis vorher**: 9 Fehlversuche ueber die Einrichtung ohne Protokoll
+  und ohne Sperre, danach richtiger Code -> `/admin` erreichbar, alter
+  Ersatzcode ungueltig.
+- **Fix**: `TwoFactorController::setupStore` leitet bei eingerichtetem Faktor
+  zur Abfrage um, OHNE einen Code zu pruefen; `TwoFactorService::confirmSetup`
+  lehnt einen bestaetigten Faktor zusaetzlich ab. Die ERSTE Einrichtung
+  zaehlt Fehlversuche im selben Limiter-Schluessel wie die Abfrage
+  (`2fa:<id>|<ip>`) und protokolliert sie (`two_factor_failed`, `weg:
+  einrichtung`) - kein Weg verschafft dem anderen zusaetzliche Versuche.
+- **Tests**: `ZweiFaktorEinrichtungUmgehungTest` (6). Ohne Fix rot: 5 von 6;
+  der sechste haelt fest, dass die normale Ersteinrichtung weiter
+  funktioniert (muss in beiden Faellen gruen sein).
+
+### KI-043 - Zugangslinks ueberlebten Aenderungen durch die Verwaltung (MEDIUM, behoben)
+
+- **Ursache**: `EinmalLink` kannte nur `password_changed_at` (selbst
+  gewaehltes Passwort). Die Kundenakte schrieb ein von der Verwaltung
+  gesetztes Passwort direkt per `bcrypt`, eine neue Login-Adresse beruehrte
+  keinen Zustand, "Einladung erneut senden" liess die vorigen Links stehen.
+- **Nachweis vorher**: Adresse UND Passwort in der Kundenakte geaendert, der
+  Magic-Link an die alte Adresse meldete danach weiter an (302 ins Portal).
+- **Fix - ein Widerrufsstand statt verteilter Pruefungen**:
+  `users.zugangslink_version` (Migration `2026_09_28_140000`). Jeder neue
+  Link traegt den Stand als signierten Parameter `v`
+  (`EinmalLink::parameter()`, die EINE Stelle fuer Magic-Login UND
+  Einladung); `EinmalLink::nochGueltig()` verlangt Gleichheit mit dem Stand
+  am Konto. Hochgezaehlt wird nur ueber `User::zugangslinksWiderrufen()`,
+  atomar in der Datenbank (ein veraltetes Modell kann den Stand nicht
+  zurueckschreiben). Ausloeser: Aenderung der Login-Adresse (Modell-Hook -
+  gilt fuer jeden Schreibweg), von der Verwaltung gesetztes Passwort
+  (`User::setzeVerwaltungsPasswort()`, ersetzt beide direkten
+  `bcrypt`-Stellen in `AdminController`), Portal-Reset, jede neu
+  verschickte Einladung (Kunde und Personal).
+  **Warum ein Zaehler und kein Zeitstempel "ungueltig ab"**: der Vergleich
+  in Sekunden liess einen Link gelten, der in derselben Sekunde VOR dem
+  Widerruf entstand (zweimal "senden"). KI-041 wird jetzt ebenfalls ueber
+  den Zaehler geloest; `password_changed_at` steht wieder nur fuer ein
+  selbst gewaehltes Passwort (so war es in der Migration vom 18.08.2026
+  definiert).
+  **Bestand**: Links von vor dem Deployment tragen kein `v`, zaehlen als 0
+  und gelten, bis an ihrem Konto zum ersten Mal widerrufen wird.
+- **Tests**: `ZugangslinkWiderrufTest` (8, Links aus der WIRKLICH
+  verschickten Mail); `EinmalLinkTest::test_portal_reset_entwertet_alte_links`
+  benutzt jetzt ebenfalls die echte Mail und laeuft ohne Zeitreise (Reset
+  und alter Link koennen in dieselbe Sekunde fallen - der fruehere
+  Sekunden-Vergleich haette dann durchgelassen, der Zaehler nicht). Mutationen, jeweils rot: Pruefung des Standes aus -> 6 Faelle;
+  Adress-Hook aus -> 2; Widerruf beim Verwaltungspasswort aus -> 1;
+  Hochzaehlen am Objekt statt in der DB -> 1. Der Fall "manipuliertes `v`"
+  ist ein Signatur-Waechter und in beiden Faellen gruen.
+
+### Einladung des Personals: Lebenslauf vorher/nachher
+
+| | vorher | nachher |
+|---|---|---|
+| erneut senden | neuer Link, alle alten weiter 14 Tage gueltig | alte ungueltig, nur der neue gilt |
+| eine Einladung angenommen | alle anderen ungueltig (KI-026) | unveraendert |
+| Konto deaktiviert | alle ungueltig | unveraendert |
+| Manager sendet an Administrator | erlaubt | 403 - dieselbe Grenze wie beim Bearbeiten, weil das Senden jetzt die Links des Kontos widerruft |
+| Rolle/Rechte | Link setzt nur das Passwort | unveraendert (Test) |
+
+Tests: `MitarbeiterEinladungErneutSendenTest` (6). Ohne Widerruf rot:
+`test_nach_erneutem_senden_gilt_nur_die_neue_einladung`; ohne die
+Manager-Grenze rot: `test_manager_kann_die_einladung_eines_administrators_nicht_erneut_senden`.
+Die uebrigen vier sind Waechter fuer Eigenschaften, die schon vorher galten
+(Rolle unveraendert, Konto nicht umbiegbar, nach Annahme alle verbraucht,
+Manager darf Mitarbeitern weiter senden).
+
+### Nachpruefung KI-025..KI-041 (diese Runde)
+
+| Befund | Umgehung gesucht | Ergebnis | Test-Qualitaet |
+|---|---|---|---|
+| KI-025 | alle Datei-Auslieferungen (`->response`, `->download`, `Content-Disposition`, `->file`), oeffentliche Platte | kein Fund: Anzeigen nur ueber `InlineDatei`/`isViewable`; Mail-Anhaenge nur als Download; Signatur-PDF/-Bilder erzeugt die Anwendung selbst; kein Fremd-Dokument auf `public` | verhaltensbasiert, ohne Fix rot |
+| KI-026/041/043 | Ausstellung, Signatur, Ablauf, Widerruf, Passwort-/Adresswechsel, Reset, erneut senden, Wiederholung | nach KI-043 kein Fund; offen bleibt die Mehrfachnutzung bis zum eigenen Passwort (Designfrage) | Links aus der echten Mail, Mutationen belegt |
+| KI-027 | Limiter je Unterzeichner | kein Fund | ohne Fix rot |
+| KI-030 | Gleichzeitigkeit | **Pruefluecke geschlossen**: die bisherigen Tests belegten nur das Neu-Lesen innerhalb der Sperre. Neu: gehaltene Sperre -> Unterschreiben bzw. Abschluss schreibt NICHTS (ohne Sperre rot). Zusaetzlich mit zwei echten PHP-Prozessen gegen den `database`-Cache belegt: Prozess B erhielt die Sperre erst nach der Freigabe durch A (3,27 s Wartezeit) | jetzt Sperre selbst geprueft |
+| KI-028 | ALLE `innerHTML`/`outerHTML`/`insertAdjacentHTML` und mehrzeilige Vorlagen | kein Fremddatum roh; zwei begruendete Ausnahmen (eigener lokaler Dateiname im Upload-Dialog, feste Symbolliste im Tarifrechner) | **Waechter verbreitert**: jede Variable/Eigenschaft, drei Senken, mehrzeilige Vorlagen; Mutationen belegt |
+| KI-032 | `//`, `///`, `user@`, Subdomain, `https:x`, `javascript:`, `data:`, Rueckstrich-Varianten, Fragment-/Abfrage-Trick, Grossschreibung | kein Fund; 14 Faelle als Test, 7 davon ohne Fix rot | jetzt vollstaendig |
+| KI-029, 031, 036..040 | wie Teil E | kein Fund | unveraendert |
+
+### Bewusst NICHT geaendert (Betreiber-Entscheidung)
+
+KI-033 (oeffentliche Formulare ordnen per E-Mail zu), KI-034 (Abmeldung
+beim GET), KI-035 (2FA-Schalter AUS entwertet eingerichtete Faktoren) und
+die Mehrfachnutzung des Magic-Links bis zum eigenen Passwort bzw. bis zum
+Ablauf nach 90 Tagen.

@@ -9,11 +9,11 @@ Passwoerter, Zwei-Faktor, SEC-1..5, Sichtbarkeit).
 |---|---|---|
 | Login E-Mail + Passwort | `Auth\AuthenticatedSessionController`, Limiter `anmeldung` (je IP + je Adresse) | deaktivierte Konten (`is_active=false`) werden auch in laufender Sitzung abgemeldet (`EnsureUserRole`) |
 | Registrierung (nur Kunden) | `Auth\RegisteredUserController`, `pending_registrations`, `TurnstileVerifier` | ZWEISTUFIG: erst Vormerkung, Konto+Kundennummer erst nach Bestaetigungslink; Turnstile fail-closed; `MAX_SENDS` |
-| Magic-Login | `Auth\MagicLoginController`, `/magic-login/{user}` signiert, 90 Tage | nur Kundenkonten; nie in QR-Codes |
+| Magic-Login | `Auth\MagicLoginController`, `/magic-login/{user}` signiert, 90 Tage | nur Kundenkonten; nie in QR-Codes; `App\Support\EinmalLink`: ungueltig nach eigenem Passwort und nach jedem Widerruf (`zugangslink_version`, signiert als `v`: neue Login-Adresse, Verwaltungspasswort, Portal-Reset, neue Einladung - KI-026/041/043); bis dahin mehrfach nutzbar (bewusst offen) |
 | Passwort vergessen | `PasswordResetLinkController`, Limiter `passwort-reset` | Kennung E-Mail ODER Kundennummer ODER email2; Antwort immer gleich (keine Enumeration); Broker 60 Min |
-| Einladung / Passwort setzen | `PasswordSetupController::invitationUrl`, relativ signiert, 14 Tage | Mitarbeiter bekommen nie ein Klartext-Passwort |
+| Einladung / Passwort setzen | `PasswordSetupController::invitationUrl`, relativ signiert, 14 Tage | Mitarbeiter bekommen nie ein Klartext-Passwort; nur die NEUESTE Einladung gilt (erneut senden widerruft, KI-043); Manager duerfen einem Administrator keine Einladung senden |
 | Erzwungener Wechsel | `EnsurePasswordChanged` -> `/passwort-festlegen` | Startpasswort = Geburtsdatum haelt nur bis zum ersten Login |
-| 2FA (TOTP) | `Auth\TwoFactorController`, `EnsureTwoFactor`, `App\Support\Totp`, `QrCode` | Pflicht fuer Staff + Partner (`User::requiresTwoFactor`), Schalter `two_factor_required` (AN); 8 Ersatzcodes; Sitzungsschluessel `2fa_ok:<id>`; 5 Fehlversuche/300 s |
+| 2FA (TOTP) | `Auth\TwoFactorController`, `EnsureTwoFactor`, `App\Support\Totp`, `QrCode` | Pflicht fuer Staff + Partner (`User::requiresTwoFactor`), Schalter `two_factor_required` (AN); 8 Ersatzcodes; Sitzungsschluessel `2fa_ok:<id>`; 5 Fehlversuche/300 s je Konto+IP - EIN Topf fuer Abfrage UND Ersteinrichtung; bei eingerichtetem Faktor prueft die Einrichtung keinen Code (KI-042) |
 | Unterschreiben ohne Konto | `SignatureSigningController`, Limiter `signatur` | 40-Zeichen-Token (sha256), Einmalcode an Mail, optional Geburtsdatum (verschluesselt, 5 Versuche) |
 | Webhooks | `webhooks/*` ohne CSRF | Echtheit per HMAC-Signatur im Adapter |
 | Externe Ueberwachung | `/gesundheit` + `HealthToken` | 404 ohne `HEALTH_TOKEN` |

@@ -89,6 +89,7 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   **14 Tage**, `EmployeeWelcomeMail` bewusst NICHT queued - sie ist der
   einzige Weg ins Konto). Zugang wiederherstellen = "Einladung erneut
   senden" (`employees.resend_invitation`), nie ein vergebenes Passwort.
+  Das erneute Senden entwertet jede fruehere Einladung (KI-043).
 - **Signatur RELATIV** (`absolute: false` + `signed:relative`):
   `CustomerWelcomeMail` schreibt jeden Kundenlink auf die Portal-Domain
   um - eine ueber den HOST mitsignierte Adresse waere danach ungueltig.
@@ -164,6 +165,14 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
 - **Raten wird teuer**: 5 Fehlversuche je Konto+IP (300 s Sperre) plus
   Route-Throttle; jeder Fehlversuch und jede Aenderung am zweiten Faktor
   steht im ActivityLog (`two_factor_*`) - der Code selbst nie.
+  **Es gibt genau EINEN Pruefweg** (KI-042, 28.09.2026): die Einrichtung
+  ist in jedem Zustand erreichbar und pruefte frueher auch bei einem
+  BESTAETIGTEN Faktor den Code - ohne Sperre, ohne Protokoll, und ein
+  Treffer ersetzte die Ersatzcodes. Jetzt leitet sie dann zur Abfrage um,
+  ohne einen Code anzusehen; die Ersteinrichtung zaehlt Fehlversuche im
+  SELBEN Limiter-Schluessel (`2fa:<id>|<ip>`). Wer einen weiteren Weg
+  baut, der einen Code annimmt, haengt ihn an dieselbe Bremse. Test
+  `ZweiFaktorEinrichtungUmgehungTest`.
 - `ExtraBasicAuth` bleibt als zusaetzliche Schicht bestehen, ist aber
   nicht mehr der einzige Schutz.
 - Tests: `TwoFactorTest`, `tests/Unit/TotpTest.php`,
@@ -3853,7 +3862,8 @@ Betreiber-Anleitung `docs/ANLEITUNG_BIMI_AR.md`. Die Kurzfassung:
 ## System-Audit 28.09.2026: drei Regeln, die daraus bleiben
 
 Vollstaendig in `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md`, Befunde KI-025
-bis KI-040 im Issue-Register.
+bis KI-043 im Issue-Register (KI-041..043 aus den Nachpruefungen vor dem
+Merge von PR #358, Teil E/F).
 
 - **Eine Datei wird nur ueber `App\Support\InlineDatei` "angezeigt".**
   Dokumente kommen auch aus E-Mails fremder Absender und aus WhatsApp; die
@@ -3862,16 +3872,30 @@ bis KI-040 im Issue-Register.
   PDF/JPEG/PNG/WebP/GIF, am INHALT bestimmt - nie am Dateinamen, nie an
   der Typangabe einer Plattform (die ist die Behauptung des Absenders).
   Alles andere ist ein Download.
-- **Ein Zugangslink wirkt nur bis zum ersten eigenen Passwort**
-  (`App\Support\EinmalLink`, KI-026). Magic-Login und Einladungslink
-  prueften nur Signatur und Ablauf - eine alte Mail blieb 90 bzw. 14 Tage
-  ein zweiter Schluessel. Der Ausstellungszeitpunkt steckt signiert im
-  Link (`expires` minus Gueltigkeit); verglichen wird mit
-  `password_changed_at`, das `User::setPassword()` schreibt - und
-  `PortalAccessService::resetPortal()` (KI-041): der Admin-Reset ist die
-  Antwort auf "jemand anderes hat meine Mail" und entwertet deshalb alle
-  vorher ausgestellten Links. Wer das Feld an anderer Stelle setzt, macht
-  damit ebenfalls alle offenen Links ungueltig.
+- **Ein Zugangslink wirkt nur bis zum ersten eigenen Passwort - und
+  nur, bis er widerrufen wird** (`App\Support\EinmalLink`, KI-026/041/043).
+  Magic-Login und Einladungslink prueften nur Signatur und Ablauf - eine
+  alte Mail blieb 90 bzw. 14 Tage ein zweiter Schluessel. Zwei Regeln:
+  (1) Ausstellungszeitpunkt (`expires` minus Gueltigkeit, signiert) muss
+  NACH `password_changed_at` liegen - das Feld setzt nur
+  `User::setPassword()`, es steht fuer ein SELBST gewaehltes Passwort.
+  (2) Der Link traegt `users.zugangslink_version` signiert als `v` und
+  gilt nur bei Gleichheit. Links NUR ueber `EinmalLink::parameter()`
+  ausstellen, widerrufen NUR ueber `User::zugangslinksWiderrufen()`
+  (zaehlt atomar in der DB hoch - ein veraltetes Modell koennte sonst
+  einen alten Stand zurueckschreiben und widerrufene Links wiederbeleben).
+  Widerrufen wird bei neuer Login-Adresse (Modell-Hook, jeder
+  Schreibweg), bei einem Passwort der Verwaltung
+  (`User::setzeVerwaltungsPasswort()` - nie wieder `bcrypt` direkt in
+  einem Controller), beim Portal-Reset und bei JEDER neuen Einladung:
+  es gilt immer nur die neueste Mail. Ein Zaehler statt eines
+  Zeitstempels "ungueltig ab", weil ein Sekunden-Vergleich einen Link aus
+  derselben Sekunde vor dem Widerruf gelten laesst. Bestandslinks ohne
+  `v` gelten bis zum ersten Widerruf an ihrem Konto. Bewusst offen: bis
+  zum eigenen Passwort ist ein Magic-Link mehrfach nutzbar.
+  "Einladung erneut senden" an einen Administrator ist fuer Manager
+  gesperrt - dieselbe Grenze wie beim Bearbeiten, weil das Senden die
+  Links des Kontos widerruft.
 - **Ein Konto per ID in einer Personal-Maske braucht einen Rollenfilter.**
   `EmployeeController` lud `User::findOrFail($id)` - also auch Kunden- und
   Partnerkonten: ein Manager machte per "Speichern" aus einem Kundenkonto
@@ -3889,7 +3913,12 @@ bis KI-040 im Issue-Register.
   in der Kundenakte und im Portal; KI-034 Abmeldung schon beim GET;
   KI-035 2FA-Schalter AUS entwertet eingerichtete zweite Faktoren.
 - Tests: `InlineDateiauslieferungTest`, `EinmalLinkTest`,
-  `MitarbeiterverwaltungNurPersonalTest`, `SignaturCodeUndGleichzeitigkeitTest`,
+  `ZugangslinkWiderrufTest`, `MitarbeiterEinladungErneutSendenTest`,
+  `ZweiFaktorEinrichtungUmgehungTest`,
+  `MitarbeiterverwaltungNurPersonalTest`, `SignaturCodeUndGleichzeitigkeitTest`
+  (prueft seit KI-030-Nachpruefung die Sperre SELBST: gehaltene Sperre ->
+  nichts geschrieben; ueber Prozessgrenzen mit zwei echten PHP-Prozessen
+  belegt, Bericht Teil F),
   `SuchlistenFremddatenTest`, `SprachumschalterWeiterleitungTest`,
   `RegistrierungDoppelklickTest`, `ActivityLogMetaKodierungTest`,
   `SvgSanitizerExterneVerweiseTest`, `WhatsAppChannelTest` (Zwei-Nummern-Fall).

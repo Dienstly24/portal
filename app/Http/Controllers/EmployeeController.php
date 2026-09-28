@@ -494,10 +494,24 @@ class EmployeeController extends Controller
         if (! $employee->isStaff()) {
             return back()->with('error', 'Dieses Konto ist kein Mitarbeiter-Konto.');
         }
+        // Dieselbe Grenze wie beim Bearbeiten: ein Manager hat keinen Zugriff
+        // auf Administrator-Konten. Seit KI-043 entwertet das erneute Senden
+        // die bisherigen Links des Kontos - ohne diese Zeile koennte ein
+        // Manager die Zugangslinks eines Administrators widerrufen und neue
+        // ausloesen, obwohl er dessen Konto sonst nicht anfassen darf.
+        if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
+            abort(403, 'Kein Zugriff auf Administrator-Konten.');
+        }
         if (! $employee->hasRealEmail()) {
             return back()->with('error', 'Fuer dieses Konto ist keine echte E-Mail-Adresse hinterlegt.');
         }
 
+        // Nur die NEUESTE Einladung gilt (KI-043). Vorher blieben alle
+        // frueheren Einladungen parallel 14 Tage gueltig - wer eine alte Mail
+        // hatte, konnte das Passwort setzen, bevor der Mitarbeiter die neue
+        // oeffnete. Widerruf VOR dem Bau des neuen Links, damit dieser den
+        // neuen Stand traegt.
+        $employee->zugangslinksWiderrufen();
         $setPasswordUrl = PasswordSetupController::invitationUrl($employee);
 
         try {

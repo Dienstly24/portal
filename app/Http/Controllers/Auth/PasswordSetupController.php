@@ -53,7 +53,9 @@ class PasswordSetupController extends Controller
         $relative = URL::temporarySignedRoute(
             'password.setup',
             now()->addDays(self::INVITATION_DAYS),
-            ['user' => $user->id],
+            // Konto + Widerrufsstand (KI-043): eine neu verschickte
+            // Einladung macht die vorige ungueltig.
+            EinmalLink::parameter($user),
             absolute: false,
         );
 

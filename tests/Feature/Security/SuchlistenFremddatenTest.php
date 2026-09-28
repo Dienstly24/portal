@@ -27,17 +27,66 @@ class SuchlistenFremddatenTest extends TestCase
      */
     public function test_kein_view_haengt_fremddaten_roh_in_innerhtml(): void
     {
-        $roh = '/innerHTML[^;]*(\+\s*\(?|\$\{)(c|item|n)\.(name|title|sub|email|address|number|url|icon)\b/';
+        // Nachpruefung vor dem Merge: die erste Fassung kannte nur die
+        // Variablennamen c/item/n und bestimmte Felder - ein neues
+        // `row.innerHTML = '...' + kunde.name` waere durchgerutscht. Jetzt:
+        // JEDE Eigenschaft JEDER Variable, an allen drei HTML-Senken.
+        $roh = '/(innerHTML|outerHTML|insertAdjacentHTML)[^;]*?(\+\s*\(?|\$\{)\s*[A-Za-z_]\w*\.\w+/';
         $funde = [];
-        foreach ((new Finder)->files()->in(resource_path('views'))->name('*.blade.php') as $datei) {
-            foreach (preg_split('/\R/', $datei->getContents()) as $nr => $zeile) {
-                if (preg_match($roh, $zeile)) {
-                    $funde[] = $datei->getRelativePathname().':'.($nr + 1);
+        foreach ($this->oberflaechenDateien() as $name => $zeilen) {
+            foreach ($zeilen as $nr => $zeile) {
+                if (preg_match($roh, $zeile) && ! $this->bekannteAusnahme($name, $zeile)) {
+                    $funde[] = $name.':'.($nr + 1);
                 }
             }
         }
 
-        $this->assertSame([], $funde, 'Fremddaten roh in innerHTML: '.implode(', ', $funde));
+        $this->assertSame([], $funde, 'Fremddaten roh in einer HTML-Senke: '.implode(', ', $funde));
+    }
+
+    /**
+     * Mehrzeilige Vorlagen (`innerHTML = data.map(x => \`...\`)`) sieht die
+     * zeilenweise Pruefung nicht - die Einsetzung steht Zeilen spaeter.
+     * Deshalb: keine rohe `${x.feld}`-Einsetzung irgendwo in einer Vorlage.
+     */
+    public function test_keine_rohe_vorlagen_einsetzung_ueber_mehrere_zeilen(): void
+    {
+        $roh = '/\$\{\s*[A-Za-z_]\w*\.(?!id\b|length\b|size\b|count\b)\w+[^}]*\}/';
+        $funde = [];
+        foreach ($this->oberflaechenDateien() as $name => $zeilen) {
+            foreach ($zeilen as $nr => $zeile) {
+                if (preg_match($roh, $zeile) && ! $this->bekannteAusnahme($name, $zeile)) {
+                    $funde[] = $name.':'.($nr + 1);
+                }
+            }
+        }
+
+        $this->assertSame([], $funde, 'Rohe Vorlagen-Einsetzung: '.implode(', ', $funde));
+    }
+
+    /** @return array<string, array<int, string>> */
+    private function oberflaechenDateien(): array
+    {
+        $dateien = [];
+        $finder = (new Finder)->files()->in([resource_path('views'), resource_path('js')])->name(['*.blade.php', '*.js']);
+        foreach ($finder as $datei) {
+            $dateien[$datei->getRelativePathname()] = preg_split('/\R/', $datei->getContents()) ?: [];
+        }
+
+        return $dateien;
+    }
+
+    /**
+     * Namentlich begruendete Ausnahmen - keine Fremddaten:
+     * - Upload-Vorschau der Kundenakte: der Name einer Datei, die der
+     *   Mitarbeiter gerade SELBST von seinem Rechner waehlt; er verlaesst
+     *   den Browser nicht, bevor der Server ihn prueft.
+     * - Tarifrechner: Symbol aus der fest im Code stehenden Linkliste.
+     */
+    private function bekannteAusnahme(string $datei, string $zeile): bool
+    {
+        return (str_ends_with($datei, 'admin/customer_show.blade.php') && str_contains($zeile, "'<span>📄 '+f.name+'</span>"))
+            || (str_ends_with($datei, 'admin/tarifrechner.blade.php') && str_contains($zeile, "\${l.icon||'🔗'}"));
     }
 
     public function test_kopfzeilen_suche_escaped_titel_und_zusatz(): void

@@ -9,6 +9,11 @@ KI-027..032/036..039 (MEDIUM/LOW, behoben) und drei Designfragen fuer den
 Betreiber (KI-033..035). Neue Regeln: Dateien "anzeigen" nur ueber
 `App\Support\InlineDatei`; Zugangslinks ueber `App\Support\EinmalLink`;
 Konten per ID in Personal-Masken nur mit Rollenfilter.
+Nachpruefung vor dem Merge von PR #358: KI-041 (Portal-Reset), KI-042
+(2FA-Einrichtung als zweiter Pruefweg) und KI-043 (Zugangslinks ueberlebten
+Aenderungen durch die Verwaltung) - alle MEDIUM, behoben (Teil E/F des
+Berichts). Neue Regel: Zugangslinks nur ueber `EinmalLink::parameter()`
+ausstellen, widerrufen nur ueber `User::zugangslinksWiderrufen()`.
 
 Stand davor: 23.09.2026. Baut auf SEC-1..5 (03.09.), Audit 15.09. und Nachlauf 16.09.
 auf (`docs/SICHERHEIT_SEC_1_BIS_5.md`, `docs/AUDIT_2026-09-15_BEHEBUNG.md`).

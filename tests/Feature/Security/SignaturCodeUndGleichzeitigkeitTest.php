@@ -11,9 +11,13 @@ use App\Services\Signature\SignatureRequestService;
 use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureTokenService;
 use App\Support\SignatureFieldType;
+use Illuminate\Contracts\Cache\Lock;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
+use Mockery;
 use Tests\TestCase;
 
 /**
@@ -143,6 +147,66 @@ class SignaturCodeUndGleichzeitigkeitTest extends TestCase
         $this->assertSame($pdfHash, $request->fresh()->signed_hash, 'Der Vorgang wurde ein zweites Mal abgeschlossen.');
         $this->assertSame($bildNachAbschluss, $request->fresh()->fields()->first()->image_path);
         Mail::assertSent(SignatureCompletedMail::class, 1);
+    }
+
+    /**
+     * Nachpruefung vor dem Merge: die beiden Faelle oben pruefen die
+     * Neu-Lese-Logik INNERHALB der Sperre, nicht die Sperre selbst - in einem
+     * PHPUnit-Prozess gibt es kein echtes Gleichzeitig. Hier haelt "ein
+     * anderer Prozess" die Sperre: dann darf NICHTS geschrieben werden.
+     * Ohne `Cache::lock` um das Unterschreiben schlaegt der Fall fehl.
+     * (Dass die Sperre des database-Treibers ueber Prozessgrenzen wirkt,
+     * ist gesondert mit zwei echten PHP-Prozessen belegt - siehe
+     * docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md, Teil F.)
+     */
+    public function test_gehaltene_sperre_verhindert_jedes_schreiben_beim_unterschreiben(): void
+    {
+        [$request, $signer] = $this->vorgang(SignatureRequest::IDENTITY_NONE);
+        $this->sperreGehaltenVonAnderemProzess('signatur-unterschrift:'.$signer->id);
+
+        try {
+            app(SignatureSigningService::class)->sign($request->fresh(), $signer, [], ['unterschrift' => $this->unterschrift()]);
+            $this->fail('Unterschrift lief trotz gehaltener Sperre durch.');
+        } catch (LockTimeoutException) {
+        }
+
+        $this->assertNull($signer->fresh()->signed_at);
+        $this->assertNull($request->fresh()->fields()->first()->image_path);
+        $this->assertSame(0, $request->fresh()->events()->where('event', 'signed')->count());
+        Mail::assertNotSent(SignatureCompletedMail::class);
+    }
+
+    public function test_gehaltene_sperre_verhindert_einen_zweiten_abschluss(): void
+    {
+        [$request, $signer] = $this->vorgang(SignatureRequest::IDENTITY_NONE);
+        $this->sperreGehaltenVonAnderemProzess('signatur-abschluss:'.$request->id);
+
+        // Die Unterschrift selbst gelingt (andere Sperre); nur der Abschluss
+        // wartet auf den "anderen Prozess" und schreibt nichts.
+        try {
+            app(SignatureSigningService::class)->sign($request->fresh(), $signer, [], ['unterschrift' => $this->unterschrift()]);
+        } catch (LockTimeoutException) {
+        }
+
+        $this->assertNotNull($signer->fresh()->signed_at);
+        $this->assertNull($request->fresh()->completed_at);
+        $this->assertNull($request->fresh()->signed_hash);
+        Mail::assertNotSent(SignatureCompletedMail::class);
+    }
+
+    /** Liefert fuer genau diesen Schluessel eine Sperre, die gerade jemand anderes haelt. */
+    private function sperreGehaltenVonAnderemProzess(string $schluessel): void
+    {
+        $echt = Cache::store();
+        $belegt = Mockery::mock(Lock::class);
+        $belegt->shouldReceive('block')->andThrow(new LockTimeoutException);
+        $belegt->shouldReceive('get')->andReturn(false);
+
+        Cache::partialMock()->shouldReceive('lock')->andReturnUsing(
+            fn (string $name, int $sekunden = 0, ?string $owner = null) => $name === $schluessel
+                ? $belegt
+                : $echt->lock($name, $sekunden, $owner)
+        );
     }
 
     public function test_abschluss_laeuft_genau_einmal(): void

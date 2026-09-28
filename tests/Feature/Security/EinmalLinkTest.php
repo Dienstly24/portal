@@ -4,6 +4,7 @@ namespace Tests\Feature\Security;
 
 use App\Http\Controllers\Auth\MagicLoginController;
 use App\Http\Controllers\Auth\PasswordSetupController;
+use App\Mail\CustomerWelcomeMail;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\Portal\PortalAccessService;
@@ -122,15 +123,29 @@ class EinmalLinkTest extends TestCase
         Mail::fake();
         $user = User::factory()->create(['role' => 'customer', 'email' => uniqid().'@kunde.de']);
         $kunde = Customer::create(['user_id' => $user->id, 'customer_number' => 'K-'.uniqid(), 'birth_date' => '1990-01-01']);
-        $alt = $this->magicUrl($user);
+        app(PortalAccessService::class)->sendInvitation($kunde);
+        $alt = $this->linkAusLetzterWillkommensmail();
+        $this->get($alt)->assertRedirect(route('portal.profile'));
+        auth()->logout();
 
-        $this->travel(2)->days();
-        app(PortalAccessService::class)->resetPortal($kunde);
-        $neu = $this->magicUrl($user->fresh());
+        // Bewusst OHNE Zeitreise: Reset und alter Link koennen in dieselbe
+        // Sekunde fallen. Der fruehere Sekunden-Vergleich (KI-041) haette
+        // den alten Link dann gelten lassen; der Widerrufsstand (KI-043)
+        // ist davon unabhaengig.
+        app(PortalAccessService::class)->resetPortal($kunde->fresh());
+        $neu = $this->linkAusLetzterWillkommensmail();
 
-        $this->travel(1)->minutes();
         $this->get($alt)->assertForbidden();
         $this->assertGuest();
         $this->get($neu)->assertRedirect(route('portal.profile'));
+    }
+
+    /** Der Magic-Link, wie ihn die zuletzt verschickte Willkommensmail wirklich enthaelt. */
+    private function linkAusLetzterWillkommensmail(): string
+    {
+        $mails = Mail::sent(CustomerWelcomeMail::class);
+        $this->assertNotEmpty($mails, 'Es wurde keine Willkommensmail verschickt.');
+
+        return (string) $mails->last()->magicLoginUrl;
     }
 }
