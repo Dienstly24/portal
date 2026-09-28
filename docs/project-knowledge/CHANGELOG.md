@@ -16,7 +16,8 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **API Changes**: 3 neue Routen unter `/admin/vertragsherkunft/...`; `/admin/contracts?herkunft=eigen|fremd|alle` (Standard eigen); Schnellsuche liefert `origin`.
 - **Potential Side Effects**: Dashboard "Aktive Vertraege", Auswertungs-Dashboard, Kundenliste, Kundenakte, Berichte und Portal zaehlen Fremdvertraege nicht mehr mit; nach dem Deploy steht der GESAMTE Altbestand als "ungepruefte Herkunft" im Dashboard (gewollt). Fremdvertraege buchen keine Werber-Provision und erscheinen nie als "Provision fehlt". Wird ein Eigenvertrag nachtraeglich zum Fremdvertrag, bleibt eine schon gebuchte Provision stehen (bewusst keine automatische Gegenbuchung - Finanzentscheidung).
 - **Tests Performed**: `php -l` aller geaenderten PHP-Dateien. Die Testsuite lief lokal NICHT: `composer install` scheitert in dieser Umgebung an `phpstan/phpstan` (nur als GitHub-ZIP im Lockfile, Host gesperrt - vgl. KI-018/`docs/TESTUMGEBUNG.md`). Massstab ist die CI des Pull Requests. `ROUTES_INVENTORY.md` muss mit `scripts/wissensbasis-routen.php` neu erzeugt werden (braucht `vendor/`).
-- **Result**: IMPLEMENTED, Nachweis ueber CI ausstehend.
+- **CI (PR #359)**: erster Lauf rot - Pint (voll qualifizierte Klassennamen) und 21 Tests durch EINEN Blade-Fehler im Dashboard (`Wort@if` wird nicht als Direktive erkannt, `@endif` schon -> ParseError). Behoben; danach Pint, PHPStan (Stufe 5), Testsuite SQLite UND MySQL gruen. Geaenderte Vorlagen zusaetzlich lokal mit dem Blade-Compiler + `php -l` geprueft.
+- **Result**: IMPLEMENTED, CI gruen.
 
 ---
 
