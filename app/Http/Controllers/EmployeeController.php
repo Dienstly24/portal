@@ -214,7 +214,7 @@ class EmployeeController extends Controller
         // Icons mitladen). Die Freitext-Suche nutzt denselben Scope wie der
         // Kundenbereich (alle Felder) - hier nur auf das Portfolio begrenzt.
         $query = $employee->assignedCustomers()
-            ->with(['user', 'contracts' => fn ($q) => $q->currentlyActive()
+            ->with(['user', 'contracts' => fn ($q) => $q->currentlyActive()->ownPortfolio()
                 ->select('id', 'customer_id', 'type', 'status', 'start_date', 'end_date', 'cancellation_date')]);
         if ($request->filled('q')) {
             $query->search((string) $request->q);

@@ -181,6 +181,13 @@ class CommissionStatusEngine
             return $offen ? Zustand::ERHALTEN : Zustand::VOLLSTAENDIG;
         }
 
+        // Fremdvertrag ohne Buchung (28.09.2026): wir haben ihn nicht
+        // vermittelt, also FEHLT auch keine Provision - sonst stuende jeder
+        // dokumentierte Vorvertrag irgendwann in der Mahnliste.
+        if ($contract->isExternal()) {
+            return Zustand::NEU;
+        }
+
         // Keine Buchung: eine bewusste menschliche Entscheidung bleibt
         // stehen ("der Pool zahlt hier nicht, Sache erledigt").
         if (in_array($contract->commission_status, Zustand::MANUELL, true)) {

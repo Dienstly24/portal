@@ -345,6 +345,7 @@ class ContractStatusLogicTest extends TestCase
 
         $this->actingAs($this->admin())
             ->post(route('admin.contract.store', $customer->id), [
+                'origin' => 'brokered',
                 'type' => 'strom',
                 'insurer' => 'RheinEnergie AG',
                 'status' => 'active',

@@ -26,9 +26,13 @@ $typeLabels = [
     // Aktive Vertraege zentral aus dem Modell (Contract::isCurrentlyActive) -
     // gleiche Definition wie in der Beraterwelt. Ein zum Ablauf gekuendigter
     // oder abgelaufener Vertrag zaehlt nicht mehr zu den laufenden Kosten.
-    $activeContracts = $contracts->filter(fn($c) => $c->isCurrentlyActive());
-    $pendingContracts = $contracts->filter(fn($c) => $c->isPendingStatus());
-    $historyContracts = $contracts->filter(fn($c) => $c->isHistoric());
+    // Fremdvertraege (nicht ueber uns vermittelt) stehen in einem EIGENEN
+    // Abschnitt und zaehlen nicht zu den Kosten, die wir betreuen (28.09.2026).
+    $externalContracts = $contracts->filter(fn($c) => $c->isExternal());
+    $ownContracts = $contracts->reject(fn($c) => $c->isExternal());
+    $activeContracts = $ownContracts->filter(fn($c) => $c->isCurrentlyActive());
+    $pendingContracts = $ownContracts->filter(fn($c) => $c->isPendingStatus());
+    $historyContracts = $ownContracts->filter(fn($c) => $c->isHistoric());
     $monthlyTotal = $activeContracts->sum(fn($c) => $c->monthlyPremium());
     $yearlyTotal  = $activeContracts->sum(fn($c) => $c->yearlyPremium());
     $withPremium  = $activeContracts->filter(fn($c) => $c->hasPremium())->count();
@@ -58,6 +62,7 @@ $typeLabels = [
         ['contracts' => $activeContracts,  'title' => 'Laufende Verträge',    'hint' => null, 'muted' => false],
         ['contracts' => $pendingContracts, 'title' => 'In Bearbeitung',       'hint' => 'Diese Verträge sind noch nicht abgeschlossen.', 'muted' => true],
         ['contracts' => $historyContracts, 'title' => 'Beendete Verträge',    'hint' => 'Diese Verträge sind beendet und gelten nicht mehr. Sie bleiben für Ihre Unterlagen sichtbar.', 'muted' => true],
+        ['contracts' => $externalContracts, 'title' => 'Weitere Verträge (nicht über uns betreut)', 'hint' => 'Diese Verträge wurden nicht über uns abgeschlossen. Wir haben sie nur zu Ihrer Übersicht gespeichert – bei Fragen wenden Sie sich bitte an Ihren dortigen Ansprechpartner oder den Versicherer.', 'muted' => true],
     ];
 @endphp
 @foreach($abschnitte as $abschnitt)

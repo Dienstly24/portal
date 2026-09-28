@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 28.09.2026 - Vertragsherkunft: Eigenvertrag, Fremdvertrag, uebernommen (F-011)
+
+- **Task**: Betreiber-Auftrag: ein als Vorvertrag erfasster Fremdvertrag (z. B. ADAC) sah aus wie ein eigener; Wochen spaeter wurde an einem Vertrag ohne Mandat gearbeitet, und jede Kennzahl zaehlte ihn mit.
+- **Files Changed**: Migration `2026_09_28_100000_vertragsherkunft`; `Contract` (Konstanten, Scopes, Relationen, Portal-Einstellung, KI-Hinweis); `Admin\ContractController`; `AdminController` (Dashboard, Kundenliste, Schnellsuche); `ReportController`, `DashboardAnalyticsService`, `EmployeeController`, `PartnerPortalController`, `PortalController`; `ChangeRequestReviewController` + `CustomerChangeRequest::contractId()`; `DocumentRequestController`; `SettingsController` + `UpdateSettingsRequest`; `ContractProvisionService`, `CommissionStatusEngine`, `CommissionContractBuilder`; KI-Werkzeuge `GetCustomerContractsTool`, `GetRelevantContractInformationTool`; Views (Formular-Partial, Abzeichen, Warnleiste, Vertragsliste, Kundenakte, Vertragsakte, Dashboard, Eingang, Aenderungsantraege, Einstellungen, Portal-Vertragsliste, zwei neue Seiten); `lang/ar.json`; Routen; neuer Test `VertragsherkunftTest`, 7 Tests um `origin` ergaenzt (Pflichtfeld bei Neuanlage).
+- **Database Changes**: `contracts` + 7 Spalten (siehe DATABASE_MAP). Altbestand: `origin = brokered`, `origin_verified = false` (Annahme, Pruefliste im Dashboard). Migration umkehrbar.
+- **API Changes**: 3 neue Routen unter `/admin/vertragsherkunft/...`; `/admin/contracts?herkunft=eigen|fremd|alle` (Standard eigen); Schnellsuche liefert `origin`.
+- **Potential Side Effects**: Dashboard "Aktive Vertraege", Auswertungs-Dashboard, Kundenliste, Kundenakte, Berichte und Portal zaehlen Fremdvertraege nicht mehr mit; nach dem Deploy steht der GESAMTE Altbestand als "ungepruefte Herkunft" im Dashboard (gewollt). Fremdvertraege buchen keine Werber-Provision und erscheinen nie als "Provision fehlt". Wird ein Eigenvertrag nachtraeglich zum Fremdvertrag, bleibt eine schon gebuchte Provision stehen (bewusst keine automatische Gegenbuchung - Finanzentscheidung).
+- **Tests Performed**: `php -l` aller geaenderten PHP-Dateien. Die Testsuite lief lokal NICHT: `composer install` scheitert in dieser Umgebung an `phpstan/phpstan` (nur als GitHub-ZIP im Lockfile, Host gesperrt - vgl. KI-018/`docs/TESTUMGEBUNG.md`). Massstab ist die CI des Pull Requests. `ROUTES_INVENTORY.md` muss mit `scripts/wissensbasis-routen.php` neu erzeugt werden (braucht `vendor/`).
+- **CI (PR #359)**: erster Lauf rot - Pint (voll qualifizierte Klassennamen) und 21 Tests durch EINEN Blade-Fehler im Dashboard (`Wort@if` wird nicht als Direktive erkannt, `@endif` schon -> ParseError). Behoben; danach Pint, PHPStan (Stufe 5), Testsuite SQLite UND MySQL gruen. Geaenderte Vorlagen zusaetzlich lokal mit dem Blade-Compiler + `php -l` geprueft.
+- **Result**: IMPLEMENTED, CI gruen.
+
+---
+
 ## 28.09.2026 - PR #358: KI-042, KI-043, Einladungs-Lebenslauf, Nachpruefung KI-025..041
 
 - **Task**: Betreiber-Auftrag nach der Threat-Model-Runde: KI-042 und KI-043 beheben, KI-025..041 erneut auf Umgehungen pruefen. KI-033/034/035 und die Mehrfachnutzung des Magic-Links bewusst NICHT angefasst.

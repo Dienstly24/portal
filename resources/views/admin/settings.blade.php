@@ -80,6 +80,23 @@
     </div>
 </div>
 
+{{-- Vertragsherkunft (28.09.2026): wie sieht der Kunde Fremdvertraege? --}}
+<div class="card">
+    <div class="card-title" style="margin-bottom:20px;">📁 Fremdverträge im Kundenportal</div>
+    <div class="field">
+        <label>Verträge, die nicht über uns vermittelt wurden</label>
+        <select name="{{ \App\Models\Contract::SETTING_PORTAL_EXTERNAL }}" aria-label="Fremdverträge im Kundenportal">
+            @foreach(\App\Models\Contract::PORTAL_EXTERNAL_MODES as $key => $label)
+            <option value="{{ $key }}" {{ ($settings[\App\Models\Contract::SETTING_PORTAL_EXTERNAL] ?? 'getrennt') === $key ? 'selected' : '' }}>{{ $label }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div style="background:#F7F5EF;border-radius:8px;padding:14px;font-size:13px;color:var(--ink-soft);">
+        Fremdverträge sind nur zur Dokumentation erfasst (z. B. ein Vorvertrag beim Wechsel). Sie stehen im Portal nie
+        zwischen den Verträgen, die wir betreuen – entweder in einem eigenen Abschnitt oder gar nicht.
+    </div>
+</div>
+
 {{-- Sicherheit: Zwei-Faktor-Pflicht fuer die Beraterwelt. Eigener
      Marker (security_form), damit ein anderes Formular die Schutzschicht
      nicht versehentlich abschaltet. --}}

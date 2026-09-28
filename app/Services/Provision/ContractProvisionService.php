@@ -45,6 +45,11 @@ class ContractProvisionService
         if (! in_array($contract->status, ['active', 'pending'], true)) {
             return null;
         }
+        // Fremdvertrag (28.09.2026): nicht von uns vermittelt, also auch kein
+        // Verkauf, den ein Werber verdient haette.
+        if ($contract->isExternal()) {
+            return null;
+        }
 
         $customer = $contract->customer;
         if (! $customer) {

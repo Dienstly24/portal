@@ -218,7 +218,13 @@ class CommissionContractBuilder
             'notes' => $this->note($mapped, $import),
         ], fn ($v) => $v !== null && $v !== ''));
 
-        $contract->forceFill(['commission_import_id' => $import->id])->saveQuietly();
+        // Herkunft (28.09.2026): eine Courtage-Abrechnung BELEGT, dass wir den
+        // Vertrag vermittelt haben - hier ist Eigenvertrag keine Annahme.
+        $contract->forceFill([
+            'commission_import_id' => $import->id,
+            'origin' => Contract::ORIGIN_BROKERED,
+            'origin_verified' => true,
+        ])->saveQuietly();
 
         $this->audit->log('vertrag_angelegt', null, [
             'contract_id' => $contract->id,

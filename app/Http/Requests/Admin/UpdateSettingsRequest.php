@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Http\Controllers\LegalPageController;
+use App\Models\Contract;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\Messaging\ChannelRoutingService;
@@ -100,6 +101,8 @@ class UpdateSettingsRequest extends FormRequest
                 'regex:/^\s*\d{1,3}(\s*,\s*\d{1,3})*\s*$/'],
 
             'welcome_email_enabled' => ['sometimes', Rule::in(['0', '1'])],
+            // Vertragsherkunft (28.09.2026): Fremdvertraege im Kundenportal.
+            Contract::SETTING_PORTAL_EXTERNAL => ['sometimes', Rule::in(array_keys(Contract::PORTAL_EXTERNAL_MODES))],
 
             'change_request_auto_approve' => ['sometimes',
                 Rule::in(array_keys(ChangeProofPolicy::AUTO_APPROVE_MODES))],

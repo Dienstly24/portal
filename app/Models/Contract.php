@@ -28,7 +28,7 @@ class Contract extends Model
      * Storno weiterhin bei Loeschung und manueller Stornierung im Formular.
      */
     public bool $endsWithoutStorno = false;
-    protected $fillable = ['customer_id', 'contract_number', 'internal_contract_number', 'commission_import_id', 'reference_number', 'vermittler_id', 'vermittler_status', 'vermittler_matched_at', 'vermittler_last_import_id', 'vermittler_last_imported_at', 'pool', 'type', 'type_other', 'subtype', 'insurer', 'status', 'stage', 'start_date', 'application_date', 'signing_date', 'end_date', 'pdf_path', 'notes', 'cancellation_date', 'premium_amount', 'premium_interval'];
+    protected $fillable = ['customer_id', 'contract_number', 'internal_contract_number', 'commission_import_id', 'reference_number', 'vermittler_id', 'vermittler_status', 'vermittler_matched_at', 'vermittler_last_import_id', 'vermittler_last_imported_at', 'pool', 'type', 'type_other', 'subtype', 'insurer', 'status', 'stage', 'origin', 'origin_verified', 'previous_broker', 'origin_note', 'transfer_date', 'cancellation_submitted_by_us', 'replaces_contract_id', 'start_date', 'application_date', 'signing_date', 'end_date', 'pdf_path', 'notes', 'cancellation_date', 'premium_amount', 'premium_interval'];
 
     protected $casts = [
         'premium_amount' => 'decimal:2',
@@ -37,6 +37,10 @@ class Contract extends Model
         // keine Zeitzone (siehe Lehre zur Anzeige-Zeitzone).
         'application_date' => 'date',
         'signing_date' => 'date',
+        // Vertragsherkunft (28.09.2026): reines Datum, keine Zeitzone.
+        'transfer_date' => 'date',
+        'origin_verified' => 'boolean',
+        'cancellation_submitted_by_us' => 'boolean',
         'expected_commission_date' => 'date',
         'commission_check_date' => 'date',
         'commission_status_at' => 'datetime',
@@ -271,6 +275,125 @@ class Contract extends Model
      * Gespeicherte Status-Werte. Vier Zustaende, fachlich in DREI Gruppen
      * (siehe GROUP_*): aktiver Bestand, Anbahnung, Historie.
      */
+    /*
+     * VERTRAGSHERKUNFT (Betreiber-Auftrag 28.09.2026). Eine Frage, die bisher
+     * niemand stellte: ist das UNSER Vertrag? Ein als Vorvertrag erfasster
+     * ADAC-Vertrag sah genauso aus wie ein selbst vermittelter - Wochen
+     * spaeter arbeitete jemand an einem Vertrag ohne Mandat und ohne Courtage.
+     *
+     * - brokered    = Eigenvertrag (von uns vermittelt)
+     * - external    = Fremdvertrag, NUR Dokumentation (kein Mandat)
+     * - transferred = war fremd, ist per Maklervollmacht/Courtagezusage
+     *                 zu uns uebergegangen (zaehlt ab dann zum Eigenbestand)
+     *
+     * Herkunft und Status sind GETRENNTE Wahrheiten: ein Fremdvertrag kann
+     * laufen (dann ist er Uebernahmepotenzial), ein Eigenvertrag gekuendigt
+     * sein. Deshalb bleibt `currentlyActive()` unberuehrt; Kennzahlen des
+     * EIGENEN Bestands kombinieren es mit `ownPortfolio()`.
+     */
+    public const ORIGIN_BROKERED = 'brokered';
+    public const ORIGIN_EXTERNAL = 'external';
+    public const ORIGIN_TRANSFERRED = 'transferred';
+
+    public const ORIGIN_LABELS = [
+        self::ORIGIN_BROKERED => 'Eigenvertrag',
+        self::ORIGIN_EXTERNAL => 'Fremdvertrag – nur Dokumentation',
+        self::ORIGIN_TRANSFERRED => 'Übernommen',
+    ];
+
+    /** Kurzbeschreibung je Herkunft (Auswahlkarten im Formular). */
+    public const ORIGIN_HINTS = [
+        self::ORIGIN_BROKERED => 'Von uns vermittelt – wir betreuen den Vertrag und erhalten Courtage.',
+        self::ORIGIN_EXTERNAL => 'Nicht über uns vermittelt, kein Mandat. Nur zur Dokumentation erfasst (z. B. Vorvertrag bei einem Wechsel).',
+        self::ORIGIN_TRANSFERRED => 'Ursprünglich fremd, per Maklervollmacht/Courtagezusage zu uns übertragen.',
+    ];
+
+    /** @return list<string> */
+    public static function originKeys(): array {
+        return array_keys(self::ORIGIN_LABELS);
+    }
+
+    public function isExternal(): bool {
+        return $this->origin === self::ORIGIN_EXTERNAL;
+    }
+
+    public function isTransferred(): bool {
+        return $this->origin === self::ORIGIN_TRANSFERRED;
+    }
+
+    /** Eigenbestand = vermittelt ODER uebernommen (die EINE Definition). */
+    public function isOwnPortfolio(): bool {
+        return ! $this->isExternal();
+    }
+
+    public function originLabel(): string {
+        return self::ORIGIN_LABELS[$this->origin] ?? self::ORIGIN_LABELS[self::ORIGIN_BROKERED];
+    }
+
+    /**
+     * Wer ist fuer einen Fremdvertrag zustaendig? Nie leer - "unbekannt"
+     * waere fuer den Mitarbeiter keine Handlungsanweisung, "Versicherer
+     * direkt" ist die uebliche Lage.
+     */
+    public function responsibleParty(): string {
+        $v = trim((string) $this->previous_broker);
+        return $v !== '' ? $v : 'Versicherer direkt';
+    }
+
+    /**
+     * Kundenportal (28.09.2026): Fremdvertraege GETRENNT zeigen ("Weitere
+     * Vertraege (nicht ueber uns betreut)") oder ganz ausblenden.
+     * Voreinstellung getrennt - der Kunde sieht seine Vertraege vollstaendig,
+     * aber nie so, als betreuten wir sie.
+     */
+    public const SETTING_PORTAL_EXTERNAL = 'portal_fremdvertraege';
+
+    public const PORTAL_EXTERNAL_MODES = [
+        'getrennt' => 'Getrennt anzeigen: „Weitere Verträge (nicht über uns betreut)"',
+        'ausblenden' => 'Im Kundenportal ausblenden',
+    ];
+
+    public static function portalShowsExternal(): bool {
+        return SystemSetting::get(self::SETTING_PORTAL_EXTERNAL, 'getrennt') !== 'ausblenden';
+    }
+
+    /**
+     * Hinweis fuer KI-Assistent und automatische Zuordnung (28.09.2026):
+     * bei einem Fremdvertrag darf nichts zugesagt werden, was ein Mandat
+     * voraussetzt. Nur Klartext, keine Kennung eines Dritten.
+     */
+    public function assistantOriginHint(): ?string {
+        if (! $this->isExternal()) {
+            return null;
+        }
+        return 'Fremdvertrag: nicht ueber Dienstly24 vermittelt, nur zur Dokumentation erfasst. '
+            .'Dienstly24 hat KEIN Mandat - keine Aenderung, Kuendigung oder Schadenbearbeitung zusagen. '
+            .'Zustaendig: '.$this->responsibleParty().'. Bei Bedarf an das Team uebergeben (Uebernahme moeglich).';
+    }
+
+    /** Query-Spiegel von isOwnPortfolio() - Kennzahlen zaehlen NUR diesen Bestand. */
+    public function scopeOwnPortfolio($query) {
+        return $query->where(function ($w) {
+            $w->where('contracts.origin', '!=', self::ORIGIN_EXTERNAL)->orWhereNull('contracts.origin');
+        });
+    }
+
+    /** Fremdbestand (nur Dokumentation, kein Mandat). */
+    public function scopeExternalOrigin($query) {
+        return $query->where('contracts.origin', self::ORIGIN_EXTERNAL);
+    }
+
+    /**
+     * Filter nach Herkunft: 'eigen' | 'fremd' | alles andere = kein Filter.
+     */
+    public function scopeOriginFilter($query, ?string $filter) {
+        return match ($filter) {
+            'eigen' => $query->ownPortfolio(),
+            'fremd' => $query->externalOrigin(),
+            default => $query,
+        };
+    }
+
     public const STATUS_ACTIVE = 'active';
     public const STATUS_PENDING = 'pending';
     public const STATUS_CANCELLED = 'cancelled';
@@ -736,6 +859,17 @@ class Contract extends Model
         static::deleting(fn ($m) => app(ContractProvisionService::class)
             ->createStornoForContract($m, 'Vertrag geloescht'));
     }
+    /** Vorgaenger, den dieser Vertrag ersetzt (z. B. der gekuendigte Fremdvertrag). */
+    public function predecessor(): BelongsTo { return $this->belongsTo(self::class, 'replaces_contract_id'); }
+
+    /**
+     * Nachfolger, der diesen Vertrag ersetzt - ABGELEITET aus der einen
+     * Spalte des Nachfolgers, nie separat gespeichert.
+     *
+     * @return HasOne<Contract, $this>
+     */
+    public function successor(): HasOne { return $this->hasOne(self::class, 'replaces_contract_id'); }
+
     /** @return HasOne<ContractVehicleDetail, $this> */
     public function vehicleDetail(): HasOne { return $this->hasOne(ContractVehicleDetail::class); }
     /** @return HasOne<ContractEnergyDetail, $this> */

@@ -26,7 +26,8 @@ class GetCustomerContractsTool implements AssistantTool
         return 'Alle Vertraege des angemeldeten Kunden mit Sparte, Gesellschaft, '
             .'Vertragsnummer, Status (aktiv/beendet/in Bearbeitung), Beitrag und Laufzeit. '
             .'Nutze das fuer Fragen wie "welche Vertraege habe ich", "was zahle ich", '
-            .'"laeuft mein Vertrag noch". Optional nur aktive Vertraege abfragen.';
+            .'"laeuft mein Vertrag noch". Optional nur aktive Vertraege abfragen. '
+            .'Vertraege mit "herkunft: Fremdvertrag" betreut Dienstly24 NICHT - dazu nichts zusagen.';
     }
 
     public function parameters(): array
@@ -86,6 +87,9 @@ class GetCustomerContractsTool implements AssistantTool
                         ? number_format((float) $c->premium_amount, 2, ',', '.').' EUR '.$c->premiumIntervalLabel()
                         : null,
                     'kennzeichen' => $c->vehicleDetail?->license_plate,
+                    // Vertragsherkunft (28.09.2026): nur wenn es etwas zu sagen gibt.
+                    'herkunft' => $c->isOwnPortfolio() ? null : $c->originLabel(),
+                    'hinweis' => $c->assistantOriginHint(),
                 ], fn ($v) => $v !== null && $v !== '');
             })->values()->all(),
         ];

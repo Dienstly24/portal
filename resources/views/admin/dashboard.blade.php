@@ -25,7 +25,10 @@
         <div class="metric-icon icon-blue">📄</div>
         <div class="metric-label">Aktive Verträge</div>
         <div class="metric-value">{{ $activeContracts }}</div>
-        <div class="metric-sub">Im Bestand</div>
+        <div class="metric-sub">Eigenbestand
+            {{-- Leerzeichen vor @if ist Pflicht: "Wort@if" erkennt Blade nicht als Direktive. --}}
+            @if(($activeExternalContracts ?? 0) > 0) · zzgl. {{ $activeExternalContracts }} {{ $activeExternalContracts === 1 ? 'Fremdvertrag' : 'Fremdverträge' }}@endif
+        </div>
     </a>
     <a href="{{ route('admin.tickets', ['status' => 'aktiv']) }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-amber">💬</div>
@@ -50,13 +53,16 @@
         ? \App\Models\Commission::pendingReview()->count() : 0;
     $inboxDocRequests = \App\Models\DocumentRequest::awaitingReview()->count();
 @endphp
-@if($inboxSuggested + $inboxCommissions + $inboxDocRequests > 0)
+@php $unverifiedOrigin = $unverifiedOriginContracts ?? 0; @endphp
+@if($inboxSuggested + $inboxCommissions + $inboxDocRequests + $unverifiedOrigin > 0)
 <div class="card" style="margin-bottom:24px;padding:16px 20px;">
     <div style="font-weight:700;margin-bottom:10px;">Wartet auf Ihre Entscheidung</div>
     <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px;">
         @if($inboxSuggested > 0)<a href="{{ route('admin.email_inbox') }}">📧 {{ $inboxSuggested }} E-Mail-Zuordnung(en) bestätigen</a>@endif
         @if($inboxCommissions > 0)<a href="{{ route('admin.commissions') }}">💶 {{ $inboxCommissions }} Provisionsgutschrift(en) buchen</a>@endif
         @if($inboxDocRequests > 0)<a href="{{ route('admin.document_requests') }}">📄 {{ $inboxDocRequests }} Dokument-Upload(s) prüfen</a>@endif
+        {{-- Vertragsherkunft (28.09.2026): nur ANGENOMMENE Herkunft - bestaetigen oder korrigieren. --}}
+        @if($unverifiedOrigin > 0)<a href="{{ route('admin.contracts.origin_review') }}">🔎 {{ $unverifiedOrigin }} {{ $unverifiedOrigin === 1 ? 'Vertrag' : 'Verträge' }} mit ungeprüfter Herkunft</a>@endif
     </div>
 </div>
 @endif
@@ -117,11 +123,11 @@ new Chart(ctx, {
         labels: ['Kfz', 'Krankenversicherung', 'Internet', 'Strom & Gas', 'Andere'],
         datasets: [{
             data: [
-                {{ \App\Models\Contract::where('type','kfz')->count() }},
-                {{ \App\Models\Contract::where('type','krankenversicherung')->count() }},
-                {{ \App\Models\Contract::where('type','internet')->count() }},
-                {{ \App\Models\Contract::whereIn('type',['strom','gas','strom_gas'])->count() }},
-                {{ \App\Models\Contract::where('type','andere')->count() }}
+                {{ \App\Models\Contract::ownPortfolio()->where('type','kfz')->count() }},
+                {{ \App\Models\Contract::ownPortfolio()->where('type','krankenversicherung')->count() }},
+                {{ \App\Models\Contract::ownPortfolio()->where('type','internet')->count() }},
+                {{ \App\Models\Contract::ownPortfolio()->whereIn('type',['strom','gas','strom_gas'])->count() }},
+                {{ \App\Models\Contract::ownPortfolio()->where('type','andere')->count() }}
             ],
             backgroundColor: ['#0F3D3D','#C9963E', brandColor('emerald'), '#185FA5','#B4B2A9'],
             borderWidth: 0,

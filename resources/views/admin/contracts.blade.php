@@ -17,6 +17,9 @@
         $G::GROUP_HISTORY => ['🗄 Beendet / Historie: gekündigte und abgelaufene Verträge. Nur zur Nachvollziehbarkeit sichtbar – sie zählen NICHT als aktive Verträge und erscheinen nicht in der Vertragsstruktur.', '#F3F0E8', '#E0DCD0', '#5F6B62'],
         'alle'            => ['ℹ️ Alle Verträge (aktiv + Historie gemischt). Beendete Verträge sind ausgegraut und mit „Historie – nicht aktiv" gekennzeichnet.', '#EEF0F3', '#E0DCD0', '#5F6B62'],
     ];
+    if ($herkunft === 'fremd') {
+        $hinweise[$gruppe] = ['📁 Fremdbestand: nicht über uns vermittelt, nur zur Dokumentation erfasst. Kein Mandat, keine Courtage – diese Verträge zählen NIE zum Bestand.', '#ECEAE4', '#CFCBC0', '#4B5250'];
+    }
     $h = $hinweise[$gruppe] ?? $hinweise['alle'];
     $anzahl = $contracts->total();
     $wort = $anzahl === 1 ? ($reiter[$gruppe][1] ?? 'Vertrag') : ($reiter[$gruppe][2] ?? 'Verträge');
@@ -32,11 +35,12 @@
          Kundenname, Kundennummer (Contract::scopeSearch). --}}
     <form method="GET" action="{{ route('admin.contracts') }}" style="position:relative;flex:1;max-width:500px;">
         <input type="hidden" name="gruppe" value="{{ $gruppe }}">
+        <input type="hidden" name="herkunft" value="{{ $herkunft }}">
         <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);">🔍</span>
         <input type="text" name="q" value="{{ $suche }}" placeholder="Verträge durchsuchen"
             style="width:100%;padding:11px 14px 11px 42px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;" aria-label="Verträge durchsuchen">
         @if($suche !== '')
-        <a href="{{ route('admin.contracts', ['gruppe' => $gruppe]) }}" title="Suche zurücksetzen"
+        <a href="{{ route('admin.contracts', ['gruppe' => $gruppe, 'herkunft' => $herkunft]) }}" title="Suche zurücksetzen"
             style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);text-decoration:none;font-size:16px;">✕</a>
         @endif
     </form>
@@ -53,7 +57,7 @@
 <div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:16px;flex-wrap:wrap;">
     @foreach($reiter as $key => $texte)
     @php $aktiv = $gruppe === $key; @endphp
-    <a href="{{ route('admin.contracts', array_filter(['gruppe' => $key, 'q' => $suche])) }}"
+    <a href="{{ route('admin.contracts', array_filter(['gruppe' => $key, 'herkunft' => $herkunft, 'q' => $suche])) }}"
         style="padding:12px 20px;text-decoration:none;font-size:14px;margin-bottom:-2px;
                font-weight:{{ $aktiv ? '700' : '500' }};
                color:{{ $aktiv ? 'var(--graphite)' : 'var(--ink-soft)' }};
@@ -61,6 +65,17 @@
         {{ $texte[0] }} ({{ $zaehler[$key] ?? 0 }})
     </a>
     @endforeach
+</div>
+
+{{-- Herkunft (28.09.2026): Eigenbestand ist Standard - Kennzahlen zaehlen nur ihn. --}}
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;font-size:13px;">
+    <span class="muted-xs">Herkunft:</span>
+    @foreach(['eigen' => '🤝 Eigenbestand', 'fremd' => '📁 Fremdbestand', 'alle' => 'Alle'] as $hk => $hl)
+    <a href="{{ route('admin.contracts', array_filter(['gruppe' => $gruppe, 'herkunft' => $hk, 'q' => $suche])) }}"
+        class="btn btn-ghost btn-sm" style="{{ $herkunft === $hk ? 'border-color:var(--graphite);font-weight:700;background:var(--canvas);' : '' }}"
+        title="{{ $hk === 'eigen' ? 'Von uns vermittelte und übernommene Verträge' : ($hk === 'fremd' ? 'Nicht über uns vermittelt – nur Dokumentation' : 'Eigen- und Fremdbestand') }}">{{ $hl }} ({{ $herkunftZaehler[$hk] ?? 0 }})</a>
+    @endforeach
+    <a href="{{ route('admin.contracts.fremdbestand') }}" class="muted-xs" style="margin-left:auto;">📈 Fremdbestand – Übernahmepotenzial →</a>
 </div>
 
 <div style="font-size:12.5px;border-radius:8px;padding:10px 14px;margin-bottom:16px;line-height:1.55;
@@ -90,13 +105,15 @@
             $cGroup = $c->statusGroup();
             $cHistoric = $cGroup === \App\Models\Contract::GROUP_HISTORY;
         @endphp
-        <tr class="contract-row{{ $cHistoric ? ' contract-row-historic' : '' }}" data-status="{{ $c->status }}" data-group="{{ $cGroup }}">
+        <tr class="contract-row{{ $cHistoric ? ' contract-row-historic' : '' }}{{ $c->isExternal() ? ' contract-row-fremd' : '' }}" data-status="{{ $c->status }}" data-group="{{ $cGroup }}">
             <td style="padding:14px 20px;">
                 <div style="width:40px;height:40px;border-radius:10px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:20px;">{{ $c->typeIcon() }}</div>
             </td>
             <td style="padding:14px 8px;">
-                <div style="font-weight:700;font-size:14px;">{{ $c->typeLabel() }}</div>
+                <div style="font-weight:700;font-size:14px;">{{ $c->typeLabel() }} @include('admin.partials.contract_origin_badge', ['contract' => $c])</div>
                 <div class="muted-xs">{{ $c->insurer }}</div>
+                @if($c->successor)<div class="muted-2xs">↪ Ersetzt durch: {{ $c->successor->insurer }}</div>@endif
+                @if($c->predecessor)<div class="muted-2xs">↩ Ersetzt: {{ $c->predecessor->insurer }}@if($c->predecessor->isExternal()) (Fremdvertrag)@endif</div>@endif
             </td>
             <td style="font-size:13px;">{{ $c->customer?->user?->name ?? '—' }}</td>
             <td class="muted-sm">

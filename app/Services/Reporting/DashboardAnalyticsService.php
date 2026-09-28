@@ -620,7 +620,10 @@ class DashboardAnalyticsService
      */
     private function vertragsbasis(AnalyticsFilters $f): Builder
     {
-        $q = Contract::query()->join('customers', 'customers.id', '=', 'contracts.customer_id');
+        // Vertragsherkunft (28.09.2026): jede Kennzahl dieser Seite ist eine
+        // Aussage ueber UNSER Geschaeft - dokumentierte Fremdvertraege
+        // (kein Mandat, keine Courtage) zaehlen nie mit.
+        $q = Contract::query()->join('customers', 'customers.id', '=', 'contracts.customer_id')->ownPortfolio();
 
         if ($this->sichtbareKunden !== null) {
             $q->whereIn('contracts.customer_id', $this->sichtbareKunden);
@@ -668,7 +671,7 @@ class DashboardAnalyticsService
         // auf dieser Seite, `statusGroup()` ist die bekannte Scope-Methode und
         // nicht ein Aufruf auf "irgendeinem Model" im Inneren einer Closure.
         if ($f->sparte !== null || $f->vertragsstatus !== null) {
-            $vertraege = Contract::query()->select('contracts.customer_id');
+            $vertraege = Contract::query()->select('contracts.customer_id')->ownPortfolio();
             if ($f->sparte !== null) {
                 $vertraege->where('contracts.type', $f->sparte);
             }

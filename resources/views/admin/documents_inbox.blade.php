@@ -185,7 +185,10 @@
                 <td style="padding:10px 12px;">
                     @if($doc->customer)<a href="{{ route('admin.customer', $doc->customer_id) }}#tab-dokumente">{{ $doc->customer->user?->name ?? $doc->customer->customer_number }}</a>@else — @endif
                 </td>
-                <td style="padding:10px 12px;">{{ $doc->aiTypeLabel() ?? '—' }}</td>
+                <td style="padding:10px 12px;">{{ $doc->aiTypeLabel() ?? '—' }}
+                    {{-- Dokument an einem Fremdvertrag (28.09.2026): kein Mandat. --}}
+                    @if($doc->contract?->isExternal())<div><span class="origin-badge origin-badge-fremd" title="Zugeordneter Vertrag wurde nicht über uns vermittelt – zuständig: {{ $doc->contract->responsibleParty() }}">📁 Fremdvertrag</span></div>@endif
+                </td>
                 <td style="padding:10px 12px;">
                     @if($doc->aiInProgress())<span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ läuft</span>
                     @elseif($doc->ai_status === 'done')<span class="badge" style="background:var(--emerald-soft);color:var(--emerald-deep);">✓ analysiert</span>
@@ -202,6 +205,7 @@
     </div>
 </div>
 
+@include('admin.partials.contract_origin_badge', ['contract' => new \App\Models\Contract()])
 {{-- Review-/Zuordnungs-Modal --}}
 {{-- DIAGNOSE: der TATSAECHLICH erkannte Text (Betreiber-Frage 28.08.2026).
      Fehlt ein Feld, sieht man im BILD die Angabe klar stehen - die Erkennung

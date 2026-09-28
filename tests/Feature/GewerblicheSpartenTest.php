@@ -73,6 +73,7 @@ class GewerblicheSpartenTest extends TestCase
         $customer = $this->makeCustomer();
 
         $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), [
+            'origin' => 'brokered',
             'type' => 'frachtfuehrerhaftpflicht',
             'insurer' => 'Helvetia Versicherungs-AG',
             'status' => 'active',
