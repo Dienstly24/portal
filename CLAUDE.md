@@ -3867,8 +3867,11 @@ bis KI-040 im Issue-Register.
   prueften nur Signatur und Ablauf - eine alte Mail blieb 90 bzw. 14 Tage
   ein zweiter Schluessel. Der Ausstellungszeitpunkt steckt signiert im
   Link (`expires` minus Gueltigkeit); verglichen wird mit
-  `password_changed_at`, das NUR `User::setPassword()` schreibt. Wer das
-  Feld an anderer Stelle setzt, macht damit alle offenen Links ungueltig.
+  `password_changed_at`, das `User::setPassword()` schreibt - und
+  `PortalAccessService::resetPortal()` (KI-041): der Admin-Reset ist die
+  Antwort auf "jemand anderes hat meine Mail" und entwertet deshalb alle
+  vorher ausgestellten Links. Wer das Feld an anderer Stelle setzt, macht
+  damit ebenfalls alle offenen Links ungueltig.
 - **Ein Konto per ID in einer Personal-Maske braucht einen Rollenfilter.**
   `EmployeeController` lud `User::findOrFail($id)` - also auch Kunden- und
   Partnerkonten: ein Manager machte per "Speichern" aus einem Kundenkonto

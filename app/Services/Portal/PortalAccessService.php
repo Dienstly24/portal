@@ -192,9 +192,16 @@ class PortalAccessService
         // naechsten Login gegen ein eigenes getauscht werden. Ohne diese
         // Zeile behielte ein Kunde, der frueher schon einmal gewechselt hat,
         // dauerhaft sein Geburtsdatum als Passwort.
+        // Der Reset ist die Antwort auf "jemand anderes hat meine Mail" -
+        // deshalb entwertet er ALLE bis jetzt ausgestellten Zugangslinks
+        // (Magic-Login, Passwort-Setzen; KI-041). EinmalLink laesst nur
+        // Links gelten, die NACH `password_changed_at` ausgestellt wurden.
+        // Eine Sekunde zurueck, weil die neue Willkommensmail unten in
+        // derselben Sekunde entsteht und ihr Link gelten muss.
         $user->forceFill([
             'portal_password_set_at' => null,
             'must_change_password' => false,
+            'password_changed_at' => now()->subSecond(),
         ])->save();
         $mode = $this->sendInvitation($customer, $actorId);
 

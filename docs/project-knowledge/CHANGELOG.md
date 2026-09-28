@@ -8,6 +8,16 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 28.09.2026 - Pre-Merge-Review PR #358: KI-041
+
+- **Task**: unabhaengige Nachpruefung vor dem Merge (Betreiber-Auftrag): jeder Fix auf Umgehungswege geprueft.
+- **Files Changed**: `PortalAccessService::resetPortal` (setzt `password_changed_at`), `EinmalLink` (Kommentar), Tests `EinmalLinkTest` (+1), `InlineDateiauslieferungTest` (+1 Gegenprobe Nachweis-Upload mit gefaelschtem Typ - kein Fund, Waechter).
+- **Database/API Changes**: keine.
+- **Tests Performed**: neuer Test ohne Fix rot; volle Suite, PHPStan, Pint gruen (siehe TESTING_STATUS Lauf 6).
+- **Result**: KI-041 FIXED.
+
+---
+
 ## 28.09.2026 - System-Audit: KI-025 bis KI-040
 
 - **Task**: Betreiber-Auftrag "vollstaendige, tiefe Pruefung" (Full Audit -> Verifikation -> Erstbericht -> Reparatur -> Tests -> Nachpruefung -> Schlussbericht). Bericht: `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md`.

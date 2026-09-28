@@ -6,7 +6,9 @@ use App\Http\Controllers\Auth\MagicLoginController;
 use App\Http\Controllers\Auth\PasswordSetupController;
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\Portal\PortalAccessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
@@ -105,5 +107,30 @@ class EinmalLinkTest extends TestCase
             ->assertSessionHasErrors(['email' => $meldung]);
         $this->from('/reset-password/geraten')->post(route('password.store'), $daten('niemand@kunde.de'))
             ->assertSessionHasErrors(['email' => $meldung]);
+    }
+
+    /**
+     * Nachpruefung vor dem Merge (KI-041): "Portal zuruecksetzen" ist die
+     * Antwort des Betriebs auf "jemand anderes hat meine Mail". Vorher
+     * setzte der Reset nur ein neues Startpasswort - ein ALTER Magic-Link
+     * blieb bis zu 90 Tage gueltig, weil `password_changed_at` sich nicht
+     * aenderte. Der Reset entwertet jetzt alle vorher ausgestellten Links;
+     * der Link der NEUEN Willkommensmail gilt.
+     */
+    public function test_portal_reset_entwertet_alte_links(): void
+    {
+        Mail::fake();
+        $user = User::factory()->create(['role' => 'customer', 'email' => uniqid().'@kunde.de']);
+        $kunde = Customer::create(['user_id' => $user->id, 'customer_number' => 'K-'.uniqid(), 'birth_date' => '1990-01-01']);
+        $alt = $this->magicUrl($user);
+
+        $this->travel(2)->days();
+        app(PortalAccessService::class)->resetPortal($kunde);
+        $neu = $this->magicUrl($user->fresh());
+
+        $this->travel(1)->minutes();
+        $this->get($alt)->assertForbidden();
+        $this->assertGuest();
+        $this->get($neu)->assertRedirect(route('portal.profile'));
     }
 }

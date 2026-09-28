@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Security;
 
+use App\Models\ChangeRequestDocument;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\CustomerMessageAttachment;
 use App\Models\Document;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -139,5 +141,40 @@ class InlineDateiauslieferungTest extends TestCase
 
         $this->assertStringNotContainsString('svg', strtolower((string) $antwort->headers->get('Content-Type')));
         $this->assertStringStartsWith('attachment', (string) $antwort->headers->get('Content-Disposition'));
+    }
+
+    /**
+     * Gegenprobe der Nachpruefung vor dem Merge (kein Fund, als Waechter
+     * behalten): der Nachweis einer Kundenaenderung speichert den vom
+     * BROWSER gemeldeten Typ. Eine echte PNG mit angehaengtem HTML, als
+     * `text/html` hochgeladen, darf nie als HTML ausgeliefert werden -
+     * `ChangeRequestDocument::isViewable()` laesst nur sichere Typen
+     * inline zu, alles andere wird heruntergeladen.
+     */
+    public function test_nachweis_folgt_dem_inhalt_nicht_der_typangabe_des_browsers(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create(['role' => 'customer', 'name' => 'Erika Muster', 'email' => uniqid().'@example.de']);
+        $customer = Customer::create(['user_id' => $user->id, 'customer_number' => 'T-'.Str::random(6), 'iban' => 'DE00ALTALTALTALTALT00']);
+
+        $bild = imagecreatetruecolor(4, 4);
+        ob_start();
+        imagepng($bild);
+        $png = (string) ob_get_clean().'<meta http-equiv="refresh" content="0;url=https://example.org/falle">';
+        $pfad = tempnam(sys_get_temp_dir(), 'nw').'.png';
+        file_put_contents($pfad, $png);
+        $datei = new UploadedFile($pfad, 'karte.png', 'text/html', null, true);
+
+        $this->actingAs($user)->post(route('portal.bank.store'), [
+            'iban' => 'DE89370400440532013000',
+            'account_holder' => 'Erika Muster',
+            'bank_proof' => $datei,
+        ]);
+        $dokument = ChangeRequestDocument::latest()->firstOrFail();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $antwort = $this->actingAs($admin)->get(route('admin.change_requests.proof', $dokument->id));
+
+        $this->assertStringNotContainsString('text/html', (string) $antwort->headers->get('Content-Type'));
     }
 }

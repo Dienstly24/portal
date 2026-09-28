@@ -311,3 +311,26 @@ Feindliche Durchsicht der eigenen Aenderungen:
     umstellen; fuer jede neue Datei-Anzeige `InlineDatei` benutzen und fuer
     jede Konto-Auswahl "aktives Personal" validieren - beides steht jetzt in
     `CLAUDE.md`.
+
+---
+
+## Teil E - Unabhaengige Nachpruefung vor dem Merge (PR #358)
+
+Jeder Fix wurde aus der Rolle des Angreifers auf Umgehungswege geprueft.
+
+| Fix | Umgehungsversuch | Ergebnis |
+|---|---|---|
+| KI-025 | Nachweis-Upload: echte PNG + HTML, Browser meldet `text/html` (`ChangeRequestDocument.mime` = Client-Angabe) | **kein Fund** - `isViewable()` laesst nur sichere Typen inline, sonst Download; als Waechter-Test behalten |
+| KI-025 | finfo erkennt Text nicht eindeutig -> Rueckfall auf die Endung (`x.pdf`) | kein Fund - es kommen nur Typen der Positivliste in Frage, mit `nosniff` fuehrt keiner Code aus |
+| KI-026 | **Admin "Portal zuruecksetzen"** nach geleakter Mail | **FUND KI-041 (MEDIUM)**: alter Magic-Link blieb gueltig -> behoben, Test ohne Fix rot |
+| KI-026 | Parameter `expires` manipulieren | kein Fund - signiert |
+| KI-040 | andere Wege, ein Konto per ID anzusprechen (Tickets, Postfach, Vertretung, Einladung, 2FA-Reset, Partner) | kein Fund - ueberall Personal-/Rollenpruefung |
+| KI-028 | breitere Suche nach `innerHTML` mit Fremddaten | einziger Rest `customer_show` (Name der EIGENEN lokalen Datei im Upload-Dialog - kein Fremddatum) |
+| KI-032 | `//fremd`, `user@fremd`-Referer | kein Fund - Host-Vergleich nach `parse_url` |
+| KI-027/030 | neuer Code je Minute, zweiter Reiter | kein Fund - Limiter je Unterzeichner, Sperre je Unterzeichner/Vorgang |
+
+Restrisiken (unveraendert, bewusst): KI-033..035 (Entscheidung Betreiber);
+ein Kunde OHNE Startpasswort, der nie ein eigenes Passwort setzt, kann den
+Magic-Link bis zum Ablauf wiederverwenden (der Link IST dann sein einziger
+Zugang); "Einladung erneut senden" beim Personal entwertet die alte
+Einladung nicht (Personal hat zusaetzlich den zweiten Faktor).

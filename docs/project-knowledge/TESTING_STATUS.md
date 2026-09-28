@@ -11,6 +11,7 @@ Stand: 23.09.2026, `main` @ 04c0823.
 | 3 | wie 2, nach der Reparaturrunde (KI-006/007/010/011/014/016/019/020/021, Turnstile-Absatz) | 3069 | **3069** | 0 | **0** | 140 s |
 | 4 | 28.09.2026, System-Audit: Ausgangslage vor jeder Aenderung (`main` @ 8251cec) | 3087 | **3087** | 0 | **0** | 126 s |
 | 5 | 28.09.2026, nach den Reparaturen KI-025..KI-040 (+34 neue Tests) | 3121 | **3121** | 0 | **0** | 130 s |
+| 6 | 28.09.2026, nach der Pre-Merge-Review (KI-041, +2 Tests) | 3123 | **3123** | 0 | **0** | 139 s |
 
 Lauf 4/5 zusaetzlich: `composer stan` 0 Fehler (phpstan ueber die Umgehung
 aus KI-018 installiert), `composer lint` gruen, `composer audit` 0,

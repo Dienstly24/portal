@@ -22,6 +22,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 |---|---|---|---|---|
 | KI-025 | HIGH | security | Stored XSS: SVG/HTML aus E-Mail-/WhatsApp-Anhaengen inline (SVG ohne CSP) | FIXED |
 | KI-026 | HIGH | security | Magic-Login/Einladungslink nach eigenem Passwort weiter benutzbar | FIXED |
+| KI-041 | MEDIUM | security | Admin-Reset des Portals liess alte Magic-/Einladungslinks gueltig (Umgehung von KI-026) | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
 | KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
@@ -258,6 +259,13 @@ und PHPStan) auf `main` gruen ist.
 - **Description** `User::findOrFail($id)` ohne Rollenfilter: ein Manager konnte einem KUNDENKONTO per "Speichern" die Rolle manager geben (Zugang zur Beraterwelt), ein Kundenkonto sperren (sonst admin-only) und ein Admin eine Kundenakte am `CustomerDeletionService` vorbei loeschen (Kaskade `customers.user_id`). Vertretungen und Postfach-Zuweisungen nahmen ebenfalls Kunden-/Partnerkonten an.
 - **Fix (28.09.2026)**: nur Personal-Rollen (404 sonst), Validierung auf Personal. Test `MitarbeiterverwaltungNurPersonalTest` (ohne Fix rot).
 - **Discovered** 28.09.2026 (Nachpruefung)
+
+### KI-041 - Admin-Reset entwertete alte Zugangslinks nicht
+- **Category** security · **Severity** MEDIUM · **Status** FIXED
+- **Location** `PortalAccessService::resetPortal`, `App\Support\EinmalLink`
+- **Description** Gefunden in der unabhaengigen Nachpruefung vor dem Merge von PR #358: KI-026 entwertet Links erst, wenn der KUNDE ein Passwort setzt. "Portal zuruecksetzen" - die Antwort des Betriebs auf "jemand anderes hat meine Mail" - setzte nur ein neues Startpasswort; ein alter Magic-Link blieb bis zu 90 Tage gueltig.
+- **Fix (28.09.2026)**: `resetPortal()` setzt `password_changed_at` (eine Sekunde zurueck, damit der Link der neuen Willkommensmail gilt). Test `EinmalLinkTest::test_portal_reset_entwertet_alte_links` (ohne Fix rot).
+- **Discovered** 28.09.2026 (Pre-Merge-Review)
 
 ### KI-027 - Bestaetigungscode der E-Signatur ohne echte Grenze
 - **Category** security · **Severity** MEDIUM · **Status** FIXED

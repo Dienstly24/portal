@@ -18,8 +18,9 @@ use Illuminate\Http\Request;
  *
  * DIE REGEL: ein Link gilt nur, wenn er NACH dem letzten bewusst
  * gesetzten Passwort ausgestellt wurde (`users.password_changed_at` -
- * gesetzt ausschliesslich von `User::setPassword()`, also nie von einem
- * vom System vergebenen Startpasswort).
+ * gesetzt von `User::setPassword()` und von `PortalAccessService::
+ * resetPortal()`, das damit alle alten Links entwertet; nie von einem
+ * vom System vergebenen Startpasswort allein).
  *
  * DER AUSSTELLUNGSZEITPUNKT STEHT SCHON IM LINK: `expires` ist Teil der
  * Signatur, die Gueltigkeitsdauer ist fest - Ausstellung = Ablauf minus
