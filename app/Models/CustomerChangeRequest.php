@@ -87,6 +87,19 @@ class CustomerChangeRequest extends Model
 
     public function scopePending($q) { return $q->where('status', 'pending'); }
 
+    /**
+     * Kennung des betroffenen Vertrags bei einer Vertragsaenderung
+     * (steht verschluesselt in new_data/old_data, daher keine Spalte).
+     */
+    public function contractId(): ?string
+    {
+        if ($this->type !== 'contract') {
+            return null;
+        }
+        $id = $this->new_data['id'] ?? $this->old_data['id'] ?? null;
+        return is_string($id) && $id !== '' ? $id : null;
+    }
+
     public function typeLabel(): string {
         return self::TYPE_LABELS[$this->type] ?? $this->type;
     }

@@ -39,6 +39,8 @@ class KfzContractRedesignTest extends TestCase
     {
         return array_merge([
             'type' => 'kfz',
+            // Vertragsherkunft ist bei der Neuanlage Pflicht (28.09.2026).
+            'origin' => 'brokered',
             'insurer' => 'HUK-Coburg',
             'status' => 'active',
         ], $overrides);

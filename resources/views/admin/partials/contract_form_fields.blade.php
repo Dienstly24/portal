@@ -15,6 +15,9 @@
     $curSub    = old('subtype', $c->subtype ?? '');
 @endphp
 
+{{-- Vertragsherkunft ganz oben (28.09.2026): die erste Frage an jeden Vertrag. --}}
+@include('admin.partials.contract_origin_fields', ['contract' => $c, 'originCustomer' => $customer ?? $c?->customer])
+
 <div class="field">
     <label style="font-weight:700;font-size:15px;">Sparte *</label>
     <select name="type" id="sparte" required data-h-change="98ff44e737"

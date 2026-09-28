@@ -44,7 +44,12 @@ class AdminController extends Controller
             // AKTIVE Vertraege = Contract::currentlyActive() (eine Quelle):
             // gekuendigte, abgelaufene und beendete Vertraege zaehlen nie mit,
             // auch wenn der gespeicherte Status noch auf "active" steht.
-            'activeContracts' => Contract::currentlyActive()->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->count(),
+            // Vertragsherkunft (28.09.2026): NUR der Eigenbestand (vermittelt +
+            // uebernommen). Laufende Fremdvertraege stehen getrennt daneben.
+            'activeContracts' => Contract::currentlyActive()->ownPortfolio()->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->count(),
+            'activeExternalContracts' => Contract::currentlyActive()->externalOrigin()->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->count(),
+            // Pruefliste: Vertraege, deren Herkunft nur ANGENOMMEN ist.
+            'unverifiedOriginContracts' => Contract::where('origin_verified', false)->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->count(),
             // Gleiche Definition wie der Karten-Link (status=aktiv, nur Kundentickets),
             // damit die Zahl der Liste nach dem Klick entspricht.
             'openTickets' => Ticket::customerOnly()->active()->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->count(),
@@ -63,7 +68,7 @@ class AdminController extends Controller
                 // Zaehler auf der Kundenkarte: AKTIVE Vertraege (gleiche
                 // Definition wie ueberall), nicht alle je erfassten.
                 ->with('user')
-                ->withCount(['contracts as active_contracts_count' => fn ($q) => $q->currentlyActive()])
+                ->withCount(['contracts as active_contracts_count' => fn ($q) => $q->currentlyActive()->ownPortfolio()])
                 ->orderByDesc('customer_views.viewed_at')
                 ->take(8)->get(),
         ]);
@@ -80,8 +85,8 @@ class AdminController extends Controller
         $query = $this->scopeCustomers(Customer::with([
             'user',
             'betreuer',
-            'contracts' => fn ($q) => $q->currentlyActive()
-                ->select('id', 'customer_id', 'type', 'status', 'start_date', 'end_date', 'cancellation_date'),
+            'contracts' => fn ($q) => $q->currentlyActive()->ownPortfolio()
+                ->select('id', 'customer_id', 'type', 'status', 'origin', 'start_date', 'end_date', 'cancellation_date'),
         ]));
         // Filter (E-Mail, Sparte, Portal-Status, Vertrags-Ablauf, letzter Kontakt,
         // Betreuer) + Sortierung aus den GET-Parametern anwenden.
@@ -103,7 +108,7 @@ class AdminController extends Controller
             'ohne_email' => $this->scopeCustomers(Customer::query())
                 ->whereDoesntHave('user', fn ($u) => $this->scopeRealEmail($u))->count(),
             'ablauf' => $this->scopeCustomers(Customer::query())
-                ->whereHas('contracts', fn ($q) => $q->currentlyActive()
+                ->whereHas('contracts', fn ($q) => $q->currentlyActive()->ownPortfolio()
                     ->whereNotNull('end_date')
                     ->whereBetween('end_date', [today(), today()->addDays(60)]))->count(),
             'kontakt' => $this->scopeCustomers(Customer::query())
@@ -119,7 +124,7 @@ class AdminController extends Controller
     /** Zaehlt Kunden mit mind. einem AKTIVEN Vertrag der Sparte (portfolio-gescoped). */
     private function countBySparte(string $type): int {
         return $this->scopeCustomers(Customer::query())
-            ->whereHas('contracts', fn ($q) => $q->currentlyActive()->where('type', $type))
+            ->whereHas('contracts', fn ($q) => $q->currentlyActive()->ownPortfolio()->where('type', $type))
             ->count();
     }
 
@@ -159,7 +164,7 @@ class AdminController extends Controller
         // Sparte: mind. ein aktiver Vertrag dieses Typs (gleiche Definition wie
         // die Sparten-Kennzahl und die Vertrags-Icons der Liste).
         if ($request->filled('sparte')) {
-            $query->whereHas('contracts', fn ($q) => $q->currentlyActive()->where('type', $request->sparte));
+            $query->whereHas('contracts', fn ($q) => $q->currentlyActive()->ownPortfolio()->where('type', $request->sparte));
         }
         // Alphabet-Index: Kundenname (users.name) beginnt mit dem gewaehlten
         // Buchstaben. "XYZ" fasst die seltenen Anfangsbuchstaben X/Y/Z zusammen.
@@ -184,7 +189,7 @@ class AdminController extends Controller
         // Vertrag laeuft demnaechst ab: aktiver Vertrag mit end_date im Fenster.
         if ($request->filled('ablauf')) {
             $days = max(1, (int) $request->ablauf);
-            $query->whereHas('contracts', fn ($q) => $q->currentlyActive()
+            $query->whereHas('contracts', fn ($q) => $q->currentlyActive()->ownPortfolio()
                 ->whereNotNull('end_date')
                 ->whereBetween('end_date', [today(), today()->addDays($days)]));
         }
@@ -291,7 +296,7 @@ class AdminController extends Controller
                 ['viewed_at' => now()]
             );
         }
-        $customer = Customer::with(['user', 'contracts.vehicleDetail.claims', 'contracts.vehicleDetail.mileageReadings', 'contracts.energyDetail.meterReadings', 'contracts.internetDetail', 'contracts.switchReminders', 'tickets', 'documents', 'family', 'changeRequests.reviewer'])->findOrFail($id);
+        $customer = Customer::with(['user', 'contracts.vehicleDetail.claims', 'contracts.vehicleDetail.mileageReadings', 'contracts.energyDetail.meterReadings', 'contracts.internetDetail', 'contracts.switchReminders', 'contracts.predecessor', 'contracts.successor', 'tickets', 'documents', 'family', 'changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->orderBy('id')->get();
         $internalNotes = InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
@@ -984,9 +989,11 @@ class AdminController extends Controller
             })
             ->limit(3)->get()->map(fn ($c) => [
                 'type' => 'contract',
-                'icon' => '📄',
-                'title' => $c->insurer,
+                // Fremdvertrag (28.09.2026) auch in der Schnellsuche erkennbar.
+                'icon' => $c->isExternal() ? '📁' : '📄',
+                'title' => $c->insurer.($c->isExternal() ? ' · Fremdvertrag' : ($c->isTransferred() ? ' · Übernommen' : '')),
                 'sub' => $c->contract_number,
+                'origin' => $c->origin ?? Contract::ORIGIN_BROKERED,
                 'url' => route('admin.customer', $c->customer_id),
             ]);
         $tickets = Ticket::with('customer.user')

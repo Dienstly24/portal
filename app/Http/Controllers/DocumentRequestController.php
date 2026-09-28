@@ -78,6 +78,16 @@ class DocumentRequestController extends Controller
             'meta' => json_encode(['customer_id' => (string) $customer->id, 'title' => $data['title']], JSON_UNESCAPED_UNICODE),
         ]);
 
+        // Fremdvertrag (28.09.2026): die Anfrage ist erlaubt (z. B. der
+        // Versicherungsschein fuer einen Wechsel), aber der Hinweis gehoert
+        // dazu - sonst verspricht jemand dem Kunden Bearbeitung ohne Mandat.
+        $vertrag = ! empty($data['contract_id']) ? \App\Models\Contract::find($data['contract_id']) : null;
+        if ($vertrag?->isExternal()) {
+            return back()->with('success', 'Dokumentenanfrage erstellt und Kunde benachrichtigt.')
+                ->with('warning', 'Achtung: Der gewählte Vertrag ('.$vertrag->insurer.') wurde nicht über uns vermittelt. Zuständig: '
+                    .$vertrag->responsibleParty().'. Wir haben kein Mandat für diesen Vertrag.');
+        }
+
         return back()->with('success', 'Dokumentenanfrage erstellt und Kunde benachrichtigt.');
     }
 

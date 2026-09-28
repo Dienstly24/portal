@@ -61,28 +61,128 @@ class ContractController extends Controller
             ? (string) $request->query('gruppe')
             : Contract::GROUP_ACTIVE;
 
-        $basis = fn () => Contract::query()
+        // Herkunft (28.09.2026): Standard ist der EIGENBESTAND - sonst
+        // zaehlte "Aktiver Bestand" dokumentierte Fremdvertraege mit, fuer
+        // die wir weder Mandat noch Courtage haben.
+        $herkuenfte = ['eigen', 'fremd', 'alle'];
+        $herkunft = in_array($request->query('herkunft'), $herkuenfte, true)
+            ? (string) $request->query('herkunft')
+            : 'eigen';
+
+        $basis = fn (?string $h = null) => Contract::query()
             ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))
+            ->originFilter($h ?? $herkunft)
             ->search($suche);
 
         // Zaehler je Gruppe als reine COUNT-Abfragen - es wird keine einzige
-        // Zeile geladen, nur gezaehlt. Sie folgen der Suche, damit die Zahl
-        // in den Reitern zum Gezeigten passt.
+        // Zeile geladen, nur gezaehlt. Sie folgen der Suche und der Herkunft,
+        // damit die Zahl in den Reitern zum Gezeigten passt.
         $zaehler = [
             Contract::GROUP_ACTIVE => $basis()->statusGroup(Contract::GROUP_ACTIVE)->count(),
             Contract::GROUP_PENDING => $basis()->statusGroup(Contract::GROUP_PENDING)->count(),
             Contract::GROUP_HISTORY => $basis()->statusGroup(Contract::GROUP_HISTORY)->count(),
             'alle' => $basis()->count(),
         ];
+        $herkunftZaehler = [];
+        foreach ($herkuenfte as $h) {
+            $herkunftZaehler[$h] = $basis($h)->statusGroup($gruppe === 'alle' ? null : $gruppe)->count();
+        }
 
         $contracts = $basis()
-            ->with('customer.user')
+            ->with(['customer.user', 'successor', 'predecessor'])
             ->statusGroup($gruppe === 'alle' ? null : $gruppe)
             ->latest()
             ->paginate(50)
             ->withQueryString();
 
-        return view('admin.contracts', compact('contracts', 'gruppe', 'suche', 'zaehler'));
+        return view('admin.contracts', compact('contracts', 'gruppe', 'suche', 'zaehler', 'herkunft', 'herkunftZaehler'));
+    }
+
+    /**
+     * Fremdbestand - Uebernahmepotenzial (28.09.2026): LAUFENDE
+     * Fremdvertraege ueber alle sichtbaren Kunden. Jeder davon ist ein
+     * Anlass fuer eine Bestandsuebertragung oder ein Gegenangebot. Sortiert
+     * nach Ablauf: wer zuerst wechseln kann, steht oben; ohne Ablauf am Ende.
+     */
+    public function contractsFremdbestand(Request $request) {
+        $ids = $this->visibleCustomerIds();
+        $contracts = Contract::query()
+            ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))
+            ->externalOrigin()
+            ->currentlyActive()
+            ->with(['customer.user', 'successor'])
+            ->orderByRaw('CASE WHEN end_date IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('end_date')
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('admin.contracts_fremdbestand', compact('contracts'));
+    }
+
+    /**
+     * Pruefliste "Vertraege mit ungepruefter Herkunft" (28.09.2026). Der
+     * Altbestand wurde bei der Einfuehrung als Eigenvertrag angenommen,
+     * automatisch angelegte Vertraege (Dokumenten-Eingang) ebenso - beides
+     * ist eine ANNAHME, und hier wird sie abgearbeitet.
+     */
+    public function originReview(Request $request) {
+        $ids = $this->visibleCustomerIds();
+        $contracts = Contract::query()
+            ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))
+            ->where('origin_verified', false)
+            ->with('customer.user')
+            ->orderBy('created_at')
+            ->paginate(50)
+            ->withQueryString();
+        $darfAendern = in_array(auth()->user()->role, ['admin', 'manager'], true);
+
+        return view('admin.contracts_origin_review', compact('contracts', 'darfAendern'));
+    }
+
+    /**
+     * Sammelaktion der Pruefliste. "Bestaetigen" laesst die Herkunft wie sie
+     * ist (jede Personalrolle); "als Fremdvertrag"/"als Eigenvertrag"
+     * AENDERT sie und ist admin/manager vorbehalten - jede Aenderung einzeln
+     * protokolliert. "Uebernommen" gibt es hier bewusst nicht: es braucht
+     * ein Datum je Vertrag, das gehoert ins Formular.
+     */
+    public function originReviewStore(Request $request) {
+        $data = $request->validate([
+            'aktion' => 'required|in:bestaetigen,als_fremd,als_eigen',
+            'ids' => 'required|array|min:1|max:200',
+            'ids.*' => 'uuid',
+        ], ['ids.required' => 'Bitte mindestens einen Vertrag auswählen.']);
+
+        $neu = ['als_fremd' => Contract::ORIGIN_EXTERNAL, 'als_eigen' => Contract::ORIGIN_BROKERED][$data['aktion']] ?? null;
+        if ($neu !== null) {
+            abort_unless(in_array(auth()->user()->role, ['admin', 'manager'], true), 403);
+        }
+
+        $ids = $this->visibleCustomerIds();
+        $vertraege = Contract::whereIn('id', $data['ids'])
+            ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))
+            ->get();
+
+        foreach ($vertraege as $vertrag) {
+            $vorher = $vertrag->origin ?? Contract::ORIGIN_BROKERED;
+            $vertrag->origin_verified = true;
+            if ($neu !== null) {
+                $vertrag->origin = $neu;
+                if ($neu === Contract::ORIGIN_BROKERED) {
+                    $vertrag->previous_broker = null;
+                    $vertrag->origin_note = null;
+                    $vertrag->cancellation_submitted_by_us = false;
+                }
+                $vertrag->transfer_date = null;
+            }
+            // saveQuietly: eine Herkunftspruefung ist kein Vertragsereignis
+            // (keine Provision, kein Storno, keine Wechsel-Automatik).
+            $vertrag->saveQuietly();
+            $this->recordOriginChange($vertrag, $vorher);
+        }
+
+        return back()->with('success', $vertraege->count().' Vertrag/Verträge '
+            .($neu === null ? 'bestätigt.' : 'geprüft und als „'.Contract::ORIGIN_LABELS[$neu].'" gespeichert.'));
     }
 
     public function contractNew() {
@@ -104,6 +204,7 @@ class ContractController extends Controller
     public function contractStore(Request $request, $customerId) {
         $this->authorizeCustomerAccess($customerId);
         $this->validateContract($request);
+        $herkunft = $this->validateOrigin($request, (string) $customerId);
 
         // Doppelversicherungs-Schutz + Wechsel-Automatik (26.07.2026):
         // Gleiches Fahrzeug, ANDERER Versicherer = Wechsel -> am Altvertrag
@@ -151,9 +252,13 @@ class ContractController extends Controller
             'premium_amount' => $request->filled('premium_amount') ? $request->premium_amount : null,
             'premium_interval' => in_array($request->premium_interval, Contract::premiumIntervalKeys(), true) ? $request->premium_interval : 'monthly',
             'added_by' => auth()->user()?->name,
+        ] + $herkunft + [
+            // Ein Mensch hat die Herkunft gerade aktiv gewaehlt.
+            'origin_verified' => true,
         ]);
 
         $this->syncContractDetails($contract, $request);
+        $switchNote .= $this->syncOriginLinks($contract, $request);
         // Bei der Neuanlage erfasste Vermittler-Kennungen gehen sofort in die
         // Historie - und eine bereits importierte, bisher unzugeordnete
         // Abrechnungszeile findet damit ihren Vertrag.
@@ -245,15 +350,18 @@ class ContractController extends Controller
     }
 
     public function contractUpdate(Request $request, $id) {
-        $contract = Contract::findOrFail($id);
+        $contract = Contract::with('vehicleDetail.claims')->findOrFail($id);
         $this->authorizeCustomerAccess($contract->customer_id);
         $this->validateContract($request, $contract->id);
+        $herkunft = $this->validateOrigin($request, (string) $contract->customer_id, $contract);
+        $fremdHandlung = $this->guardExternalAction($request, $contract);
         if ($conflictError = $this->vehicleOverlapError($request, (string) $contract->customer_id, $contract->id)) {
             return back()->withErrors(['vehicle_overlap' => $conflictError])->withInput();
         }
 
         // Vermittler-Kennungen VOR der Aenderung merken: die Historie soll
         // zeigen, wann eine Referenz-Nr./ID von Hand kam (20.08.2026).
+        $herkunftBefore = $contract->origin ?? Contract::ORIGIN_BROKERED;
         $vermittlerBefore = [
             'internal_contract_number' => $contract->internal_contract_number,
             'reference_number' => $contract->reference_number,
@@ -277,9 +385,17 @@ class ContractController extends Controller
             'notes' => $request->notes,
             'premium_amount' => $request->filled('premium_amount') ? $request->premium_amount : null,
             'premium_interval' => in_array($request->premium_interval, Contract::premiumIntervalKeys(), true) ? $request->premium_interval : 'monthly',
-        ]);
+        ] + $herkunft);
 
         $this->syncContractDetails($contract, $request);
+        $linkNote = $this->syncOriginLinks($contract, $request);
+        $this->recordOriginChange($contract, $herkunftBefore);
+        if ($fremdHandlung !== null) {
+            ActivityLog::record('external_contract_action', 'contract', $contract->id, $fremdHandlung + [
+                'customer_id' => (string) $contract->customer_id,
+                'insurer' => $contract->insurer,
+            ]);
+        }
         app(VermittlerLinkService::class)
             ->recordContractEdit($contract, $vermittlerBefore, auth()->id());
 
@@ -297,7 +413,7 @@ class ContractController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.customer', $contract->customer_id)->with('success', 'Vertrag aktualisiert.');
+        return redirect()->route('admin.customer', $contract->customer_id)->with('success', 'Vertrag aktualisiert.'.$linkNote);
     }
 
     public function contractDestroy($id) {
@@ -321,6 +437,243 @@ class ContractController extends Controller
         $contract->delete();
 
         return redirect()->route('admin.customer', $customerId)->with('success', 'Vertrag gelöscht.');
+    }
+
+    /**
+     * Vertragsherkunft pruefen und in Spaltenwerte uebersetzen
+     * (Betreiber-Auftrag 28.09.2026). Serverseitig und je Herkunft - das
+     * Formular blendet nur ein, es entscheidet nichts.
+     *
+     * Regeln:
+     * - Herkunft ist Pflicht und hat bei der Neuanlage KEINE Voreinstellung.
+     * - "Uebernommen" verlangt das Datum der Uebernahme.
+     * - Aendern einer bestehenden Herkunft duerfen nur admin/manager, und
+     *   nur mit ausdruecklicher Bestaetigung (protokolliert in
+     *   recordOriginChange).
+     * - Vorgaenger/Nachfolger muessen zum SELBEN Kunden gehoeren und duerfen
+     *   nicht schon anderweitig verkettet sein - sonst entstuende eine Kette,
+     *   die zwei Nachfolger fuer denselben Altvertrag behauptet.
+     *
+     * @return array<string,mixed>
+     */
+    private function validateOrigin(Request $request, string $customerId, ?Contract $existing = null): array {
+        $selfId = $existing?->id;
+        // Beim BEARBEITEN ist die Herkunft bereits entschieden: fehlt das Feld
+        // (anderer Schreibweg, alte Formulare), bleibt sie unveraendert. Bei
+        // der Neuanlage gibt es diese Rueckfallebene bewusst NICHT.
+        if ($existing && ! $request->filled('origin')) {
+            $request->merge(['origin' => $existing->origin ?? Contract::ORIGIN_BROKERED]);
+        }
+        $vomKunden = fn () => Rule::exists('contracts', 'id')->where('customer_id', $customerId);
+
+        $data = $request->validate([
+            'origin' => 'required|in:'.implode(',', Contract::originKeys()),
+            'previous_broker' => 'nullable|string|max:150',
+            'origin_note' => 'nullable|string|max:2000',
+            'transfer_date' => 'nullable|date|before_or_equal:today|required_if:origin,'.Contract::ORIGIN_TRANSFERRED,
+            'cancellation_submitted_by_us' => 'nullable|boolean',
+            'replaces_mode' => 'nullable|in:none,existing,new',
+            'replaces_contract_id' => ['nullable', 'uuid', 'required_if:replaces_mode,existing', $vomKunden(),
+                Rule::notIn(array_filter([$selfId]))],
+            'replaced_by_contract_id' => ['nullable', 'uuid', $vomKunden(), Rule::notIn(array_filter([$selfId]))],
+            'predecessor.insurer' => 'nullable|string|max:255|required_if:replaces_mode,new',
+            'predecessor.contract_number' => ['nullable', 'string', 'max:255', Rule::unique('contracts', 'contract_number')],
+            'predecessor.previous_broker' => 'nullable|string|max:150',
+            'predecessor.premium_amount' => 'nullable|numeric|min:0|max:9999999.99',
+            'predecessor.cancellation_submitted_by_us' => 'nullable|boolean',
+            'origin_change_confirmed' => 'nullable|boolean',
+        ], [
+            'origin.required' => 'Bitte die Vertragsherkunft wählen: Eigenvertrag, Fremdvertrag oder Übernommen.',
+            'transfer_date.required_if' => 'Bei einem übernommenen Vertrag bitte das Datum der Übernahme angeben.',
+            'replaces_contract_id.required_if' => 'Bitte den Vertrag wählen, der ersetzt wird.',
+            'predecessor.insurer.required_if' => 'Bitte den Versicherer des Vorvertrags angeben.',
+            'replaces_contract_id.not_in' => 'Ein Vertrag kann sich nicht selbst ersetzen.',
+            'replaced_by_contract_id.not_in' => 'Ein Vertrag kann sich nicht selbst ersetzen.',
+        ]);
+
+        $origin = $data['origin'];
+        $errors = [];
+
+        if ($existing) {
+            $bisher = $existing->origin ?? Contract::ORIGIN_BROKERED;
+            if ($origin !== $bisher) {
+                if (! in_array(auth()->user()->role, ['admin', 'manager'], true)) {
+                    $errors['origin'] = 'Die Vertragsherkunft kann nur ein Admin oder Manager ändern.';
+                } elseif (! $request->boolean('origin_change_confirmed')) {
+                    $errors['origin_change_confirmed'] = 'Bitte die Änderung der Vertragsherkunft ausdrücklich bestätigen.';
+                }
+            }
+        }
+
+        $mode = $origin === Contract::ORIGIN_EXTERNAL ? 'none' : ($data['replaces_mode'] ?? null);
+        if ($mode === 'new' && $existing) {
+            $errors['replaces_mode'] = 'Ein Vorvertrag kann nur bei der Neuanlage gleich mit erfasst werden.';
+        }
+        if ($mode === 'existing' && ! empty($data['replaces_contract_id'])) {
+            $belegt = Contract::where('replaces_contract_id', $data['replaces_contract_id'])
+                ->when($selfId, fn ($q) => $q->where('id', '!=', $selfId))->exists();
+            if ($belegt) {
+                $errors['replaces_contract_id'] = 'Dieser Vertrag ist bereits als Vorvertrag eines anderen Vertrags verknüpft.';
+            }
+        }
+        if ($origin === Contract::ORIGIN_EXTERNAL && ! empty($data['replaced_by_contract_id'])) {
+            $nachfolger = Contract::find($data['replaced_by_contract_id']);
+            if ($nachfolger?->isExternal()) {
+                $errors['replaced_by_contract_id'] = 'Als Nachfolger kommt nur ein Eigenvertrag oder übernommener Vertrag in Frage.';
+            } elseif ($nachfolger && $nachfolger->replaces_contract_id && $nachfolger->replaces_contract_id !== $selfId) {
+                $errors['replaced_by_contract_id'] = 'Der gewählte Nachfolger ersetzt bereits einen anderen Vertrag.';
+            }
+        }
+        if ($errors !== []) {
+            throw \Illuminate\Validation\ValidationException::withMessages($errors);
+        }
+
+        $clean = fn ($v) => ($v === null || trim((string) $v) === '') ? null : trim((string) $v);
+        $werte = [
+            'origin' => $origin,
+            'previous_broker' => $origin === Contract::ORIGIN_BROKERED ? null : $clean($data['previous_broker'] ?? null),
+            'origin_note' => $origin === Contract::ORIGIN_BROKERED ? null : $clean($data['origin_note'] ?? null),
+            'transfer_date' => $origin === Contract::ORIGIN_TRANSFERRED ? $data['transfer_date'] : null,
+            'cancellation_submitted_by_us' => $origin === Contract::ORIGIN_EXTERNAL && $request->boolean('cancellation_submitted_by_us'),
+        ];
+        // Die Verkettung zum Vorgaenger nur anfassen, wenn das Formular sie
+        // mitschickt - ein Fremdvertrag behaelt eine vorhandene Kette.
+        if ($origin !== Contract::ORIGIN_EXTERNAL && $request->has('replaces_mode')) {
+            $werte['replaces_contract_id'] = $mode === 'existing' ? $data['replaces_contract_id'] : null;
+        }
+        // Wer die Herkunft sieht und waehlen darf, hat sie damit geprueft.
+        if ($existing && in_array(auth()->user()->role, ['admin', 'manager'], true)) {
+            $werte['origin_verified'] = true;
+        }
+        return $werte;
+    }
+
+    /**
+     * Vorgaenger/Nachfolger verknuepfen und - bei der Schnellanlage - den
+     * Vorvertrag gleich als Fremdvertrag anlegen. Liefert einen Satz fuer
+     * die Erfolgsmeldung.
+     */
+    private function syncOriginLinks(Contract $contract, Request $request): string {
+        $note = '';
+        $beginn = $contract->start_date ? \Illuminate\Support\Carbon::parse($contract->start_date) : null;
+
+        if (! $contract->isExternal() && $request->input('replaces_mode') === 'new') {
+            $p = (array) $request->input('predecessor', []);
+            $vorvertrag = Contract::create([
+                'customer_id' => $contract->customer_id,
+                'type' => $contract->type,
+                'type_other' => $contract->type_other,
+                'subtype' => $contract->subtype,
+                'insurer' => trim((string) $p['insurer']),
+                'contract_number' => filled($p['contract_number'] ?? null) ? trim((string) $p['contract_number']) : null,
+                // Laeuft bis zum Beginn des neuen Vertrags, danach Historie.
+                // Ohne Beginn: sofort gekuendigt - ein Ablauf wird nie geraten.
+                'status' => $beginn ? Contract::STATUS_ACTIVE : Contract::STATUS_CANCELLED,
+                'cancellation_date' => $beginn ? null : now()->toDateString(),
+                'premium_amount' => filled($p['premium_amount'] ?? null) ? $p['premium_amount'] : null,
+                'premium_interval' => 'monthly',
+                'origin' => Contract::ORIGIN_EXTERNAL,
+                'origin_verified' => true,
+                'previous_broker' => filled($p['previous_broker'] ?? null) ? trim((string) $p['previous_broker']) : null,
+                'origin_note' => 'Als Vorvertrag erfasst, ersetzt durch '.$contract->insurer.'.',
+                'cancellation_submitted_by_us' => (bool) ($p['cancellation_submitted_by_us'] ?? false),
+                'added_by' => auth()->user()?->name,
+            ]);
+            if ($beginn) {
+                app(ContractSwitchService::class)->recordCancellationForSwitch($vorvertrag, $beginn, 'manual', auth()->id());
+            }
+            $contract->forceFill(['replaces_contract_id' => $vorvertrag->id])->saveQuietly();
+            ActivityLog::record('contract_predecessor_created', 'contract', $vorvertrag->id, [
+                'successor_id' => $contract->id, 'insurer' => $vorvertrag->insurer,
+            ]);
+            $note = ' Vorvertrag '.$vorvertrag->insurer.' wurde als Fremdvertrag erfasst und verknüpft.';
+        } elseif (! $contract->isExternal() && $contract->replaces_contract_id
+            && ($contract->wasRecentlyCreated || $contract->wasChanged('replaces_contract_id'))) {
+            // Vorhandenen Vertrag als Vorgaenger gewaehlt: ohne erfasste
+            // Kuendigung endet er zum Beginn des neuen (wie beim Wechsel).
+            $vorvertrag = Contract::find($contract->replaces_contract_id);
+            if ($vorvertrag && $beginn && empty($vorvertrag->cancellation_date) && ! $vorvertrag->isHistoric()) {
+                app(ContractSwitchService::class)->recordCancellationForSwitch($vorvertrag, $beginn, 'manual', auth()->id());
+                $note = ' Am Vorvertrag '.$vorvertrag->insurer.' wurde die Kündigung zum '.$beginn->format('d.m.Y').' erfasst.';
+            }
+        }
+
+        // Fremdvertrag: Nachfolger von dieser Seite aus setzen. Gespeichert
+        // wird am NACHFOLGER (eine Spalte, eine Wahrheit).
+        if ($contract->isExternal() && $request->has('replaced_by_contract_id')) {
+            $neu = $request->input('replaced_by_contract_id') ?: null;
+            Contract::where('replaces_contract_id', $contract->id)
+                ->when($neu, fn ($q) => $q->where('id', '!=', $neu))
+                ->update(['replaces_contract_id' => null]);
+            if ($neu) {
+                Contract::whereKey($neu)->update(['replaces_contract_id' => $contract->id]);
+            }
+        }
+        return $note;
+    }
+
+    /**
+     * Herkunftswechsel protokollieren: Aktivitaetsprotokoll (wer/wann) UND
+     * Version History des Vertrags (alt -> neu) - eine stille Umdeutung
+     * eines Fremdvertrags zum Eigenvertrag waere sonst nicht nachvollziehbar.
+     */
+    private function recordOriginChange(Contract $contract, string $before): void {
+        $after = $contract->origin ?? Contract::ORIGIN_BROKERED;
+        if ($after === $before) {
+            return;
+        }
+        $label = fn ($o) => Contract::ORIGIN_LABELS[$o] ?? $o;
+        ActivityLog::record('contract_origin_changed', 'contract', $contract->id, [
+            'customer_id' => (string) $contract->customer_id,
+            'old' => $before,
+            'new' => $after,
+        ]);
+        \App\Models\ContractRevision::create([
+            'contract_id' => $contract->id,
+            'batch_id' => (string) Str::uuid(),
+            'field' => 'origin',
+            'label' => 'Vertragsherkunft',
+            'old_value' => $label($before),
+            'new_value' => $label($after),
+            'source' => 'manual',
+            'changed_by' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Schutz bei Handlungen an einem FREMDVERTRAG (kein Mandat): wer ihn
+     * kuendigt oder einen Schaden daran erfasst, muss einen Grund nennen.
+     * Liefert die Protokoll-Angaben oder null, wenn nichts zu schuetzen war.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function guardExternalAction(Request $request, Contract $contract): ?array {
+        if (! $contract->isExternal() || $request->input('origin') !== Contract::ORIGIN_EXTERNAL) {
+            return null;
+        }
+        $aktionen = [];
+        $wirdGekuendigt = ($request->input('status') === Contract::STATUS_CANCELLED && $contract->status !== Contract::STATUS_CANCELLED)
+            || ($request->filled('cancellation_date') && empty($contract->cancellation_date));
+        if ($wirdGekuendigt) {
+            $aktionen[] = 'kuendigung';
+        }
+        $neueSchaeden = collect((array) $request->input('vehicle.claim_rows', []))
+            ->filter(fn ($r) => is_array($r) && collect(['claim_date', 'claim_type', 'damage_amount', 'insurer', 'notes'])
+                ->contains(fn ($k) => isset($r[$k]) && $r[$k] !== ''))
+            ->count();
+        if ($neueSchaeden > ($contract->vehicleDetail?->claims?->count() ?? 0)) {
+            $aktionen[] = 'schadenmeldung';
+        }
+        if ($aktionen === []) {
+            return null;
+        }
+        $request->validate([
+            'fremdvertrag_grund' => 'required|string|min:5|max:1000',
+        ], [
+            'fremdvertrag_grund.required' => 'Dieser Vertrag wurde nicht über uns vermittelt (kein Mandat). Für Kündigung oder Schadenmeldung bitte einen Grund angeben.',
+            'fremdvertrag_grund.min' => 'Bitte den Grund etwas genauer angeben.',
+        ]);
+        return ['aktionen' => $aktionen, 'grund' => trim((string) $request->input('fremdvertrag_grund'))];
     }
 
     /**

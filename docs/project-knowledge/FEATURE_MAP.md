@@ -67,6 +67,13 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 
 ## B. Dokumente
 
+### F-011 Vertragsherkunft (Eigen-/Fremdvertrag/uebernommen)
+- **Beschreibung**: jeder Vertrag sagt, ob WIR ihn vermittelt haben (`brokered`), ob er nur zur Dokumentation erfasst ist (`external`, kein Mandat) oder per Maklervollmacht uebernommen wurde (`transferred`). Pflichtwahl ganz oben im Formular, Vorvertrag in einem Zug als Fremdvertrag anlegen, Kette Vorgaenger/Nachfolger, Kennzahlen nur Eigenbestand, Filter Eigen-/Fremdbestand, Uebernahmepotenzial, Warnleiste + Pflicht-Grund bei Kuendigung/Schaden/Aenderungsantrag an Fremdvertraegen, Pruefliste "ungepruefte Herkunft", Portal-Einstellung getrennt/ausblenden, Herkunft im KI-Kontext.
+- C `Admin\ContractController` (`validateOrigin`, `syncOriginLinks`, `guardExternalAction`, `contractsFremdbestand`, `originReview*`), `ChangeRequestReviewController`, `DocumentRequestController`; M `Contract` (`ORIGIN_*`, `scopeOwnPortfolio`, `predecessor`/`successor`, `assistantOriginHint`); V `partials/contract_origin_fields`, `partials/contract_origin_badge`, `partials/fremdvertrag_warnung`, `contracts_fremdbestand`, `contracts_origin_review`
+- Routen `admin/vertragsherkunft/fremdbestand`, `admin/vertragsherkunft/pruefen` (GET/POST); T `contracts` (+ `origin`, `origin_verified`, `previous_broker`, `origin_note`, `transfer_date`, `cancellation_submitted_by_us`, `replaces_contract_id`); Einstellung `portal_fremdvertraege`
+- R Herkunft aendern nur admin/manager (mit Bestaetigung, protokolliert); Pruefliste bestaetigen alle Staff (Portfolio)
+- Tests `VertragsherkunftTest` · Status **ACTIVE** (Stand 28.09.2026, lokal ungetestet - siehe CHANGELOG)
+
 ### F-020 Smart Document Upload / Dokumenten-Eingang
 - C `SmartDocumentUploadController` (Admin + Portal); S `Ai/DocumentAnalyzer`, `HeuristicDocumentClassifier`, `Ocr/*`, `DocumentIntake/DocumentIntakeService`; Job `AnalyzeDocumentJob`; Planer `documents:analyze-pending`, `documents:prune-unassigned`
 - V `admin/documents_inbox` (1636 Z.), `portal/documents`; T `documents`, `ai_decisions`

@@ -37,6 +37,7 @@ class EscooterContractTest extends TestCase
     {
         return array_merge([
             'type' => 'escooter',
+            'origin' => 'brokered',
             'insurer' => 'die Bayerische',
             'status' => 'active',
             'start_date' => '2026-07-20',

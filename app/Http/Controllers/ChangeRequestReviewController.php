@@ -50,8 +50,16 @@ class ChangeRequestReviewController extends Controller
             $query->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution());
         }
 
+        $requests = $query->paginate(25)->withQueryString();
+        // Vertragsherkunft (28.09.2026): betroffene Vertraege EINMAL laden -
+        // eine Aenderung an einem Fremdvertrag bekommt die Warnleiste.
+        $vertragIds = collect($requests->items())->map(fn ($r) => $r->contractId())->filter()->unique()->values();
+        $vertraege = $vertragIds->isEmpty() ? collect()
+            : \App\Models\Contract::whereIn('id', $vertragIds)->get()->keyBy('id');
+
         return view('admin.change_requests', [
-            'requests' => $query->paginate(25)->withQueryString(),
+            'requests' => $requests,
+            'vertraege' => $vertraege,
             'status' => $status,
             'counts' => [
                 'pending' => $this->scopedCount('pending'),
@@ -172,6 +180,25 @@ class ChangeRequestReviewController extends Controller
             'action' => 'required|in:approve,reject',
             'notes' => 'nullable|string|max:1000',
         ]);
+
+        // Aenderungsantrag zu einem FREMDVERTRAG (28.09.2026): wir haben kein
+        // Mandat. Genehmigen verlangt einen Grund und wird protokolliert -
+        // meistens ist der richtige Weg, die Uebernahme anzubieten.
+        $vertrag = ($cid = $changeRequest->contractId()) ? \App\Models\Contract::find($cid) : null;
+        if ($data['action'] === 'approve' && $vertrag?->isExternal()) {
+            $grund = $request->validate([
+                'fremdvertrag_grund' => 'required|string|min:5|max:1000',
+            ], [
+                'fremdvertrag_grund.required' => 'Dieser Vertrag wurde nicht über uns vermittelt (kein Mandat). Bitte einen Grund für die Genehmigung angeben.',
+                'fremdvertrag_grund.min' => 'Bitte den Grund etwas genauer angeben.',
+            ])['fremdvertrag_grund'];
+            \App\Models\ActivityLog::record('external_contract_action', 'contract', $vertrag->id, [
+                'aktionen' => ['aenderungsantrag'],
+                'grund' => trim($grund),
+                'change_request_id' => $changeRequest->id,
+                'customer_id' => (string) $vertrag->customer_id,
+            ]);
+        }
 
         $result = $data['action'] === 'approve'
             ? $service->approve($changeRequest, auth()->user(), $data['notes'] ?? null)

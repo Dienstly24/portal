@@ -36,7 +36,7 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 ### Vertrag
 | Tabelle | Zweck |
 |---|---|
-| `contracts` | Kern: `type` (Sparte, String; Liste `Contract::TYPES`), `status`, `stage` (antrag/vertrag), `contract_number`, `reference_number`, `internal_contract_number`, `vermittler_id`, `vermittler_*`, `pool`, `commission_status` |
+| `contracts` | Kern: `type` (Sparte, String; Liste `Contract::TYPES`), `status`, `stage` (antrag/vertrag), `contract_number`, `reference_number`, `internal_contract_number`, `vermittler_id`, `vermittler_*`, `pool`, `commission_status`; Herkunft (28.09.2026): `origin` (brokered/external/transferred), `origin_verified`, `previous_broker`, `origin_note`, `transfer_date`, `cancellation_submitted_by_us`, `replaces_contract_id` (Selbstbezug: Nachfolger -> Vorgaenger, "ersetzt durch" wird abgeleitet) |
 | `contract_vehicle_details`, `contract_energy_details`, `contract_internet_details` | Sparten-Details (1:1) |
 | `contract_revisions` | Version History feldgenau |
 | `contract_histories`, `contract_switch_reminders` | Historie, Wechsel-Erinnerungen |

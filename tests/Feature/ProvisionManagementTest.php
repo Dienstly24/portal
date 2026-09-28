@@ -168,6 +168,7 @@ class ProvisionManagementTest extends TestCase
         $customer = $this->customer([], ['acquired_by' => $werber->id]);
 
         $this->actingAs($this->admin)->post(route('admin.contract.store', $customer->id), [
+            'origin' => 'brokered',
             'type' => 'kfz', 'insurer' => 'Allianz', 'status' => 'active',
             'premium_amount' => 50, 'premium_interval' => 'monthly',
         ])->assertRedirect();

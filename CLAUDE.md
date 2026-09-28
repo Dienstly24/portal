@@ -2228,6 +2228,76 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Saetze, Berichte oder Statistiken; KEINE Benachrichtigungen an
   Empfaenger (interner Prozess). Tests: `ProvisionManagementTest`.
 
+## Vertragsherkunft: Eigenvertrag, Fremdvertrag, uebernommen (Betreiber-Auftrag 28.09.2026)
+
+- **Anlass**: der Kunde will seinen ADAC-Vertrag loswerden, wir erfassen ihn
+  als gekuendigten Vorvertrag und vermitteln DA Direkt. Wochen spaeter weiss
+  niemand mehr, dass der ADAC-Vertrag nie unserer war - und bei einer
+  Rueckfrage arbeitet jemand an einem Vertrag ohne Mandat und ohne Courtage.
+- **`contracts.origin`**: `brokered` (Eigenvertrag), `external` (Fremdvertrag -
+  nur Dokumentation), `transferred` (per Maklervollmacht/Courtagezusage
+  uebernommen, dann Datum `transfer_date` Pflicht). Dazu `previous_broker`,
+  `origin_note`, `cancellation_submitted_by_us`. **Eigenbestand =
+  brokered + transferred** (`Contract::isOwnPortfolio()` / Scope
+  `ownPortfolio()` - die EINE Definition, wie `currentlyActive()`).
+- **Herkunft und Status sind GETRENNTE Wahrheiten**: ein Fremdvertrag kann
+  laufen (= Uebernahmepotenzial). `currentlyActive()` bleibt unberuehrt;
+  Kennzahlen des eigenen Bestands kombinieren es mit `ownPortfolio()`
+  (Dashboard, Auswertungs-Dashboard ueber `vertragsbasis()`, Kundenliste
+  inkl. Sparten-Filter, Kundenakte-Struktur und Beitragsuebersicht,
+  Berichte, Mitarbeiter-/Partnerlisten, Portal-Zaehler). Laufende
+  Fremdvertraege stehen GETRENNT daneben ("zzgl. 1 Fremdvertrag,
+  80,84 EUR/Monat"), nie gemischt.
+- **`transfer_date`, nicht `transferred_at`**: `..._at` heisst in diesem
+  Projekt Zeitpunkt (UTC, Anzeige nur mit `->lokal()`, Waechter-Test). Das
+  Uebernahmedatum ist ein reines Datum wie `start_date`.
+- **Keine stille Voreinstellung bei der Neuanlage**: `origin` ist Pflicht
+  (Auswahlkarten ganz oben, Pruefung serverseitig in
+  `ContractController::validateOrigin`). Beim BEARBEITEN bleibt die
+  Herkunft stehen, wenn das Feld fehlt. **Altbestand** = `brokered` mit
+  `origin_verified = false` (Annahme); automatische Anlagewege
+  (Dokumenten-Eingang) ebenso. Formular-Neuanlage und Provisions-Import
+  (Courtage belegt die Vermittlung) setzen `true`. Pruefliste
+  `/admin/vertragsherkunft/pruefen` + Aufgabe im Dashboard; Bestaetigen darf
+  jede Personalrolle, UMDEUTEN nur admin/manager.
+- **Herkunft aendern**: nur admin/manager, nur mit ausdruecklicher
+  Bestaetigung (`origin_change_confirmed`), protokolliert im ActivityLog
+  (`contract_origin_changed`) UND in der Version History (`field = origin`).
+  Eine schon gebuchte Werber-Provision bleibt dabei stehen - keine
+  automatische Gegenbuchung (Finanzentscheidung).
+- **EINE Verkettungsspalte**: `replaces_contract_id` am NACHFOLGER;
+  "ersetzt durch" ist die abgeleitete Relation `successor()`. Zwei Spalten
+  fuer dieselbe Aussage koennten auseinanderlaufen (wie bei der
+  Signaturgruppe). Vorgaenger muss zum selben Kunden gehoeren und darf nur
+  EINEN Nachfolger haben. Haeufigster Ablauf: "Ersetzt einen bestehenden
+  Vertrag? -> Vorvertrag jetzt als Fremdvertrag erfassen" legt ihn in
+  derselben Sparte an und erfasst die Kuendigung zum Beginn des neuen
+  (`ContractSwitchService`); ohne Beginn wird er sofort als gekuendigt
+  gefuehrt - ein Ablauf wird nie geraten.
+- **Leitplanken**: Warnleiste `partials/fremdvertrag_warnung` ("Wir haben
+  kein Mandat", Zustaendig: `responsibleParty()`, Knopf "Uebernahme
+  anbieten" -> Signatur/Maklervollmacht) in Vertragsakte und
+  Aenderungsantraegen; Kuendigung oder neuer Schaden an einem Fremdvertrag
+  und das GENEHMIGEN eines Aenderungsantrags dazu verlangen
+  `fremdvertrag_grund` (serverseitig, ActivityLog
+  `external_contract_action`). Dokumentanfrage zu einem Fremdvertrag:
+  Warnhinweis. Dokumente an Fremdvertraegen tragen im Eingang und in der
+  Kundenakte das Abzeichen. Tickets und Kundenchat haben KEINE
+  Vertragsverknuepfung - dort gibt es nichts zu warnen (erst mit einer
+  solchen Verknuepfung nachziehen).
+- **Geld**: Fremdvertrag bucht keine Werber-Provision
+  (`ContractProvisionService`) und steht nie als "Provision fehlt"
+  (`CommissionStatusEngine` -> `neu`).
+- **KI**: die Kunden-Werkzeuge liefern `herkunft` + Hinweis "kein Mandat,
+  nichts zusagen" (`Contract::assistantOriginHint()`).
+- **Portal**: Einstellung `portal_fremdvertraege` (getrennt = Abschnitt
+  "Weitere Vertraege (nicht ueber uns betreut)", Standard; oder ausblenden,
+  dann auch die Detailseite 404).
+- **Bewusst unveraendert**: Verlaengerungs-Erinnerungen (E-Scooter,
+  Schutzbrief) laufen auch fuer Fremdvertraege - sie sind Kundenservice,
+  kein Handeln am Vertrag. Sparten-Kampagnen ebenso.
+- Tests: `VertragsherkunftTest`.
+
 ## Provisionen sieht nur der Admin (Betreiber-Vorgabe 23.09.2026)
 
 - **Gemeldet am Screenshot der Vertragsakte**: die Box "🤝 Vermittler /

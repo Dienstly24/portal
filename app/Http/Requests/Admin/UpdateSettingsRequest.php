@@ -100,6 +100,8 @@ class UpdateSettingsRequest extends FormRequest
                 'regex:/^\s*\d{1,3}(\s*,\s*\d{1,3})*\s*$/'],
 
             'welcome_email_enabled' => ['sometimes', Rule::in(['0', '1'])],
+            // Vertragsherkunft (28.09.2026): Fremdvertraege im Kundenportal.
+            \App\Models\Contract::SETTING_PORTAL_EXTERNAL => ['sometimes', Rule::in(array_keys(\App\Models\Contract::PORTAL_EXTERNAL_MODES))],
 
             'change_request_auto_approve' => ['sometimes',
                 Rule::in(array_keys(ChangeProofPolicy::AUTO_APPROVE_MODES))],

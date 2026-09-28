@@ -414,6 +414,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Verträge
     Route::get('/contracts', [AdminContractController::class, 'contracts'])->name('contracts');
     Route::get('/contracts/new', [AdminContractController::class, 'contractNew'])->name('contract.new');
+    // Vertragsherkunft (28.09.2026). Eigener Pfad /vertragsherkunft/... statt
+    // /contracts/... - ein POST dort wuerde sonst von contract.store als
+    // Kunden-ID gelesen.
+    Route::get('/vertragsherkunft/fremdbestand', [AdminContractController::class, 'contractsFremdbestand'])->name('contracts.fremdbestand');
+    Route::get('/vertragsherkunft/pruefen', [AdminContractController::class, 'originReview'])->name('contracts.origin_review');
+    Route::post('/vertragsherkunft/pruefen', [AdminContractController::class, 'originReviewStore'])->name('contracts.origin_review.store');
 
     Route::get('/contracts/create/{customerId}', [AdminContractController::class, 'contractCreate'])->name('contract.create');
     Route::get('/contracts/{id}/edit', [AdminContractController::class, 'contractEdit'])->name('contract.edit');

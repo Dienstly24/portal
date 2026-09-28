@@ -36,9 +36,14 @@ foreach (\App\Models\Contract::TYPES as $ck => $cfg) { $valueLabels[$ck] ??= $cf
 $fmt = fn($v) => $valueLabels[$v] ?? $v;
 @endphp
 
+@if($errors->any())
+<div class="alert alert-error">@foreach($errors->all() as $error)<div>✗ {{ $error }}</div>@endforeach</div>
+@endif
 @forelse($requests as $r)
-@php $proof = $r->proofState(); @endphp
+@php $proof = $r->proofState(); $crVertrag = ($cid = $r->contractId()) ? ($vertraege[$cid] ?? null) : null; @endphp
 <div class="card">
+    {{-- Aenderung an einem Fremdvertrag: kein Mandat (28.09.2026). --}}
+    @include('admin.partials.fremdvertrag_warnung', ['contract' => $crVertrag, 'showContract' => true])
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
         <div style="flex:1;min-width:280px;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;">
@@ -175,6 +180,13 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                     <label style="font-size:12px;">Notiz (optional, bei Ablehnung sichtbar für den Kunden)</label>
                     <textarea name="notes" maxlength="1000" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:60px;font-family:inherit;resize:vertical;" aria-label="Notiz (optional, bei Ablehnung sichtbar für den Kunden)"></textarea>
                 </div>
+                @if($crVertrag?->isExternal())
+                <div class="field" style="margin-bottom:10px;">
+                    <label style="font-size:12px;color:#8A4B0F;">Grund für die Genehmigung trotz Fremdvertrag *</label>
+                    <textarea name="fremdvertrag_grund" maxlength="1000" style="width:100%;padding:8px 10px;border:1px solid #D98B3A;border-radius:8px;font-size:13px;min-height:50px;font-family:inherit;resize:vertical;" aria-label="Grund für die Genehmigung trotz Fremdvertrag">{{ old('fremdvertrag_grund') }}</textarea>
+                    <div class="muted-2xs">Nur für „Genehmigen“ nötig. Besser oft: Übernahme anbieten.</div>
+                </div>
+                @endif
                 @if(in_array($r->proof_status, ['mismatch', 'missing'], true))
                 <div style="font-size:12px;color:#A32D2D;margin-bottom:8px;">⚠️ {{ $r->proof_status === 'missing' ? 'Es liegt kein Nachweis vor.' : 'Der Nachweis passt nicht zu den beantragten Angaben.' }} Bitte vor einer Freigabe klären.</div>
                 @endif

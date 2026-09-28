@@ -106,6 +106,14 @@ class GetRelevantContractInformationTool implements AssistantTool
                 ? number_format((float) $c->premium_amount, 2, ',', '.').' EUR '.$c->premiumIntervalLabel()
                 : null,
         ];
+        // Vertragsherkunft (28.09.2026): Fremdvertrag = kein Mandat. Nur
+        // gesetzt, wenn es etwas zu sagen gibt (Eigenvertrag = Normalfall).
+        if (! $c->isOwnPortfolio() || $c->isTransferred()) {
+            $data['herkunft'] = $c->originLabel();
+        }
+        if ($hinweis = $c->assistantOriginHint()) {
+            $data['fremdvertrag_hinweis'] = $hinweis;
+        }
 
         if ($vehicle = $c->vehicleDetail) {
             $data['fahrzeug'] = array_filter([

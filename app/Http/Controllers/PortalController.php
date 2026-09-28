@@ -52,10 +52,12 @@ class PortalController extends Controller
             // "Meine aktiven Verträge": gleiche Definition wie in der
             // Beraterwelt (Contract::currentlyActive) - gekuendigte und
             // abgelaufene Vertraege zaehlen nicht mit.
-            'contractsCount' => Contract::where('customer_id', $customer->id)->currentlyActive()->count(),
+            // Nur Vertraege, die WIR betreuen (28.09.2026) - ein dokumentierter
+            // Fremdvertrag steht nie als "unser" Vertrag in der Zahl.
+            'contractsCount' => Contract::where('customer_id', $customer->id)->currentlyActive()->ownPortfolio()->count(),
             'openTickets' => Ticket::where('customer_id', $customer->id)->whereIn('status', ['open', 'in_progress'])->count(),
             'pendingApprovals' => CustomerChangeRequest::where('customer_id', $customer->id)->where('status', 'pending')->count(),
-            'contracts' => Contract::where('customer_id', $customer->id)->latest()->take(3)->get(),
+            'contracts' => Contract::where('customer_id', $customer->id)->ownPortfolio()->latest()->take(3)->get(),
             'tickets' => Ticket::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'completeness' => $customer->completeness(),
             'banners' => $this->bannersFor(auth()->id()),
@@ -125,6 +127,8 @@ class PortalController extends Controller
         $customer = $this->getCustomer();
         return view('portal.contracts', [
             'contracts' => Contract::where('customer_id', $customer->id)
+                // Fremdvertraege je nach Einstellung getrennt oder gar nicht.
+                ->when(! Contract::portalShowsExternal(), fn ($q) => $q->ownPortfolio())
                 ->with(['vehicleDetail', 'energyDetail', 'internetDetail'])
                 ->latest()->get(),
         ]);
@@ -134,6 +138,7 @@ class PortalController extends Controller
     public function contractShow($id) {
         $customer = $this->getCustomer();
         $contract = Contract::where('customer_id', $customer->id)
+            ->when(! Contract::portalShowsExternal(), fn ($q) => $q->ownPortfolio())
             ->with(['vehicleDetail.mileageReadings', 'energyDetail.meterReadings', 'internetDetail'])
             ->where('id', $id)->firstOrFail();
 

@@ -83,7 +83,10 @@ class ReportController extends Controller
             ->whereNotNull('end_date')
             ->whereDate('end_date', '>=', now())
             ->whereDate('end_date', '<=', now()->addDays(30))
-            ->currentlyActive();
+            ->currentlyActive()
+            // Nur Eigenbestand (28.09.2026): Ablauf eines Fremdvertrags ist
+            // Sache seines Betreuers - bei uns hoechstens Uebernahmepotenzial.
+            ->ownPortfolio();
         $expiringTotal = (clone $expiringBasis)->count();
         $expiring = $expiringBasis->orderBy('end_date')->limit(50)->get();
 
@@ -91,6 +94,7 @@ class ReportController extends Controller
             ->whereNotNull('end_date')
             ->whereDate('end_date', '<', now())
             ->currentlyActive()
+            ->ownPortfolio()
             ->count();
 
         return view('admin.reports', compact('f', 'daten', 'karteLinks', 'tickets', 'expiring', 'expiringTotal', 'warnings'));

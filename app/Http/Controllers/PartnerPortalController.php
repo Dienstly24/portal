@@ -42,7 +42,7 @@ class PartnerPortalController extends Controller
     {
         $partner = $this->partner();
         $customers = $partner->customers()
-            ->with(['user', 'contracts' => fn ($q) => $q->currentlyActive()
+            ->with(['user', 'contracts' => fn ($q) => $q->currentlyActive()->ownPortfolio()
                 ->select('id', 'customer_id', 'type', 'status', 'start_date', 'end_date', 'cancellation_date')])
             ->latest()
             ->paginate(25);

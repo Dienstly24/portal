@@ -8,8 +8,26 @@
         <span>Vertrag bearbeiten</span>
     </div>
     <h1 class="page-title">Vertrag bearbeiten</h1>
-    <div class="page-sub">{{ $contract->typeIcon() }} {{ $contract->typeLabel() }} · {{ $contract->insurer }}</div>
+    <div class="page-sub">{{ $contract->typeIcon() }} {{ $contract->typeLabel() }} · {{ $contract->insurer }} @include('admin.partials.contract_origin_badge', ['contract' => $contract])</div>
 </div>
+
+{{-- Fremdvertrag: niemand soll an einem Vertrag ohne Mandat arbeiten, ohne es zu wissen. --}}
+@include('admin.partials.fremdvertrag_warnung', ['contract' => $contract, 'maxWidth' => '980px'])
+
+{{-- Vorgaenger/Nachfolger (28.09.2026): die Wechsel-Kette in beide Richtungen. --}}
+@php $vorgaenger = $contract->predecessor; $nachfolger = $contract->successor; @endphp
+@if($vorgaenger || $nachfolger)
+<div style="background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:10px 16px;margin-bottom:16px;max-width:980px;font-size:13px;line-height:1.7;">
+    @if($nachfolger)
+    <div>↪ Ersetzt durch: <a href="{{ route('admin.contract.edit', $nachfolger->id) }}" style="font-weight:600;">{{ $nachfolger->insurer }}@if($nachfolger->contract_number) ({{ $nachfolger->contract_number }})@elseif($nachfolger->reference_number) (Ref. {{ $nachfolger->reference_number }})@endif</a>
+        @include('admin.partials.contract_origin_badge', ['contract' => $nachfolger])</div>
+    @endif
+    @if($vorgaenger)
+    <div>↩ Ersetzt: <a href="{{ route('admin.contract.edit', $vorgaenger->id) }}" style="font-weight:600;">{{ $vorgaenger->insurer }}@if($vorgaenger->contract_number) {{ $vorgaenger->contract_number }}@endif</a>
+        @if($vorgaenger->isExternal()) <span class="muted-2xs">(Fremdvertrag)</span>@endif</div>
+    @endif
+</div>
+@endif
 
 {{-- Bestandszustand auch in den Vertragsdetails eindeutig nennen (dieselbe
      Quelle wie Liste und Vertragsstruktur: Contract::displayStatus/statusGroup). --}}
@@ -66,6 +84,16 @@
     <form method="POST" action="{{ route('admin.contract.update', $contract->id) }}">
         @csrf @method('PUT')
         @include('admin.partials.contract_form_fields', ['contract' => $contract])
+
+        @if($contract->isExternal())
+        {{-- Kuendigung oder Schadenmeldung an einem Fremdvertrag verlangt einen
+             Grund (serverseitig geprueft, protokolliert). --}}
+        <div class="field" style="border:1px solid #D98B3A;background:#FDF1E4;border-radius:10px;padding:12px 14px;">
+            <label style="font-weight:600;">Grund für Kündigung / Schadenmeldung an diesem Fremdvertrag</label>
+            <textarea name="fremdvertrag_grund" maxlength="1000" rows="2" placeholder="z. B. Kunde hat uns schriftlich beauftragt, die Kündigung einzureichen" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;" aria-label="Grund für Kündigung oder Schadenmeldung an diesem Fremdvertrag">{{ old('fremdvertrag_grund') }}</textarea>
+            <div class="muted-2xs" style="margin-top:4px;">Nur nötig, wenn Sie den Vertrag kündigen oder einen Schaden erfassen. Wird mit Name und Zeitpunkt protokolliert.</div>
+        </div>
+        @endif
 
         <div style="border-top:1px solid var(--line);padding-top:20px;display:flex;gap:10px;justify-content:space-between;margin-top:8px;">
             <div style="display:flex;gap:10px;">

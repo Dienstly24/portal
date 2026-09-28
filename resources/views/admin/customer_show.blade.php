@@ -10,7 +10,13 @@ $typeConfig = \App\Models\Contract::TYPES;
 // erhoehen aber NIE die Zahl der aktiven Vertraege. Die Zuordnung kommt
 // zentral aus Contract::isCurrentlyActive() - nie aus status === 'active',
 // sonst wuerde z.B. ein zum Ablauf gekuendigter Vertrag mitzaehlen.
-$aktiveVertraege = $customer->contracts->filter(fn($c) => $c->isCurrentlyActive());
+// Vertragsherkunft (28.09.2026): die Struktur und alle Summen zaehlen NUR
+// den Eigenbestand (vermittelt + uebernommen). Laufende Fremdvertraege
+// stehen getrennt daneben - gemischt saehe der Kunde besser betreut aus,
+// als er es ist, und wir zaehlten Beitraege, fuer die wir kein Mandat haben.
+$aktiveVertraege = $customer->contracts->filter(fn($c) => $c->isCurrentlyActive() && $c->isOwnPortfolio());
+$fremdAktiv = $customer->contracts->filter(fn($c) => $c->isCurrentlyActive() && $c->isExternal());
+$fremdMonat = $fremdAktiv->sum(fn($c) => $c->monthlyPremium());
 $historieVertraege = $customer->contracts->filter(fn($c) => $c->isHistoric());
 $anbahnungVertraege = $customer->contracts->filter(fn($c) => $c->isPendingStatus());
 $activeTypes = $aktiveVertraege->pluck('type')->unique()->toArray();
@@ -181,6 +187,10 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         @if($anbahnungVertraege->count())
         {{ $anbahnungVertraege->count() }} Vertrag/Verträge „In Bearbeitung“ zählen ebenfalls nicht zum aktiven Bestand.
         @endif
+        @endif
+        @if($fremdAktiv->count())
+        <br>📁 zzgl. {{ $fremdAktiv->count() === 1 ? '1 Fremdvertrag' : $fremdAktiv->count() . ' Fremdverträge' }}@if($fremdMonat > 0), {{ number_format($fremdMonat, 2, ',', '.') }} €/Monat @endif
+        – nicht über uns vermittelt, nur zur Dokumentation erfasst (zählt nicht zum Bestand).
         @endif
         @if($auslaufendGesamt > 0)
         <br>Hinweis: {{ $auslaufendGesamt === 1 ? 'ein aktiver Vertrag ist' : $auslaufendGesamt . ' aktive Verträge sind' }}
@@ -447,6 +457,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 <span>· {{ $d->created_at->lokal()->format('d.m.Y') }}</span>
                 @if(($d->visibility ?? 'customer') === 'internal')<span style="background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
                 @if($docContract)<span style="background:var(--emerald-soft);color:var(--emerald);padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
+                @if($docContract?->isExternal())@include('admin.partials.contract_origin_badge', ['contract' => $docContract])@endif
                 @if($d->aiInProgress())<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;">⏳ KI-Analyse läuft</span>
                 @elseif($d->ai_status === 'failed')<span style="background:#FBE9E9;color:#B3261E;padding:1px 6px;border-radius:4px;" title="{{ $d->ai_error }}">⚠ KI-Analyse fehlgeschlagen</span>
                     <button type="button" data-h-click="doc-neu-analyse" data-doc="{{ $d->id }}" style="border:none;background:none;color:#185FA5;cursor:pointer;font-size:12px;padding:0;">erneut analysieren</button>
@@ -543,6 +554,9 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <div style="font-size:22px;font-weight:700;">{{ $withPremium }} <span style="font-size:13px;color:var(--ink-soft);font-weight:500;">von {{ $activeContracts->count() }}</span></div>
         </div>
     </div>
+    @if($fremdAktiv->count())
+    <div class="muted-xs" style="margin-top:10px;">📁 zzgl. {{ $fremdAktiv->count() === 1 ? '1 Fremdvertrag' : $fremdAktiv->count() . ' Fremdverträge' }}@if($fremdMonat > 0), {{ $eur($fremdMonat) }}/Monat @endif – nicht enthalten.</div>
+    @endif
 </div>
 @endif
 {{-- Verträge --}}
@@ -592,17 +606,21 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             $cGroup = $c->statusGroup();
             $cHistoric = $cGroup === \App\Models\Contract::GROUP_HISTORY;
         @endphp
-        <tr class="contract-row row-link{{ $cHistoric ? ' contract-row-historic' : '' }}" data-type="{{ $c->type }}" data-group="{{ $cGroup }}" style="border-bottom:1px solid var(--line);" data-row-nav="{{ route('admin.contract.edit', $c->id) }}" title="{{ $cHistoric ? 'Beendeter Vertrag (Historie) – öffnen' : 'Vertrag öffnen' }}">
+        <tr class="contract-row row-link{{ $cHistoric ? ' contract-row-historic' : '' }}{{ $c->isExternal() ? ' contract-row-fremd' : '' }}" data-type="{{ $c->type }}" data-group="{{ $cGroup }}" style="border-bottom:1px solid var(--line);" data-row-nav="{{ route('admin.contract.edit', $c->id) }}" title="{{ $cHistoric ? 'Beendeter Vertrag (Historie) – öffnen' : 'Vertrag öffnen' }}">
             <td style="padding:12px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="width:32px;height:32px;border-radius:8px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:16px;">{{ $c->typeIcon() }}</span>
                     <div>
                         <span style="font-weight:600;">{{ $c->typeLabel() }}</span>
+                        @include('admin.partials.contract_origin_badge', ['contract' => $c])
                         @if($c->subtypeLabel())<div class="muted-2xs">{{ $c->subtypeLabel() }}</div>@endif
                     </div>
                 </div>
             </td>
-            <td style="padding:12px;">{{ $c->insurer }}</td>
+            <td style="padding:12px;">{{ $c->insurer }}
+                @if($c->successor)<div class="muted-2xs">↪ Ersetzt durch: {{ $c->successor->insurer }}</div>@endif
+                @if($c->predecessor)<div class="muted-2xs">↩ Ersetzt: {{ $c->predecessor->insurer }}@if($c->predecessor->isExternal()) (Fremdvertrag)@endif</div>@endif
+            </td>
             <td style="padding:12px;font-family:monospace;font-size:13px;">
                 {{ $c->contract_number }}
                 {{-- Referenz-/Vorgangsnummer: beim Antrag oft die einzige
@@ -1227,7 +1245,7 @@ function smartReanalyze(docId, btn) {
                         {{-- Alle Vertraege waehlbar (auch beendete - Post kommt
                              auch zu Altvertraegen), beendete aber gekennzeichnet. --}}
                         @foreach($customer->contracts as $ct)
-                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif @if($ct->isHistoric()) · beendet @elseif($ct->isPendingStatus()) · in Bearbeitung @endif</option>
+                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif @if($ct->isHistoric()) · beendet @elseif($ct->isPendingStatus()) · in Bearbeitung @endif @if($ct->isExternal()) · 📁 Fremdvertrag @endif</option>
                         @endforeach
                     </select>
                 </div>
@@ -1454,7 +1472,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <select name="contract_id" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Betrifft Vertrag">
                             <option value="">— keiner —</option>
                             @foreach($customer->contracts as $ct)
-                            <option value="{{ $ct->id }}">{{ $ct->contract_number }} ({{ $ct->insurer }}@if($ct->isHistoric()) · beendet @endif)</option>
+                            <option value="{{ $ct->id }}">{{ $ct->contract_number }} ({{ $ct->insurer }}@if($ct->isHistoric()) · beendet @endif @if($ct->isExternal()) · 📁 Fremdvertrag – kein Mandat @endif)</option>
                             @endforeach
                         </select>
                     </div>
@@ -1505,7 +1523,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         {{-- Alle Vertraege waehlbar (auch beendete - Post kommt
                              auch zu Altvertraegen), beendete aber gekennzeichnet. --}}
                         @foreach($customer->contracts as $ct)
-                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif @if($ct->isHistoric()) · beendet @elseif($ct->isPendingStatus()) · in Bearbeitung @endif</option>
+                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif @if($ct->isHistoric()) · beendet @elseif($ct->isPendingStatus()) · in Bearbeitung @endif @if($ct->isExternal()) · 📁 Fremdvertrag @endif</option>
                         @endforeach
                     </select>
                 </div>

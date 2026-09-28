@@ -56,6 +56,8 @@ class VehicleOverlapGuardTest extends TestCase
     {
         return array_merge([
             'type' => 'kfz',
+            // Vertragsherkunft ist bei der Neuanlage Pflicht (28.09.2026).
+            'origin' => 'brokered',
             'insurer' => 'Neodigital',
             'status' => 'active',
         ], $contract, ['vehicle' => $vehicle]);
