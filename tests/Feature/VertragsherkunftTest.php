@@ -13,6 +13,7 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\Reporting\AnalyticsFilters;
 use App\Services\Reporting\DashboardAnalyticsService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\TestCase;
@@ -155,7 +156,7 @@ class VertragsherkunftTest extends TestCase
         $this->assertTrue($alt->isExternal());
         $this->assertTrue($alt->cancellation_submitted_by_us);
         // Endet zum Beginn des neuen Vertrags - wie beim Versicherer-Wechsel.
-        $this->assertSame($beginn->toDateString(), \Carbon\Carbon::parse($alt->end_date)->toDateString());
+        $this->assertSame($beginn->toDateString(), Carbon::parse($alt->end_date)->toDateString());
         $this->assertNotNull($alt->cancellation_date);
     }
 

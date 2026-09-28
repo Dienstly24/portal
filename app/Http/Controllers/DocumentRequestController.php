@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Mail\DocumentRequestMail;
 use App\Models\ActivityLog;
+use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\DocumentRequest;
 use Illuminate\Http\Request;
@@ -81,7 +82,7 @@ class DocumentRequestController extends Controller
         // Fremdvertrag (28.09.2026): die Anfrage ist erlaubt (z. B. der
         // Versicherungsschein fuer einen Wechsel), aber der Hinweis gehoert
         // dazu - sonst verspricht jemand dem Kunden Bearbeitung ohne Mandat.
-        $vertrag = ! empty($data['contract_id']) ? \App\Models\Contract::find($data['contract_id']) : null;
+        $vertrag = ! empty($data['contract_id']) ? Contract::find($data['contract_id']) : null;
         if ($vertrag?->isExternal()) {
             return back()->with('success', 'Dokumentenanfrage erstellt und Kunde benachrichtigt.')
                 ->with('warning', 'Achtung: Der gewählte Vertrag ('.$vertrag->insurer.') wurde nicht über uns vermittelt. Zuständig: '

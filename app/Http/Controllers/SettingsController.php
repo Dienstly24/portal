@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Middleware\EnsureTwoFactor;
 use App\Http\Requests\Admin\UpdateSettingsRequest;
+use App\Models\Contract;
 use App\Models\SystemSetting;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
@@ -48,7 +49,7 @@ class SettingsController extends Controller
             // AN - eine Schutzschicht, die man erst einschalten muss, ist
             // in der Praxis meistens aus.
             'two_factor_required' => SystemSetting::get('two_factor_required', EnsureTwoFactor::defaultSetting()),
-            \App\Models\Contract::SETTING_PORTAL_EXTERNAL => SystemSetting::get(\App\Models\Contract::SETTING_PORTAL_EXTERNAL, 'getrennt'),
+            Contract::SETTING_PORTAL_EXTERNAL => SystemSetting::get(Contract::SETTING_PORTAL_EXTERNAL, 'getrennt'),
             // Postfach: kanaluebergreifende Unterhaltungen. Voreinstellung
             // AUS - eine Aenderung, die bestehende Unterhaltungen anders
             // fuehrt, schaltet sich nicht selbst scharf.
@@ -86,7 +87,7 @@ class SettingsController extends Controller
             'welcome_email_enabled', 'lexoffice_api_key', 'change_request_auto_approve',
             'legal_external_base', 'legal_external_suffix',
             'legal_impressum', 'legal_agb', 'legal_datenschutz', 'legal_cookies',
-            \App\Models\Contract::SETTING_PORTAL_EXTERNAL,
+            Contract::SETTING_PORTAL_EXTERNAL,
         ];
         foreach ($fields as $field) {
             // array_key_exists statt $request->has(): geschrieben wird nur,

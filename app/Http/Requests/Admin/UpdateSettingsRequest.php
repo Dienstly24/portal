@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Http\Controllers\LegalPageController;
+use App\Models\Contract;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\Messaging\ChannelRoutingService;
@@ -101,7 +102,7 @@ class UpdateSettingsRequest extends FormRequest
 
             'welcome_email_enabled' => ['sometimes', Rule::in(['0', '1'])],
             // Vertragsherkunft (28.09.2026): Fremdvertraege im Kundenportal.
-            \App\Models\Contract::SETTING_PORTAL_EXTERNAL => ['sometimes', Rule::in(array_keys(\App\Models\Contract::PORTAL_EXTERNAL_MODES))],
+            Contract::SETTING_PORTAL_EXTERNAL => ['sometimes', Rule::in(array_keys(Contract::PORTAL_EXTERNAL_MODES))],
 
             'change_request_auto_approve' => ['sometimes',
                 Rule::in(array_keys(ChangeProofPolicy::AUTO_APPROVE_MODES))],

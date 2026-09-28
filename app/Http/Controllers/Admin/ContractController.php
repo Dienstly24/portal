@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Models\Contract;
 use App\Models\ContractEnergyDetail;
 use App\Models\ContractInternetDetail;
+use App\Models\ContractRevision;
 use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
 use App\Models\Document;
@@ -22,6 +23,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Vertraege in der Beraterwelt (ARCH-5, aus AdminController herausgeloest).
@@ -525,7 +527,7 @@ class ContractController extends Controller
             }
         }
         if ($errors !== []) {
-            throw \Illuminate\Validation\ValidationException::withMessages($errors);
+            throw ValidationException::withMessages($errors);
         }
 
         $clean = fn ($v) => ($v === null || trim((string) $v) === '') ? null : trim((string) $v);
@@ -628,7 +630,7 @@ class ContractController extends Controller
             'old' => $before,
             'new' => $after,
         ]);
-        \App\Models\ContractRevision::create([
+        ContractRevision::create([
             'contract_id' => $contract->id,
             'batch_id' => (string) Str::uuid(),
             'field' => 'origin',
