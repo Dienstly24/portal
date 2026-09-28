@@ -27,6 +27,7 @@ class User extends Authenticatable
         'portal_password_set_at' => 'datetime',
         'password_changed_at' => 'datetime',
         'must_change_password' => 'boolean',
+        'zugangslink_version' => 'integer',
         // Das 2FA-Geheimnis ist gleichwertig zum Passwort: wer es hat,
         // erzeugt gueltige Codes. Deshalb verschluesselt at rest.
         'two_factor_secret' => 'encrypted',
@@ -45,6 +46,18 @@ class User extends Authenticatable
     ];
     protected static function booted(): void
     {
+        // Neue Login-Adresse = alte Zugangslinks sind hinfaellig (KI-043).
+        // Sie wurden an die ALTE Adresse geschickt - war die falsch
+        // (Tippfehler bei der Anlage) oder ist sie nicht mehr die des
+        // Kunden, haelt dort jemand anderes einen gueltigen Schluessel.
+        // Als Modell-Hook, damit JEDER Schreibweg es lernt (Verwaltung,
+        // Aenderungsantrag, Zusammenfuehrung) - nicht nur der eine Controller.
+        static::updated(function (self $user) {
+            if (array_key_exists('email', $user->getChanges())) {
+                $user->zugangslinksWiderrufen();
+            }
+        });
+
         // Name und E-Mail sind starke Dubletten-Signale, liegen aber am User.
         // Aendert sich eines fuer einen KUNDEN-Account, muss der Dubletten-
         // Hinweis-Badge neu berechnet werden (Anlage/Loeschung laufen bereits
@@ -204,6 +217,48 @@ class User extends Authenticatable
             'password_changed_at' => now(),
             'must_change_password' => false,
         ])->save();
+    }
+
+    /**
+     * Passwort, das die VERWALTUNG vergibt (Kundenakte). Es gilt als
+     * system-vergeben: beim naechsten Login ist ein eigenes faellig. Und es
+     * entwertet alle bisherigen Zugangslinks (KI-043) - wer ein Passwort
+     * von Hand neu setzt, reagiert meist auf "da stimmt etwas mit dem
+     * Zugang nicht"; ein alter Magic-Link blieb bis dahin 90 Tage gueltig.
+     * `password_changed_at` bleibt bewusst unberuehrt: es steht fuer ein
+     * Passwort, das der Mensch SELBST gewaehlt hat.
+     */
+    public function setzeVerwaltungsPasswort(string $plain): void
+    {
+        $this->forceFill([
+            'password' => bcrypt($plain),
+            'portal_password_set_at' => now(),
+            'must_change_password' => true,
+        ])->save();
+        $this->zugangslinksWiderrufen();
+    }
+
+    /**
+     * Alle bis jetzt ausgestellten Zugangslinks dieses Kontos entwerten
+     * (Magic-Login, Passwort-Setzen-Einladung; KI-043). Jeder Link traegt
+     * den Stand `zugangslink_version` signiert in sich und gilt nur,
+     * solange er dem Stand am Konto entspricht (App\Support\EinmalLink).
+     *
+     * Hochgezaehlt wird IN DER DATENBANK, nicht am Objekt: ein veraltetes
+     * Modell koennte sonst einen Stand zurueckschreiben, den ein frueher
+     * ausgestellter Link bereits traegt - und ihn damit wiederbeleben.
+     */
+    public function zugangslinksWiderrufen(): void
+    {
+        static::query()->whereKey($this->getKey())->increment('zugangslink_version');
+        $this->forceFill(['zugangslink_version' => $this->aktuelleZugangslinkVersion()]);
+        $this->syncOriginalAttribute('zugangslink_version');
+    }
+
+    /** Stand aus der Datenbank - Grundlage jedes neu ausgestellten Links. */
+    public function aktuelleZugangslinkVersion(): int
+    {
+        return (int) static::query()->whereKey($this->getKey())->value('zugangslink_version');
     }
 
     /** Ist die Zwei-Faktor-Anmeldung fertig eingerichtet und bestaetigt? */

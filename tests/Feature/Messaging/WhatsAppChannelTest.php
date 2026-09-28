@@ -359,4 +359,45 @@ class WhatsAppChannelTest extends TestCase
         $this->call('POST', '/webhooks/whatsapp', [], [], [], ['CONTENT_TYPE' => 'application/json'], 'kein json')
             ->assertOk();
     }
+
+    /**
+     * Audit 28.09.2026 (KI-031): eine Zustellung mit Ereignissen ZWEIER
+     * eigener Nummern. Frueher ging alles an das Konto der ERSTEN Nummer
+     * - die Antwort an den zweiten Kunden waere ueber die falsche Nummer
+     * hinausgegangen. Jede Nummer bekommt jetzt ihren eigenen Teil.
+     */
+    public function test_zwei_nummern_in_einer_zustellung_werden_getrennt(): void
+    {
+        Queue::fake();
+        $erste = $this->konto();
+        $zweite = ChannelAccount::create([
+            'channel_id' => $erste->channel_id,
+            'name' => 'Zweitnummer',
+            'is_active' => true,
+            'credentials' => [
+                'access_token' => 'TOKEN-Y',
+                'phone_number_id' => '999888777',
+                'app_secret' => self::SECRET,
+                'verify_token' => 'VERIFY-ME-2',
+            ],
+        ]);
+        $nutzlast = $this->nutzlast('An die erste', 'wamid.1');
+        $zweiterTeil = $this->nutzlast('An die zweite', 'wamid.2')['entry'][0];
+        $zweiterTeil['changes'][0]['value']['metadata']['phone_number_id'] = '999888777';
+        $nutzlast['entry'][] = $zweiterTeil;
+        [$roh, $signatur] = $this->signiert($nutzlast);
+
+        $this->call('POST', '/webhooks/whatsapp', [], [], [], [
+            'HTTP_X-Hub-Signature-256' => $signatur,
+            'CONTENT_TYPE' => 'application/json',
+        ], $roh)->assertOk();
+
+        Queue::assertPushed(ProcessWhatsAppWebhookJob::class, 2);
+        Queue::assertPushed(ProcessWhatsAppWebhookJob::class, fn ($job) => $job->accountId === $zweite->id
+            && json_encode($job->payload) !== false
+            && str_contains(json_encode($job->payload), 'An die zweite')
+            && ! str_contains(json_encode($job->payload), 'An die erste'));
+        Queue::assertPushed(ProcessWhatsAppWebhookJob::class, fn ($job) => $job->accountId === $erste->id
+            && ! str_contains(json_encode($job->payload), 'An die zweite'));
+    }
 }

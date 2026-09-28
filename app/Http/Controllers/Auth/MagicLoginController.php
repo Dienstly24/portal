@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Support\EinmalLink;
 use Illuminate\Http\Request;
 
 /**
@@ -21,6 +22,9 @@ use Illuminate\Http\Request;
  */
 class MagicLoginController extends Controller
 {
+    /** Gueltigkeit des Links in der Willkommens-Mail (Tage). */
+    public const GUELTIG_TAGE = 90;
+
     public function __invoke(Request $request, string $user)
     {
         $account = User::find($user);
@@ -31,6 +35,14 @@ class MagicLoginController extends Controller
             || (isset($account->is_active) && ! $account->is_active)
         ) {
             abort(403, 'Dieser Anmeldelink ist nicht gültig.');
+        }
+
+        // Hat der Kunde nach dem Versand ein eigenes Passwort gewaehlt, hat
+        // der Link seinen Zweck erfuellt - er meldet niemanden mehr an
+        // (KI-026). Sonst waere eine alte Willkommens-Mail 90 Tage lang
+        // ein zweiter Schluessel zum Konto.
+        if (! EinmalLink::nochGueltig($request, $account, self::GUELTIG_TAGE)) {
+            abort(403, 'Dieser Anmeldelink wurde bereits verwendet. Bitte melden Sie sich mit Ihrem Passwort an.');
         }
 
         // Bereits als jemand anderes eingeloggt? Sauber trennen.

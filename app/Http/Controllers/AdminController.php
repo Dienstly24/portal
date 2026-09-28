@@ -484,11 +484,7 @@ class AdminController extends Controller
                     // Vorgabe 18.08.2026): ein Klartext-Passwort in einem
                     // Postfach bleibt dort fuer immer, samt Backups. Der
                     // Mitarbeiter nennt es dem Kunden persoenlich.
-                    $user->forceFill([
-                        'password' => bcrypt($request->password),
-                        'portal_password_set_at' => now(),
-                        'must_change_password' => true,
-                    ])->save();
+                    $user->setzeVerwaltungsPasswort($request->password);
                     session()->flash('warning', 'Passwort gesetzt. Aus Sicherheitsgruenden wird es NICHT per E-Mail verschickt - '
                         .'bitte teilen Sie es dem Kunden persoenlich mit. Beim ersten Login muss er ein eigenes Passwort festlegen. '
                         .'Alternativ koennen Sie in der Kundenakte eine Einladung senden.');
@@ -622,27 +618,21 @@ class AdminController extends Controller
         // eine alte Platzhalter-Adresse durch Leeren sauber entfernen.
         $newEmail = $request->filled('portal_email') ? $request->portal_email : $request->email;
         $userData['email'] = ($newEmail !== null && $newEmail !== '') ? $newEmail : null;
-        if ($request->filled('new_password')) {
-            $userData['password'] = bcrypt($request->new_password);
-        }
         // Zustand VOR dem Speichern merken: hatte der Kunde bisher eine echte
         // (nutzbare) E-Mail? Nur so laesst sich "E-Mail neu nachgetragen" erkennen.
         $hadRealEmail = $user->hasRealEmail();
         $user->update($userData);
 
-        // Portal-Status-Spalten stehen bewusst NICHT in User::$fillable (sie
-        // gehoeren dem System, nicht dem Formular) - update() wuerde sie still
-        // verwerfen. Deshalb forceFill, wie an allen anderen Stellen auch
-        // (gleiche Falle wie seinerzeit bei is_active).
+        // Von der Verwaltung vergebenes Passwort: EIN Weg im Modell (KI-043).
+        // Er markiert es als system-vergeben (beim ersten Login ist ein
+        // eigenes faellig) und entwertet alle bisherigen Zugangslinks -
+        // vorher schrieb diese Stelle `bcrypt` direkt, und ein alter
+        // Magic-Link meldete danach weiterhin an. Hier und nicht im
+        // Einladungs-Block weiter unten, weil der nur bei NEU
+        // hinzugekommener E-Mail-Adresse ueberhaupt laeuft. Eine geaenderte
+        // Login-Adresse entwertet die Links bereits im Modell-Hook.
         if ($request->filled('new_password')) {
-            $user->forceFill([
-                'portal_password_set_at' => now(),
-                // Von der Verwaltung vergeben = system-vergeben: beim ersten
-                // Login ist ein eigenes Passwort faellig. Hier gesetzt und
-                // nicht im Einladungs-Block weiter unten, weil der nur bei
-                // NEU hinzugekommener E-Mail-Adresse ueberhaupt laeuft.
-                'must_change_password' => true,
-            ])->save();
+            $user->setzeVerwaltungsPasswort($request->new_password);
         }
 
         // Automatische Portal-Einladung, sobald eine echte E-Mail NEU nachgetragen

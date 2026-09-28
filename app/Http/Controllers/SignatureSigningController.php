@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Die OEFFENTLICHE Seite: der Unterzeichner braucht kein Konto.
@@ -36,6 +37,12 @@ use Illuminate\Support\Facades\Mail;
  */
 class SignatureSigningController extends Controller
 {
+    /** Hoechstens so viele Bestaetigungscodes je Unterzeichner und Stunde. */
+    public const MAX_CODES_PER_HOUR = 5;
+
+    /** Hoechstens so viele falsche Codes je Unterzeichner und Stunde (ueber alle Codes). */
+    public const MAX_CODE_FAILS_PER_HOUR = 10;
+
     public function __construct(
         private readonly SignatureTokenService $tokens,
         private readonly SignatureSigningService $signing,
@@ -113,6 +120,23 @@ class SignatureSigningController extends Controller
             return redirect()->route('signature.show', $token);
         }
 
+        // GRENZE JE UNTERZEICHNER (KI-027). Jeder neue Code setzt die
+        // Fehlversuche des Codes zurueck - ohne Deckel auf den VERSAND
+        // war die Grenze von 6 Versuchen keine: mit dem Link allein liessen
+        // sich minuetlich neue Codes holen und raten, und nebenbei lief
+        // das Postfach des Unterzeichners voll.
+        if (RateLimiter::tooManyAttempts(self::codeFailKey($signer), self::MAX_CODE_FAILS_PER_HOUR)
+            || RateLimiter::tooManyAttempts(self::codeSendHourKey($signer), self::MAX_CODES_PER_HOUR)) {
+            return redirect()->route('signature.show', $token)->with('error', __('signing.verify_too_many'));
+        }
+        if (RateLimiter::tooManyAttempts(self::codeSendMinuteKey($signer), 1)) {
+            return redirect()->route('signature.show', $token)
+                ->with('signature_code_sent', $signer->id)
+                ->with('error', __('signing.verify_wait'));
+        }
+        RateLimiter::hit(self::codeSendMinuteKey($signer), 60);
+        RateLimiter::hit(self::codeSendHourKey($signer), 3600);
+
         $code = $this->tokens->issueVerificationCode($signer);
         try {
             Mail::to($signer->email)->send(new SignatureVerificationMail($request, $signer, $code));
@@ -136,7 +160,14 @@ class SignatureSigningController extends Controller
 
         $data = $request->validate(['code' => ['required', 'string', 'max:12']]);
 
+        // Fehlversuche zaehlen UEBER ALLE Codes einer Stunde - nicht nur
+        // ueber den aktuellen (KI-027).
+        if (RateLimiter::tooManyAttempts(self::codeFailKey($signer), self::MAX_CODE_FAILS_PER_HOUR)) {
+            return back()->with('error', __('signing.verify_too_many'));
+        }
+
         if (! $this->tokens->verifyCode($signer, trim($data['code']))) {
+            RateLimiter::hit(self::codeFailKey($signer), 3600);
             $this->audit->record($signature, 'verification_failed', $signer);
 
             return back()->with('error', __('signing.verify_wrong'));
@@ -424,6 +455,21 @@ class SignatureSigningController extends Controller
     private function needsVerification(SignatureRequest $request, SignatureSigner $signer): bool
     {
         return $request->requiresEmailVerification() && $signer->verified_at === null;
+    }
+
+    private static function codeSendMinuteKey(SignatureSigner $signer): string
+    {
+        return 'signatur-code-min:'.$signer->id;
+    }
+
+    private static function codeSendHourKey(SignatureSigner $signer): string
+    {
+        return 'signatur-code-std:'.$signer->id;
+    }
+
+    private static function codeFailKey(SignatureSigner $signer): string
+    {
+        return 'signatur-code-fehl:'.$signer->id;
     }
 
     /** "ma***@example.com" - die Adresse bestaetigen, ohne sie preiszugeben. */

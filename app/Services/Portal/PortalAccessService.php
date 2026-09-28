@@ -59,6 +59,13 @@ class PortalAccessService
             throw new \RuntimeException('Kunde hat keine echte E-Mail-Adresse – bitte zuerst eine Login-E-Mail hinterlegen.');
         }
 
+        // Jede neue Einladung ersetzt die vorige (KI-043): nur der Link der
+        // NEUESTEN Willkommensmail gilt. Sonst blieben nach "Einladung
+        // erneut senden" - typischerweise nach einer korrigierten Adresse -
+        // alle frueheren Links 90 Tage lang gueltig. Vor dem Bau der neuen
+        // Links, damit diese den neuen Stand tragen.
+        $user->zugangslinksWiderrufen();
+
         $initialPassword = $this->initialPasswordFor($customer);
         $setPasswordUrl = null;
         $hasUsablePassword = $user->portal_password_set_at !== null;
@@ -196,6 +203,15 @@ class PortalAccessService
             'portal_password_set_at' => null,
             'must_change_password' => false,
         ])->save();
+        // Der Reset ist die Antwort auf "jemand anderes hat meine Mail" -
+        // deshalb entwertet er ALLE bis jetzt ausgestellten Zugangslinks
+        // (Magic-Login, Passwort-Setzen; KI-041). Ueber den Widerrufsstand
+        // (KI-043) und nicht mehr ueber `password_changed_at`: das Feld
+        // steht fuer ein SELBST gewaehltes Passwort, und der Vergleich in
+        // Sekunden liess einen Link gelten, der in derselben Sekunde vor dem
+        // Reset entstand. Die neue Willkommensmail unten traegt den neuen
+        // Stand und gilt.
+        $user->zugangslinksWiderrufen();
         $mode = $this->sendInvitation($customer, $actorId);
 
         ActivityLog::create([

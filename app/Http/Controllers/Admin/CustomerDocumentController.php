@@ -12,6 +12,7 @@ use App\Models\Contract;
 use App\Models\Document;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
+use App\Support\InlineDatei;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -194,9 +195,11 @@ class CustomerDocumentController extends Controller
         $disk = $doc->disk ?: 'public';
         abort_unless(Storage::disk($disk)->exists($doc->file_path), 404);
         // ?view=1 -> im Browser anzeigen (Vorschau, z.B. "Anzeigen"-Button im
-        // Dokumenten-Eingang); sonst herunterladen.
+        // Dokumenten-Eingang); sonst herunterladen. "Anzeigen" nur fuer
+        // Typen, die der Browser nicht ausfuehrt - Dokumente kommen auch
+        // aus E-Mails fremder Absender (KI-025, InlineDatei).
         return $request->boolean('view')
-            ? Storage::disk($disk)->response($doc->file_path, $doc->file_name)
+            ? InlineDatei::antwort(Storage::disk($disk), $doc->file_path, $doc->file_name)
             : Storage::disk($disk)->download($doc->file_path, $doc->file_name);
     }
 

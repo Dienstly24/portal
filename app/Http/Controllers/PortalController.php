@@ -27,6 +27,7 @@ use App\Services\Mailbox\CustomerMailboxImportService;
 use App\Services\Notifications\NotificationService;
 use App\Services\TicketNotifier;
 use App\Support\Facades\Notify;
+use App\Support\InlineDatei;
 use App\Support\PasswordPolicy;
 use App\Support\SessionPasswordHash;
 use App\Support\UploadRules;
@@ -523,10 +524,9 @@ class PortalController extends Controller
         $disk = $doc->disk ?: 'public';
         abort_unless(Storage::disk($disk)->exists($doc->file_path), 404);
         // Content-Disposition: inline -> Browser zeigt die Datei an, statt sie
-        // herunterzuladen. Nur fuer den Kunden selbst zugaenglich. nosniff wie
-        // beim Nachrichten-Anhang (Audit FLOW-4, Konsistenz-Haertung).
-        return Storage::disk($disk)
-            ->response($doc->file_path, $doc->file_name, ['X-Content-Type-Options' => 'nosniff']);
+        // herunterzuladen. Nur fuer den Kunden selbst zugaenglich - und nur
+        // fuer Typen, die der Browser nicht ausfuehrt (KI-025, InlineDatei).
+        return InlineDatei::antwort(Storage::disk($disk), $doc->file_path, $doc->file_name);
     }
 
     /**

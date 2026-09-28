@@ -73,6 +73,13 @@ class TwoFactorService
      */
     public function confirmSetup(User $user, string $code): ?array
     {
+        // Ein bestaetigter zweiter Faktor wird hier NIE erneut bestaetigt
+        // (KI-042): sonst waere die Einrichtung ein zweiter Pruefweg ohne
+        // die Bremse der Abfrage, und ein Treffer ersetzte die Ersatzcodes.
+        if ($user->hasTwoFactor()) {
+            return null;
+        }
+
         if ($user->two_factor_secret === null || ! Totp::verify($user->two_factor_secret, $code)) {
             return null;
         }

@@ -20,6 +20,25 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 
 | ID | Sev | Kategorie | Kurz | Status |
 |---|---|---|---|---|
+| KI-025 | HIGH | security | Stored XSS: SVG/HTML aus E-Mail-/WhatsApp-Anhaengen inline (SVG ohne CSP) | FIXED |
+| KI-026 | HIGH | security | Magic-Login/Einladungslink nach eigenem Passwort weiter benutzbar | FIXED |
+| KI-041 | MEDIUM | security | Admin-Reset des Portals liess alte Magic-/Einladungslinks gueltig (Umgehung von KI-026) | FIXED |
+| KI-042 | MEDIUM | security | 2FA-Einrichtung als zweiter Pruefweg ohne Sperre/Protokoll (Raten, Ersatzcodes ersetzt) | FIXED |
+| KI-043 | MEDIUM | security | Zugangslinks ueberlebten Adress-/Passwortaenderung durch die Verwaltung und erneutes Senden | FIXED |
+| KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
+| KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
+| KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
+| KI-029 | MEDIUM | correctness | E-Mail-Eingang: Kundensuche fuer Support 403 (tot) | FIXED |
+| KI-030 | MEDIUM | concurrency | E-Signatur: gleichzeitiges Absenden -> doppelter Abschluss | FIXED |
+| KI-033 | MEDIUM | business-logic | Oeffentliche Formulare ordnen ungepruefte Anfragen per E-Mail einer Kundenakte zu | OPEN (Betreiber-Entscheidung) |
+| KI-038 | LOW | security | `/reset-password` verriet per Meldung, ob ein Konto existiert | FIXED |
+| KI-039 | LOW | concurrency | Doppelklick auf Registrierungs-Bestaetigung -> HTTP 500 | FIXED |
+| KI-031 | LOW | correctness | WhatsApp: mehrere Rufnummern in einer Zustellung -> erstes Konto | FIXED |
+| KI-032 | LOW | security | Sprachumschalter folgte fremdem Referer | FIXED |
+| KI-034 | LOW | business-logic | Abmeldelink wirkt schon beim GET (Link-Scanner) | OPEN (Betreiber-Entscheidung) |
+| KI-035 | LOW | security | 2FA-Schalter AUS entwertet eingerichtete zweite Faktoren | OPEN (Betreiber-Entscheidung) |
+| KI-036 | LOW | maintenance | `ActivityLog.meta` doppelt kodiert (~85 Schreibstellen) | FIXED |
+| KI-037 | LOW | security | SvgSanitizer liess externe `url()`/`@import` durch | FIXED |
 | KI-002 | HIGH | ops/security | Turnstile-Schluessel in Produktion nicht belegt | OPEN (Betreiber) |
 | KI-004 | HIGH | ops | Sicherung auf dem Server nicht belegt in Betrieb | OPEN (Betreiber) |
 | KI-008 | HIGH | legal | KI-Assistent/KI-Training: DPA, Datenschutz, Verzeichnis | OPEN (Betreiber) |
@@ -221,6 +240,116 @@ und PHPStan) auf `main` gruen ist.
 - **Description** PR #354 hat `VerifyEmailController.php` geloescht, der Baseline-Eintrag dazu blieb stehen. PHPStan bricht bei einem Eintrag fuer eine nicht vorhandene Datei SOFORT ab ("Invalid entry in ignoreErrors"). Der Job "Codeformat und statische Analyse" war damit auf `main` und auf jedem neuen PR rot - und weil der Deploy an den Tests haengt, wurde #354 NICHT ausgeliefert. Lokal fiel es nicht auf, weil phpstan hier nicht lief (KI-018).
 - **Fix (24.09.2026)**: Eintrag entfernt; dazu ein zweiter veralteter Eintrag (`VermittlerSettlement::$anzahl`, Ursache mit KI-023 behoben). PHPStan lokal nachgeholt: 5 neue Meldungen im Code von KI-023 an der Ursache behoben (keine neue Baseline-Zeile), danach 0 Fehler. LEHRE: wer eine Datei loescht, sucht sie auch in `phpstan-baseline.neon`.
 - **Discovered** 24.09.2026
+
+### KI-025 - Stored XSS ueber Dateien aus fremder Quelle
+- **Category** security · **Severity** HIGH · **Status** FIXED
+- **Location** `Admin\CustomerDocumentController::documentDownload` (`?view=1`), `PortalController::documentView`, `CustomerMessageController`/`PortalMessageController::viewAttachment`
+- **Description** E-Mail-Anhaenge beliebiger Absender und WhatsApp-Dokumente werden Dokumente der Kundenakte. "Anzeigen" lieferte sie mit dem am Inhalt erratenen Typ aus; `SecurityHeaders` setzt die CSP nur auf `text/html` -> eine SVG mit `<script>` lief ohne CSP im Ursprung der Beraterwelt (bzw. des Portals, wenn fuer den Kunden sichtbar).
+- **Fix (28.09.2026)**: `App\Support\InlineDatei` - inline nur PDF/JPEG/PNG/WebP/GIF, am INHALT bestimmt; alles andere als Download (`application/octet-stream`). Test `InlineDateiauslieferungTest` (ohne Fix 5/6 rot).
+- **Discovered** 28.09.2026 (System-Audit, `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md`)
+
+### KI-026 - Wiederverwendbare Zugangslinks
+- **Category** security · **Severity** HIGH · **Status** FIXED
+- **Location** `MagicLoginController`, `PasswordSetupController`
+- **Description** Magic-Login (90 Tage) und Einladungslink (14 Tage) blieben nach dem Setzen des eigenen Passworts gueltig - eine alte Mail war ein zweiter Schluessel zum Konto.
+- **Fix (28.09.2026)**: `App\Support\EinmalLink` - gilt nur, wenn nach dem letzten `password_changed_at` ausgestellt (Ausstellung = signiertes `expires` minus Gueltigkeit). Keine Migration; unbenutzte, bereits verschickte Links funktionieren weiter. Test `EinmalLinkTest` (ohne Fix rot).
+- **Discovered** 28.09.2026
+
+### KI-040 - Mitarbeiterverwaltung lud jedes Konto
+- **Category** security · **Severity** HIGH · **Status** FIXED
+- **Location** `EmployeeController` (edit/show/update/destroy/toggleActive/assign/unassign/transferPortfolio, storeSubstitution), `PostfachController::reassign`
+- **Description** `User::findOrFail($id)` ohne Rollenfilter: ein Manager konnte einem KUNDENKONTO per "Speichern" die Rolle manager geben (Zugang zur Beraterwelt), ein Kundenkonto sperren (sonst admin-only) und ein Admin eine Kundenakte am `CustomerDeletionService` vorbei loeschen (Kaskade `customers.user_id`). Vertretungen und Postfach-Zuweisungen nahmen ebenfalls Kunden-/Partnerkonten an.
+- **Fix (28.09.2026)**: nur Personal-Rollen (404 sonst), Validierung auf Personal. Test `MitarbeiterverwaltungNurPersonalTest` (ohne Fix rot).
+- **Discovered** 28.09.2026 (Nachpruefung)
+
+### KI-041 - Admin-Reset entwertete alte Zugangslinks nicht
+- **Category** security · **Severity** MEDIUM · **Status** FIXED
+- **Location** `PortalAccessService::resetPortal`, `App\Support\EinmalLink`
+- **Description** Gefunden in der unabhaengigen Nachpruefung vor dem Merge von PR #358: KI-026 entwertet Links erst, wenn der KUNDE ein Passwort setzt. "Portal zuruecksetzen" - die Antwort des Betriebs auf "jemand anderes hat meine Mail" - setzte nur ein neues Startpasswort; ein alter Magic-Link blieb bis zu 90 Tage gueltig.
+- **Fix (28.09.2026)**: `resetPortal()` setzt `password_changed_at` (eine Sekunde zurueck, damit der Link der neuen Willkommensmail gilt). Test `EinmalLinkTest::test_portal_reset_entwertet_alte_links` (ohne Fix rot).
+- **Discovered** 28.09.2026 (Pre-Merge-Review)
+- **Nachtrag (KI-043)**: der Mechanismus ist ersetzt - `resetPortal()` widerruft ueber `users.zugangslink_version` statt ueber `password_changed_at` (der Sekunden-Vergleich liess einen Link aus derselben Sekunde gelten). Das Verhalten ist dasselbe, der Test benutzt jetzt den Link der echten Mail.
+
+### KI-042 - 2FA-Einrichtung als zweiter Pruefweg
+- **Category** security · **Severity** MEDIUM · **Status** FIXED
+- **Location** `Auth\TwoFactorController::setupStore`, `TwoFactorService::confirmSetup`, `EnsureTwoFactor::ALLOWED_ROUTES`
+- **Description** Die Einrichtung ist in jedem Zustand erreichbar und pruefte den Code auch bei einem BESTAETIGTEN Faktor - gegen dasselbe Geheimnis wie die Abfrage, aber ohne deren Sperre (5/300 s je Konto+IP) und ohne `two_factor_failed`. Mit gestohlenem Passwort: 10 statt 1 Versuch je Minute, unsichtbar; ein Treffer liess herein und ersetzte die Ersatzcodes.
+- **Fix (28.09.2026)**: eingerichteter Faktor -> Umleitung zur Abfrage ohne Codepruefung; `confirmSetup` lehnt einen bestaetigten Faktor ab; die Ersteinrichtung zaehlt Fehlversuche im SELBEN Limiter-Schluessel wie die Abfrage und protokolliert sie (`weg: einrichtung`). Test `ZweiFaktorEinrichtungUmgehungTest` (ohne Fix 5/6 rot; der sechste sichert die normale Ersteinrichtung).
+- **Discovered** 28.09.2026 (Threat-Model-Runde vor dem Merge, `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md` Teil F)
+
+### KI-043 - Zugangslinks ueberlebten Aenderungen durch die Verwaltung
+- **Category** security · **Severity** MEDIUM · **Status** FIXED
+- **Location** `AdminController::customerUpdate/storeCustomer`, `PortalAccessService`, `EmployeeController::resendInvitation`, `App\Support\EinmalLink`
+- **Description** Nach Aenderung der Login-Adresse und/oder einem von der Verwaltung gesetzten Passwort meldete der Magic-Link an die ALTE Adresse weiter an (Tippfehler bei der Anlage -> Fremder hat 90 Tage Zugang). "Einladung erneut senden" liess alle frueheren Einladungen 14 Tage parallel gueltig.
+- **Fix (28.09.2026)**: Widerrufsstand `users.zugangslink_version`; jeder Link traegt ihn signiert als `v` (`EinmalLink::parameter()`), gilt nur bei Gleichheit. Widerruf (`User::zugangslinksWiderrufen()`, atomar in der DB) bei neuer Login-Adresse (Modell-Hook), Verwaltungspasswort (`User::setzeVerwaltungsPasswort()`), Portal-Reset und jeder neuen Einladung. Manager duerfen die Einladung eines Administrators nicht mehr erneut senden (Grenze aus dem Bearbeiten). Bestandslinks ohne `v` gelten bis zum ersten Widerruf. Tests `ZugangslinkWiderrufTest`, `MitarbeiterEinladungErneutSendenTest` (Mutationen belegt).
+- **Bewusst offen (Betreiber-Entscheidung)**: ein unbenutzter bzw. ohne eigenes Passwort benutzter Magic-Link ist bis zum Ablauf (90 Tage) mehrfach verwendbar; kein Einmal-Verbrauch.
+- **Discovered** 28.09.2026 (Threat-Model-Runde vor dem Merge)
+
+### KI-027 - Bestaetigungscode der E-Signatur ohne echte Grenze
+- **Category** security · **Severity** MEDIUM · **Status** FIXED
+- **Location** `SignatureSigningController::requestCode/verify`, `SignatureTokenService`
+- **Description** Jeder neue Code setzte die Fehlversuche zurueck, der Versand war nur ueber den Token-Limiter (120/min) begrenzt -> Raten in Tagen machbar, Postfach flutbar.
+- **Fix**: 1 Code/Minute, 5/Stunde je Unterzeichner, 10 Fehlversuche/Stunde ueber alle Codes (Limiter, keine Migration). Test `SignaturCodeUndGleichzeitigkeitTest`.
+- **Discovered** 28.09.2026
+
+### KI-028 - HTML-Injection in Suchlisten
+- **Category** security · **Severity** MEDIUM · **Status** FIXED
+- **Location** `layouts/admin` (Kopfzeilen-Suche, Glocke), `layouts/portal` (Glocke), `employee_edit`, `employee_show`, `email_inbox`, `email_message`, `banners`
+- **Description** Kundennamen/Ticket-Betreffe (Registrierung, oeffentliche Formulare) roh in `innerHTML`. CSP stoppt Skripte, nicht Links/Formular-Attrappen/Tracking-Bilder.
+- **Fix**: escapen bzw. `textContent`; Waechter-Test `SuchlistenFremddatenTest` scannt alle Views. Im Browser (Chromium) nachgeprueft.
+- **Discovered** 28.09.2026
+
+### KI-029 - E-Mail-Eingang: Kundensuche fuer Support tot
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Description** Eingang ist fuer support freigegeben, die Suche rief `admin.employees.customer-search` (nur admin/manager) -> 403, leere Liste.
+- **Fix**: `admin.customers.search` (portfolio-gescoped). Test `SuchlistenFremddatenTest`, Browser: 200 + Treffer + Zuordnen-Knopf aktiv.
+- **Discovered** 28.09.2026
+
+### KI-030 - E-Signatur: gleichzeitiges Absenden
+- **Category** concurrency · **Severity** MEDIUM · **Status** FIXED
+- **Location** `SignatureSigningService::sign/complete`
+- **Description** Pruefung "schon unterschrieben?" ohne Sperre: doppelter Abschluss (PDF + Mails doppelt), Bilddatei nach Abschluss ueberschreibbar.
+- **Fix**: `Cache::lock` je Unterzeichner bzw. Vorgang, Zustand innerhalb neu gelesen. Test `SignaturCodeUndGleichzeitigkeitTest`.
+- **Discovered** 28.09.2026
+
+### KI-031 - WhatsApp: mehrere Rufnummern in einer Zustellung
+- **Category** correctness · **Severity** LOW · **Status** FIXED
+- **Fix**: `WhatsAppAdapter::splitByPhoneNumberId`, ein Job je Nummer. Test in `WhatsAppChannelTest`.
+
+### KI-032 - Sprachumschalter folgte fremdem Referer
+- **Category** security · **Severity** LOW · **Status** FIXED
+- **Fix**: nur eigener Host, sonst Startseite. Test `SprachumschalterWeiterleitungTest`.
+
+### KI-033 - Ungepruefte Anfragen in der Kundenakte (Designfrage)
+- **Category** business-logic · **Severity** MEDIUM · **Status** OPEN (Betreiber-Entscheidung)
+- **Location** `SupportFormController`, `WebsiteController::submitContact`, `WebsiteContactController`, `ServicePageController::submit`, `WebsiteInquiryController`
+- **Description** Die Formulare haengen eine Anfrage allein ueber die E-Mail-Adresse an eine Kundenakte - wer die Adresse eines Kunden kennt, legt einen Vorgang in dessen Akte und Portal an, der wie vom Kunden aussieht. Vorschlag: sichtbar "Absender nicht verifiziert" + nicht im Portal, bis ein Mitarbeiter bestaetigt. Aendert einen Ablauf -> nicht eigenmaechtig.
+
+### KI-034 - Abmeldung schon beim GET (Designfrage)
+- **Category** business-logic · **Severity** LOW · **Status** OPEN (Betreiber-Entscheidung)
+- **Description** Link-Scanner (Outlook Safe Links) rufen Links vorab auf und melden Kunden ab. Vorschlag: GET zeigt Bestaetigungsknopf, POST (RFC 8058) bleibt Ein-Klick.
+
+### KI-035 - 2FA-Schalter (Designfrage)
+- **Category** security · **Severity** LOW · **Status** OPEN (Betreiber-Entscheidung)
+- **Description** Schalter AUS -> auch eingerichtete zweite Faktoren werden nicht abgefragt. Vorschlag: wer eingerichtet hat, wird immer gefragt.
+
+### KI-036 - `ActivityLog.meta` doppelt kodiert
+- **Category** maintenance · **Severity** LOW · **Status** FIXED
+- **Fix**: Mutator `ActivityLog::setMetaAttribute` nimmt Array oder JSON-String und speichert immer ein JSON-Objekt (eine Stelle statt ~85). Altbestand bleibt lesbar ueber `metaArray()`. Test `ActivityLogMetaKodierungTest`.
+
+### KI-037 - SvgSanitizer: externe CSS-Verweise
+- **Category** security · **Severity** LOW · **Status** FIXED
+- **Fix**: `@import` und externe `url()` in `<style>`/Attributen entfernt, `url(#...)` bleibt. Test `SvgSanitizerExterneVerweiseTest`.
+
+### KI-038 - Konto-Enumeration ueber `/reset-password`
+- **Category** security · **Severity** LOW · **Status** FIXED
+- **Description** Mit beliebigem Token: "kein Konto gefunden" gegen "Link abgelaufen" verriet die Existenz eines Kontos.
+- **Fix**: gleiche Meldung. Test in `EinmalLinkTest`.
+
+### KI-039 - Doppelklick auf Registrierungs-Bestaetigung
+- **Category** concurrency · **Severity** LOW · **Status** FIXED
+- **Description** Zweiter gleichzeitiger Aufruf scheiterte am Unique-Index `users.email` -> HTTP 500.
+- **Fix**: Unique-Verletzung abgefangen, Transaktion rollt vollstaendig zurueck, Hinweis "Konto besteht bereits". Test `RegistrierungDoppelklickTest`.
 
 ### KI-023 - TARIFCHECK24-Status falsch gedeutet, Rechnung nicht hochladbar
 - **Category** correctness · **Severity** HIGH · **Status** FIXED
