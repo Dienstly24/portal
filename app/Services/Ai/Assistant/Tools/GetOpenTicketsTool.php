@@ -42,7 +42,7 @@ class GetOpenTicketsTool implements AssistantTool
 
     public function run(array $arguments, AssistantToolContext $context): array
     {
-        $tickets = Ticket::where('customer_id', $context->customer->id)
+        $tickets = Ticket::where('customer_id', $context->customer->id)->kundenSichtbar()
             ->active()
             ->orderByDesc('created_at')
             ->limit(20)

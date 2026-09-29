@@ -14,6 +14,7 @@
         <div class="page-sub">
             <strong>{{ $ticket->ticket_number }}</strong>
             @if($ticket->customer) · 👤 <a href="{{ route('admin.customer', $ticket->customer_id) }}" style="color:inherit;">{{ $ticket->customer?->user?->name }}</a> · Nr. {{ $ticket->customer->customer_number }}
+            @if($ticket->absenderUngeprueft()) · <span class="badge" style="background:var(--status-warning);color:#fff;">⚠️ Absender ungeprüft</span>@endif
             @else · 👤 {{ $ticket->guest_name ?? 'Gast' }}
             @endif
             <span class="muted">(via {{ $quelle }})</span>
@@ -148,6 +149,39 @@
         </table>
     </div>
 </div>
+
+@if($ticket->customer && $ticket->absenderUngeprueft())
+{{-- KI-033: nur per E-Mail-Adresse zugeordnet. Der Vorgang ist fuer den
+     Kunden unsichtbar, bis hier jemand entscheidet. --}}
+<div class="card" data-absender-ungeprueft style="border-left:4px solid var(--status-warning);">
+    <div class="card-title">⚠️ Absender nicht verifiziert</div>
+    <p style="font-size:14px;margin:0 0 10px;">
+        Diese Anfrage kam über ein öffentliches Formular und wurde <strong>nur über die E-Mail-Adresse</strong>
+        der Akte von {{ $ticket->customer->user?->name ?? $ticket->customer->customer_number }} zugeordnet. Eine Adresse belegt nicht, dass der
+        Kunde selbst geschrieben hat. Bis zur Bestätigung sieht der Kunde den Vorgang nicht im Portal,
+        und Antworten gehen nur an die im Formular angegebene Adresse.
+    </p>
+    <p style="font-size:13.5px;margin:0 0 12px;">
+        Angaben im Formular:
+        @if($ticket->guest_name)<strong>{{ $ticket->guest_name }}</strong>@endif
+        @if($ticket->guest_email) · 📧 {{ $ticket->guest_email }}@endif
+        @if($ticket->guest_phone) · 📞 {{ $ticket->guest_phone }}@endif
+        @if(!$ticket->guest_name && !$ticket->guest_email && !$ticket->guest_phone) —@endif
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <form method="POST" action="{{ route('admin.ticket.absender_bestaetigen', $ticket->id) }}"
+            data-confirm="Bestätigen, dass die Anfrage wirklich vom Kunden stammt? Danach sieht er den Vorgang im Portal.">
+            @csrf
+            <button type="submit" class="btn btn-primary">✅ Absender bestätigen</button>
+        </form>
+        <form method="POST" action="{{ route('admin.ticket.absender_loesen', $ticket->id) }}"
+            data-confirm="Von der Kundenakte lösen? Der Vorgang bleibt als Gast-Anfrage erhalten.">
+            @csrf
+            <button type="submit" class="btn btn-ghost">✂️ Nicht der Kunde – von Akte lösen</button>
+        </form>
+    </div>
+</div>
+@endif
 
 @if(!$ticket->customer && ($ticket->guest_email || $ticket->guest_phone))
 <div class="card" style="background:#EFF6FF;">

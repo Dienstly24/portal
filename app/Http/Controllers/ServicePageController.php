@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Mail\SupportInquiryMail;
 use App\Mail\WebsiteInquiryConfirmationMail;
-use App\Models\Customer;
 use App\Models\ServicePage;
 use App\Models\Ticket;
 use App\Services\SpamFilter;
 use App\Services\TicketNotifier;
+use App\Support\FormularAbsender;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
@@ -113,12 +113,10 @@ class ServicePageController extends Controller
             }
         }
 
-        // Bestandskunden ueber die E-Mail zuordnen (nur wenn E-Mail vorhanden).
-        $customer = null;
-        if (! empty($data['email'])) {
-            $customer = Customer::whereHas('user', fn ($q) => $q->where('email', $data['email']))
-                ->orWhere('email2', $data['email'])->first();
-        }
+        // Bestandskunden ueber die E-Mail zuordnen (nur wenn E-Mail
+        // vorhanden) - als INDIZ, nicht als Nachweis (KI-033).
+        $absender = FormularAbsender::ermitteln($data['email'] ?? null);
+        $customer = $absender->customer;
 
         $leistung = $page->title_de;
         $description = ($data['message'] ?? '') !== ''
@@ -139,6 +137,7 @@ class ServicePageController extends Controller
         $ticket = Ticket::forceCreate([
             'id' => Str::uuid(),
             'customer_id' => $customer?->id,
+            'absender_status' => $absender->absenderStatus,
             'source' => 'website',
             'type' => 'offer',
             'priority' => 'mittel',
@@ -146,7 +145,7 @@ class ServicePageController extends Controller
             'subject' => 'Anfrage '.$leistung.' von '.$data['name'],
             'description' => $description,
             'guest_name' => $data['name'],
-            'guest_email' => $customer ? null : ($data['email'] ?? null),
+            'guest_email' => $absender->gastdatenBehalten() ? ($data['email'] ?? null) : null,
             'guest_phone' => $data['phone'] ?? null,
             'consent_given_at' => now(),
             'consent_ip' => $request->ip(),

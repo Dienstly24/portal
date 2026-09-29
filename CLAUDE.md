@@ -550,6 +550,8 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
 - **Hilfe-Formular**: `SupportFormController` → `/hilfe`. Aus der Mail mit
   verschlüsseltem Kunden-Token vorbefüllt; Absenden legt automatisch ein
   Ticket an, verknüpft mit der Kundenakte.
+  OHNE Token/Login wird nur per E-Mail zugeordnet - und dann gilt die
+  Regel "Absender ungeprueft" (KI-033, siehe System-Audit 28.09.2026).
 - **Marketing-Website IM PORTAL (Merge, Betreiber-Auftrag 30.07.2026)**:
   `www.dienstly24.de` wird von DIESER App ausgeliefert (`WebsiteController`,
   Views `resources/views/website/`, Assets `public/website-assets/` -
@@ -3978,12 +3980,30 @@ Merge von PR #358, Teil E/F).
   trotzdem `ActivityLog::record()` benutzen. Die E-Signatur sperrt
   gleichzeitiges Absenden (`Cache::lock`, KI-030) und drosselt den
   Bestaetigungscode je Unterzeichner (KI-027).
+- **Eine E-Mail-Adresse ist kein Absender-Nachweis** (KI-033,
+  Betreiber-Entscheidung 29.09.2026). Die vier oeffentlichen Formulare
+  (`/hilfe` ohne Token, `/kontakt`, `/leistungen/.../anfrage`,
+  `/api/website-inquiry` - das WordPress-Formular dahinter ist ebenfalls
+  oeffentlich) ordnen ueber `App\Support\FormularAbsender` zu: die Akte
+  wird gefunden, der Vorgang aber als `tickets.absender_status =
+  ungeprueft` gefuehrt und behaelt die Angaben des Absenders (`guest_*`).
+  Solange das gilt, ist er reine TEAM-Sache: kein Portal (Liste,
+  Dashboard, Detail, Antwort, Anhang), kein KI-Assistent, keine
+  Kunden-Glocke; die Antwort des Teams geht wie bei Gast-Anfragen nur an
+  die Formular-Adresse. Sonst schrieb ein Fremder, der die Adresse kennt,
+  in das Portal des Kunden - im Namen des Kunden. Der Mitarbeiter
+  "bestaetigt" (ab dann normal) oder "loest von der Akte" (Gast-Anfrage,
+  nichts geloescht), beides mit Ticket-Zugriff und Bearbeiten-Recht.
+  Vertrauenswuerdig sind nur Login und das Token der Willkommensmail.
+  **Jede kundenseitige Ticket-Abfrage laeuft ueber
+  `Ticket::kundenSichtbar()`** - ein Waechter-Test scannt Portal und
+  KI-Werkzeuge; die naechste neue Abfrage ohne den Scope macht ihn rot.
+  Altbestand bleibt unmarkiert (ob er per Token kam, steht nirgends).
 - **Offen fuer den Betreiber** (Designfragen, bewusst nicht eigenmaechtig
-  geaendert): KI-033 ungepruefte Formularanfragen landen per E-Mail-Adresse
-  in der Kundenakte und im Portal; KI-034 Abmeldung schon beim GET;
-  KI-035 2FA-Schalter AUS entwertet eingerichtete zweite Faktoren.
+  geaendert): KI-034 Abmeldung schon beim GET; KI-035 2FA-Schalter AUS
+  entwertet eingerichtete zweite Faktoren.
 - Tests: `InlineDateiauslieferungTest`, `EinmalLinkTest`,
-  `ZugangslinkWiderrufTest`, `MitarbeiterEinladungErneutSendenTest`,
+  `FormularAbsenderUngeprueftTest`, `ZugangslinkWiderrufTest`, `MitarbeiterEinladungErneutSendenTest`,
   `ZweiFaktorEinrichtungUmgehungTest`,
   `MitarbeiterverwaltungNurPersonalTest`, `SignaturCodeUndGleichzeitigkeitTest`
   (prueft seit KI-030-Nachpruefung die Sperre SELBST: gehaltene Sperre ->

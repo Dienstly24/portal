@@ -31,6 +31,11 @@ class TicketNotifier
                 ?: trim(($ticket->customer->first_name ?? '').' '.($ticket->customer->last_name ?? ''))
                 ?: 'Kunde';
             $wer .= ' (Nr. '.$ticket->customer->customer_number.')';
+            // KI-033: nur per Adresse zugeordnet - in der Glocke darf das
+            // nicht wie eine Anfrage des Kunden aussehen.
+            if ($ticket->absenderUngeprueft()) {
+                $wer .= ' – Absender ungeprüft';
+            }
         } else {
             $wer = ($ticket->guest_name ?: 'Gast')
                 .($ticket->guest_email ? ' <'.$ticket->guest_email.'>' : '');
@@ -83,7 +88,10 @@ class TicketNotifier
     public static function notifyCustomerStatus(Ticket $ticket, bool $reopened = false): void
     {
         $ticket->loadMissing('customer.user');
-        if (! $ticket->customer?->user_id) {
+        // Ungepruefter Absender (KI-033): der Vorgang ist im Portal nicht
+        // sichtbar - eine Glocke dorthin fuehrte ins Leere und truege den
+        // Betreff eines Fremden in das Konto des Kunden.
+        if (! $ticket->customer?->user_id || $ticket->absenderUngeprueft()) {
             return;
         }
         $text = match ($ticket->status) {

@@ -49,7 +49,7 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 |---|---|
 | `documents` | Dateien + Analyse-Ergebnis (`ai_extracted_data`, Content-Hash, `vermittler_import_id`) - Rohtext wird NIE gespeichert |
 | `document_requests` | Unterlagen-Anforderungen |
-| `tickets`, `ticket_messages`, `ticket_attachments`, `ticket_events` | Vorgaenge (inkl. Website-Leads, Einwilligungsnachweis) |
+| `tickets`, `ticket_messages`, `ticket_attachments`, `ticket_events` | Vorgaenge (inkl. Website-Leads, Einwilligungsnachweis); `tickets.absender_status` (`ungeprueft`/`bestaetigt`/NULL) + `absender_geprueft_von/_am`: Formular-Anfrage nur per E-Mail zugeordnet -> fuer den Kunden unsichtbar bis zur Bestaetigung (KI-033) |
 | `conversations`, `conversation_channels`, `conversation_assignments`, `conversation_notes` | Unterhaltungen (Omnichannel) |
 | `customer_messages`, `customer_message_attachments` | EINE Nachrichtentabelle fuer alle Kanaele (`customer_id` nullable, `channel_id`, `direction`/`from_staff`, `source`) |
 | `channels`, `channel_accounts` (Zugangsdaten verschluesselt), `channel_events` (Idempotenz, `dedupe_key`) | Kanaele |

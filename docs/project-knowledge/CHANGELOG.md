@@ -8,6 +8,18 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 29.09.2026 - KI-033: Formular-Anfragen mit ungeprueftem Absender
+
+- **Task**: Betreiber-Entscheidung zur Designfrage KI-033: Zuordnung per E-Mail bleiben lassen, aber als "Absender nicht verifiziert" markieren und dem Kunden erst nach Bestaetigung zeigen.
+- **Files Changed**: neu `app/Support/FormularAbsender.php`; `SupportFormController`, `WebsiteController::submitContact`, `WebsiteContactController`, `ServicePageController::submit`, `WebsiteInquiryController::store`; `Ticket` (Konstanten, `scopeKundenSichtbar`, `absenderBestaetigen`, `vonKundenaktLoesen`), `TicketEvent` (zwei Ereignisse); `PortalController` (alle Ticket-Abfragen); KI-Werkzeuge `GetOpenTickets`, `GetProcessStatus`, `CreateTicket`, `RequestDocument`; `TicketNotifier`, `AutoCloseResolvedTickets`, `TicketController` (Antwortweg, zwei neue Aktionen); Views `admin/ticket_show`, `admin/tickets`, `emails/support_inquiry`; Routen; `ROUTES_INVENTORY.md` neu erzeugt (enthaelt dabei auch drei bisher fehlende Routen aus F-011).
+- **Database Changes**: Migration `2026_09_29_100000_absender_pruefung_an_tickets` - `tickets.absender_status`, `absender_geprueft_von`, `absender_geprueft_am` (alle nullable, kein Nachtrag).
+- **API Changes**: `POST /admin/tickets/{id}/absender-bestaetigen`, `POST /admin/tickets/{id}/absender-loesen`.
+- **Potential Side Effects**: Kunden sehen eine Anfrage, die sie selbst ueber die WEBSITE (nicht das Portal, nicht per Token-Link) geschickt haben, erst nach Bestaetigung im Portal; die Antwort des Teams erreicht sie per E-Mail wie bisher bei Gast-Anfragen. `/api/website-inquiry` ordnet jetzt auch ueber `email2` zu (wie die anderen Formulare).
+- **Tests Performed**: neuer Test ohne Fix rot (4 Mutationen, jede gefangen); volle Suite, PHPStan, Pint (TESTING_STATUS Lauf 8); Chromium: echtes Website-Formular mit der Adresse eines Kunden -> Hinweis in Liste und Detail, Kundenportal zeigt nichts (Detail 404), "Absender bestaetigen" per Klick -> danach im Portal sichtbar (200), keine JS-Fehler.
+- **Result**: KI-033 FIXED.
+
+---
+
 ## 28.09.2026 - Vertragsherkunft: Eigenvertrag, Fremdvertrag, uebernommen (F-011)
 
 - **Task**: Betreiber-Auftrag: ein als Vorvertrag erfasster Fremdvertrag (z. B. ADAC) sah aus wie ein eigener; Wochen spaeter wurde an einem Vertrag ohne Mandat gearbeitet, und jede Kennzahl zaehlte ihn mit.

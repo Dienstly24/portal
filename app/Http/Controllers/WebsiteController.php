@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Mail\SupportInquiryMail;
 use App\Mail\WebsiteInquiryConfirmationMail;
-use App\Models\Customer;
 use App\Models\Ticket;
 use App\Services\SpamFilter;
 use App\Services\TicketNotifier;
+use App\Support\FormularAbsender;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -129,10 +129,9 @@ class WebsiteController extends Controller
             ? mb_strtolower($kontakt)
             : null;
 
-        $customer = $email
-            ? Customer::whereHas('user', fn ($q) => $q->where('email', $email))
-                ->orWhere('email2', $email)->first()
-            : null;
+        // Zuordnung per Adresse ist ein INDIZ, kein Nachweis (KI-033).
+        $absender = FormularAbsender::ermitteln($email);
+        $customer = $absender->customer;
 
         $nachricht = trim((string) ($data['nachricht'] ?? ''));
 
@@ -145,6 +144,7 @@ class WebsiteController extends Controller
         $ticket = Ticket::forceCreate([
             'id' => Str::uuid(),
             'customer_id' => $customer?->id,
+            'absender_status' => $absender->absenderStatus,
             'source' => 'website',
             'type' => WebsiteContactController::LEISTUNGEN[$data['leistung']],
             'priority' => 'mittel',

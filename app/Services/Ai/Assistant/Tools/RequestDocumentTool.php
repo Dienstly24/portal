@@ -106,7 +106,7 @@ class RequestDocumentTool implements AssistantTool
         $note = trim((string) ($arguments['hinweis'] ?? ''));
         $ticketNumber = trim((string) ($arguments['vorgangsnummer'] ?? ''));
         if ($ticketNumber !== '') {
-            $ticket = $context->customer->tickets()
+            $ticket = $context->customer->tickets()->kundenSichtbar()
                 ->where('ticket_number', $ticketNumber)
                 ->first();
             if ($ticket) {

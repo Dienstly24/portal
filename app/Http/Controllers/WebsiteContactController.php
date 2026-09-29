@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Mail\SupportInquiryMail;
-use App\Models\Customer;
 use App\Models\Ticket;
 use App\Services\SpamFilter;
 use App\Services\TicketNotifier;
+use App\Support\FormularAbsender;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
@@ -109,17 +109,17 @@ class WebsiteContactController extends Controller
             ? mb_strtolower($kontakt)
             : null;
 
-        // Bestandskunden ueber die E-Mail-Adresse zuordnen.
-        $customer = $email
-            ? Customer::whereHas('user', fn ($q) => $q->where('email', $email))
-                ->orWhere('email2', $email)->first()
-            : null;
+        // Bestandskunden ueber die E-Mail-Adresse zuordnen - als INDIZ,
+        // nicht als Nachweis (KI-033).
+        $absender = FormularAbsender::ermitteln($email);
+        $customer = $absender->customer;
 
         $nachricht = trim((string) ($data['nachricht'] ?? ''));
 
         $ticket = Ticket::forceCreate([
             'id' => Str::uuid(),
             'customer_id' => $customer?->id,
+            'absender_status' => $absender->absenderStatus,
             'source' => 'website',
             'type' => self::LEISTUNGEN[$data['leistung']],
             'priority' => 'mittel',

@@ -56,10 +56,10 @@ class PortalController extends Controller
             // Nur Vertraege, die WIR betreuen (28.09.2026) - ein dokumentierter
             // Fremdvertrag steht nie als "unser" Vertrag in der Zahl.
             'contractsCount' => Contract::where('customer_id', $customer->id)->currentlyActive()->ownPortfolio()->count(),
-            'openTickets' => Ticket::where('customer_id', $customer->id)->whereIn('status', ['open', 'in_progress'])->count(),
+            'openTickets' => Ticket::where('customer_id', $customer->id)->kundenSichtbar()->whereIn('status', ['open', 'in_progress'])->count(),
             'pendingApprovals' => CustomerChangeRequest::where('customer_id', $customer->id)->where('status', 'pending')->count(),
             'contracts' => Contract::where('customer_id', $customer->id)->ownPortfolio()->latest()->take(3)->get(),
-            'tickets' => Ticket::where('customer_id', $customer->id)->latest()->take(3)->get(),
+            'tickets' => Ticket::where('customer_id', $customer->id)->kundenSichtbar()->latest()->take(3)->get(),
             'completeness' => $customer->completeness(),
             'banners' => $this->bannersFor(auth()->id()),
             // Badge auf der Kontakt-Hero-Karte (Chat starten)
@@ -340,7 +340,7 @@ class PortalController extends Controller
     public function tickets() {
         $customer = $this->getCustomer();
         return view('portal.tickets', [
-            'tickets' => Ticket::where('customer_id', $customer->id)->latest()->get(),
+            'tickets' => Ticket::where('customer_id', $customer->id)->kundenSichtbar()->latest()->get(),
         ]);
     }
 
@@ -392,7 +392,7 @@ class PortalController extends Controller
 
     public function ticketsShow($id) {
         $customer = $this->getCustomer();
-        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
+        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->kundenSichtbar()->firstOrFail();
         $messages = TicketMessage::where('ticket_id', $id)->where('is_internal', false)->with('sender')->get();
         return view('portal.tickets_show', compact('ticket', 'messages'));
     }
@@ -400,7 +400,7 @@ class PortalController extends Controller
     public function downloadAttachment($id) {
         $customer = $this->getCustomer();
         $a = TicketAttachment::findOrFail($id);
-        $ticket = Ticket::where('id', $a->ticket_id)->where('customer_id', $customer->id)->firstOrFail();
+        $ticket = Ticket::where('id', $a->ticket_id)->where('customer_id', $customer->id)->kundenSichtbar()->firstOrFail();
         if (($a->disk ?? 'public') === 'local') {
             return Storage::disk('local')->download($a->file_path, $a->file_name);
         }
@@ -417,7 +417,7 @@ class PortalController extends Controller
             'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
         ]);
         $customer = $this->getCustomer();
-        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
+        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->kundenSichtbar()->firstOrFail();
         // Geschlossene Anfragen sind schreibgeschuetzt (bitte neue Anfrage stellen)
         if ($ticket->status === 'closed') {
             return back()->with('error', __('Diese Anfrage ist geschlossen. Bitte stellen Sie eine neue Anfrage.'));
@@ -455,7 +455,7 @@ class PortalController extends Controller
     /** Kunde bestaetigt: Anliegen erledigt -> Anfrage schliessen. */
     public function ticketsClose($id) {
         $customer = $this->getCustomer();
-        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
+        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->kundenSichtbar()->firstOrFail();
         if ($ticket->status !== 'closed') {
             $ticket->transitionTo('closed', auth()->id(), 'closed_by_customer');
             TicketNotifier::notifyTeam($ticket, '✅ Anfrage vom Kunden geschlossen',
@@ -471,7 +471,7 @@ class PortalController extends Controller
             'rating_comment' => 'nullable|string|max:1000',
         ]);
         $customer = $this->getCustomer();
-        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
+        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->kundenSichtbar()->firstOrFail();
         if (! $ticket->isFinished() || $ticket->rating !== null) {
             return back();
         }
@@ -573,7 +573,7 @@ class PortalController extends Controller
         $banner->recordClick(auth()->id());
 
         $subject = 'Interesse: '.$banner->title;
-        $ticket = Ticket::where('customer_id', $customer->id)
+        $ticket = Ticket::where('customer_id', $customer->id)->kundenSichtbar()
             ->where('subject', $subject)
             ->whereIn('status', ['open', 'in_progress', 'waiting'])
             ->first();
