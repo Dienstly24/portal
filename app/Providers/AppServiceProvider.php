@@ -82,6 +82,7 @@ use App\Services\Ai\TemplateParsers\MeldebestaetigungParser;
 use App\Services\Ai\TemplateParsers\NafiKfzAntragParser;
 use App\Services\Ai\TemplateParsers\NovitasBeitrittserklaerungParser;
 use App\Services\Ai\TemplateParsers\OnlineProtokollAntragParser;
+use App\Services\Ai\TemplateParsers\PersonalausweisParser;
 use App\Services\Ai\TemplateParsers\PlanBNetZeroAuftragParser;
 use App\Services\Ai\TemplateParsers\PrivathaftpflichtAntragParser;
 use App\Services\Ai\TemplateParsers\ReisepassMrzParser;
@@ -212,6 +213,10 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(GeburtsurkundeParser::class),
                 $app->make(ReisepassMrzParser::class),
                 $app->make(MeldebestaetigungParser::class),
+                // Personalausweis + Aufenthaltstitel teilen sich die baugleiche
+                // Rueckseite (MRZ + Anschrift); jeder beansprucht nur SEINE
+                // Karte (MRZ-Zeile 1 "ID" bzw. "AR").
+                $app->make(PersonalausweisParser::class),
                 $app->make(AufenthaltstitelParser::class),
                 // Energie-Parser (Strom/Gas) VOR dem DSL-Parser: ein echter
                 // Energie-Auftrag wird von seinem spezifischen Parser erkannt;

@@ -8,6 +8,18 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 30.09.2026 - KI-044: Rueckseite von Aufenthaltstitel und Personalausweis
+
+- **Task**: Betreiber-Meldung mit zwei Fotos: vom Personalausweis und vom Aufenthaltstitel werden vor allem Anschrift und Geburtsort gebraucht, erkannt wurde nur die Vorderseite.
+- **Files Changed**: neu `app/Services/Ai/Concerns/LiestDeutscheAusweiskarte.php`, `app/Services/Ai/TemplateParsers/PersonalausweisParser.php`; `AufenthaltstitelParser` (auf den Baustein umgestellt), `AppServiceProvider` (Registrierung vor dem Aufenthaltstitel), `DocumentAnalyzer::acceptTemplateOrEscalate` (`pflichtangaben`), `TesseractTextExtractor` (MRZ im Original nachlesen), `ClaudeDocumentAiProvider` (Prompt: Personalausweis); Test neu `AusweiskartenRueckseiteTest`.
+- **Database Changes**: keine.
+- **API Changes**: keine.
+- **Potential Side Effects**: Fotos des Personalausweises werden jetzt gratis gelesen (Typ `personalausweis`) statt ueber Heuristik/KI. Eine erkannte Ausweis-Rueckseite OHNE lesbare Anschrift bzw. eine Personalausweis-Vorderseite ohne Geburtsort geht jetzt zur KI (Kosten nur in diesem Fall; Duplikat-Kostendeckel gilt). Fuer kleine Kartenfotos, deren vergroesserte Fassung keine MRZ ergibt, laeuft Tesseract ein zweites Mal (nur Kartenfotos).
+- **Tests Performed**: neuer Test ohne Fix 12/14 rot; volle Suite gruen (3210 Tests); `composer stan`, `composer lint` gruen. Real: die eingesandten Fotos durch den echten `TesseractTextExtractor` + Parser-Kette - Personalausweis-Rueckseite liefert Name, Geburtsdatum, Staatsangehoerigkeit und Dokumentennummer (`LILMT...` per Pruefziffer zu `L1LMT...` repariert); die Anschrift ist auf diesem stark verkleinerten Foto unlesbar -> geht jetzt zur KI statt still zu fehlen. Das eAT-Foto (beide Seiten auf 568 px) ist fuer OCR zu klein; die Faelle sind mit dem am Foto gemessenen OCR-Rauschen als Test nachgebaut.
+- **Result**: KI-044 FIXED.
+
+---
+
 ## 29.09.2026 - KI-033: Formular-Anfragen mit ungeprueftem Absender
 
 - **Task**: Betreiber-Entscheidung zur Designfrage KI-033: Zuordnung per E-Mail bleiben lassen, aber als "Absender nicht verifiziert" markieren und dem Kunden erst nach Bestaetigung zeigen.

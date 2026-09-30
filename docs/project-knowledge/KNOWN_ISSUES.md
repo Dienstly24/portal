@@ -25,6 +25,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-041 | MEDIUM | security | Admin-Reset des Portals liess alte Magic-/Einladungslinks gueltig (Umgehung von KI-026) | FIXED |
 | KI-042 | MEDIUM | security | 2FA-Einrichtung als zweiter Pruefweg ohne Sperre/Protokoll (Raten, Ersatzcodes ersetzt) | FIXED |
 | KI-043 | MEDIUM | security | Zugangslinks ueberlebten Adress-/Passwortaenderung durch die Verwaltung und erneutes Senden | FIXED |
+| KI-044 | MEDIUM | correctness | Ausweis-Rueckseiten (eAT + Personalausweis) nicht erkannt: Anschrift/Geburtsort fehlten | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
 | KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
@@ -284,6 +285,13 @@ und PHPStan) auf `main` gruen ist.
 - **Fix (28.09.2026)**: Widerrufsstand `users.zugangslink_version`; jeder Link traegt ihn signiert als `v` (`EinmalLink::parameter()`), gilt nur bei Gleichheit. Widerruf (`User::zugangslinksWiderrufen()`, atomar in der DB) bei neuer Login-Adresse (Modell-Hook), Verwaltungspasswort (`User::setzeVerwaltungsPasswort()`), Portal-Reset und jeder neuen Einladung. Manager duerfen die Einladung eines Administrators nicht mehr erneut senden (Grenze aus dem Bearbeiten). Bestandslinks ohne `v` gelten bis zum ersten Widerruf. Tests `ZugangslinkWiderrufTest`, `MitarbeiterEinladungErneutSendenTest` (Mutationen belegt).
 - **Bewusst offen (Betreiber-Entscheidung)**: ein unbenutzter bzw. ohne eigenes Passwort benutzter Magic-Link ist bis zum Ablauf (90 Tage) mehrfach verwendbar; kein Einmal-Verbrauch.
 - **Discovered** 28.09.2026 (Threat-Model-Runde vor dem Merge)
+
+### KI-044 - Rueckseite von Aufenthaltstitel und Personalausweis nicht erkannt
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** `AufenthaltstitelParser` (Rueckseite), fehlender Parser fuer den Personalausweis, `TesseractTextExtractor::upscaleIfSmall`
+- **Description** Betreiber-Meldung 30.09.2026: vom Ausweis werden vor allem ANSCHRIFT und GEBURTSORT gebraucht, erkannt wurde nur die Vorderseite. An den eingesandten Fotos mit Tesseract gemessen: (1) die Rueckseite des eAT wurde NUR an einer fehlerfrei gelesenen MRZ-Datenzeile erkannt - "<<<<" als "cccceee", "«", Rauschen am Zeilenrand oder eine verlesene Staatsangehoerigkeit liessen die ganze Karte samt Anschrift durchfallen; (2) fuer den Personalausweis gab es gar keinen Parser (Vorderseite traegt den Geburtsort, Rueckseite die Anschrift), und "D<<" (Deutschland) passte nicht auf das Muster "drei Buchstaben"; (3) die 2x-Vergroesserung kleiner Bilder liess Tesseract den MRZ-Block am echten Personalausweis-Foto komplett weglassen; (4) ein Ergebnis ohne Anschrift galt als fertig - die KI las das Bild nie.
+- **Fix (30.09.2026)**: gemeinsamer Baustein `LiestDeutscheAusweiskarte` (MRZ nach POSITION gelesen, OCR-Verwechslungen nur dort zurueckgesetzt, wo die Norm sie eindeutig macht, jede Zahl ueber ihre Pruefziffer bestaetigt; Rueckseite auch ohne Datenzeile an Namenszeile + zwei Rueckseiten-Beschriftungen; Anschrift auch bei zerlegter Beschriftung, nie aus der Behoerdenzeile); neuer `PersonalausweisParser` (Vorder- und Rueckseite); MRZ-Nachlesen im Original, wenn die Vergroesserung sie verschluckt; `pflichtangaben` im Parser-Ergebnis -> `DocumentAnalyzer` eskaliert zur KI, wenn Anschrift (Rueckseite) bzw. Geburtsort (Vorderseite Personalausweis) fehlen; KI-Prompt kennt den Personalausweis. Test `AusweiskartenRueckseiteTest` (ohne Fix 12/14 rot).
+- **Discovered** 30.09.2026 (Betreiber-Meldung mit Fotos)
 
 ### KI-027 - Bestaetigungscode der E-Signatur ohne echte Grenze
 - **Category** security · **Severity** MEDIUM · **Status** FIXED
