@@ -73,6 +73,11 @@ class TesseractTextExtractor implements TextExtractorInterface
                 }
                 $pages[] = trim($this->ocrImage($image));
             }
+
+            if ($mime !== 'application/pdf' && count($pages) === 1 && microtime(true) < $deadline) {
+                $pages[0] = $this->mrzImOriginalNachlesen($pages[0], $images[0], $dir, $mime);
+            }
+
             return trim(implode("\f", $pages), " \t\n\r\0\x0B\f");
         } catch (\Throwable $e) {
             Log::warning('OCR-Extraktion fehlgeschlagen: '.$e->getMessage());
@@ -80,6 +85,40 @@ class TesseractTextExtractor implements TextExtractorInterface
         } finally {
             $this->cleanup($dir);
         }
+    }
+
+    /**
+     * Ausweiskarten: MRZ im ORIGINAL nachlesen, wenn die Vergroesserung sie
+     * verschluckt hat (Betreiber-Meldung 30.09.2026, am eingesandten Foto
+     * einer Personalausweis-Rueckseite gemessen): in Originalgroesse liest
+     * Tesseract die drei MRZ-Zeilen, nach dem Verdoppeln - egal ob 1,5x, 2x
+     * oder 3x - stuft es den Block vor dem Hologramm als Bild ein und gibt
+     * NICHTS davon aus. Ohne MRZ fehlt der Rueckseite aber genau das, woran
+     * sie erkannt wird.
+     *
+     * Bewusst eng: nur wenn das Bild vergroessert wurde, der Text nach einer
+     * Karten-Rueckseite aussieht und KEINE "<<"-Zeile enthaelt. Dann kostet
+     * es einen zweiten Tesseract-Lauf, und uebernommen werden NUR die
+     * MRZ-artigen Zeilen - der uebrige Text steht nicht doppelt da (sonst
+     * saehe das Foto nach zwei Karten aus).
+     */
+    private function mrzImOriginalNachlesen(string $text, string $gelesen, string $dir, string $mime): string
+    {
+        $original = $dir.'/input.'.(self::IMAGE_EXTENSIONS[$mime] ?? '');
+        if ($gelesen === $original || ! is_file($original) || str_contains($text, '<<')
+            || ! preg_match('/ANSCHRIFT|AUGENFARBE|EYE COLOU|HEIGHT|TAILLE|GEBURTSORT|BEH(?:[OÖ]|OE)RDE|AUTHORITY|B(?:Ü|UE)RGERMEISTER|ANMERKUNG|K[UÜ]NSTLERNAME|AUFENTHALTSTITEL|PERSONALAUSWEIS/iu', $text)) {
+            return $text;
+        }
+
+        $mrz = [];
+        foreach (preg_split('/\R/u', $this->ocrImage($original)) ?: [] as $zeile) {
+            $kompakt = (string) preg_replace('/\s+/u', '', $zeile);
+            if (str_contains($kompakt, '<<') && strlen($kompakt) >= 24) {
+                $mrz[] = trim($zeile);
+            }
+        }
+
+        return $mrz === [] ? $text : $text."\n".implode("\n", $mrz);
     }
 
     /** @return list<string> Pfade der rasterisierten Seiten (leer, wenn poppler-utils fehlt). */

@@ -83,6 +83,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 ### F-021 Vorlagen-Parser (~43)
 - `app/Services/Ai/TemplateParsers/*`, Reihenfolge in `AppServiceProvider` (spezialisiert vor generisch)
 - Tests je Parser unter `tests/Feature/Ai/*ParserTest`, `ParserPolicyTest`
+- Ausweiskarten: `PersonalausweisParser` + `AufenthaltstitelParser` teilen den Baustein `Concerns/LiestDeutscheAusweiskarte` (MRZ + Anschrift der Rueckseite); Parser-Ergebnis darf `pflichtangaben` tragen -> `DocumentAnalyzer` eskaliert zur KI, wenn sie fehlen. Tests `AusweiskartenRueckseiteTest`, `AufenthaltstitelParserTest`
 - Status **ACTIVE** · Regel `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`
 
 ### F-022 Dokumenten-Anforderungen
