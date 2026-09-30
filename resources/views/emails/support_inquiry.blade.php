@@ -8,7 +8,7 @@
 <tr><td style="padding:25px 30px;">
 <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;color:#333;">
 <tr><td style="color:#6B7280;width:150px;">Kundenname</td><td style="font-weight:bold;">{{ $ticket->guest_name }}</td></tr>
-<tr><td style="color:#6B7280;">Kundennummer</td><td style="font-weight:bold;">{{ $customerNumber ?? 'kein Bestandskunde' }}</td></tr>
+<tr><td style="color:#6B7280;">Kundennummer</td><td style="font-weight:bold;">{{ $customerNumber ?? 'kein Bestandskunde' }}@if($ticket->absenderUngeprueft()) <span style="color:#B45309;font-weight:normal;">(nur per E-Mail-Adresse zugeordnet – Absender ungeprüft)</span>@endif</td></tr>
 <tr><td style="color:#6B7280;">E-Mail-Adresse</td><td style="font-weight:bold;">{{ $ticket->guest_email }}</td></tr>
 @if($ticket->guest_phone)<tr><td style="color:#6B7280;">Telefon</td><td style="font-weight:bold;">{{ $ticket->guest_phone }}</td></tr>@endif
 <tr><td style="color:#6B7280;">Betreff</td><td style="font-weight:bold;">{{ $ticket->subject }}</td></tr>

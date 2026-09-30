@@ -30,7 +30,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
 | KI-029 | MEDIUM | correctness | E-Mail-Eingang: Kundensuche fuer Support 403 (tot) | FIXED |
 | KI-030 | MEDIUM | concurrency | E-Signatur: gleichzeitiges Absenden -> doppelter Abschluss | FIXED |
-| KI-033 | MEDIUM | business-logic | Oeffentliche Formulare ordnen ungepruefte Anfragen per E-Mail einer Kundenakte zu | OPEN (Betreiber-Entscheidung) |
+| KI-033 | MEDIUM | business-logic | Oeffentliche Formulare ordnen ungepruefte Anfragen per E-Mail einer Kundenakte zu | FIXED |
 | KI-038 | LOW | security | `/reset-password` verriet per Meldung, ob ein Konto existiert | FIXED |
 | KI-039 | LOW | concurrency | Doppelklick auf Registrierungs-Bestaetigung -> HTTP 500 | FIXED |
 | KI-031 | LOW | correctness | WhatsApp: mehrere Rufnummern in einer Zustellung -> erstes Konto | FIXED |
@@ -321,9 +321,11 @@ und PHPStan) auf `main` gruen ist.
 - **Fix**: nur eigener Host, sonst Startseite. Test `SprachumschalterWeiterleitungTest`.
 
 ### KI-033 - Ungepruefte Anfragen in der Kundenakte (Designfrage)
-- **Category** business-logic · **Severity** MEDIUM · **Status** OPEN (Betreiber-Entscheidung)
+- **Category** business-logic · **Severity** MEDIUM · **Status** FIXED (Betreiber-Entscheidung 29.09.2026: Variante "als ungeprueft markieren")
 - **Location** `SupportFormController`, `WebsiteController::submitContact`, `WebsiteContactController`, `ServicePageController::submit`, `WebsiteInquiryController`
 - **Description** Die Formulare haengen eine Anfrage allein ueber die E-Mail-Adresse an eine Kundenakte - wer die Adresse eines Kunden kennt, legt einen Vorgang in dessen Akte und Portal an, der wie vom Kunden aussieht. Vorschlag: sichtbar "Absender nicht verifiziert" + nicht im Portal, bis ein Mitarbeiter bestaetigt. Aendert einen Ablauf -> nicht eigenmaechtig.
+- **Threat Model (28.09.2026)**: kein Lesezugriff fuer den Absender (Antwortseite und Bestaetigungsmail verraten nichts, Antworten gingen an die echte Adresse). Aber: er legte einen Vorgang im PORTAL des Opfers an (Text frei waehlbar -> Phishing im vertrauten Kanal), im KI-Assistenten als offenen Vorgang, in der Kunden-Glocke; beim Team erschien er als Anfrage des Kunden, bei `/leistungen/.../anfrage` mit der Rufnummer des Absenders an der Akte (Rueckruf beim Falschen); `/hilfe` schrieb die Anfrage im ActivityLog dem Konto des Opfers zu. Das WordPress-Formular (`/api/website-inquiry`) ist trotz Token ebenfalls oeffentlich - das Token belegt nur den Server.
+- **Fix (29.09.2026)**: `App\Support\FormularAbsender` ist die EINE Stelle fuer alle vier Formulare. Zuordnung per Adresse bleibt, der Vorgang traegt `tickets.absender_status = ungeprueft` und die Angaben des Absenders (`guest_*`). `Ticket::scopeKundenSichtbar()` blendet ihn in Portal (Liste, Dashboard, Detail, Anhang, Antwort, Schliessen, Bewertung) und KI-Werkzeugen aus; Kunden-Glocke (Antwort, Status, Auto-Close) entfaellt, Antworten gehen wie bei Gast-Anfragen nur an die Formular-Adresse. Team: Hinweis in Liste, Detailseite, Glocke und Support-Mail; "Absender bestaetigen" (ab dann normal sichtbar) oder "von der Akte loesen" (Gast-Anfrage, nichts geloescht) - beides mit Ticket-Zugriff UND Bearbeiten-Recht, beides im Ticket-Verlauf. Vertrauenswuerdig bleiben Login und Token aus der Willkommensmail. Altbestand bleibt unmarkiert (ob er ueber das Token kam, steht nirgends - nicht geraten). Test `FormularAbsenderUngeprueftTest` (13, Mutationen belegt, dazu ein Waechter ueber alle kundenseitigen Ticket-Abfragen).
 
 ### KI-034 - Abmeldung schon beim GET (Designfrage)
 - **Category** business-logic · **Severity** LOW · **Status** OPEN (Betreiber-Entscheidung)

@@ -41,7 +41,7 @@ class AutoCloseResolvedTickets extends Command
             }
             $ticket->transitionTo('closed', null, 'auto_closed');
             // Portal-Glocke: Kunde weiss, dass der Vorgang abgeschlossen ist
-            if ($ticket->customer?->user_id) {
+            if ($ticket->customer?->user_id && ! $ticket->absenderUngeprueft()) {
                 Notify::push($ticket->customer->user_id, [
                     'type' => NotificationService::TYPE_TICKET,
                     'title' => 'Anfrage geschlossen',

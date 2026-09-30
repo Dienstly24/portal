@@ -26,7 +26,22 @@ class Ticket extends Model
         'due_at' => 'datetime',
         // DSGVO-Einwilligungszeitpunkt sauber als Carbon (Audit FLOW-3).
         'consent_given_at' => 'datetime',
+        'absender_geprueft_am' => 'datetime',
     ];
+
+    /**
+     * Absender einer Formular-Anfrage (KI-033). Eine oeffentliche Anfrage,
+     * die NUR ueber die E-Mail-Adresse einer Kundenakte zugeordnet wurde,
+     * ist 'ungeprueft': die Adresse kennt jeder, der einmal eine Mail des
+     * Kunden gesehen hat. Solange niemand bestaetigt hat, bleibt der
+     * Vorgang eine Sache des TEAMS - nicht im Kundenportal, nicht beim
+     * KI-Assistenten, keine Glocke beim Kunden. Sonst koennte ein Fremder
+     * Text in das Portal eines Kunden schreiben, der dort wie dessen eigene
+     * Anfrage aussieht. NULL heisst: keine Frage offen (Portal, Team,
+     * Token aus der Willkommensmail, Altbestand).
+     */
+    public const ABSENDER_UNGEPRUEFT = 'ungeprueft';
+    public const ABSENDER_BESTAETIGT = 'bestaetigt';
 
     /** Alle Workflow-Stati mit deutschen Labels (Beraterwelt). */
     public const STATUSES = [
@@ -93,6 +108,49 @@ class Ticket extends Model
 
     /** Nur Tickets mit Kundenakte (ohne Gast-Anfragen/Leads). */
     public function scopeCustomerOnly($query) { return $query->whereNotNull('customer_id'); }
+
+    /**
+     * Was der KUNDE sehen darf: alles ausser Vorgaengen mit ungeprueftem
+     * Absender (KI-033). EINE Stelle fuer Portal, KI-Assistent und jede
+     * kuenftige kundenseitige Abfrage.
+     */
+    public function scopeKundenSichtbar($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('absender_status')
+            ->orWhere('absender_status', '!=', self::ABSENDER_UNGEPRUEFT));
+    }
+
+    public function absenderUngeprueft(): bool
+    {
+        return $this->absender_status === self::ABSENDER_UNGEPRUEFT;
+    }
+
+    /** Ein Mitarbeiter bestaetigt: der Kunde der Akte hat selbst geschrieben. */
+    public function absenderBestaetigen(User $durch): void
+    {
+        $this->forceFill([
+            'absender_status' => self::ABSENDER_BESTAETIGT,
+            'absender_geprueft_von' => $durch->id,
+            'absender_geprueft_am' => now(),
+        ])->save();
+        $this->logEvent('sender_confirmed', 'Absender bestaetigt von '.$durch->name);
+    }
+
+    /**
+     * Ein Mitarbeiter stellt fest: NICHT der Kunde. Der Vorgang wird von der
+     * Akte geloest und bleibt als Gast-Anfrage stehen - mit den Angaben, die
+     * der Absender selbst gemacht hat. Geloescht wird nichts.
+     */
+    public function vonKundenaktLoesen(User $durch): void
+    {
+        $this->forceFill([
+            'customer_id' => null,
+            'absender_status' => null,
+            'absender_geprueft_von' => $durch->id,
+            'absender_geprueft_am' => now(),
+        ])->save();
+        $this->logEvent('sender_detached', 'Von der Kundenakte geloest durch '.$durch->name);
+    }
 
     /** Noch nicht erledigt (weder geloest noch geschlossen). */
     public function scopeActive($query) { return $query->whereNotIn('status', ['resolved', 'closed']); }

@@ -24,6 +24,8 @@ class TicketEvent extends Model
         'staff_reply' => ['📨', 'Antwort an Kunde gesendet'],
         'customer_reply' => ['💬', 'Antwort vom Kunden erhalten'],
         'note_added' => ['🔒', 'Interne Notiz hinzugefügt'],
+        'sender_confirmed' => ['✅', 'Absender bestätigt'],
+        'sender_detached' => ['✂️', 'Von der Kundenakte gelöst'],
         'closed_by_customer' => ['✅', 'Vom Kunden geschlossen'],
         'auto_closed' => ['🕓', 'Automatisch geschlossen'],
         'rated' => ['⭐', 'Vom Kunden bewertet'],

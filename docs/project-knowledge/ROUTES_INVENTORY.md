@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 28.09.2026 aus `php artisan route:list --json` (511 Routen).
+Generiert am 29.09.2026 aus `php artisan route:list --json` (513 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -355,6 +355,8 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | GET | `admin/tickets/statistik` | admin.tickets.stats | auth role:staff role:admin,manager |
 | GET | `admin/tickets/{id}` | admin.ticket | auth role:staff |
 | DELETE | `admin/tickets/{id}` | admin.ticket.delete | auth role:staff role:admin,manager |
+| POST | `admin/tickets/{id}/absender-bestaetigen` | admin.ticket.absender_bestaetigen | auth role:staff |
+| POST | `admin/tickets/{id}/absender-loesen` | admin.ticket.absender_loesen | auth role:staff |
 | DELETE | `admin/tickets/{id}/force` | admin.ticket.forcedelete | auth role:staff role:admin |
 | POST | `admin/tickets/{id}/note` | admin.ticket.note | auth role:staff |
 | POST | `admin/tickets/{id}/reply` | admin.ticket.reply | auth role:staff |

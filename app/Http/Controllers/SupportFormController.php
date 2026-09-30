@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Ticket;
 use App\Services\SpamFilter;
 use App\Services\TicketNotifier;
+use App\Support\FormularAbsender;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
@@ -115,30 +116,33 @@ class SupportFormController extends Controller
         }
 
         // Gast-Anfrage: per E-Mail trotzdem der Kundenakte zuordnen, wenn
-        // möglich - aber NUR intern. Die Antwortseite verrät die Zuordnung
-        // nicht (sonst könnten Fremde per E-Mail-Raten Kundenkonten erkennen).
-        if (! $customer) {
-            $customer = Customer::whereHas('user', fn ($q) => $q->where('email', $data['email']))
-                ->orWhere('email2', $data['email'])->first();
-        }
+        // möglich - aber NUR intern und als UNGEPRUEFT (KI-033): eine
+        // Adresse belegt nicht, dass der Kunde selbst geschrieben hat. Die
+        // Antwortseite verrät die Zuordnung nicht (sonst könnten Fremde per
+        // E-Mail-Raten Kundenkonten erkennen).
+        $absender = FormularAbsender::ermitteln($data['email'] ?? null, $trusted);
+        $customer = $absender->customer;
 
         $leistung = self::LEISTUNGEN[$data['leistung']];
 
-        $ticket = Ticket::create([
+        $ticket = Ticket::forceCreate([
             'id' => Str::uuid(),
             'customer_id' => $customer?->id,
+            'absender_status' => $absender->absenderStatus,
             'type' => $leistung['type'],
             'priority' => 'mittel',
             'subject' => 'Hilfe-Anfrage: '.$leistung['label'],
             'description' => $data['message'],
             'status' => 'open',
             'source' => 'hilfe-formular',
-            'guest_name' => $customer ? null : $data['name'],
-            'guest_email' => $customer ? null : $data['email'],
+            'guest_name' => $absender->gastdatenBehalten() ? $data['name'] : null,
+            'guest_email' => $absender->gastdatenBehalten() ? $data['email'] : null,
         ]);
 
         ActivityLog::create([
-            'user_id' => $customer?->user_id,
+            // Einem Kundenkonto wird die Anfrage nur zugeschrieben, wenn der
+            // Absender nachweislich dieser Kunde ist (angemeldet/Token).
+            'user_id' => $trusted?->user_id,
             'action' => 'support_request_created',
             'entity_type' => Ticket::class,
             'entity_id' => $ticket->id,

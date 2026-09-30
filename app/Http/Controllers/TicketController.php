@@ -502,6 +502,42 @@ class TicketController extends Controller
     }
 
     /** Interne Notiz: nur fuer Staff sichtbar, nie im Kundenportal. */
+    /**
+     * KI-033: ein Mitarbeiter bestaetigt, dass die Formular-Anfrage wirklich
+     * vom Kunden der Akte stammt (Rueckruf, bekannter Sachverhalt). Erst
+     * danach sieht der Kunde den Vorgang im Portal. Zugriff wie jede
+     * schreibende Ticket-Aktion: Portfolio der Akte + Bearbeiten-Recht.
+     */
+    public function absenderBestaetigen($id) {
+        $ticket = Ticket::findOrFail($id);
+        $this->authorizeTicketAccess($ticket);
+        $this->authorizeTicketManage();
+        if (! $ticket->absenderUngeprueft() || $ticket->customer_id === null) {
+            return back()->with('error', 'Bei diesem Vorgang ist kein Absender zu bestaetigen.');
+        }
+        $ticket->absenderBestaetigen(auth()->user());
+
+        return back()->with('success', 'Absender bestaetigt - der Kunde sieht den Vorgang jetzt im Portal.');
+    }
+
+    /**
+     * KI-033: die Anfrage stammt NICHT vom Kunden der Akte. Sie wird zur
+     * Gast-Anfrage; die Angaben des Absenders bleiben erhalten, geloescht
+     * wird nichts.
+     */
+    public function absenderLoesen($id) {
+        $ticket = Ticket::findOrFail($id);
+        $this->authorizeTicketAccess($ticket);
+        $this->authorizeTicketManage();
+        if (! $ticket->absenderUngeprueft() || $ticket->customer_id === null) {
+            return back()->with('error', 'Dieser Vorgang ist nicht als ungeprueft zugeordnet.');
+        }
+        $ticket->vonKundenaktLoesen(auth()->user());
+
+        return redirect()->route('admin.ticket', $ticket->id)
+            ->with('success', 'Von der Kundenakte geloest - der Vorgang steht jetzt als Gast-Anfrage.');
+    }
+
     public function note(Request $request, $id) {
         $request->validate(['body' => 'required|string|max:5000']);
         $ticket = Ticket::findOrFail($id);
@@ -569,7 +605,11 @@ class TicketController extends Controller
         $ticket->touch();
 
         $ticket->load('customer.user');
-        if ($ticket->customer) {
+        // Ungepruefter Absender (KI-033): die Antwort geht an die Adresse,
+        // die im Formular stand - wie bei einer Gast-Anfrage -, nie als
+        // Glocke oder Portal-Link an das Konto der Akte. Dort ist der
+        // Vorgang nicht sichtbar, bis ein Mitarbeiter ihn bestaetigt.
+        if ($ticket->customer && ! $ticket->absenderUngeprueft()) {
             // Portal-Glocke: "Neue Nachricht" fuer den Kunden (Review Punkt 10)
             if ($ticket->customer->user_id) {
                 Notify::push($ticket->customer->user_id, [

@@ -14,6 +14,10 @@ Nachpruefung vor dem Merge von PR #358: KI-041 (Portal-Reset), KI-042
 Aenderungen durch die Verwaltung) - alle MEDIUM, behoben (Teil E/F des
 Berichts). Neue Regel: Zugangslinks nur ueber `EinmalLink::parameter()`
 ausstellen, widerrufen nur ueber `User::zugangslinksWiderrufen()`.
+KI-033 (29.09.2026, behoben): Formular-Anfragen, die nur per E-Mail einer
+Akte zugeordnet werden, sind "Absender ungeprueft" und fuer den Kunden
+unsichtbar, bis ein Mitarbeiter bestaetigt. Neue Regel: kundenseitige
+Ticket-Abfragen immer mit `Ticket::kundenSichtbar()` (Waechter-Test).
 
 Stand davor: 23.09.2026. Baut auf SEC-1..5 (03.09.), Audit 15.09. und Nachlauf 16.09.
 auf (`docs/SICHERHEIT_SEC_1_BIS_5.md`, `docs/AUDIT_2026-09-15_BEHEBUNG.md`).

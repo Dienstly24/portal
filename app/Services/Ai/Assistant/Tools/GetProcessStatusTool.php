@@ -54,7 +54,7 @@ class GetProcessStatusTool implements AssistantTool
         }
 
         // Immer BEIDE Bedingungen: Nummer UND eigener Kunde.
-        $ticket = Ticket::where('customer_id', $context->customer->id)
+        $ticket = Ticket::where('customer_id', $context->customer->id)->kundenSichtbar()
             ->where('ticket_number', $number)
             ->with(['messages' => fn ($q) => $q->where('is_internal', false)->latest()->limit(1)])
             ->first();

@@ -157,7 +157,7 @@ class CreateTicketTool implements AssistantTool
      */
     private function findDuplicate(AssistantToolContext $context, string $subject, string $type): ?Ticket
     {
-        $candidates = Ticket::where('customer_id', $context->customer->id)
+        $candidates = Ticket::where('customer_id', $context->customer->id)->kundenSichtbar()
             ->active()
             ->latest()
             ->limit(20)

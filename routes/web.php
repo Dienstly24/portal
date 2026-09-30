@@ -450,6 +450,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/tickets/{id}/status', [TicketController::class, 'status'])->name('ticket.status');
     Route::post('/tickets/{id}/update', [TicketController::class, 'updateMeta'])->name('ticket.update');
     Route::post('/tickets/{id}/note', [TicketController::class, 'note'])->name('ticket.note');
+    // KI-033: Absender einer Formular-Anfrage bestaetigen bzw. von der Akte loesen.
+    Route::post('/tickets/{id}/absender-bestaetigen', [TicketController::class, 'absenderBestaetigen'])->name('ticket.absender_bestaetigen');
+    Route::post('/tickets/{id}/absender-loesen', [TicketController::class, 'absenderLoesen'])->name('ticket.absender_loesen');
     // Loeschen = Papierkorb (Soft Delete, admin/manager); endgueltig NUR admin
     // und nur aus dem Papierkorb (zweistufiger Schutz). Mitarbeiter/Support
     // loeschen NIE - analog zur Kundenloeschung.

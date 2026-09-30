@@ -212,7 +212,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
                     <div style="min-width:0;">
                         <div style="font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;">{{ $custName }}</div>
                         @if($t->customer?->customer_number)
-                        <div class="muted-2xs">Nr. {{ $t->customer->customer_number }}</div>
+                        <div class="muted-2xs">Nr. {{ $t->customer->customer_number }}@if($t->absenderUngeprueft()) · <span style="color:var(--status-warning);font-weight:600;">⚠️ Absender ungeprüft</span>@endif</div>
                         @elseif(!$t->customer)
                         <div class="muted-2xs">Gast-Anfrage</div>
                         @endif
