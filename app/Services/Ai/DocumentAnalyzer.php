@@ -257,12 +257,25 @@ class DocumentAnalyzer
      */
     private function acceptTemplateOrEscalate(array $parsed, string $binary, string $mime, string $text, bool $fromTextLayer, ?callable $reuse = null): array
     {
+        // Ein Parser kann selbst sagen, wofuer das Dokument hochgeladen wird
+        // ('pflichtangaben': mindestens EINES dieser Personenfelder). Die
+        // Ausweis-Rueckseite wird fuer die ANSCHRIFT hochgeladen, die
+        // Vorderseite des Personalausweises fuer den GEBURTSORT (Betreiber-
+        // Meldung 30.09.2026). Erkennt der Parser die Karte, liest aber genau
+        // das nicht (unscharfes Foto), gilt dieselbe Regel wie beim
+        // Vertragskern: ein Ergebnis ohne den Zweck ist nicht "fertig" -
+        // dann liest die KI das Bild. Das Feld ist ein Steuersignal und wird
+        // nicht gespeichert.
+        $pflicht = array_values(array_filter((array) ($parsed['pflichtangaben'] ?? []), 'is_string'));
+        unset($parsed['pflichtangaben']);
         $template = [...$parsed, 'source' => 'template'];
 
-        if (! in_array($parsed['type'] ?? '', self::CONTRACT_CORE_TYPES, true)) {
-            return $template;
-        }
-        if ($this->hasContractCore($parsed)) {
+        $kernDa = match (true) {
+            $pflicht !== [] => fn (array $r): bool => $this->hasAnyPersonField($r, $pflicht),
+            in_array($parsed['type'] ?? '', self::CONTRACT_CORE_TYPES, true) => fn (array $r): bool => $this->hasContractCore($r),
+            default => null,
+        };
+        if ($kernDa === null || $kernDa($parsed)) {
             return $template;
         }
         if (! $this->provider->isEnabled()) {
@@ -276,7 +289,7 @@ class DocumentAnalyzer
         // bezahlter Versuch nichts - das Vorlagen-Ergebnis bleibt. Nur eine
         // bewusste Neu-Analyse (fresh) bzw. Erst-Uploads zahlen.
         if ($reuse !== null && ($reused = $reuse()) !== null) {
-            return $this->hasContractCore($reused) ? $reused : $template;
+            return $kernDa($reused) ? $reused : $template;
         }
 
         // Textweg nur bei ZUVERLAESSIGEM Text: einer echten, nicht kaputt
@@ -298,7 +311,21 @@ class DocumentAnalyzer
         // Eine leere/duennere KI-Antwort (gueltiges JSON ohne Versicherer,
         // Typ 'sonstiges') wuerde sonst gelesene Felder wegwerfen und die
         // Kategorie verfaelschen - dann lieber das Vorlagen-Ergebnis behalten.
-        return ($ai !== null && $this->hasContractCore($ai)) ? $ai : $template;
+        return ($ai !== null && $kernDa($ai)) ? $ai : $template;
+    }
+
+    /**
+     * @param  list<string>  $felder
+     */
+    private function hasAnyPersonField(array $result, array $felder): bool
+    {
+        foreach ($felder as $feld) {
+            if (! blank($result['data']['person'][$feld] ?? null)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Traegt das Analyse-Ergebnis einen Vertragskern (Versicherer/Vertragsnummer)? */

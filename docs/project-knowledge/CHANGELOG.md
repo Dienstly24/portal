@@ -8,7 +8,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
-## 30.09.2026 - Entgeltabrechnung: Kunde und Arbeitgeber werden gelesen (KI-044)
+## 30.09.2026 - Entgeltabrechnung: Kunde und Arbeitgeber werden gelesen (KI-045)
 
 - **Task**: Betreiber-Meldung mit einer echten Abrechnung: "erkenne den Lohnzettel - uns interessieren Name und Anschrift des Kunden und der Name des Arbeitgebers; der steht ueblicherweise EINZEILIG ueber der Kundenanschrift".
 - **Files Changed**: `GehaltsabrechnungParser` (Titel-Liste, Empfaengerblock ueber Spaltenposition, Arbeitgeber, Geburtsdatum, IBAN, Netto); neu `app/Support/Adresszeile.php`; `ClaudeDocumentAiProvider` (Prompt-Absatz zur Entgeltabrechnung); `tests/Feature/Ai/GehaltsabrechnungParserTest.php` (+6 Faelle).
@@ -18,6 +18,18 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Potential Side Effects**: Die Typ-Erkennung greift bei sechs weiteren Ueberschriften - ein Dokument, das bisher "Sonstiges" war, kann jetzt `gehaltsabrechnung` werden. Der Arbeitgeber steht zusaetzlich als Feld (bisher nur Zusammenfassung); uebernommen wird er weiterhin nur per Haken im Review.
 - **Tests Performed**: Am ECHTEN Dokument gemessen (pdftotext -layout) - vorher `NULL`, nachher Name, Anschrift, Arbeitgeber + Anschrift, Geburtsdatum, IBAN, Brutto/Netto. Gegenprobe an der bisherigen Bauform: unveraendert vollstaendig, zusaetzlich Arbeitgeber-Felder. Mutationsprobe: 6 der 8 Parser-Tests scheitern ohne den Fix. Volle Suite 3188/3188 gruen, 0 uebersprungen; `pint --test` sauber; PHPStan Stufe 5: 0 Fehler.
 - **Result**: IMPLEMENTED.
+
+---
+
+## 30.09.2026 - KI-044: Rueckseite von Aufenthaltstitel und Personalausweis
+
+- **Task**: Betreiber-Meldung mit zwei Fotos: vom Personalausweis und vom Aufenthaltstitel werden vor allem Anschrift und Geburtsort gebraucht, erkannt wurde nur die Vorderseite.
+- **Files Changed**: neu `app/Services/Ai/Concerns/LiestDeutscheAusweiskarte.php`, `app/Services/Ai/TemplateParsers/PersonalausweisParser.php`; `AufenthaltstitelParser` (auf den Baustein umgestellt), `AppServiceProvider` (Registrierung vor dem Aufenthaltstitel), `DocumentAnalyzer::acceptTemplateOrEscalate` (`pflichtangaben`), `TesseractTextExtractor` (MRZ im Original nachlesen), `ClaudeDocumentAiProvider` (Prompt: Personalausweis); Test neu `AusweiskartenRueckseiteTest`.
+- **Database Changes**: keine.
+- **API Changes**: keine.
+- **Potential Side Effects**: Fotos des Personalausweises werden jetzt gratis gelesen (Typ `personalausweis`) statt ueber Heuristik/KI. Eine erkannte Ausweis-Rueckseite OHNE lesbare Anschrift bzw. eine Personalausweis-Vorderseite ohne Geburtsort geht jetzt zur KI (Kosten nur in diesem Fall; Duplikat-Kostendeckel gilt). Fuer kleine Kartenfotos, deren vergroesserte Fassung keine MRZ ergibt, laeuft Tesseract ein zweites Mal (nur Kartenfotos).
+- **Tests Performed**: neuer Test ohne Fix 12/14 rot; volle Suite gruen (3210 Tests); `composer stan`, `composer lint` gruen. Real: die eingesandten Fotos durch den echten `TesseractTextExtractor` + Parser-Kette - Personalausweis-Rueckseite liefert Name, Geburtsdatum, Staatsangehoerigkeit und Dokumentennummer (`LILMT...` per Pruefziffer zu `L1LMT...` repariert); die Anschrift ist auf diesem stark verkleinerten Foto unlesbar -> geht jetzt zur KI statt still zu fehlen. Das eAT-Foto (beide Seiten auf 568 px) ist fuer OCR zu klein; die Faelle sind mit dem am Foto gemessenen OCR-Rauschen als Test nachgebaut.
+- **Result**: KI-044 FIXED.
 
 ---
 

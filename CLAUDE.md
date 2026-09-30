@@ -1440,6 +1440,41 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   den Anschrift-Aufkleber, aber weder die umgekehrte Reihenfolge noch die
   Abgrenzung zur Behoerdenanschrift. Ein Waechter-Test prueft ausserdem die
   ECHTE Kette AUS DEM CONTAINER, nicht den Parser allein.
+  **PERSONALAUSWEIS + ROBUSTE MRZ (Betreiber-Meldung 30.09.2026, KI-044):**
+  "vom Ausweis brauchen wir Anschrift und Geburtsort - erkannt wird nur die
+  Vorderseite". An den eingesandten Fotos mit Tesseract gemessen: die
+  Rueckseite hing an einer FEHLERFREI gelesenen MRZ-Datenzeile, und die
+  kommt fast nie an ("<<<<" als "cccceee"/"«", Rauschen am Rand, "D<<" als
+  "0<<", "L1LMT" als "LILMT"). EINE Stelle liess die ganze Karte samt
+  Anschrift durchfallen. Fuer den PERSONALAUSWEIS gab es gar keinen Parser.
+  Jetzt: gemeinsamer Baustein `Concerns/LiestDeutscheAusweiskarte` fuer
+  BEIDE Karten (baugleiche Rueckseite, unterschieden an MRZ-Zeile 1 "ID"/
+  "AR", sonst an der Staatsangehoerigkeit - ein Personalausweis geht nur an
+  Deutsche, ein eAT nie) und neuer `PersonalausweisParser` (Vorderseite:
+  Name, Geburtsdatum, GEBURTSORT, Nummer; der Geburtsname ist KEIN Nachname,
+  er steht nur in der Zusammenfassung; Rueckseite: ANSCHRIFT + MRZ). Die
+  MRZ wird nach POSITION gelesen; zurueckgesetzt wird nur, was die Norm
+  eindeutig macht (keine Kleinbuchstaben in der MRZ; deutsche
+  Dokumentennummern ohne O/I), und jede Zahl zaehlt nur mit stimmiger
+  PRUEFZIFFER. Ist die Datenzeile verlesen, genuegt die Namenszeile plus
+  ZWEI Rueckseiten-Beschriftungen - dann ohne Geburtsdatum, statt mit einem
+  geratenen. Ist die Beschriftung "Anschrift" zerlegt ("Arschrifi"), wird
+  die einzige "PLZ Ort"-Zeile der Karte gelesen - NIE eine Zeile der
+  Behoerde (Datum/"Behoerde"-Beschriftung davor). "STRAGE" ist ein
+  verlesenes "STRAßE". Mehrteilige Strassen bei verschmolzener Spalte
+  ("172 cm Fockbeker Chaussee 90"): hoechstens zwei Woerter vor der
+  Strassen-Endung, Stopp an Merkmalswert/Behoerdenwort/Schreibweisenwechsel.
+  **ZWECK VOR "ERKANNT"**: ein Parser-Ergebnis darf `pflichtangaben`
+  tragen (Rueckseite: zip/street, Personalausweis-Vorderseite:
+  birth_place); fehlen alle, eskaliert `DocumentAnalyzer` wie beim
+  Vertragskern zur KI - eine erkannte Karte ohne die Anschrift, fuer die sie
+  hochgeladen wurde, ist nicht "fertig". Das Feld wird nie gespeichert.
+  **VERGROESSERN KANN DIE MRZ KOSTEN**: am echten Personalausweis-Foto las
+  Tesseract die MRZ in Originalgroesse, nach 1,5x/2x/3x aber GAR NICHT
+  (Block vor dem Hologramm als Bild eingestuft). `TesseractTextExtractor`
+  liest deshalb bei Kartenfotos ohne "<<" die MRZ-Zeilen im ORIGINAL nach
+  und haengt NUR diese an (sonst saehe das Bild nach zwei Karten aus).
+  Tests: `AusweiskartenRueckseiteTest`.
 - **Entgeltabrechnung: Kunde UND Arbeitgeber** (`GehaltsabrechnungParser`,
   Betreiber-Meldung 30.09.2026 mit einem echten Dokument). Gefragt waren Name
   und Anschrift des Kunden und der Name des Arbeitgebers - "der steht
