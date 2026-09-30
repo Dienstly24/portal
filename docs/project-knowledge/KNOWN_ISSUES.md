@@ -26,6 +26,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-042 | MEDIUM | security | 2FA-Einrichtung als zweiter Pruefweg ohne Sperre/Protokoll (Raten, Ersatzcodes ersetzt) | FIXED |
 | KI-043 | MEDIUM | security | Zugangslinks ueberlebten Adress-/Passwortaenderung durch die Verwaltung und erneutes Senden | FIXED |
 | KI-044 | MEDIUM | correctness | Ausweis-Rueckseiten (eAT + Personalausweis) nicht erkannt: Anschrift/Geburtsort fehlten | FIXED |
+| KI-045 | MEDIUM | correctness | Entgeltabrechnung "Verdienstabrechnung": weder Kunde noch Arbeitgeber gelesen | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
 | KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
@@ -71,6 +72,14 @@ und PHPStan) auf `main` gruen ist.
 ---
 
 ## Befunde im Detail
+
+### KI-045 - Entgeltabrechnung "Verdienstabrechnung" wurde gar nicht erkannt
+- **Category** functionality · **Severity** MEDIUM · **Status** FIXED
+- **Location** `GehaltsabrechnungParser`, neu `App\Support\Adresszeile`, `ClaudeDocumentAiProvider` (Prompt)
+- **Description** Vom Betreiber mit einer echten Abrechnung gemeldet. Vier Ursachen, jede fuer sich ausreichend, damit das Dokument als "Sonstiges / kein Kunde gefunden" im Eingang landet: (1) die Typ-Erkennung kannte nur vier Ueberschriften, das Dokument heisst "Verdienstabrechnung"; (2) der Empfaengerblock wurde ueber die Anrede "Herrn/Frau" gesucht, die dort fehlt; (3) gelesen wurde "die erste Zelle der Zeile" - im Empfaengerblock bleibt aber eine Zeile links LEER, dort steht die Merkmalsspalte ("Telefon") - dieselbe Klasse wie beim Gruenwelt-Briefkopf und der eAT-Rueckseite; (4) der Arbeitgeber wurde ueber eine Rechtsform (GmbH/AG/...) gesucht, viele Traeger fuehren keine. Nebenbefunde am selben Dokument: `Geburtsdatum: …` (Doppelpunkt statt Spaltenabstand), `Auf Konto (IBAN) : …` und "Gesetzliches Netto" statt "Gesamtnetto" fielen still weg.
+- **Fix (30.09.2026)**: Titel-Liste `GehaltsabrechnungParser::TITEL`; Empfaengerblock ueber die FORM seiner Zellen an der SPALTENPOSITION (eine Zelle "PLZ Ort", darueber Strasse und Name; Anrede optional, liefert nur noch das Geschlecht); Arbeitgeber aus der einzeiligen ABSENDERZEILE ueber dem Empfaenger (`Adresszeile::mitName`) bzw. aus dem Block darueber (`Adresszeile::anschrift`) - welcher Fall gilt, entscheidet das Umfeld, nicht die Zeichenkette. Der Arbeitgeber steht jetzt in `employer_name`/`employer_address` (im Review als Gruppe "Arbeitgeber" uebernehmbar) statt nur in der Zusammenfassung. Laesst sich die Strasse nicht sicher loesen, bleibt das Feld LEER. KI-Prompt kannte die Entgeltabrechnung gar nicht und beschreibt sie jetzt inkl. Absenderzeile. Tests `GehaltsabrechnungParserTest` (8 Faelle, 6 scheitern ohne den Fix).
+- **Bewusst offen**: die Namenstrennung "letztes Wort = Nachname" macht aus "Yusuf Al Rahman" den Vornamen "Yusuf Al" und den Nachnamen "Rahman". Die Regel steht in ueber zehn Parsern und in `CLAUDE.md`; sie zentral auf Namenspartikel (Al/El/Abu/Bin/van/von) umzustellen ist eine eigene Aufgabe.
+- **Discovered** 30.09.2026 (Betreiber-Meldung mit echtem Dokument)
 
 ### KI-001 - `can_see_all_customers` Default `true`
 - **Category** security · **Severity** LOW · **Status** OPEN (Betreiber-Entscheidung)

@@ -1475,6 +1475,61 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   liest deshalb bei Kartenfotos ohne "<<" die MRZ-Zeilen im ORIGINAL nach
   und haengt NUR diese an (sonst saehe das Bild nach zwei Karten aus).
   Tests: `AusweiskartenRueckseiteTest`.
+- **Entgeltabrechnung: Kunde UND Arbeitgeber** (`GehaltsabrechnungParser`,
+  Betreiber-Meldung 30.09.2026 mit einem echten Dokument). Gefragt waren Name
+  und Anschrift des Kunden und der Name des Arbeitgebers - "der steht
+  ueblicherweise EINZEILIG ueber der Kundenanschrift". Gemessen (pdftotext
+  -layout) las das System daraus VORHER **gar nichts**: der Parser gab `null`
+  zurueck, das Dokument landete als "Sonstiges / kein Kunde gefunden".
+  VIER URSACHEN, jede fuer sich ausreichend, und keine erzeugt eine
+  Fehlermeldung:
+  (1) **Die Ueberschrift.** Erkannt wurden vier Woerter
+  (Entgelt-/Gehalts-/Lohnabrechnung, Entgeltbescheinigung); das Dokument
+  heisst **"Verdienstabrechnung"**. Die Liste steht jetzt in
+  `GehaltsabrechnungParser::TITEL` (sechs weitere Schreibweisen, u.a.
+  "Bezuegemitteilung" aus dem oeffentlichen Dienst) - ein fehlendes Wort
+  laesst den Parser stumm bleiben, und genau das faellt niemandem auf.
+  (2) **Es gibt keine Anrede.** Der Empfaengerblock wurde ueber
+  "Herrn/Frau" gesucht; hier steht der Name nackt. Gefunden wird er jetzt
+  ueber die FORM seiner Zellen (eine Zelle "PLZ Ort", darueber Strasse und
+  Name); eine Anrede DARF stehen und liefert dann nur noch das Geschlecht.
+  (3) **Auf Spaltenabstaende ist kein Verlass** - dieselbe Lehre wie beim
+  Gruenwelt-Briefkopf und der eAT-Rueckseite, hier zum dritten Mal: im
+  Empfaengerblock bleibt eine Zeile LINKS leer, die erste Zelle dieser Zeile
+  gehoert zur Merkmalsspalte ("Telefon"). Wer "die erste Zelle der Zeile"
+  liest, bekommt sie als Strasse. Gelesen wird an der SPALTENPOSITION
+  (in Zeichen, nicht in Bytes - ein Umlaut weiter links verschoebe sie).
+  Und weil rechts derselbe Aufbau fuer den ARBEITGEBER steht, gewinnt die am
+  weitesten links stehende Spalte - sonst wird der Arbeitgeber zum Kunden.
+  (4) **Der Arbeitgeber hing an einer Rechtsform.** Gesucht wurde
+  "GmbH/AG/KG..."; viele Traeger und Einrichtungen fuehren keine
+  ("SHV KV OS Mitte Nord"). Jetzt liest `App\Support\Adresszeile` die
+  **Absenderzeile** ueber dem Empfaenger. ZWEI FAELLE, die man der Zeile
+  selbst NICHT ansieht: "Preetzer Str. 207 - 24147 Kiel" ist eine reine
+  Anschrift (der Name steht darueber), "SHV KV OS Mitte Nord Holstenkamp 7b
+  24537 Neumuenster" traegt den Namen mit. Welcher gilt, entscheidet das
+  UMFELD (steht darueber ein Name?), nicht ein Raten an der Zeichenkette.
+  Getrennt wird an der STRASSEN-ENDUNG (`Adresszeile::STRASSEN_ENDUNGEN`,
+  die EINE Liste dafuer); ein Trennzeichen schlaegt die Regel, wo eines da
+  ist. Laesst sich die Strasse nicht sicher loesen, bleibt das Feld LEER -
+  ein Firmenname mit einem Stueck Anschrift darin waere schlimmer (Lehre
+  "BRAUN OSTLANDSTRASSE").
+  Der Arbeitgeber steht jetzt in `employer_name`/`employer_address` (dieselben
+  Felder wie beim Arbeitsvertrag, im Review als Gruppe "Arbeitgeber"
+  uebernehmbar) statt nur in der Zusammenfassung.
+  NEBENBEFUNDE am selben Dokument, alle "still": `Geburtsdatum: 12.03.1990`
+  (Doppelpunkt und EIN Leerzeichen statt Spaltenabstand - das Datum traegt
+  sich selbst und haengt jetzt nicht mehr an seiner Beschriftung),
+  `Auf Konto (IBAN) : DE34 …` und das Netto unter "Gesetzliches Netto"
+  statt "Gesamtnetto". DIESELBE LUECKE IM KI-PROMPT wie bei der
+  Zaehlernummer und der eAT-Rueckseite: er kannte die Entgeltabrechnung
+  ueberhaupt nicht und beschreibt sie jetzt samt Absenderzeile; Steuer-ID
+  und Sozialversicherungsnummer werden ausdruecklich NICHT uebernommen.
+  BEWUSST NICHT GEAENDERT: die Namenstrennung "letztes Wort = Nachname"
+  macht aus "Yusuf Al Rahman" den Vornamen "Yusuf Al". Die Regel steht in
+  ueber zehn Parsern; sie auf Namenspartikel (Al/El/Abu/Bin/van/von)
+  umzustellen ist eine eigene Aufgabe mit eigenen Tests, kein Nebeneffekt.
+  Tests: `GehaltsabrechnungParserTest` (8 Faelle; 6 scheitern ohne den Fix).
 - **Zuordnungs-Vorschlaege im Dokumenten-Eingang** (Betreiber-Vorgabe
   29.07.2026): Beim Oeffnen von „Kunden zuordnen…" / „Neuen Kunden
   erstellen" laedt der Dialog SOFORT die naechstliegenden Kunden
