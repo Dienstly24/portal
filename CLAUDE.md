@@ -1474,6 +1474,15 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   (Block vor dem Hologramm als Bild eingestuft). `TesseractTextExtractor`
   liest deshalb bei Kartenfotos ohne "<<" die MRZ-Zeilen im ORIGINAL nach
   und haengt NUR diese an (sonst saehe das Bild nach zwei Karten aus).
+  Das Nachlesen und die Anschrift-Beschriftung pruefen WORTANFAENGE
+  ("ANSCHRI", "ADRES", "GR..SSE", "AUTHOR"): am zweiten Foto kam die
+  vergroesserte Fassung als "Anschrif/Addrenn", "Heighr/Tanlike" an, und
+  mit ganzen Woertern loeste nichts aus. RANDRAUSCHEN: "|" am Zeilenende
+  wird abgeschnitten, eine einzelne Ziffer hinter dem ORT ebenso ("24768
+  Rendsburg 4" - ein Ortsname endet nie auf eine Zahl; hinter der Strasse
+  bleibt sie, dort ist sie die Hausnummer). Klebt die Groesse vorn an der
+  Strasse, obwohl die PLZ-Zeile sauber ist ('"72 cm Fockbeker Chaussee
+  90'), greift dieselbe Endungs-Lesung wie bei verschmolzenen Spalten.
   Tests: `AusweiskartenRueckseiteTest`.
 - **Entgeltabrechnung: Kunde UND Arbeitgeber** (`GehaltsabrechnungParser`,
   Betreiber-Meldung 30.09.2026 mit einem echten Dokument). Gefragt waren Name

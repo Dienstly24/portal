@@ -96,6 +96,10 @@ class TesseractTextExtractor implements TextExtractorInterface
      * NICHTS davon aus. Ohne MRZ fehlt der Rueckseite aber genau das, woran
      * sie erkannt wird.
      *
+     * Die Stichwoerter sind WORTANFAENGE: am zweiten Foto (30.09.2026) kam
+     * die vergroesserte Fassung als "Anschrif/Addrenn", "Heighr/Tanlike"
+     * an - mit ganzen Woertern loeste das Nachlesen nie aus.
+     *
      * Bewusst eng: nur wenn das Bild vergroessert wurde, der Text nach einer
      * Karten-Rueckseite aussieht und KEINE "<<"-Zeile enthaelt. Dann kostet
      * es einen zweiten Tesseract-Lauf, und uebernommen werden NUR die
@@ -106,7 +110,7 @@ class TesseractTextExtractor implements TextExtractorInterface
     {
         $original = $dir.'/input.'.(self::IMAGE_EXTENSIONS[$mime] ?? '');
         if ($gelesen === $original || ! is_file($original) || str_contains($text, '<<')
-            || ! preg_match('/ANSCHRIFT|AUGENFARBE|EYE COLOU|HEIGHT|TAILLE|GEBURTSORT|BEH(?:[OÖ]|OE)RDE|AUTHORITY|B(?:Ü|UE)RGERMEISTER|ANMERKUNG|K[UÜ]NSTLERNAME|AUFENTHALTSTITEL|PERSONALAUSWEIS/iu', $text)) {
+            || ! preg_match('/ANSCHRI|ADRES|ADDRE|AUGENFARB|EYE COLOU|GR(?:[OÖ]|OE)(?:SS|ß)E|HEIGHT|TAILLE|GEBURTSORT|BEH(?:[OÖ]|OE)RDE|AUTHOR|B(?:Ü|UE)RGERMEIST|ANMERKUNG|K[UÜ]NSTLER|AUFENTHALT|PERSONALAUSW/iu', $text)) {
             return $text;
         }
 
