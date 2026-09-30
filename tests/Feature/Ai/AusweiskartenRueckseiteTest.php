@@ -121,6 +121,38 @@ class AusweiskartenRueckseiteTest extends TestCase
         $this->assertStringContainsString('01.08.2031', $r['summary']);
     }
 
+    /**
+     * Zweites Foto vom 30.09.2026, so wie der echte Weg es liefert: die
+     * vergroesserte Fassung mit zerlegter Beschriftung ("Anschrif/Addrenn"),
+     * einer Rausch-Ziffer hinter dem Ort, der Groesse vorn an der Strasse
+     * und einem "|" am Ende - dahinter die im Original nachgelesene MRZ.
+     */
+    public function test_zweites_foto_mit_zerlegter_beschriftung_und_randrauschen(): void
+    {
+        $ocr = implode("\n", [
+            '7 A el ne Anschrif/Addrenn/Adrense',
+            'BRAUN',
+            'Größe/Heighr/Tanlike',
+            '51147 Koeln 1',
+            '"72 cm Muehlenbeker Chaussee 21 |',
+            'Oatum/Date/Dmte 37 ;',
+            '13.04.23 ya ae',
+            'IDD<<T22000I29 3<<<<<<ccceccccce',
+            '8308126<31080110<<2108<<<ccce4',
+            'MUSTERMANN<<ERIKA<<<cccceccccee',
+        ]);
+
+        $r = (new PersonalausweisParser)->parse($ocr);
+
+        $this->assertNotNull($r);
+        $p = $r['data']['person'];
+        $this->assertSame('51147', $p['zip']);
+        $this->assertSame('Koeln', $p['city']);
+        $this->assertSame('Muehlenbeker Chaussee', $p['street']);
+        $this->assertSame('21', $p['house_number']);
+        $this->assertSame('1983-08-12', $p['birth_date']);
+    }
+
     public function test_behoerde_wird_nie_die_anschrift_der_person(): void
     {
         $r = (new PersonalausweisParser)->parse($this->personalausweisRueckseite());

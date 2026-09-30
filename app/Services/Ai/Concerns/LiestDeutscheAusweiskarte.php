@@ -120,7 +120,7 @@ trait LiestDeutscheAusweiskarte
     {
         $t = $this->text();
         $gruppen = [
-            '/ANSCHRIFT|ADRESSE|ADDRESS/iu',
+            '/ANSCHRI|ADRES|ADDRE/iu',
             '/AUGENFARBE|EYE COLOU?R/iu',
             '/GR(?:[OÖ]|OE)(?:SS|ß)E|HEIGHT/iu',
             '/ANMERKUNG|REMARKS/iu',
@@ -533,7 +533,9 @@ trait LiestDeutscheAusweiskarte
      */
     private function backAddress(): array
     {
-        $idx = $this->lineIndex('/ANSCHRIFT|ADRESSE|ADDRESS/i');
+        // Nur der WORTANFANG: am Foto vom 30.09.2026 kam die Beschriftung
+        // als "Anschrif/Addrenn/Adrense" an - kein Teil davon ganz.
+        $idx = $this->lineIndex('/ANSCHRI|ADRES|ADDRE/i');
         $zeilenTexte = $idx !== null ? $this->nextNonEmpty($idx, 4) : $this->zeilenUmDiePlz();
         if ($zeilenTexte === []) {
             return [];
@@ -627,6 +629,10 @@ trait LiestDeutscheAusweiskarte
     /** @return list<string> */
     private function kandidaten(string $zeile): array
     {
+        // Rauschen am Zeilenende (Kartenkante, Hologramm) ab: "Fockbeker
+        // Chaussee 90 |". Nur Satz-/Strichzeichen - eine Ziffer kann eine
+        // Hausnummer sein und bleibt stehen.
+        $zeile = (string) preg_replace('/(?:\h+[|!\/\\,;:.\'"\x{2018}\x{2019}\x{201c}\x{201d}\]\[()}{]+)+\h*$/u', '', $zeile);
         $ganz = trim((string) preg_replace('/\h+/u', ' ', $zeile));
         $out = [];
         foreach (preg_split('/\h{2,}/u', trim($zeile)) ?: [] as $spalte) {
@@ -643,6 +649,9 @@ trait LiestDeutscheAusweiskarte
     /** @return array{0:string,1:string}|null */
     private function plzUndOrt(string $zeile): ?array
     {
+        // Ein Ortsname endet nie auf eine Zahl: eine einzelne Ziffer dahinter
+        // ist Rauschen ("24768 Rendsburg 4" am Foto vom 30.09.2026).
+        $zeile = (string) preg_replace('/(\p{L})\h+\d{1,2}$/u', '$1', trim($zeile));
         if (! preg_match('/(?<![\d.\-])(\d{5}) (\p{Lu}[\p{L}.\-]+(?:[ \-]\p{L}[\p{L}.\-]+)*)$/u', $zeile, $m)) {
             return null;
         }
@@ -658,17 +667,18 @@ trait LiestDeutscheAusweiskarte
     {
         $nummer = '(\d{1,4} ?[a-zA-Z]?)$';
 
-        if ($verschmolzen) {
-            if (preg_match('/((?:[\p{L}.\-]+ ){0,2})(\p{L}*(?:'.self::STRASSEN_ENDUNGEN.'))\.?,? '.$nummer.'/iu', $zeile, $m)) {
-                return [$this->strassenName($this->strassenVorsatz($m[1], $m[2]).$m[2]), trim($m[3])];
-            }
-
-            return null;
-        }
-
-        if (preg_match('/^(\p{Lu}[\p{L}.\-]*(?:[ \-]\p{L}[\p{L}.\-]*)*),? '.$nummer.'/u', $zeile, $m)
+        if (! $verschmolzen
+            && preg_match('/^(\p{Lu}[\p{L}.\-]*(?:[ \-]\p{L}[\p{L}.\-]*)*),? '.$nummer.'/u', $zeile, $m)
             && ! $this->istBeschriftung($m[1])) {
             return [$this->strassenName($m[1]), trim($m[2])];
+        }
+
+        // Verschmolzene Spalte ODER Rauschen vorn in der Zeile ('"72 cm
+        // Fockbeker Chaussee 90' - die Groesse klebt auch dann vorn, wenn
+        // die PLZ-Zeile sauber ist, gemessen am Foto vom 30.09.2026): dann
+        // traegt nur das Wort mit der Strassen-Endung.
+        if (preg_match('/((?:[\p{L}.\-]+ ){0,2})(\p{L}*(?:'.self::STRASSEN_ENDUNGEN.'))\.?,? '.$nummer.'/iu', $zeile, $m)) {
+            return [$this->strassenName($this->strassenVorsatz($m[1], $m[2]).$m[2]), trim($m[3])];
         }
 
         return null;
