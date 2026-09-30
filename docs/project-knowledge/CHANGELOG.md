@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 30.09.2026 - Entgeltabrechnung: Kunde und Arbeitgeber werden gelesen (KI-044)
+
+- **Task**: Betreiber-Meldung mit einer echten Abrechnung: "erkenne den Lohnzettel - uns interessieren Name und Anschrift des Kunden und der Name des Arbeitgebers; der steht ueblicherweise EINZEILIG ueber der Kundenanschrift".
+- **Files Changed**: `GehaltsabrechnungParser` (Titel-Liste, Empfaengerblock ueber Spaltenposition, Arbeitgeber, Geburtsdatum, IBAN, Netto); neu `app/Support/Adresszeile.php`; `ClaudeDocumentAiProvider` (Prompt-Absatz zur Entgeltabrechnung); `tests/Feature/Ai/GehaltsabrechnungParserTest.php` (+6 Faelle).
+- **Components Affected**: Dokumenten-Eingang (Typ-Erkennung, Kunden-Zuordnung, Review-Modal Gruppe "Arbeitgeber"), KI-Eskalation.
+- **Database Changes**: keine. `customers.employer_name`/`employer_address` bestehen seit dem Arbeitsvertrag-Parser.
+- **API Changes**: keine.
+- **Potential Side Effects**: Die Typ-Erkennung greift bei sechs weiteren Ueberschriften - ein Dokument, das bisher "Sonstiges" war, kann jetzt `gehaltsabrechnung` werden. Der Arbeitgeber steht zusaetzlich als Feld (bisher nur Zusammenfassung); uebernommen wird er weiterhin nur per Haken im Review.
+- **Tests Performed**: Am ECHTEN Dokument gemessen (pdftotext -layout) - vorher `NULL`, nachher Name, Anschrift, Arbeitgeber + Anschrift, Geburtsdatum, IBAN, Brutto/Netto. Gegenprobe an der bisherigen Bauform: unveraendert vollstaendig, zusaetzlich Arbeitgeber-Felder. Mutationsprobe: 6 der 8 Parser-Tests scheitern ohne den Fix. Volle Suite 3188/3188 gruen, 0 uebersprungen; `pint --test` sauber; PHPStan Stufe 5: 0 Fehler.
+- **Result**: IMPLEMENTED.
+
+---
+
 ## 29.09.2026 - KI-033: Formular-Anfragen mit ungeprueftem Absender
 
 - **Task**: Betreiber-Entscheidung zur Designfrage KI-033: Zuordnung per E-Mail bleiben lassen, aber als "Absender nicht verifiziert" markieren und dem Kunden erst nach Bestaetigung zeigen.
