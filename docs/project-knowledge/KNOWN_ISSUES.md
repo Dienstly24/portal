@@ -29,7 +29,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-045 | MEDIUM | correctness | Entgeltabrechnung "Verdienstabrechnung": weder Kunde noch Arbeitgeber gelesen | FIXED |
 | KI-046 | MEDIUM | correctness | Erstwagen einer Zweitwagenregelung zweckentfremdet in der Vorversicherung, Vertraege nicht verknuepft | FIXED |
 | KI-047 | MEDIUM | correctness | `Contract`: der Provisions-Listener auf `deleting` beendete die Listener-Kette (jeder spaetere deleting-Listener lief nie) | FIXED |
-| KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | OPEN |
+| KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
 | KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
@@ -91,10 +91,11 @@ und PHPStan) auf `main` gruen ist.
 - **Discovered** 01.10.2026
 
 ### KI-048 - Dashboard-Test scheitert am Monatsersten
-- **Category** testing · **Severity** LOW · **Status** OPEN
+- **Category** testing · **Severity** LOW · **Status** FIXED
 - **Location** `tests/Feature/ReportsDashboardTest.php` (`test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung`)
 - **Description** Der Test legt den Ablauf auf `now()->startOfMonth()->addDays(2)`. Am 1. eines Monats liegt dieses Datum in der Zukunft und zaehlt (noch) nicht als Verlaengerung - der Test ist an diesem Tag rot, unabhaengig vom Code. Auf `main` am 01.10.2026 nachgestellt (Basislauf vor jeder Aenderung).
-- **Discovered** 01.10.2026 · nicht in diesem PR behoben (fremdes Thema)
+- **Fix (01.10.2026, PR #365)**: der Test blockierte am 1. Oktober die Pflicht-Checks des PRs (beide Testjobs rot, Deploy uebersprungen) und wurde deshalb hier mitbehoben. Der Code war richtig ("Dieser Monat" = Monatserster bis heute), falsch war das Testdatum. Jetzt steht die Uhr fest auf dem Monatsersten (`travelTo`), der Ablauf ist der Monatserste selbst. Gegenprobe: mit dem alten Datum ist der Test nun an JEDEM Tag rot, nicht nur am Ersten.
+- **Discovered** 01.10.2026
 
 ### KI-045 - Entgeltabrechnung "Verdienstabrechnung" wurde gar nicht erkannt
 - **Category** functionality · **Severity** MEDIUM · **Status** FIXED

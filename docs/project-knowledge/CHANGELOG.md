@@ -17,6 +17,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **API Changes**: neue JSON-Route `GET admin/sf-bezug/{customerId}/suche` (`admin.contract.sf_reference_search`, Portfolio-Pruefung, throttle 240/min).
 - **Potential Side Effects**: Ein als Fremdvertrag angelegter Erstwagen steht im Kundenbestand (Abschnitt Fremdvertraege, Herkunft "ungeprueft") - nicht im Eigenbestand, keine Courtage. KI-047: `deleting`-Listener am Vertrag laufen jetzt alle (bisher nur der erste).
 - **Tests Performed**: neu `SfBezugsfahrzeugTest` (19), `KfzSfRegelnTest` (6); volle Suite, `composer stan`, `composer lint` - Ergebnis im PR. Basislauf auf `main` vor der Aenderung: 1 datumsabhaengiger Fehlschlag (KI-048), 5 uebersprungen (OCR-Werkzeuge fehlen in dieser Umgebung).
+- **Nachtrag (CI)**: Beide Testjobs der CI waren rot - einzig durch den datumsabhaengigen `ReportsDashboardTest` (KI-048, am Monatsersten immer rot, auch auf `main`). Im selben PR behoben (Uhr im Test fest auf den Monatsersten), damit der PR mergebar wird.
 - **Result**: IMPLEMENTED (Phase 1 von 3; Phase 2/3 geplant, Regeln in KFZ_RULES.md).
 
 ---
