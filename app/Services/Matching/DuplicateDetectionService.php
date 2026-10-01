@@ -211,10 +211,18 @@ class DuplicateDetectionService
         $candidates = $query->limit(200)->get();
         // Bereits markierte Beziehungen inkl. Art (Ehepaar/Familie/...), damit
         // die Kundenakte eine verwandte Person aussagekraeftig kennzeichnen kann.
-        $relTypes = CustomerRelationship::query()
-            ->get(['customer_a_id', 'customer_b_id', 'type'])
-            ->mapWithKeys(fn ($r) => [$r->customer_a_id.'|'.$r->customer_b_id => $r->type])
-            ->all();
+        // Ein Paar kann mehrere Arten tragen (z. B. Geschwister + Haushalt):
+        // angezeigt wird die aussagekraeftigste - eine Familienart vor allen
+        // anderen, "Kein Duplikat" zuletzt.
+        $relTypes = [];
+        foreach (CustomerRelationship::query()->get(['customer_a_id', 'customer_b_id', 'type']) as $r) {
+            $key = $r->customer_a_id.'|'.$r->customer_b_id;
+            $bisher = $relTypes[$key] ?? null;
+            if ($bisher === null || $bisher === 'not_duplicate'
+                || (CustomerRelationship::isFamilyType($r->type) && ! CustomerRelationship::isFamilyType($bisher))) {
+                $relTypes[$key] = $r->type;
+            }
+        }
 
         $out = [];
         foreach ($candidates as $cand) {

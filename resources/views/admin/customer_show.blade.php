@@ -303,7 +303,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
          und fuehrt direkt in sein eigenes Kundenprofil. --}}
     @if($familie['all']->isNotEmpty())
     <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:12px;">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Verknüpfte Kunden</div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Familie (verknüpfte Kundenakten)</div>
         @foreach($familie['all'] as $famRel)
         @php $famMitglied = $famRel->relatedCustomer; $famAlter = $famMitglied->age(); @endphp
         <div style="display:flex;align-items:center;gap:10px;padding:7px 0;{{ !$loop->first ? 'border-top:1px solid var(--line);' : '' }}">
@@ -353,6 +353,8 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     @endforeach
 </div>
 @endif
+
+@include('admin.partials.linked_customers', ['customer' => $customer, 'verknuepft' => $verknuepft])
 
 {{-- Kundenakte: Kranken-/Renten-/Steuerdaten (sensibel, verschlüsselt gespeichert) --}}
 <div class="card">

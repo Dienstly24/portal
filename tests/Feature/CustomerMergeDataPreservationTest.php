@@ -133,7 +133,7 @@ class CustomerMergeDataPreservationTest extends TestCase
         // Familien-Verknuepfung haengt am Duplikat, dazu ein
         // "kein Duplikat"-Marker zwischen den beiden Merge-Partnern.
         [$a, $b] = CustomerRelationship::pairKey((string) $duplicate->id, (string) $child->id);
-        CustomerRelationship::create(['customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'family']);
+        CustomerRelationship::create(['customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'sonstige_verwandte']);
         [$a, $b] = CustomerRelationship::pairKey((string) $primary->id, (string) $duplicate->id);
         CustomerRelationship::create(['customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'not_duplicate']);
 
@@ -144,7 +144,7 @@ class CustomerMergeDataPreservationTest extends TestCase
         $this->assertTrue(
             DB::table('customer_relationships')
                 ->where('customer_a_id', $a)->where('customer_b_id', $b)
-                ->where('type', 'family')->exists(),
+                ->where('type', 'sonstige_verwandte')->exists(),
             'Familien-Verknuepfung muss auf den Hauptkunden umgehaengt werden'
         );
 
@@ -166,9 +166,9 @@ class CustomerMergeDataPreservationTest extends TestCase
         // BEIDE Akten sind bereits mit demselben Kind verknuepft - nach dem
         // Merge darf das Paar nur einmal existieren (UNIQUE a+b).
         [$a, $b] = CustomerRelationship::pairKey((string) $primary->id, (string) $child->id);
-        CustomerRelationship::create(['customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'family']);
+        CustomerRelationship::create(['customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'sonstige_verwandte']);
         [$a, $b] = CustomerRelationship::pairKey((string) $duplicate->id, (string) $child->id);
-        CustomerRelationship::create(['customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'family']);
+        CustomerRelationship::create(['customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'sonstige_verwandte']);
 
         app(CustomerMergeService::class)->merge($primary, $duplicate);
 
@@ -230,7 +230,7 @@ class CustomerMergeDataPreservationTest extends TestCase
         $duplicate = $this->makeCustomer('Nour Haddad', 'nour@example.com');
         $child = $this->makeCustomer('Kind Haddad', 'kindhaddad@example.com');
         [$a, $b] = CustomerRelationship::pairKey((string) $duplicate->id, (string) $child->id);
-        CustomerRelationship::create(['customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'family']);
+        CustomerRelationship::create(['customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'sonstige_verwandte']);
 
         $preview = app(CustomerMergeService::class)->preview($duplicate);
 

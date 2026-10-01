@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 29.09.2026 aus `php artisan route:list --json` (513 Routen).
+Generiert am 01.10.2026 aus `php artisan route:list --json` (515 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -76,6 +76,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | PUT | `admin/customers/notes/{id}/done` | admin.customer.note.done | auth role:staff |
 | GET | `admin/customers/relationships` | admin.customers.relationships | auth role:staff |
 | DELETE | `admin/customers/relationships/{id}` | admin.customers.relationships.delete | auth role:staff |
+| POST | `admin/customers/relationships/{id}/bestaetigen` | admin.customers.relationships.confirm | auth role:staff |
 | POST | `admin/customers/relationships/{id}/type` | admin.customers.relationships.type | auth role:staff |
 | POST | `admin/customers/{customerId}/document-requests` | admin.document_requests.store | auth role:staff |
 | GET | `admin/customers/{id}` | admin.customer | auth role:staff |
@@ -100,6 +101,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/customers/{id}/portal/toggle` | admin.customer.portal.toggle | auth role:staff role:admin |
 | GET | `admin/customers/{id}/timeline` | admin.customer.timeline | auth role:staff |
 | POST | `admin/customers/{id}/vehicles` | admin.customer.vehicle.store | auth role:staff |
+| POST | `admin/customers/{id}/verknuepfte-kunden` | admin.customer.relationships.store | auth role:staff |
 | GET | `admin/document-requests` | admin.document_requests | auth role:staff |
 | POST | `admin/document-requests/{id}/approve` | admin.document_requests.approve | auth role:staff |
 | POST | `admin/document-requests/{id}/reject` | admin.document_requests.reject | auth role:staff |

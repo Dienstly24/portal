@@ -9,7 +9,6 @@ use App\Models\ContractHistory;
 use App\Models\ContractInternetDetail;
 use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
-use App\Models\CustomerRelationship;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\ContractHistoryService;
@@ -18,6 +17,7 @@ use App\Services\Energy\MeterReadingService;
 use App\Services\Matching\CustomerMatchingService;
 use App\Services\Matching\MatchResult;
 use App\Services\Notifications\NotificationService;
+use App\Services\Relationships\CustomerRelationshipService;
 use App\Services\VehicleOverlapGuard;
 use App\Support\Facades\Notify;
 use App\Support\GermanPhone;
@@ -215,10 +215,10 @@ class DocumentIntakeService
                     continue;
                 }
 
-                [$x, $y] = CustomerRelationship::pairKey((string) $a->id, (string) $b->id);
-                CustomerRelationship::updateOrCreate(
-                    ['customer_a_id' => $x, 'customer_b_id' => $y],
-                    ['type' => 'family', 'note' => $note.' (gleicher Familienname)', 'created_by' => $byUserId]
+                // Vermutete Verwandtschaft OHNE Familienrolle - die Rolle
+                // vergibt ein Mensch (CustomerRelationshipService).
+                app(CustomerRelationshipService::class)->markRelatedUnconfirmed(
+                    (string) $a->id, (string) $b->id, $note.' (gleicher Familienname)', $byUserId
                 );
                 $count++;
             }
@@ -671,7 +671,7 @@ class DocumentIntakeService
      * Kind <-> Eltern verknuepfen (Geburtsurkunde): fuer jeden im Dokument
      * erkannten Elternteil (relation mutter/vater) den bestehenden Eltern-Kunden
      * suchen und - nur bei belastbarem Namens-Treffer (Score >= 70) - eine
-     * Familien-Beziehung (CustomerRelationship, type 'family') zwischen Kind und
+     * Beziehung (sonstige_verwandte, OHNE Familienrolle) zwischen Kind und
      * Elternteil anlegen. Idempotent (Paar in fester Reihenfolge). So ist das
      * neugeborene Kind sofort mit seinen Eltern verknuepft, ohne dass der
      * Mitarbeiter die Beziehung von Hand pflegen muss.
@@ -759,16 +759,12 @@ class DocumentIntakeService
                 continue;
             }
 
-            [$a, $b] = CustomerRelationship::pairKey((string) $child->id, (string) $adult->id);
-            CustomerRelationship::updateOrCreate(
-                ['customer_a_id' => $a, 'customer_b_id' => $b],
-                [
-                    'type' => 'family',
-                    'note' => 'Aus Meldebestätigung: gleicher Haushalt ('.$street
-                        .($houseNo !== null && $houseNo !== '' ? ' '.$houseNo : '')
-                        .', '.$zip.') und Familienname - Kind',
-                    'created_by' => $byUserId,
-                ]
+            app(CustomerRelationshipService::class)->markRelatedUnconfirmed(
+                (string) $child->id, (string) $adult->id,
+                'Aus Meldebestätigung: gleicher Haushalt ('.$street
+                    .($houseNo !== null && $houseNo !== '' ? ' '.$houseNo : '')
+                    .', '.$zip.') und Familienname - Kind',
+                $byUserId
             );
             $linked[] = $adultName;
 
@@ -858,14 +854,10 @@ class DocumentIntakeService
                 continue;
             }
 
-            [$a, $b] = CustomerRelationship::pairKey((string) $child->id, (string) $parentCustomer->id);
-            CustomerRelationship::updateOrCreate(
-                ['customer_a_id' => $a, 'customer_b_id' => $b],
-                [
-                    'type' => 'family',
-                    'note' => 'Aus Geburtsurkunde: '.($relation === 'mutter' ? 'Mutter' : 'Vater').' des Kindes',
-                    'created_by' => $byUserId,
-                ]
+            app(CustomerRelationshipService::class)->markRelatedUnconfirmed(
+                (string) $child->id, (string) $parentCustomer->id,
+                'Aus Geburtsurkunde: '.($relation === 'mutter' ? 'Mutter' : 'Vater').' des Kindes',
+                $byUserId
             );
             $linked[] = $full;
 

@@ -2046,10 +2046,11 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Vertraege, Vorgaenge und Historie. Sie werden deshalb weder geloescht noch
   zusammengefuehrt, sondern zu einer Familie verbunden.
   **EIGENE TABELLE `customer_family_relations`** (`CustomerFamilyRelation`),
-  bewusst NEBEN `customer_relationships`: letztere beantwortet genau EINE
-  Frage ("kein Duplikat") und speichert das Paar SORTIERT (a<b), hat also
-  keine Richtung - "Zania ist Tochter von Jehad" passt da nicht hinein, ohne
-  die Bedeutung der Tabelle zu verbiegen. Lesart einer Zeile:
+  bewusst NEBEN `customer_relationships`: letztere speichert das Paar
+  SORTIERT (a<b) und beantwortet "kein Duplikat, sondern ..." - seit
+  01.10.2026 mit Art und (nur bei Elternteil-Kind) Richtung, aber ohne
+  Alter, Abhaengigkeit und Gueltigkeit. Beide laufen GLEICH (siehe Abschnitt
+  "Kundenbeziehungen: Beziehung festlegen"). Lesart einer Zeile:
   "`related_customer_id` ist `relationship_type` von `customer_id`". Jede
   Beziehung existiert als PAAR (Hin- UND Rueckrichtung, Gegenrolle ueber
   `inverseRole()` nach dem GESCHLECHT der Bezugsperson, unbekannt ->
@@ -4111,6 +4112,90 @@ Merge von PR #358, Teil E/F).
   `SuchlistenFremddatenTest`, `SprachumschalterWeiterleitungTest`,
   `RegistrierungDoppelklickTest`, `ActivityLogMetaKodierungTest`,
   `SvgSanitizerExterneVerweiseTest`, `WhatsAppChannelTest` (Zwei-Nummern-Fall).
+
+## Kundenbeziehungen: "Beziehung festlegen" statt nur "Ehepaar" (Betreiber-Auftrag 01.10.2026)
+
+- **Anlass**: in der Dubletten-Pruefung gab es nur "Ehepaar" und "Kein
+  Duplikat". Vater und Sohn mit gleicher E-Mail, Geschwister, Nachbarn, ein
+  Haushalt - all das ging als "Kein Duplikat" oder faelschlich als "Ehepaar"
+  verloren. Jetzt: Knopf **"Beziehung festlegen"** mit Ehepaar, Elternteil –
+  Kind, Geschwister, Sonstige Verwandte, Gleicher Haushalt, Nachbarn,
+  Sonstiges (Freitext Pflicht). "Kein Duplikat" und "Pruefen &
+  zusammenfuehren" sind unveraendert.
+- **KEINE neue Tabelle**: `customer_relationships` war schon die Stelle, an
+  der "kein Duplikat" steht, und JEDE Zeile schliesst das Paar aus der
+  Dubletten-Pruefung aus (`dismissedKeySet`). Erweitert um
+  `parent_customer_id` und UNIQUE (a, b, type) statt (a, b): ein Paar kann
+  Geschwister UND gleicher Haushalt sein. Symmetrische Arten stehen genau
+  einmal (Paar sortiert a<b), die EINZIGE gerichtete Art ist
+  `elternteil_kind` - die Richtung steht ausdruecklich in
+  `parent_customer_id`, das gleich a ODER b sein muss.
+- **Die Richtungsregel ist KEIN CHECK-Constraint**: MySQL verbietet CHECK
+  auf Spalten mit Fremdschluessel-Aktion (a/b kaskadieren, Fehler 3823).
+  Durchgesetzt im `saving`-Hook des Modells (jeder Eloquent-Weg), im
+  Service und im `CustomerMergeService` (DB::table-Weg - er haengt
+  `parent_customer_id` beim Zusammenfuehren mit um).
+- **EINE Schreibstelle je Tabelle, Gleichlauf in EINER Transaktion**:
+  `CustomerRelationshipService` schreibt `customer_relationships`,
+  `FamilyRelationService` schreibt `customer_family_relations`, und jeder
+  ruft den anderen fuer die Gegenseite (`link(..., syncRelationship: false)`
+  verhindert die Schleife). Familienarten (`FAMILY_TYPES`: ehepartner,
+  elternteil_kind, geschwister, sonstige_verwandte) haben je Paar
+  hoechstens EINE Zeile - die Familientabelle fuehrt eine Rolle je Paar;
+  Haushalt/Nachbar/Sonstiges stehen daneben.
+  Abbildung auf die Rollen (nie geraten): Kind = sohn/tochter nach dem
+  Geschlecht des KINDES, unbekannt/divers -> `kind`; Elternteil =
+  vater/mutter nach dem Geschlecht des ELTERNTEILS, sonst `elternteil`;
+  sonstige_verwandte <-> `sonstiges`. Entfernen in "Verknuepfte Kunden"
+  nimmt die Rolle mit (das Paar kann wieder als Dublette erscheinen);
+  Loesen in der Registerkarte "Familie" laesst "Kein Duplikat" stehen
+  (wie bisher).
+- **ZWEI ZUSTAENDE OHNE ROLLE, beide gewollt**: (1) ALTBESTAND - die
+  frueheren "Ehepaar"-Markierungen sind ungenau (es war die einzige
+  Auswahl fuer "verwandt"); sie wurden NUR zu `ehepartner` umbenannt, ohne
+  Rolle, gelten als UNBESTAETIGT (abgeleitet, keine Spalte:
+  `whereUnconfirmed`) und stehen auf "Verwandte Kunden" unter dem Filter
+  **"Ehepaar (unbestaetigt)"**. "Bestaetigen" oder jede Bearbeitung legt die
+  Rolle an. (2) DOKUMENTEN-EINGANG (gleicher Familienname,
+  Meldebestaetigung, Geburtsurkunde) schreibt `sonstige_verwandte` OHNE
+  Rolle (`markRelatedUnconfirmed`) - die Rolle vergibt ein Mensch; eine
+  vorhandene Familienart wird nie ueberschrieben.
+- **"Kein Duplikat" verallgemeinert nichts mehr**: frueher machte es per
+  `updateOrCreate` aus einem Ehepaar wieder "verwandt". Jetzt nur, wenn das
+  Paar noch gar keine Beziehung hat.
+- **Elternteil-Vorschlag** (`suggestParent`): der Aeltere, nur wenn BEIDE
+  Geburtsdaten da sind und mind. 16 Jahre dazwischen liegen; sonst keiner.
+  Die Sammelaktion kennt `elternteil_kind` nicht (Richtung ist je Paar zu
+  waehlen) - auch serverseitig abgelehnt.
+- **Oberflaeche**: ein Baustein `admin/partials/beziehung_festlegen`
+  (`<details>`, kein Framework, Verhalten in
+  `beziehung_festlegen_script` mit Nonce) fuer Dubletten-Pruefung und
+  "Verwandte Kunden"; in der Kundenakte die Karte "Verknuepfte Kunden"
+  (`admin/partials/linked_customers`, Anlegen per Sofort-Suche
+  `admin.customers.search`, Portfolio-Scope fuer BEIDE Seiten). Die
+  Unterueberschrift der Familienkarte heisst jetzt "Familie (verknuepfte
+  Kundenakten)", sonst stuende "Verknuepfte Kunden" zweimal auf der Seite.
+- **Nebenbefund (KI-046)**: auf der Dubletten-Seite war der Handler-Block
+  seit SEC-4 syntaktisch kaputt (ein „…"-Anfuehrungszeichen hatte zwei
+  JS-Zeichenketten abgeschnitten). Ein SyntaxError verwirft das GANZE
+  Skript - die Sammel-Knoepfe "Ehepaar"/"Kein Duplikat" taten nichts, die
+  Einzel-Rueckfragen fehlten. Jetzt `data-confirm` bzw. intakte Handler.
+- **Migration** `2026_10_01_100000_beziehungsarten_an_customer_relationships`:
+  spouse->ehepartner (OHNE Rolle), household->gleicher_haushalt, family->
+  aus den Familienrollen abgeleitet (elternteil_kind MIT Richtung,
+  geschwister ...), sonst sonstige_verwandte; Konflikt (spouse, aber Rolle
+  Vater) bleibt Ehepaar und wird gezaehlt. Zaehlung je Art vorher/nachher,
+  ergaenzte Zeilen und Konflikte im Log und auf der Konsole. **VOR dem
+  Produktionslauf: Sicherung (`scripts/backup.sh`) und Probelauf auf einer
+  Kopie (`scripts/restore.sh --pruefen` in eine Wegwerf-Datenbank, dort
+  migrieren, Zaehlung pruefen).** `down()` prueft VOLLSTAENDIG vorher und
+  bricht ab statt Daten zu verlieren (mehrere Arten je Paar, Nachbar/
+  Sonstiges, Richtung ohne Rolle). Der Datenteil ist als
+  `konvertiereDaten()`/`pruefeRueckbau()` oeffentlich - der Test prueft ihn
+  ohne DDL (DDL beendet auf MySQL die Test-Transaktion).
+- Tests: `KundenbeziehungenTest`; nachgezogen `CustomerRelationshipTest`,
+  `CustomerFamilyRelationTest`, `MeldebestaetigungHaushaltTest`,
+  `GeburtsurkundeVerknuepfungTest`, `CustomerMergeDataPreservationTest`.
 
 ## Offene Themen / wartet auf den Betreiber
 
