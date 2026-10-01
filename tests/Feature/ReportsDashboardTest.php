@@ -217,7 +217,10 @@ class ReportsDashboardTest extends TestCase
     public function test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung(): void
     {
         $kunde = $this->kunde();
-        $imZeitraum = now()->startOfMonth()->addDays(2)->toDateString();
+        // Monatserster: liegt an JEDEM Tag im Zeitraum "Diesen Monat" (bis heute).
+        // Frueher "+2 Tage" - am 1./2. eines Monats lag das in der Zukunft und der
+        // Test scheiterte nur an diesen Tagen.
+        $imZeitraum = now()->startOfMonth()->toDateString();
         $this->vertrag($kunde, ['end_date' => $imZeitraum]);
         $this->vertrag($kunde, ['end_date' => $imZeitraum, 'cancellation_date' => $imZeitraum, 'status' => 'cancelled']);
 

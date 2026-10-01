@@ -26,6 +26,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-042 | MEDIUM | security | 2FA-Einrichtung als zweiter Pruefweg ohne Sperre/Protokoll (Raten, Ersatzcodes ersetzt) | FIXED |
 | KI-043 | MEDIUM | security | Zugangslinks ueberlebten Adress-/Passwortaenderung durch die Verwaltung und erneutes Senden | FIXED |
 | KI-044 | MEDIUM | correctness | Ausweis-Rueckseiten (eAT + Personalausweis) nicht erkannt: Anschrift/Geburtsort fehlten | FIXED |
+| KI-047 | LOW | test | ReportsDashboardTest: Verlaengerungs-Fall scheiterte am 1./2. jedes Monats (Datum in der Zukunft) | FIXED |
 | KI-046 | MEDIUM | correctness | Dubletten-Seite: Handler-Skript seit SEC-4 syntaktisch kaputt (Sammel-Knoepfe ohne Wirkung, Rueckfragen fehlten) | FIXED |
 | KI-045 | MEDIUM | correctness | Entgeltabrechnung "Verdienstabrechnung": weder Kunde noch Arbeitgeber gelesen | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
@@ -73,6 +74,13 @@ und PHPStan) auf `main` gruen ist.
 ---
 
 ## Befunde im Detail
+
+### KI-047 - Datumsabhaengiger Test blockierte am Monatsanfang jeden PR
+- **Category** test · **Severity** LOW · **Status** FIXED
+- **Location** `tests/Feature/ReportsDashboardTest.php` (`test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung`)
+- **Description** Der Test setzte den Ablauf auf "Monatsanfang + 2 Tage". Am 1. und 2. eines Monats liegt das nach HEUTE und damit ausserhalb des Zeitraums "Diesen Monat" (bis heute) - der Test wurde rot, und weil CI rot war, galt JEDER offene PR an diesen Tagen als nicht mergebar ("unstable"), unabhaengig von seinem Inhalt. Der Code (`DashboardAnalyticsService`) war richtig.
+- **Fix (01.10.2026)**: Ablauf auf den Monatsersten - liegt an jedem Tag im Zeitraum.
+- **Discovered** 01.10.2026 (CI von PR #366, auch auf dem Basis-Commit 8d16b84 rot)
 
 ### KI-046 - Dubletten-Seite: Handler-Skript syntaktisch kaputt
 - **Category** functionality · **Severity** MEDIUM · **Status** FIXED
