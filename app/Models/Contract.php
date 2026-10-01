@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Kfz\SfReferenceNotifier;
 use App\Services\Provision\ContractProvisionService;
 use App\Services\Vermittler\VermittlerReference;
 use App\Support\ContractCommissionStatus;
@@ -856,8 +857,29 @@ class Contract extends Model
         });
         // deleting (nicht deleted): die Provisionen referenzieren den Vertrag
         // hier noch - nach dem Loeschen setzt die DB contract_id auf null.
-        static::deleting(fn ($m) => app(ContractProvisionService::class)
-            ->createStornoForContract($m, 'Vertrag geloescht'));
+        // Bewusst als Block OHNE Rueckgabewert: ein "deleting"-Listener, der
+        // etwas anderes als null liefert (hier die Anzahl der Stornos),
+        // beendet in Laravel die Kette - jeder spaeter registrierte
+        // deleting-Listener lief dadurch nie (gefunden 01.10.2026).
+        static::deleting(function ($m): void {
+            app(ContractProvisionService::class)->createStornoForContract($m, 'Vertrag geloescht');
+        });
+
+        // SF-Bezug (01.10.2026): ist dieser Vertrag Erstwagen einer
+        // Sondereinstufung, erfaehrt der Betreuer des Zweitwagens von einer
+        // Kuendigung / einem Ende / dem Loeschen. Abfrage nur, wenn sich
+        // Status oder Kuendigung tatsaechlich geaendert haben.
+        static::updated(function ($m) {
+            if ($m->type !== 'kfz' || ! ($m->wasChanged('status') || $m->wasChanged('cancellation_date'))) return;
+            if (($m->cancellation_date || ! $m->isCurrentlyActive()) && $m->sfDependents()->exists()) {
+                app(SfReferenceNotifier::class)->contractInactive($m);
+            }
+        });
+        static::deleting(function ($m) {
+            if ($m->type === 'kfz' && $m->sfDependents()->exists()) {
+                app(SfReferenceNotifier::class)->contractDeleted($m);
+            }
+        });
     }
     /** Vorgaenger, den dieser Vertrag ersetzt (z. B. der gekuendigte Fremdvertrag). */
     public function predecessor(): BelongsTo { return $this->belongsTo(self::class, 'replaces_contract_id'); }
@@ -872,6 +894,14 @@ class Contract extends Model
 
     /** @return HasOne<ContractVehicleDetail, $this> */
     public function vehicleDetail(): HasOne { return $this->hasOne(ContractVehicleDetail::class); }
+
+    /**
+     * SF-Bezuege, die auf DIESEN Vertrag als Erstwagen zeigen (Zweitwagen-/
+     * Drittwagen-/Familien-Einstufungen anderer Vertraege).
+     *
+     * @return HasMany<VehicleSfReference, $this>
+     */
+    public function sfDependents(): HasMany { return $this->hasMany(VehicleSfReference::class, 'reference_contract_id'); }
     /** @return HasOne<ContractEnergyDetail, $this> */
     public function energyDetail(): HasOne { return $this->hasOne(ContractEnergyDetail::class); }
     /** @return HasOne<ContractInternetDetail, $this> */

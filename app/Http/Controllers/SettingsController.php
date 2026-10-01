@@ -9,6 +9,7 @@ use App\Models\SystemSetting;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
 use App\Services\ChangeRequest\ChangeProofPolicy;
+use App\Services\Kfz\SfReferenceValidator;
 use App\Services\Messaging\ChannelRoutingService;
 
 class SettingsController extends Controller
@@ -54,6 +55,9 @@ class SettingsController extends Controller
             // AUS - eine Aenderung, die bestehende Unterhaltungen anders
             // fuehrt, schaltet sich nicht selbst scharf.
             ChannelRoutingService::SETTING_AUTO_JOIN => SystemSetting::get(ChannelRoutingService::SETTING_AUTO_JOIN, '0'),
+            // KFZ (01.10.2026): Bezugsfahrzeug bei Zweit-/Drittwagen nur auf
+            // Wunsch verpflichtend - Voreinstellung AUS (nur Warnung).
+            SfReferenceValidator::SETTING_REQUIRED => SystemSetting::get(SfReferenceValidator::SETTING_REQUIRED, '0'),
         ];
 
         // KI-Kundenassistent (Spezifikation Abschnitt 30): Betriebsschalter
@@ -102,6 +106,15 @@ class SettingsController extends Controller
         // Marker bleibt der bisherige Wert stehen.
         if ($request->has('security_form')) {
             SystemSetting::set('two_factor_required', $request->boolean('two_factor_required') ? '1' : '0');
+        }
+
+        // KFZ: eigener Marker - ein anderes Formular darf die Bezugspflicht
+        // weder ein- noch ausschalten.
+        if ($request->has('kfz_form')) {
+            SystemSetting::set(
+                SfReferenceValidator::SETTING_REQUIRED,
+                $request->boolean(SfReferenceValidator::SETTING_REQUIRED) ? '1' : '0'
+            );
         }
 
         // Postfach: eigener Marker aus demselben Grund - ein anderes

@@ -427,6 +427,11 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/vertragsherkunft/pruefen', [AdminContractController::class, 'originReview'])->name('contracts.origin_review');
     Route::post('/vertragsherkunft/pruefen', [AdminContractController::class, 'originReviewStore'])->name('contracts.origin_review.store');
 
+    // SF-Bezugsfahrzeug (01.10.2026): Sofort-Suche nach dem Erstwagen unter
+    // den KFZ-Vertraegen des Kunden und seiner verknuepften Familie. Eigener
+    // Pfad /sf-bezug/... aus demselben Grund wie /vertragsherkunft/.
+    Route::get('/sf-bezug/{customerId}/suche', [AdminContractController::class, 'sfReferenceSearch'])
+        ->middleware('throttle:240,1')->name('contract.sf_reference_search');
     Route::get('/contracts/create/{customerId}', [AdminContractController::class, 'contractCreate'])->name('contract.create');
     Route::get('/contracts/{id}/edit', [AdminContractController::class, 'contractEdit'])->name('contract.edit');
     Route::put('/contracts/{id}', [AdminContractController::class, 'contractUpdate'])->name('contract.update');
