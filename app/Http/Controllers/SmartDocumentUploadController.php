@@ -555,6 +555,10 @@ class SmartDocumentUploadController extends Controller
         $created = [];
         $skipped = [];
         $customers = [];
+        // Person UND Kunde zusammen fuehren: die Reihenfolge allein genuegt
+        // nicht, weil Personen ohne Namen uebersprungen werden - danach waere
+        // die Rolle aus dem Formular dem falschen Kunden zugeordnet.
+        $paare = [];
         foreach ($people as $person) {
             $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
             if ($name === '') {
@@ -581,12 +585,14 @@ class SmartDocumentUploadController extends Controller
                 ];
                 if ($e->matchResult->customer !== null) {
                     $customers[] = $e->matchResult->customer;
+                    $paare[] = ['person' => $person, 'customer' => $e->matchResult->customer];
                 }
                 continue;
             }
 
             $this->intake->applyPersonToCustomer($customer, $person, auth()->id());
             $customers[] = $customer;
+            $paare[] = ['person' => $person, 'customer' => $customer];
             $created[] = [
                 'name' => $name,
                 'customer_id' => $customer->id,
@@ -607,7 +613,14 @@ class SmartDocumentUploadController extends Controller
         if ($request->filled('visibility')) {
             $document->update(['visibility' => $request->visibility, 'updated_by' => auth()->id()]);
         }
-        $linked = $this->intake->linkSameFamilyName($customers, 'Gemeinsame Gesundheitskarten-Aufnahme', auth()->id());
+        // Der Antrag auf Familienversicherung BENENNT die Verwandtschaft
+        // (Ehe-/Lebenspartner, Kind) - dann wird sie gelesen und nicht aus dem
+        // Nachnamen geraten. Der Vordruck rechnet ausdruecklich mit
+        // abweichenden Familiennamen, der Namensabgleich fand hier nichts.
+        $rollenLinks = $this->intake->linkFamilienversicherungAngehoerige($document, $paare, auth()->id());
+        $linked = $rollenLinks !== []
+            ? count($rollenLinks)
+            : $this->intake->linkSameFamilyName($customers, 'Gemeinsame Gesundheitskarten-Aufnahme', auth()->id());
 
         $this->markDecision($document, 'accepted');
 

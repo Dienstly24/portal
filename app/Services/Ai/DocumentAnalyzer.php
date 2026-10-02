@@ -320,6 +320,18 @@ class DocumentAnalyzer
     private function hasAnyPersonField(array $result, array $felder): bool
     {
         foreach ($felder as $feld) {
+            // Sonderfall 'personen': bei manchen Dokumenten ist der Zweck
+            // nicht ein Feld der Hauptperson, sondern die WEITEREN Personen.
+            // Ein Antrag auf Familienversicherung wird fuer die Angehoerigen
+            // hochgeladen - ein Ergebnis mit dem Mitglied allein ist nicht
+            // "fertig", auch wenn die Erkennung formal gegriffen hat.
+            if ($feld === 'personen') {
+                if (($result['data']['personen'] ?? []) !== []) {
+                    return true;
+                }
+
+                continue;
+            }
             if (! blank($result['data']['person'][$feld] ?? null)) {
                 return true;
             }

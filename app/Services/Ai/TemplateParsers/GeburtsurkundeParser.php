@@ -23,9 +23,40 @@ class GeburtsurkundeParser implements DocumentTemplateParser
     /** @var list<string> */
     private array $lines = [];
 
+    /**
+     * Belege dafuer, dass das Dokument eine Urkunde IST und sie nicht bloss
+     * nennt. Jede deutsche Geburtsurkunde traegt das ausstellende Standesamt
+     * und seinen Eintrag; eines dieser Worte genuegt.
+     *
+     * @var list<string>
+     */
+    private const URKUNDEN_BELEGE = [
+        'Standesamt', 'Standesbeamt', 'Urkundsperson', 'Registernummer',
+        'Beurkundung', 'Geburtenregister', 'Personenstandsregister',
+    ];
+
     public function parse(string $text): ?array
     {
         if (mb_stripos($text, 'Geburtsurkunde') === false) {
+            return null;
+        }
+
+        // DAS WORT ALLEIN GENUEGT NICHT (Lehre 02.10.2026, gemessen am
+        // KKH-Vordruck 0765): dort steht im Kleingedruckten, mit welchen
+        // Urkunden ein abweichender Familienname nachzuweisen ist - "(z. B.
+        // Eheurkunde, Lebenspartnerschaftsurkunde, Geburtsurkunde)". Dieser
+        // Parser beanspruchte daraufhin den ganzen Antrag und gab den VORNAMEN
+        // DER EHEFRAU als Kind aus; Mitglied, Partnerin und beide Kinder waren
+        // verloren. Ein Hinweis auf eine Urkunde ist keine Urkunde - verlangt
+        // wird deshalb ein Beleg aus dem Standesamts-Vordruck selbst.
+        $belegt = false;
+        foreach (self::URKUNDEN_BELEGE as $beleg) {
+            if (mb_stripos($text, $beleg) !== false) {
+                $belegt = true;
+                break;
+            }
+        }
+        if (! $belegt) {
             return null;
         }
 

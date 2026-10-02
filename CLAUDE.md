@@ -1613,6 +1613,89 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   ("‚Deichweg 8") wird abgestreift: ohne das faellt die ganze Anschrift
   durchs Raster.
   Tests: `MitgliedsbescheinigungParserTest` (13 Faelle).
+- **Antrag auf Familienversicherung: Mitglied, Partner und Kinder in EINEM
+  Dokument** (`FamilienversicherungParser`, zweite Bauform, Betreiber-Auftrag
+  02.10.2026 mit zwei echten PDF - ausgefuellter Antrag + Blankoformular).
+  Gewuenscht war: "beim Hochladen soll das System den Antragsteller, die
+  Ehefrau und die Kinder erkennen und sie automatisch unter der Akte des
+  Antragstellers anlegen."
+  **GEMESSEN war der Ausgangszustand schlimmer als "wird nicht erkannt"**
+  (pdftotext -layout an der echten Textebene): die Kette lieferte
+  `geburtsurkunde` und darin als "Kind" den VORNAMEN DER EHEFRAU - Mitglied,
+  Partnerin und beide Kinder waren verloren, und das Dokument waere als
+  Urkunde in eine falsche Akte gelaufen. ZWEI Ursachen, beide still:
+  (1) **Der Parser existierte, kannte aber nur die andere Bauform.** Er
+  verlangte "Name des Mitglieds" und "Ehegatte"; der KKH-Vordruck 0765
+  schreibt "Name, Vorname (Mitglied)" und "Ehe-/Lebenspartner". Dieselbe
+  Ursachenklasse wie die fehlende Ueberschrift "Verdienstabrechnung" - ein
+  fehlendes Wort laesst den Parser STUMM bleiben, und genau das faellt
+  niemandem auf.
+  (2) **Der `GeburtsurkundeParser` loeste am KLEINGEDRUCKTEN aus** (KI-054):
+  der Vordruck nennt dort die Urkunden, mit denen ein abweichender
+  Familienname nachzuweisen ist ("z. B. Eheurkunde,
+  Lebenspartnerschaftsurkunde, Geburtsurkunde"). Sein Gatter war EIN Wort,
+  und weil der Composite den ERSTEN Treffer nimmt, blockierte er alles
+  dahinter. Ein Hinweis auf eine Urkunde ist keine Urkunde: verlangt wird
+  jetzt zusaetzlich ein Beleg aus dem Standesamts-Vordruck selbst
+  (Standesamt, Standesbeamt, Urkundsperson, Registernummer, Beurkundung,
+  Geburten-/Personenstandsregister). Diese Klasse Fehlalarm ist kein
+  Einzelfall dieses Formulars - ein Nachweis ueber
+  Personenstandsverhaeltnisse steht im Kleingedruckten vieler
+  Kassen- und Versicherungsformulare.
+  **ZWEI BAUFORMEN, EIN PARSER** (ARCH-8): derselbe Dokumenttyp, dieselbe
+  Ausgabeform, derselbe Folge-Workflow - nur ein anderes Layout desselben
+  Formulars. Ein 45. Parser haette dieselbe Aussage an zwei Stellen gefuehrt.
+  **DIE ROLLE KOMMT AUS DER KOPFZEILE, NIE AUS DEM NACHNAMEN** - das ist der
+  Kern. Der Vordruck rechnet ausdruecklich mit abweichenden Familiennamen (er
+  verlangt dafuer eine Urkunde), und im gemessenen Fall hiessen Mitglied,
+  Partnerin und Kinder DREIMAL VERSCHIEDEN. `linkSameFamilyName` haette damit
+  NICHTS verknuepft, obwohl das Formular die Verwandtschaft ausdruecklich
+  benennt. Gelesen wird die dreispaltige Tabelle
+  "Ehe-/Lebenspartner | Kind | Kind"; `DocumentIntakeService::
+  linkFamilienversicherungAngehoerige()` haengt die Angehoerigen mit ihrer
+  Rolle unter das MITGLIED (Partner -> `ehepartner`, Kind -> `sohn`/`tochter`
+  nach angekreuztem Geschlecht, ohne eindeutiges Kreuz `kind`). Das Dokument
+  haengt an der Akte des Mitglieds.
+  **DIE GEGENROLLE BLEIBT NEUTRAL** (`elternteil`): der Vordruck nennt das
+  Geschlecht der ANGEHOERIGEN (Kaestchen w/m/x/d), nicht das des Mitglieds.
+  "Vater" waere geraten - und eine falsche Rolle in der Akte faellt kaum auf.
+  **STIEFKIND, ENKEL, PFLEGEKIND SIND KEINE KINDER DES MITGLIEDS**: dort
+  entsteht nur die Beziehung "verwandt" OHNE Rolle, die ein Mensch nachtraegt.
+  Als `kind` gilt nur ein angekreuztes "leibl. Kind".
+  **GESCHLECHT NUR BEI GENAU EINEM KREUZ**: die Kaestchen-Zeile kommt aus der
+  Textebene ZERLEGT an (das Kreuz ist ein eigenes Textobjekt und steht
+  unmittelbar vor seinem Buchstaben; gemessen ersetzt es das leere Kaestchen
+  an genau dieser Stelle). Zwei Kreuze in einer Spalte sind ein Lesefehler,
+  keine Angabe - dann bleibt das Feld leer, denn ein geratenes Geschlecht
+  erzeugt eine falsche Anrede im Schreiben. "x" (unbestimmt) und "d" (divers)
+  haben in der Kundenakte keinen Wert.
+  **SEITE 2 HAT EIN EIGENES SPALTENRASTER** (gemessen 47/79/117 gegen
+  54/94/137 auf Seite 1). Dort stehen Geburtsort, Geburtsland und
+  Staatsangehoerigkeit, und zwar UEBER ihrer Beschriftung. Mit dem Raster der
+  ersten Seite fielen alle drei Werte auf dieselbe Spalte und nur der erste
+  ueberlebte; zugeordnet wird dort deshalb der REIHENFOLGE nach - und nur,
+  wenn die Anzahl der Werte genau zur Anzahl der Spalten passt. Ein
+  Geburtsort am falschen Kind ist schlimmer als ein leeres Feld.
+  Weiter gelesen: Mitglied (Reihenfolge NACHNAME, VORNAME laut Beschriftung;
+  Anschrift steht OHNE Trennzeichen in EINER Zelle, Anker ist die PLZ),
+  Geburtsdatum, Familienstand, KVNR, die Kasse des Vordrucks, "beantragt ab"
+  als Vertragsbeginn (frueheste Spalte) und die bisherige Kasse der
+  Angehoerigen. Stufe `antrag` - ein Antrag traegt KEINE Vertragsnummer.
+  Dieselbe Luecke im KI-PROMPT wie bei der Zaehlernummer, der eAT-Rueckseite,
+  der Entgeltabrechnung und der Mitgliedsbescheinigung: er kannte diese
+  Briefart nicht und beschreibt sie jetzt samt Spaltentabelle und der Regel
+  "Rolle aus der Kopfzeile".
+  **ZWECK VOR "ERKANNT"**: das Parser-Ergebnis traegt `pflichtangaben =>
+  ['personen']` - hat die Spaltentabelle KEINE Person ergeben (ein Scan, der
+  das Raster verliert), eskaliert `DocumentAnalyzer` zur KI, genau wie bei
+  der Ausweis-Rueckseite ohne Anschrift. Ein Antrag auf
+  Familienversicherung ohne die Angehoerigen ist nicht "fertig". Dafuer
+  versteht `hasAnyPersonField` jetzt den Pseudo-Namen `personen`: bei diesem
+  Dokument ist der Zweck nicht ein Feld der Hauptperson, sondern die
+  WEITEREN Personen. Das Feld wird nie gespeichert.
+  Tests: `FamilienversicherungFaveParserTest` (20 Faelle),
+  `FamilienversicherungAnlageTest` (7 Faelle); ein Waechter-Test fuehrt die
+  ECHTE Kette AUS DEM CONTAINER, nicht den Parser allein.
 - **Zuordnungs-Vorschlaege im Dokumenten-Eingang** (Betreiber-Vorgabe
   29.07.2026): Beim Oeffnen von „Kunden zuordnen…" / „Neuen Kunden
   erstellen" laedt der Dialog SOFORT die naechstliegenden Kunden
