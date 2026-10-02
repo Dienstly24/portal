@@ -118,12 +118,6 @@ class CustomerFamilyRelation extends Model
         };
     }
 
-    /** Passende Beziehungsart fuer die Dubletten-Ausnahme (customer_relationships). */
-    public static function duplicateExemptionType(string $role): string
-    {
-        return $role === 'ehepartner' ? 'spouse' : 'family';
-    }
-
     /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {

@@ -24,9 +24,11 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Status **ACTIVE** · Issues KI-001
 
 ### F-002 Dubletten, Zusammenfuehren, Beziehungen
-- C `Admin\DuplicateController`; S `DuplicateDetectionService`, `CustomerMergeService`, `CustomerMatchingService`; T `customer_relationships`
-- R Merge/Sammel-Merge admin/manager
-- Tests `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`
+- C `Admin\DuplicateController`; S `DuplicateDetectionService`, `CustomerMergeService`, `CustomerMatchingService`, `Relationships\CustomerRelationshipService`; T `customer_relationships` (Art + `parent_customer_id`, UNIQUE a/b/type)
+- V `admin/customer_duplicates`, `admin/customer_relationships` (Filter "Ehepaar (unbestaetigt)"), `admin/partials/beziehung_festlegen`, `admin/partials/linked_customers` (Kundenakte "Verknuepfte Kunden")
+- R Merge/Sammel-Merge admin/manager; Beziehungen alle Personalrollen im Portfolio
+- Gleichlauf mit F-003 (Familienrollen) in einer Transaktion, seit 01.10.2026
+- Tests `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
 - Status **ACTIVE**
 
 ### F-003 Familie und Kundenbeziehungen (inkl. Uebergang mit 15)

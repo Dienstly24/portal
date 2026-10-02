@@ -83,7 +83,7 @@ class MeldebestaetigungHaushaltTest extends TestCase
             [$a, $b] = CustomerRelationship::pairKey((string) $kind->id, (string) $adult->id);
             $rel = CustomerRelationship::where('customer_a_id', $a)->where('customer_b_id', $b)->first();
             $this->assertNotNull($rel, 'Beziehung zu '.$adult->user->name.' fehlt');
-            $this->assertSame('family', $rel->type);
+            $this->assertSame('sonstige_verwandte', $rel->type);
             // Die Begruendung nennt die Belege, behauptet aber keine Elternrolle.
             $this->assertStringContainsString('Meldebestätigung', $rel->note);
             $this->assertStringContainsString('Gartenstraße 105', $rel->note);

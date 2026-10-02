@@ -370,6 +370,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/customers/relationships', [AdminDuplicateController::class, 'relationships'])->name('customers.relationships');
     Route::post('/customers/relationships/{id}/type', [AdminDuplicateController::class, 'relationshipSetType'])->name('customers.relationships.type');
     Route::delete('/customers/relationships/{id}', [AdminDuplicateController::class, 'relationshipDelete'])->name('customers.relationships.delete');
+    Route::post('/customers/relationships/{id}/bestaetigen', [AdminDuplicateController::class, 'relationshipConfirm'])->name('customers.relationships.confirm');
+    Route::post('/customers/{id}/verknuepfte-kunden', [AdminDuplicateController::class, 'relationshipStore'])->name('customer.relationships.store');
     Route::put('/customers/notes/{id}/done', [AdminController::class, 'noteMarkDone'])->name('customer.note.done');
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');

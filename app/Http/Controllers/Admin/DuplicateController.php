@@ -9,6 +9,7 @@ use App\Models\CustomerRelationship;
 use App\Services\Matching\CustomerMatchingService;
 use App\Services\Matching\CustomerMergeService;
 use App\Services\Matching\DuplicateDetectionService;
+use App\Services\Relationships\CustomerRelationshipService;
 use Illuminate\Http\Request;
 
 /**
@@ -87,34 +88,39 @@ class DuplicateController extends Controller
      * Dubletten-Liste und erscheint stattdessen als Beziehung unter
      * "Verwandte Kunden". Reversibel (Beziehung entfernen).
      */
-    public function dismissDuplicate(Request $request) {
+    public function dismissDuplicate(Request $request, CustomerRelationshipService $relations) {
         $data = $request->validate([
             'customer_a' => 'required|string',
             'customer_b' => 'required|string|different:customer_a',
-            'note' => 'nullable|string|max:255',
+            'note' => 'nullable|string|max:255|required_if:type,sonstiges',
             'type' => 'nullable|in:'.implode(',', CustomerRelationship::TYPES),
+            'parent_customer_id' => 'nullable|string|required_if:type,elternteil_kind',
+        ], [
+            'note.required_if' => 'Bitte beschreiben Sie die Beziehung bei „Sonstiges".',
+            'parent_customer_id.required_if' => 'Bitte wählen Sie, wer der Elternteil ist.',
         ]);
         $this->authorizeCustomerAccess($data['customer_a']);
         $this->authorizeCustomerAccess($data['customer_b']);
-        Customer::findOrFail($data['customer_a']);
-        Customer::findOrFail($data['customer_b']);
+        $a = Customer::findOrFail($data['customer_a']);
+        $b = Customer::findOrFail($data['customer_b']);
 
         $type = $data['type'] ?? 'not_duplicate';
-        [$a, $b] = CustomerRelationship::pairKey($data['customer_a'], $data['customer_b']);
-        // updateOrCreate: ein bereits als "verwandt" markiertes Paar kann so
-        // nachtraeglich praeziser als Ehepaar/Familie gekennzeichnet werden.
-        CustomerRelationship::updateOrCreate(
-            ['customer_a_id' => $a, 'customer_b_id' => $b],
-            ['type' => $type, 'note' => $data['note'] ?? null, 'created_by' => auth()->id()]
-        );
-        app(DuplicateDetectionService::class)->forgetCount();
+        if ($type === 'not_duplicate') {
+            // Hat das Paar schon eine Beziehung, bleibt sie unveraendert -
+            // "Kein Duplikat" wuerde sie sonst verallgemeinern.
+            $relations->markNotDuplicate((string) $a->id, (string) $b->id, auth()->id());
 
-        $label = CustomerRelationship::typeLabel($type);
-        $msg = $type === 'not_duplicate'
-            ? 'Als „kein Duplikat" markiert – das Paar erscheint jetzt unter „Verwandte Kunden".'
-            : 'Als „'.$label.'" verknüpft – beide Kunden bleiben mit allen Verträgen erhalten und erscheinen unter „Verwandte Kunden".';
+            return back()->with('success', 'Als „kein Duplikat" markiert – das Paar erscheint jetzt unter „Verwandte Kunden".');
+        }
 
-        return back()->with('success', $msg);
+        try {
+            $relations->set($a, $b, $type, $data['parent_customer_id'] ?? null, $data['note'] ?? null, auth()->id());
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Als „'.CustomerRelationship::typeLabel($type)
+            .'" verknüpft – beide Kunden bleiben mit allen Verträgen erhalten und erscheinen unter „Verwandte Kunden".');
     }
 
     /**
@@ -122,11 +128,16 @@ class DuplicateController extends Controller
      * markieren (schnelles Aufraeumen, z. B. alle Adress-Treffer eines
      * Haushalts). Reihenfolge-unabhaengig, dedupliziert.
      */
-    public function dismissBulk(Request $request) {
+    public function dismissBulk(Request $request, CustomerRelationshipService $relations) {
         $data = $request->validate([
             'pairs' => 'required|array|min:1|max:500',
             'pairs.*' => 'string',
-            'type' => 'nullable|in:'.implode(',', CustomerRelationship::TYPES),
+            // Ohne Elternteil-Kind: die Richtung ist je Paar zu waehlen.
+            'type' => 'nullable|in:'.implode(',', CustomerRelationship::BULK_TYPES),
+            'note' => 'nullable|string|max:255|required_if:type,sonstiges',
+        ], [
+            'type.in' => '„Elternteil – Kind" lässt sich nur einzeln festlegen – dort wird gewählt, wer der Elternteil ist.',
+            'note.required_if' => 'Bitte beschreiben Sie die Beziehung bei „Sonstiges".',
         ]);
         $type = $data['type'] ?? 'not_duplicate';
         [$edges, $ids] = $this->pairsToEdges($data['pairs']);
@@ -143,14 +154,12 @@ class DuplicateController extends Controller
             if (! in_array($a, $existing, true) || ! in_array($b, $existing, true)) {
                 continue;
             }
-            [$x, $y] = CustomerRelationship::pairKey($a, $b);
-            $rel = CustomerRelationship::updateOrCreate(
-                ['customer_a_id' => $x, 'customer_b_id' => $y],
-                ['type' => $type, 'created_by' => auth()->id()]
-            );
-            if ($rel->wasRecentlyCreated) {
-                $marked++;
+            if ($type === 'not_duplicate') {
+                $marked += $relations->markNotDuplicate($a, $b, auth()->id()) ? 1 : 0;
+                continue;
             }
+            $relations->set(Customer::findOrFail($a), Customer::findOrFail($b), $type, null, $data['note'] ?? null, auth()->id());
+            $marked++;
         }
         app(DuplicateDetectionService::class)->forgetCount();
 
@@ -163,51 +172,128 @@ class DuplicateController extends Controller
     }
 
     /**
-     * "Verwandte Kunden": alle als Beziehung markierten Paare (kein Duplikat).
+     * "Verwandte Kunden": alle Beziehungen (eine Zeile je Paar UND Art).
      * Nur Paare, deren BEIDE Kunden im Portfolio des Mitarbeiters liegen.
+     * Filter: Art oder "ehepaar_unbestaetigt" (Altbestand ohne Familienrolle,
+     * zur manuellen Pruefung - die frueheren Ehepaar-Markierungen).
      */
-    public function relationships(DuplicateDetectionService $detection) {
+    public function relationships(Request $request, DuplicateDetectionService $detection, CustomerRelationshipService $service) {
         $ids = $this->visibleCustomerIds();
-        $query = CustomerRelationship::with(['customerA.user', 'customerB.user', 'customerA.contracts:id,customer_id,contract_number', 'customerB.contracts:id,customer_id,contract_number'])
-            ->latest();
+        $filter = (string) $request->query('filter', '');
+        if ($filter !== 'ehepaar_unbestaetigt' && ! in_array($filter, CustomerRelationship::TYPES, true)) {
+            $filter = '';
+        }
+
+        $query = CustomerRelationship::with(['customerA.user', 'customerB.user', 'customerA.contracts:id,customer_id,contract_number', 'customerB.contracts:id,customer_id,contract_number'])->latest();
         if ($ids !== null) {
             $query->whereIn('customer_a_id', $ids)->whereIn('customer_b_id', $ids);
         }
+        $unconfirmedCount = $service->whereUnconfirmed((clone $query)->where('customer_relationships.type', 'ehepartner'))->count();
+        if ($filter === 'ehepaar_unbestaetigt') {
+            $service->whereUnconfirmed($query->where('customer_relationships.type', 'ehepartner'));
+        } elseif ($filter !== '') {
+            $query->where('customer_relationships.type', $filter);
+        }
+        $unconfirmedIds = $service->whereUnconfirmed(CustomerRelationship::query())->pluck('id')->map(fn ($i) => (string) $i)->all();
+
         $relations = $query->limit(500)->get()
             ->filter(fn ($r) => $r->customerA && $r->customerB)
-            ->map(function ($r) use ($detection) {
+            ->map(function ($r) use ($detection, $unconfirmedIds) {
                 $r->signals = $detection->pairSignals($r->customerA, $r->customerB);
+                $r->unbestaetigt = in_array((string) $r->id, $unconfirmedIds, true);
+                $r->vorschlagElternteil = CustomerRelationship::suggestParent($r->customerA, $r->customerB);
                 return $r;
             })->values();
 
-        return view('admin.customer_relationships', ['relations' => $relations]);
+        return view('admin.customer_relationships', [
+            'relations' => $relations,
+            'filter' => $filter,
+            'unconfirmedCount' => $unconfirmedCount,
+        ]);
     }
 
-    /** Beziehung entfernen -> Paar kann wieder als moegliche Dublette erscheinen. */
-    public function relationshipDelete($id) {
+    /**
+     * Beziehung aus der Kundenakte anlegen ("Verknuepfte Kunden" -> Kunde
+     * suchen). Beide Kunden muessen im Portfolio liegen.
+     */
+    public function relationshipStore(Request $request, string $id, CustomerRelationshipService $relations) {
+        $data = $request->validate([
+            'related_customer_id' => 'required|string|different:'.$id,
+            'type' => 'required|in:'.implode(',', CustomerRelationship::RELATION_TYPES),
+            'parent' => 'nullable|required_if:type,elternteil_kind|in:self,other',
+            'note' => 'nullable|string|max:255|required_if:type,sonstiges',
+        ], [
+            'related_customer_id.required' => 'Bitte wählen Sie zuerst einen Kunden aus.',
+            'related_customer_id.different' => 'Ein Kunde kann nicht mit sich selbst verknüpft werden.',
+            'parent.required_if' => 'Bitte wählen Sie, wer der Elternteil ist.',
+            'note.required_if' => 'Bitte beschreiben Sie die Beziehung bei „Sonstiges".',
+        ]);
+        $this->authorizeCustomerAccess($id);
+        $this->authorizeCustomerAccess($data['related_customer_id']);
+        $customer = Customer::findOrFail($id);
+        $other = Customer::findOrFail($data['related_customer_id']);
+
+        $parentId = match ($data['parent'] ?? null) {
+            'self' => (string) $customer->id,
+            'other' => (string) $other->id,
+            default => null,
+        };
+        try {
+            $relations->set($customer, $other, $data['type'], $parentId, $data['note'] ?? null, auth()->id());
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Beziehung „'.CustomerRelationship::typeLabel($data['type']).'" mit '
+            .($other->user?->name ?: 'Kunde').' gespeichert.');
+    }
+
+    /** Beziehung entfernen (samt Familienrolle) -> Paar kann wieder als moegliche Dublette erscheinen. */
+    public function relationshipDelete($id, CustomerRelationshipService $relations) {
         $rel = CustomerRelationship::findOrFail($id);
         $this->authorizeCustomerAccess($rel->customer_a_id);
         $this->authorizeCustomerAccess($rel->customer_b_id);
-        $rel->delete();
-        app(DuplicateDetectionService::class)->forgetCount();
+        $relations->delete($rel, auth()->id());
 
         return back()->with('success', 'Beziehung entfernt – das Paar kann wieder als mögliche Dublette erscheinen.');
     }
 
     /**
-     * Art einer bestehenden Beziehung aendern (z. B. von "verwandt" zu
-     * "Ehepaar"). Aendert NICHTS an den Kundenakten - nur die Kennzeichnung.
+     * Art, Richtung oder Notiz einer bestehenden Beziehung aendern. Aendert
+     * NICHTS an den Kundenakten - nur die Kennzeichnung (und die
+     * Familienrolle im Gleichlauf).
      */
-    public function relationshipSetType(Request $request, $id) {
+    public function relationshipSetType(Request $request, $id, CustomerRelationshipService $relations) {
         $data = $request->validate([
             'type' => 'required|in:'.implode(',', CustomerRelationship::TYPES),
+            'parent_customer_id' => 'nullable|string|required_if:type,elternteil_kind',
+            'note' => 'nullable|string|max:255|required_if:type,sonstiges',
+        ], [
+            'parent_customer_id.required_if' => 'Bitte wählen Sie, wer der Elternteil ist.',
+            'note.required_if' => 'Bitte beschreiben Sie die Beziehung bei „Sonstiges".',
         ]);
         $rel = CustomerRelationship::findOrFail($id);
         $this->authorizeCustomerAccess($rel->customer_a_id);
         $this->authorizeCustomerAccess($rel->customer_b_id);
-        $rel->update(['type' => $data['type']]);
+
+        try {
+            $relations->update($rel, $data['type'], $data['parent_customer_id'] ?? null,
+                array_key_exists('note', $data) ? $data['note'] : $rel->note, auth()->id());
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Beziehung als „'.CustomerRelationship::typeLabel($data['type']).'" gekennzeichnet.');
+    }
+
+    /** Unbestaetigte Familienart (Altbestand) bestaetigen: die Familienrolle wird angelegt. */
+    public function relationshipConfirm($id, CustomerRelationshipService $relations) {
+        $rel = CustomerRelationship::findOrFail($id);
+        $this->authorizeCustomerAccess($rel->customer_a_id);
+        $this->authorizeCustomerAccess($rel->customer_b_id);
+        $relations->confirm($rel, auth()->id());
+
+        return back()->with('success', '„'.CustomerRelationship::typeLabel($rel->type).'" bestätigt – die Familienrolle ist jetzt in beiden Akten eingetragen.');
     }
 
     /**

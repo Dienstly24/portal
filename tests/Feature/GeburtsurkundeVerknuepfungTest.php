@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 /**
  * Geburtsurkunde: das Kind wird automatisch mit den bereits erfassten
- * Eltern-Kunden verknuepft (CustomerRelationship type 'family'), sobald das
+ * Eltern-Kunden verknuepft (CustomerRelationship type 'sonstige_verwandte', ohne Familienrolle), sobald das
  * Dokument dem Kind-Kunden zugeordnet wird. Verknuepft wird nur bei exaktem,
  * eindeutigem Namens-Treffer.
  */
@@ -68,7 +68,7 @@ class GeburtsurkundeVerknuepfungTest extends TestCase
             $this->assertDatabaseHas('customer_relationships', [
                 'customer_a_id' => $a,
                 'customer_b_id' => $b,
-                'type' => 'family',
+                'type' => 'sonstige_verwandte',
             ]);
         }
     }

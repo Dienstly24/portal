@@ -26,6 +26,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-042 | MEDIUM | security | 2FA-Einrichtung als zweiter Pruefweg ohne Sperre/Protokoll (Raten, Ersatzcodes ersetzt) | FIXED |
 | KI-043 | MEDIUM | security | Zugangslinks ueberlebten Adress-/Passwortaenderung durch die Verwaltung und erneutes Senden | FIXED |
 | KI-044 | MEDIUM | correctness | Ausweis-Rueckseiten (eAT + Personalausweis) nicht erkannt: Anschrift/Geburtsort fehlten | FIXED |
+| KI-049 | MEDIUM | correctness | Dubletten-Seite: Handler-Skript seit SEC-4 syntaktisch kaputt (Sammel-Knoepfe ohne Wirkung, Rueckfragen fehlten) | FIXED |
 | KI-045 | MEDIUM | correctness | Entgeltabrechnung "Verdienstabrechnung": weder Kunde noch Arbeitgeber gelesen | FIXED |
 | KI-046 | MEDIUM | correctness | Erstwagen einer Zweitwagenregelung zweckentfremdet in der Vorversicherung, Vertraege nicht verknuepft | FIXED |
 | KI-047 | MEDIUM | correctness | `Contract`: der Provisions-Listener auf `deleting` beendete die Listener-Kette (jeder spaetere deleting-Listener lief nie) | FIXED |
@@ -76,6 +77,14 @@ und PHPStan) auf `main` gruen ist.
 ---
 
 ## Befunde im Detail
+
+### KI-049 - Dubletten-Seite: Handler-Skript syntaktisch kaputt
+- **Category** functionality · **Severity** MEDIUM · **Status** FIXED
+- **Location** `resources/views/admin/customer_duplicates.blade.php` (Registrierungsblock `@pushOnce('cspScripts')`)
+- **Description** Bei der SEC-4-Umstellung (onclick -> `window.__h`) wurden zwei `confirm('…„Verwandte Kunden"…')`-Texte am geraden Anfuehrungszeichen abgeschnitten: im HTML blieb Restext hinter `data-h-submit` stehen, im Skript zwei nicht geschlossene Zeichenketten. Ein SyntaxError verwirft das GANZE Skript - damit fehlten auch die Handler der Sammel-Knoepfe "Ehepaar"/"Kein Duplikat" und die Rueckfrage der Sammel-Zusammenfuehrung. Kein 500er, keine Meldung: die Knoepfe taten einfach nichts (dieselbe Klasse wie die tote Dashboard-Suche, CLAUDE.md SEC-4 Falle 3). Der Waechter-Test prueft nur, DASS eine Registrierung existiert, nicht, dass das Skript gueltig ist.
+- **Fix (01.10.2026)**: im Zuge von "Beziehung festlegen" neu geschrieben - Einzel-Rueckfrage per `data-confirm`, Sammel-Handler intakt, typografische Anfuehrungszeichen in den JS-Texten.
+- **Discovered** 01.10.2026 (beim Umbau gelesen)
+- **Hinweis**: zuerst als KI-046 vergeben; die Nummer war parallel in PR #365 belegt, deshalb KI-049.
 
 ### KI-046 - Erstwagen der Zweitwagenregelung in der Vorversicherung
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED

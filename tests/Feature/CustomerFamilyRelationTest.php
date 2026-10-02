@@ -119,7 +119,7 @@ class CustomerFamilyRelationTest extends TestCase
 
         [$a, $b] = CustomerRelationship::pairKey((string) $vater->id, (string) $frau->id);
         $this->assertDatabaseHas('customer_relationships', [
-            'customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'spouse',
+            'customer_a_id' => $a, 'customer_b_id' => $b, 'type' => 'ehepartner',
         ]);
     }
 
@@ -358,7 +358,7 @@ class CustomerFamilyRelationTest extends TestCase
         [$a, $b] = CustomerRelationship::pairKey((string) $vater->id, (string) $kind->id);
         CustomerRelationship::create([
             'customer_a_id' => $a, 'customer_b_id' => $b,
-            'type' => 'family', 'note' => 'Gesundheitskarten-Stapel (gleicher Familienname)',
+            'type' => 'sonstige_verwandte', 'note' => 'Gesundheitskarten-Stapel (gleicher Familienname)',
         ]);
 
         $vorschlaege = $this->service()->linkSuggestions($vater);
