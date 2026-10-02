@@ -30,7 +30,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-046 | MEDIUM | correctness | Erstwagen einer Zweitwagenregelung zweckentfremdet in der Vorversicherung, Vertraege nicht verknuepft | FIXED |
 | KI-047 | MEDIUM | correctness | `Contract`: der Provisions-Listener auf `deleting` beendete die Listener-Kette (jeder spaetere deleting-Listener lief nie) | FIXED |
 | KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | FIXED |
-| KI-049 | MEDIUM | correctness | Krankenkassen-Bestaetigung an den Arbeitgeber: nicht erkannt, Service-Adresse der Kasse als Kunden-E-Mail | FIXED |
+| KI-050 | MEDIUM | correctness | Krankenkassen-Bestaetigung an den Arbeitgeber: nicht erkannt, Service-Adresse der Kasse als Kunden-E-Mail | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
 | KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
@@ -98,11 +98,14 @@ und PHPStan) auf `main` gruen ist.
 - **Fix (01.10.2026, PR #365)**: der Test blockierte am 1. Oktober die Pflicht-Checks des PRs (beide Testjobs rot, Deploy uebersprungen) und wurde deshalb hier mitbehoben. Der Code war richtig ("Dieser Monat" = Monatserster bis heute), falsch war das Testdatum. Jetzt steht die Uhr fest auf dem Monatsersten (`travelTo`), der Ablauf ist der Monatserste selbst. Gegenprobe: mit dem alten Datum ist der Test nun an JEDEM Tag rot, nicht nur am Ersten.
 - **Discovered** 01.10.2026
 
-### KI-049 - Krankenkassen-Bestaetigung: Empfaenger ist der ARBEITGEBER, nicht der Kunde
+### KI-050 - Krankenkassen-Bestaetigung: Empfaenger ist der ARBEITGEBER, nicht der Kunde
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED
 - **Location** neu `MitgliedsbescheinigungParser`, neu `App\Services\Ai\Concerns\LiestSpalten`, `Document::AI_TYPES`, `AppServiceProvider`, `ClaudeDocumentAiProvider` (Prompt)
 - **Description** Vom Betreiber mit einem echten Schreiben gemeldet ("Bestaetigung: <Name> ist bei uns versichert", KKH). An Foto (Tesseract) UND PDF-Textebene gemessen: KEIN Parser griff; die Heuristik stufte das Dokument als "Sonstiges" ein und uebernahm dabei die SERVICE-ADRESSE DER KASSE als E-Mail des Kunden. Jedes solche Schreiben lief danach in die KI-Eskalation. Der eigentliche Befund ist aber struktureller Art: dieser Brief ist an den ARBEITGEBER gerichtet, im Empfaengerblock steht die FIRMA, und der Kunde steht ausschliesslich im Fliesstext. Die sonst ueberall gueltige Regel "Empfaengerblock = Kunde" legt hier den ARBEITGEBER als Kunden an - und der KI-Prompt kannte diese Briefart nicht, haette also dasselbe getan.
 - **Fix (02.10.2026)**: eigener Parser fuer die Briefart (Kunde aus dem Kernsatz samt Anrede und Geburtsdatum). Die Zuordnung Empfaenger -> Arbeitgeber wird aus dem Brief BELEGT (Paragraph 6 DEUEV / Betriebsnummer / Sozialversicherungsbeitraege) und geht nach `employer_name`/`employer_address`; traegt der Empfaengerblock den Namen des Mitglieds, ist es dessen eigene Anschrift; ohne beides bleibt das Feld leer. Die "Krankenkassennummer" wird NIE Versichertennummer (Betriebsnummer der Kasse - dieselbe Regel wie die Traeger-Kennnummer der Gesundheitskarte), die RVNR nur mit passendem eingebautem Geburtsdatum. Stufe `vertrag`, bewusst KEIN neues Geschaeft (sonst zweiter Kranken-Vertrag). Spaltenlesung des Briefkopfs jetzt gemeinsam in `LiestSpalten`. Prompt-Absatz ergaenzt. Tests `MitgliedsbescheinigungParserTest` (13 Faelle).
+- **Hinweis zur Nummer**: KI-046/047 waren in PR #365 vergeben, KI-048 ebenfalls
+  (derselbe datumsabhaengige Dashboard-Test, den dieser Zweig zunaechst selbst
+  repariert hatte - uebernommen wird die Fassung aus `main`), KI-049 in PR #366.
 - **Discovered** 02.10.2026 (Betreiber-Meldung mit echtem Dokument)
 
 ### KI-045 - Entgeltabrechnung "Verdienstabrechnung" wurde gar nicht erkannt

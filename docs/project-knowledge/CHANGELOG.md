@@ -8,7 +8,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
-## 02.10.2026 - Krankenkassen-Bestaetigung: der Empfaenger ist der Arbeitgeber (KI-049)
+## 02.10.2026 - Krankenkassen-Bestaetigung: der Empfaenger ist der Arbeitgeber (KI-050)
 
 - **Task**: Betreiber-Meldung mit einem echten Schreiben einer gesetzlichen Krankenkasse ("Bestaetigung: <Name> ist bei uns versichert"): "erkenne die Datei, damit das System sie erkennt".
 - **Files Changed**: neu `app/Services/Ai/TemplateParsers/MitgliedsbescheinigungParser.php`, neu `app/Services/Ai/Concerns/LiestSpalten.php`; `GehaltsabrechnungParser` (nutzt den gemeinsamen Baustein statt einer privaten Kopie), `Document::AI_TYPES` (neuer Typ `mitgliedsbescheinigung`), `AppServiceProvider` (Registrierung vor den Beitritts-Formularen), `ClaudeDocumentAiProvider` (Prompt-Absatz); neu `tests/Feature/Ai/MitgliedsbescheinigungParserTest.php` (13 Faelle); `phpstan-baseline.neon` (3 Muster nachgezogen, KEIN neuer Eintrag).
@@ -17,7 +17,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **API Changes**: keine.
 - **Potential Side Effects**: Ein neuer Dokumenttyp erscheint in der Typ-Liste. Schreiben, die bisher "Sonstiges" waren und zur KI gingen, werden jetzt gratis gelesen - das spart je Dokument einen KI-Aufruf. Der Typ ist bewusst NICHT in `NEW_BUSINESS_TYPES`: sonst entstuende ein zweiter Kranken-Vertrag fuer dieselbe Mitgliedschaft.
 - **Tests Performed**: Am ECHTEN Schreiben gemessen - vorher kein Parser-Treffer und die Service-Adresse der Kasse als Kunden-E-Mail, nachher Name, Geburtsdatum, Geschlecht, Kasse, RVNR, Versicherungsbeginn und Arbeitgeber samt Anschrift; beide Wege (Foto/Tesseract und PDF-Textebene mit geteilten Zeilen) liefern dasselbe. Gegenprobe: verlesene RVNR wird verworfen. Mutationsprobe: ohne Registrierung bzw. ohne Typ scheitern die beiden Waechter-Tests. Volle Suite 3230/3230 gruen, 0 uebersprungen; `pint --test` sauber; PHPStan Stufe 5: 0 Fehler.
-- **Result**: KI-049 IMPLEMENTED.
+- **Result**: KI-050 IMPLEMENTED.
 
 ---
 
