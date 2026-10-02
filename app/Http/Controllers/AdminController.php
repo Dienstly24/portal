@@ -10,6 +10,7 @@ use App\Models\CustomerChangeRequest;
 use App\Models\CustomerFamily;
 use App\Models\CustomerMessage;
 use App\Models\CustomerNote;
+use App\Models\CustomerRelationship;
 use App\Models\CustomerVehicle;
 use App\Models\CustomerView;
 use App\Models\InternalMessage;
@@ -22,9 +23,11 @@ use App\Services\CustomerNumberGenerator;
 use App\Services\Family\FamilyRelationService;
 use App\Services\Matching\DuplicateDetectionService;
 use App\Services\Portal\PortalAccessService;
+use App\Services\Relationships\CustomerRelationshipService;
 use App\Support\GermanPhone;
 use App\Support\PasswordPolicy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -319,8 +322,11 @@ class AdminController extends Controller
         // Eltern) mit Rolle, Alter und Abhaengigkeit. Bewusst getrennt von
         // $customer->family - dort stehen Personen OHNE eigene Akte.
         $familie = app(FamilyRelationService::class)->overview($customer);
+        // "Verknuepfte Kunden": festgelegte Beziehungen (customer_relationships).
+        // Nur Paare, deren andere Seite im Portfolio liegt.
+        $verknuepft = $this->linkedCustomers($customer);
 
-        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie'));
+        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie', 'verknuepft'));
     }
 
 
@@ -337,6 +343,28 @@ class AdminController extends Controller
      * `exclude` blendet einen Kunden aus - beim Zusammenfuehren darf der
      * Hauptkunde nicht als sein eigenes Duplikat waehlbar sein.
      */
+    /** @return Collection<int, CustomerRelationship> */
+    private function linkedCustomers(Customer $customer)
+    {
+        $ids = $this->visibleCustomerIds();
+        $id = (string) $customer->id;
+        $query = CustomerRelationship::with(['customerA.user', 'customerB.user'])
+            ->where(fn ($q) => $q->where('customer_a_id', $id)->orWhere('customer_b_id', $id))
+            ->orderBy('type');
+        if ($ids !== null) {
+            $query->whereIn('customer_a_id', $ids)->whereIn('customer_b_id', $ids);
+        }
+        $service = app(CustomerRelationshipService::class);
+        $unbestaetigt = $service->whereUnconfirmed(clone $query)
+            ->pluck('customer_relationships.id')->map(fn ($i) => (string) $i)->all();
+
+        return $query->get()
+            ->filter(fn ($r) => $r->customerA && $r->customerB)
+            ->each(function ($r) use ($unbestaetigt) {
+                $r->unbestaetigt = in_array((string) $r->id, $unbestaetigt, true);
+            })->values();
+    }
+
     public function customerSearch(Request $request) {
         $q = trim((string) $request->query('q', ''));
         $exclude = (string) $request->query('exclude', '');

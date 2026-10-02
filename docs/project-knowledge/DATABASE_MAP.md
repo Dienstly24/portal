@@ -27,7 +27,7 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 | `customer_addresses`, `customer_contacts`, `customer_vehicles`, `customer_notes`, `customer_timeline`, `customer_views` | Unterlagen der Akte |
 | `customer_family` | Familienmitglieder OHNE eigene Akte |
 | `customer_family_relations` | gerichtete Beziehung zwischen zwei AKTEN (Paar hin/rueck), `is_dependent` |
-| `customer_relationships` | "kein Duplikat"/verwandt, Paar sortiert a<b |
+| `customer_relationships` | Beziehung zweier Akten (kein Duplikat): Art (`ehepartner`, `elternteil_kind`, `geschwister`, `sonstige_verwandte`, `gleicher_haushalt`, `nachbar`, `sonstiges`, `not_duplicate`), Paar sortiert a<b, UNIQUE (a, b, type); `parent_customer_id` nur bei `elternteil_kind` (= a oder b, Modell-Guard statt CHECK). Familienarten laufen gleich mit `customer_family_relations` |
 | `customer_consents` | DSGVO-Einwilligungen |
 | `customer_change_requests`, `change_request_documents`, `change_notifications` | Self-Service-Aenderungen, Nachweise, Mitteilungen an Gesellschaften |
 | `customer_channel_identities` | Kanal-Kennung -> Kunde, `match_method`, `verified_*` |

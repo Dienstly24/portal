@@ -6,14 +6,32 @@
         <h1 class="page-title">Verwandte Kunden</h1>
         <a href="{{ route('admin.customers.duplicates') }}" class="btn btn-ghost">← Mögliche Dubletten</a>
     </div>
-    <div class="page-sub">Paare, die als „kein Duplikat" markiert wurden – z. B. ein Ehepaar, Familienmitglieder oder ein Haushalt mit gleicher Anschrift/Telefon. Sie sind bewusst KEINE Dubletten, sondern verbundene Kunden: beide Akten bleiben mit allen Verträgen erhalten. Die Beziehungsart lässt sich hier jederzeit als Ehepaar/Familie präzisieren. Ist ein Paar doch dieselbe Person, kann es hier wieder als Dublette freigegeben oder direkt zusammengeführt werden.</div>
+    <div class="page-sub">Paare, die bewusst KEINE Dubletten sind – Ehepaar, Elternteil und Kind, Geschwister, sonstige Verwandte, gleicher Haushalt, Nachbarn oder eine andere Beziehung. Beide Akten bleiben mit allen Verträgen erhalten. Familienbeziehungen stehen zusätzlich in der Registerkarte „Familie“ beider Kunden (Gleichlauf). Ist ein Paar doch dieselbe Person, kann es hier wieder als Dublette freigegeben oder direkt zusammengeführt werden.</div>
 </div>
+
+@php
+    $filterChips = ['' => 'Alle'] + ['ehepaar_unbestaetigt' => 'Ehepaar (unbestätigt)'] + \App\Models\CustomerRelationship::LABELS;
+@endphp
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center;">
+    <span style="font-size:12.5px;color:var(--ink-soft);margin-right:2px;">Filter:</span>
+    @foreach($filterChips as $fKey => $fLabel)
+    <a href="{{ route('admin.customers.relationships', $fKey === '' ? [] : ['filter' => $fKey]) }}"
+       class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;{{ $filter === $fKey ? 'background:var(--graphite);color:#fff;border-color:var(--graphite);' : '' }}">
+        {{ $fLabel }}@if($fKey === 'ehepaar_unbestaetigt') ({{ $unconfirmedCount }})@endif
+    </a>
+    @endforeach
+</div>
+@if($filter === 'ehepaar_unbestaetigt')
+<div class="card" style="background:#FEF3C7;color:#92400E;padding:11px 16px;margin-bottom:14px;font-size:12.5px;line-height:1.5;">
+    Bis 30.09.2026 war „Ehepaar“ die einzige Auswahl für „verwandt“ – ein Teil dieser Markierungen ist deshalb ungenau. Bitte je Paar prüfen: <strong>Bestätigen</strong> trägt die Rolle „Ehepartner/in“ in die Registerkarte „Familie“ beider Kunden ein; stimmt die Art nicht, über „Beziehung ändern“ korrigieren.
+</div>
+@endif
 
 @if(count($relations) === 0)
 <div class="card" style="padding:40px;text-align:center;color:var(--ink-soft);">
     <div style="font-size:38px;margin-bottom:10px;">🔗</div>
-    <div style="font-size:15px;font-weight:600;color:var(--ink);">Noch keine verwandten Kunden</div>
-    <div style="font-size:13px;margin-top:6px;">Markieren Sie in der Dubletten-Prüfung ein Paar mit „✕ Kein Duplikat", um es hier als Beziehung zu sammeln.</div>
+    <div style="font-size:15px;font-weight:600;color:var(--ink);">{{ $filter === '' ? 'Noch keine verwandten Kunden' : 'Keine Beziehungen für diesen Filter' }}</div>
+    <div style="font-size:13px;margin-top:6px;">Legen Sie in der Dubletten-Prüfung mit „🔗 Beziehung festlegen“ oder „✕ Kein Duplikat“ eine Beziehung fest, um sie hier zu sammeln.</div>
 </div>
 @else
 <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">{{ count($relations) }} Beziehung(en)</div>
@@ -24,21 +42,35 @@
         $relType = $rel->type ?? 'not_duplicate';
         $relEmoji = \App\Models\CustomerRelationship::typeEmoji($relType);
         $relLabel = \App\Models\CustomerRelationship::typeLabel($relType);
-        $typeChoices = ['spouse' => '💍 Ehepaar', 'family' => '👪 Familie', 'not_duplicate' => '🔗 Allgemein'];
     @endphp
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:10px;">
-        <span style="background:#EDE9FE;color:#5B21B6;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;">{{ $relEmoji }} {{ $relLabel }} · kein Duplikat</span>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            {{-- Beziehungsart nachtraeglich praezisieren (aendert nur die Kennzeichnung). --}}
-            @foreach($typeChoices as $tKey => $tLabel)
-                @if($tKey !== $relType)
-                <form method="POST" action="{{ route('admin.customers.relationships.type', $rel->id) }}" style="margin:0;">
-                    @csrf
-                    <input type="hidden" name="type" value="{{ $tKey }}">
-                    <button type="submit" class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px;" title="Als {{ $tLabel }} kennzeichnen">{{ $tLabel }}</button>
-                </form>
-                @endif
-            @endforeach
+            <span style="background:#EDE9FE;color:#5B21B6;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;">{{ $relEmoji }} {{ $relLabel }}{{ $relType === 'not_duplicate' ? '' : ' · kein Duplikat' }}</span>
+            @if($rel->unbestaetigt)
+            <span style="background:#FEF3C7;color:#92400E;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;" title="Keine passende Rolle in der Registerkarte „Familie“ – Altbestand oder automatisch erkannt">unbestätigt</span>
+            @endif
+            @if($rel->directionText())
+            <span class="muted-xs">{{ $rel->directionText() }}</span>
+            @endif
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            @if($rel->unbestaetigt)
+            <form method="POST" action="{{ route('admin.customers.relationships.confirm', $rel->id) }}" style="margin:0;"
+                  data-confirm="„{{ $relLabel }}“ bestätigen? Die passende Rolle wird in der Registerkarte „Familie“ beider Kunden eingetragen.">
+                @csrf
+                <button type="submit" class="btn btn-primary" style="padding:7px 14px;">✓ Bestätigen</button>
+            </form>
+            @endif
+            @include('admin.partials.beziehung_festlegen', [
+                'a' => $rel->customerA, 'b' => $rel->customerB,
+                'action' => route('admin.customers.relationships.type', $rel->id),
+                'hidden' => [],
+                'current' => $relType === 'not_duplicate' ? null : $relType,
+                'parent' => $rel->parent_customer_id ?? $rel->vorschlagElternteil,
+                'suggested' => $rel->parent_customer_id === null,
+                'note' => $rel->note,
+                'label' => 'Beziehung ändern',
+            ])
             <a href="{{ route('admin.customer.merge', $rel->customerA->id) }}?duplicate={{ $rel->customerB->id }}" class="btn btn-ghost" style="padding:7px 14px;">Doch zusammenführen</a>
             <form method="POST" action="{{ route('admin.customers.relationships.delete', $rel->id) }}" style="margin:0;"
                   data-h-submit="7d45402697">

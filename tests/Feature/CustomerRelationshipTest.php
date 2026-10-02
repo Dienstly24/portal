@@ -120,13 +120,13 @@ class CustomerRelationshipTest extends TestCase
         $this->actingAs($this->admin())->post(route('admin.customers.duplicates.dismiss'), [
             'customer_a' => (string) $a->id,
             'customer_b' => (string) $b->id,
-            'type' => 'spouse',
+            'type' => 'ehepartner',
         ])->assertRedirect();
 
         // Beziehung als Ehepaar gespeichert ...
         [$x, $y] = CustomerRelationship::pairKey($a->id, $b->id);
         $this->assertDatabaseHas('customer_relationships', [
-            'customer_a_id' => $x, 'customer_b_id' => $y, 'type' => 'spouse',
+            'customer_a_id' => $x, 'customer_b_id' => $y, 'type' => 'ehepartner',
         ]);
         // ... und BEIDE Kundenakten existieren weiterhin (nichts geloescht).
         $this->assertDatabaseHas('customers', ['id' => $a->id]);
@@ -144,10 +144,10 @@ class CustomerRelationshipTest extends TestCase
         $rel = CustomerRelationship::create(['customer_a_id' => $x, 'customer_b_id' => $y, 'type' => 'not_duplicate']);
 
         $this->actingAs($this->admin())
-            ->post(route('admin.customers.relationships.type', $rel->id), ['type' => 'spouse'])
+            ->post(route('admin.customers.relationships.type', $rel->id), ['type' => 'ehepartner'])
             ->assertRedirect();
 
-        $this->assertDatabaseHas('customer_relationships', ['id' => $rel->id, 'type' => 'spouse']);
+        $this->assertDatabaseHas('customer_relationships', ['id' => $rel->id, 'type' => 'ehepartner']);
     }
 
     public function test_relationships_page_shows_spouse_badge(): void
@@ -155,7 +155,7 @@ class CustomerRelationshipTest extends TestCase
         $a = $this->customer('Mara Sung', 'mara@example.com', ['phone' => '040888']);
         $b = $this->customer('Nils Sung', 'nils@example.com', ['phone' => '040888']);
         [$x, $y] = CustomerRelationship::pairKey($a->id, $b->id);
-        CustomerRelationship::create(['customer_a_id' => $x, 'customer_b_id' => $y, 'type' => 'spouse']);
+        CustomerRelationship::create(['customer_a_id' => $x, 'customer_b_id' => $y, 'type' => 'ehepartner']);
 
         $this->actingAs($this->admin())->get(route('admin.customers.relationships'))
             ->assertOk()

@@ -9,6 +9,7 @@ use App\Models\CustomerRelationship;
 use App\Models\CustomerTimeline;
 use App\Models\InternalNotification;
 use App\Models\SystemSetting;
+use App\Services\Relationships\CustomerRelationshipService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -29,8 +30,10 @@ use Illuminate\Support\Facades\Log;
  *     Kind -> Eltern), sonst waere die Navigation einseitig.
  *  2. Es entsteht NIE ein neuer Kundendatensatz - verknuepft werden
  *     ausschliesslich vorhandene Akten.
- *  3. Das Paar verschwindet aus der Dubletten-Liste
- *     (customer_relationships), denn eine Familie ist keine Dublette.
+ *  3. Das Paar verschwindet aus der Dubletten-Liste, denn eine Familie ist
+ *     keine Dublette: die passende Art in customer_relationships schreibt
+ *     der CustomerRelationshipService in DERSELBEN Transaktion mit
+ *     (Gleichlauf in beide Richtungen, Auftrag 01.10.2026).
  *  4. Jede Aenderung steht in der Kundenakte (Timeline) und im ActivityLog.
  */
 class FamilyRelationService
@@ -47,8 +50,10 @@ class FamilyRelationService
      * @param  Customer  $customer  Bezugsperson (z. B. der Vater/Hauptkunde).
      * @param  Customer  $related   Bereits vorhandene Akte, die verknuepft wird.
      * @param  string    $role      Rolle des VERKNUEPFTEN aus Sicht der Bezugsperson.
+     * @param  bool      $syncRelationship  false NUR fuer den Aufruf aus dem
+     *                   CustomerRelationshipService (er schreibt seine Zeile selbst).
      */
-    public function link(Customer $customer, Customer $related, string $role, ?int $byUserId = null, ?string $note = null): CustomerFamilyRelation
+    public function link(Customer $customer, Customer $related, string $role, ?int $byUserId = null, ?string $note = null, bool $syncRelationship = true): CustomerFamilyRelation
     {
         if ((string) $customer->id === (string) $related->id) {
             throw new \InvalidArgumentException('Ein Kunde kann nicht mit sich selbst verknuepft werden.');
@@ -57,7 +62,7 @@ class FamilyRelationService
             throw new \InvalidArgumentException('Unbekannte Familienrolle: '.$role);
         }
 
-        $forward = DB::transaction(function () use ($customer, $related, $role, $byUserId, $note) {
+        $forward = DB::transaction(function () use ($customer, $related, $role, $byUserId, $note, $syncRelationship) {
             // Hinrichtung: "related ist <role> von customer".
             $forward = CustomerFamilyRelation::updateOrCreate(
                 ['customer_id' => $customer->id, 'related_customer_id' => $related->id],
@@ -84,7 +89,10 @@ class FamilyRelationService
                 ]
             );
 
-            $this->exemptFromDuplicates($customer, $related, $role, $byUserId);
+            if ($syncRelationship) {
+                app(CustomerRelationshipService::class)
+                    ->syncFromFamilyRole((string) $customer->id, (string) $related->id, $role, $byUserId);
+            }
 
             return $forward;
         });
@@ -119,17 +127,23 @@ class FamilyRelationService
      * und Historie bleiben unangetastet.
      *
      * Die Dubletten-Ausnahme bleibt bewusst bestehen: "kein Duplikat" bleibt
-     * wahr, auch wenn die Familienrolle nicht mehr gepflegt wird.
+     * wahr, auch wenn die Familienrolle nicht mehr gepflegt wird
+     * (CustomerRelationshipService::syncAfterFamilyUnlink).
      */
-    public function unlink(CustomerFamilyRelation $relation, ?int $byUserId = null): void
+    public function unlink(CustomerFamilyRelation $relation, ?int $byUserId = null, bool $syncRelationship = true): void
     {
         $customer = $relation->customer;
         $related = $relation->relatedCustomer;
 
-        DB::transaction(function () use ($relation) {
+        DB::transaction(function () use ($relation, $byUserId, $syncRelationship) {
             CustomerFamilyRelation::where('customer_id', $relation->related_customer_id)
                 ->where('related_customer_id', $relation->customer_id)->delete();
             $relation->delete();
+            if ($syncRelationship) {
+                app(CustomerRelationshipService::class)->syncAfterFamilyUnlink(
+                    (string) $relation->customer_id, (string) $relation->related_customer_id, $byUserId
+                );
+            }
         });
 
         if ($customer) {
@@ -330,28 +344,6 @@ class FamilyRelationService
         $age = $related->age();
 
         return $age !== null && $age < Customer::DEPENDENT_AGE;
-    }
-
-    /**
-     * Eine Familie ist keine Dublette: das Paar wird zusaetzlich in
-     * customer_relationships eingetragen, damit es aus der Dubletten-Pruefung
-     * verschwindet. Eine bereits praezisere Kennzeichnung (Ehepaar) wird nicht
-     * wieder verallgemeinert.
-     */
-    private function exemptFromDuplicates(Customer $a, Customer $b, string $role, ?int $byUserId): void
-    {
-        [$x, $y] = CustomerRelationship::pairKey((string) $a->id, (string) $b->id);
-        $type = CustomerFamilyRelation::duplicateExemptionType($role);
-
-        $vorhanden = CustomerRelationship::where('customer_a_id', $x)->where('customer_b_id', $y)->first();
-        if ($vorhanden && $vorhanden->type === 'spouse' && $type !== 'spouse') {
-            return;
-        }
-
-        CustomerRelationship::updateOrCreate(
-            ['customer_a_id' => $x, 'customer_b_id' => $y],
-            ['type' => $type, 'note' => 'Familienzuordnung', 'created_by' => $byUserId]
-        );
     }
 
     /** Eintrag in der Kundenakte-Timeline. Darf den Vorgang nie scheitern lassen. */

@@ -279,8 +279,9 @@ class CustomerMergeService
      *
      * Regeln: Das Paar Hauptkunde<->Duplikat selbst ist nach dem Merge
      * gegenstandslos (kein Selbst-Paar). Umgehaengte Paare werden neu
-     * normalisiert (a < b); existiert das Paar am Hauptkunden bereits,
-     * wird die Duplikat-Zeile verworfen (UNIQUE-Kollision).
+     * normalisiert (a < b); existiert das Paar mit derselben Art (bzw. mit
+     * irgendeiner Familienart) am Hauptkunden bereits, wird die
+     * Duplikat-Zeile verworfen. parent_customer_id wandert mit.
      */
     private function mergeRelationships(Customer $primary, Customer $duplicate): int
     {
@@ -309,14 +310,27 @@ class CustomerMergeService
         foreach ($rows as $row) {
             $other = (string) ($row->customer_a_id === $d ? $row->customer_b_id : $row->customer_a_id);
             [$a, $b] = CustomerRelationship::pairKey($p, $other);
+            // UNIQUE (a, b, type) - und je Paar hoechstens EINE Familienart
+            // (die Familientabelle fuehrt eine Rolle je Paar). Kollision: die
+            // Zeile des Hauptkunden gewinnt.
+            $types = CustomerRelationship::isFamilyType($row->type)
+                ? CustomerRelationship::FAMILY_TYPES
+                : [$row->type];
             $exists = DB::table('customer_relationships')
-                ->where('customer_a_id', $a)->where('customer_b_id', $b)->exists();
+                ->where('customer_a_id', $a)->where('customer_b_id', $b)
+                ->whereIn('type', $types)->exists();
             if ($exists) {
                 DB::table('customer_relationships')->where('id', $row->id)->delete();
                 continue;
             }
-            DB::table('customer_relationships')->where('id', $row->id)
-                ->update(['customer_a_id' => $a, 'customer_b_id' => $b]);
+            // Die Richtung (Elternteil) zeigt auf die IDs - sie wandert mit,
+            // sonst verweist sie auf die geloeschte Duplikat-Akte.
+            $parent = $row->parent_customer_id ?? null;
+            DB::table('customer_relationships')->where('id', $row->id)->update([
+                'customer_a_id' => $a,
+                'customer_b_id' => $b,
+                'parent_customer_id' => $parent === null ? null : ((string) $parent === $d ? $p : $parent),
+            ]);
             $moved++;
         }
         return $moved;
