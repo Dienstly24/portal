@@ -688,9 +688,11 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                         @if($v->first_registration) · EZ {{ $v->first_registration->format('m/Y') }}@endif
                         · <b>{{ $v->coverageLabel() }}</b>
                         @if($v->sf_liability_class)
-                            <br>📊 SF Haftpflicht: <b>{{ \App\Models\ContractVehicleDetail::sfLabel($v->sf_liability_class) }}</b>@if($v->sf_liability_valid_from) (ab {{ $v->sf_liability_valid_from->format('d.m.Y') }})@endif {{ $v->sfTransferable('haftpflicht') ? '🟢' : '🔴 Sondereinstufung' }}
-                            @if($v->has_vollkasko && $v->sf_comprehensive_class) · SF Vollkasko: <b>{{ \App\Models\ContractVehicleDetail::sfLabel($v->sf_comprehensive_class) }}</b> {{ $v->sfTransferable('vollkasko') ? '🟢' : '🔴 Sondereinstufung' }}@endif
+                            @php $sfWhyHp = $v->sfReasonSummary('haftpflicht'); $sfWhyVk = $v->has_vollkasko ? $v->sfReasonSummary('vollkasko') : null; @endphp
+                            <br>📊 SF Haftpflicht: <b>{{ \App\Models\ContractVehicleDetail::sfLabel($v->sf_liability_class) }}</b>@if($v->sf_liability_valid_from) (ab {{ $v->sf_liability_valid_from->format('d.m.Y') }})@endif {{ $v->sfTransferable('haftpflicht') ? '🟢' : '🔴 Sondereinstufung' }}@if($sfWhyHp) · @if($sfWhyHp['url'])<a href="{{ $sfWhyHp['url'] }}">{{ $sfWhyHp['text'] }}</a>@else{{ $sfWhyHp['text'] }}@endif @endif
+                            @if($v->has_vollkasko && $v->sf_comprehensive_class)<br>📊 SF Vollkasko: <b>{{ \App\Models\ContractVehicleDetail::sfLabel($v->sf_comprehensive_class) }}</b>@if($v->sf_comprehensive_valid_from) (ab {{ $v->sf_comprehensive_valid_from->format('d.m.Y') }})@endif {{ $v->sfTransferable('vollkasko') ? '🟢' : '🔴 Sondereinstufung' }}@if($sfWhyVk) · @if($sfWhyVk['url'])<a href="{{ $sfWhyVk['url'] }}">{{ $sfWhyVk['text'] }}</a>@else{{ $sfWhyVk['text'] }}@endif @endif @endif
                         @endif
+                        @if($c->sfDependents->isNotEmpty())<br>@include('admin.partials.contract_sf_erstwagen_badge', ['contract' => $c])@endif
                         @if($v->extrasLabels())
                             <br>🧩 {{ implode(' · ', $v->extrasLabels()) }}
                         @endif

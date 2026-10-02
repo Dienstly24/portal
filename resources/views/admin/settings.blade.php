@@ -119,6 +119,24 @@
     </div>
 </div>
 
+{{-- KFZ (01.10.2026): Bezugsfahrzeug der SF-Sondereinstufung. Eigener
+     Marker (kfz_form) wie bei Sicherheit und Postfach. --}}
+<div class="card">
+    <div class="card-title" style="margin-bottom:8px;">🚗 KFZ</div>
+    <input type="hidden" name="kfz_form" value="1">
+    <label class="ki-toggle">
+        <input type="checkbox" name="{{ \App\Services\Kfz\SfReferenceValidator::SETTING_REQUIRED }}" value="1"
+               @checked(($settings[\App\Services\Kfz\SfReferenceValidator::SETTING_REQUIRED] ?? '0') === '1')>
+        <span><strong>Bezugsfahrzeug bei Zweit-/Drittwagen verpflichtend</strong></span>
+    </label>
+    <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-top:8px;">
+        Eine Zweitwagen-, Drittwagen- oder Familien-Einstufung wird wegen eines anderen Vertrags gewährt (Erstwagen).
+        Fehlt dieser Bezug, zeigt das System immer eine Warnung. Ist dieser Schalter an, lässt sich ein Vertrag in der
+        Stufe <strong>Antrag</strong> oder <strong>Vertrag</strong> ohne Bezugsfahrzeug zusätzlich nicht speichern.
+        Voreinstellung: aus.
+    </div>
+</div>
+
 {{-- Postfach: kanaluebergreifende Unterhaltungen. Eigener Marker
      (messaging_form) aus demselben Grund wie bei der Sicherheit. --}}
 <div class="card">

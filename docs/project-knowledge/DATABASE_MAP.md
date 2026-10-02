@@ -41,6 +41,7 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 | `contract_revisions` | Version History feldgenau |
 | `contract_histories`, `contract_switch_reminders` | Historie, Wechsel-Erinnerungen |
 | `vehicle_mileage_readings`, `vehicle_sf_history`, `vehicle_claims` | Kfz |
+| `vehicle_sf_references` | Kfz: Begruendung einer SF-Sondereinstufung je Sparte (Bezugsfahrzeug intern -> `contracts` nullOnDelete, oder extern; Halter, Snapshot, Nachweis -> `documents`). Einziger Schreibweg `SfReferenceService` |
 | `meter_readings` | Zaehlerstaende (Energie) |
 | `tarifrechner_links` | Vergleichsportal-Links |
 

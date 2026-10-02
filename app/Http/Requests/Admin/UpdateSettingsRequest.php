@@ -6,6 +6,7 @@ use App\Http\Controllers\LegalPageController;
 use App\Models\Contract;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\ChangeRequest\ChangeProofPolicy;
+use App\Services\Kfz\SfReferenceValidator;
 use App\Services\Messaging\ChannelRoutingService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -130,6 +131,8 @@ class UpdateSettingsRequest extends FormRequest
             'security_form' => ['sometimes'],
             'ai_assistant_form' => ['sometimes'],
             'two_factor_required' => ['sometimes'],
+            'kfz_form' => ['sometimes'],
+            SfReferenceValidator::SETTING_REQUIRED => ['sometimes'],
             'messaging_form' => ['sometimes'],
             ChannelRoutingService::SETTING_AUTO_JOIN => ['sometimes'],
         ];
