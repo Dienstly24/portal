@@ -27,6 +27,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-043 | MEDIUM | security | Zugangslinks ueberlebten Adress-/Passwortaenderung durch die Verwaltung und erneutes Senden | FIXED |
 | KI-044 | MEDIUM | correctness | Ausweis-Rueckseiten (eAT + Personalausweis) nicht erkannt: Anschrift/Geburtsort fehlten | FIXED |
 | KI-045 | MEDIUM | correctness | Entgeltabrechnung "Verdienstabrechnung": weder Kunde noch Arbeitgeber gelesen | FIXED |
+| KI-046 | MEDIUM | correctness | Krankenkassen-Bestaetigung an den Arbeitgeber: nicht erkannt, Service-Adresse der Kasse als Kunden-E-Mail | FIXED |
+| KI-047 | LOW | testing | Auswertungs-Test war am 1. und 2. jedes Monats rot (Zeitraum endet heute) | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
 | KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
@@ -72,6 +74,20 @@ und PHPStan) auf `main` gruen ist.
 ---
 
 ## Befunde im Detail
+
+### KI-046 - Krankenkassen-Bestaetigung: Empfaenger ist der ARBEITGEBER, nicht der Kunde
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** neu `MitgliedsbescheinigungParser`, neu `App\Services\Ai\Concerns\LiestSpalten`, `Document::AI_TYPES`, `AppServiceProvider`, `ClaudeDocumentAiProvider` (Prompt)
+- **Description** Vom Betreiber mit einem echten Schreiben gemeldet ("Bestaetigung: <Name> ist bei uns versichert", KKH). An Foto (Tesseract) UND PDF-Textebene gemessen: KEIN Parser griff; die Heuristik stufte das Dokument als "Sonstiges" ein und uebernahm dabei die SERVICE-ADRESSE DER KASSE als E-Mail des Kunden. Jedes solche Schreiben lief danach in die KI-Eskalation. Der eigentliche Befund ist aber struktureller Art: dieser Brief ist an den ARBEITGEBER gerichtet, im Empfaengerblock steht die FIRMA, und der Kunde steht ausschliesslich im Fliesstext. Die sonst ueberall gueltige Regel "Empfaengerblock = Kunde" legt hier den ARBEITGEBER als Kunden an - und der KI-Prompt kannte diese Briefart nicht, haette also dasselbe getan.
+- **Fix (02.10.2026)**: eigener Parser fuer die Briefart (Kunde aus dem Kernsatz samt Anrede und Geburtsdatum). Die Zuordnung Empfaenger -> Arbeitgeber wird aus dem Brief BELEGT (Paragraph 6 DEUEV / Betriebsnummer / Sozialversicherungsbeitraege) und geht nach `employer_name`/`employer_address`; traegt der Empfaengerblock den Namen des Mitglieds, ist es dessen eigene Anschrift; ohne beides bleibt das Feld leer. Die "Krankenkassennummer" wird NIE Versichertennummer (Betriebsnummer der Kasse - dieselbe Regel wie die Traeger-Kennnummer der Gesundheitskarte), die RVNR nur mit passendem eingebautem Geburtsdatum. Stufe `vertrag`, bewusst KEIN neues Geschaeft (sonst zweiter Kranken-Vertrag). Spaltenlesung des Briefkopfs jetzt gemeinsam in `LiestSpalten`. Prompt-Absatz ergaenzt. Tests `MitgliedsbescheinigungParserTest` (13 Faelle).
+- **Discovered** 02.10.2026 (Betreiber-Meldung mit echtem Dokument)
+
+### KI-047 - Auswertungs-Test war an zwei Tagen im Monat rot
+- **Category** testing · **Severity** LOW · **Status** FIXED
+- **Location** `tests/Feature/ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung`
+- **Description** Beim Lauf am 02.10.2026 war die Suite auf `main` rot, ohne dass sich am Code etwas geaendert hatte. Der Test legte einen Ablauf auf "Monatsanfang + 2 Tage"; der Standard-Zeitraum der Auswertung endet aber HEUTE und nicht am Monatsende (`AnalyticsFilters`). Am 1. und 2. jedes Monats liegt dieses Datum damit NOCH NICHT im Zeitraum. Der Code war richtig, der Test war datumsabhaengig - und ein roter Test auf `main` heisst in diesem Projekt immer auch "nicht ausgeliefert" (der Deploy haengt an `needs: [test, audit]`).
+- **Fix (02.10.2026)**: der Test legt den Ablauf auf den MonatsERSTEN - der liegt an jedem Tag des Monats im Zeitraum. Keine Aenderung am Code der Auswertung.
+- **Discovered** 02.10.2026 (eigener Lauf, auf unveraendertem `main` nachgestellt)
 
 ### KI-045 - Entgeltabrechnung "Verdienstabrechnung" wurde gar nicht erkannt
 - **Category** functionality · **Severity** MEDIUM · **Status** FIXED

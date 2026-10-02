@@ -80,10 +80,12 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Tests `SmartDocumentUploadTest`, `DocumentIntake/*`, `DuplicateDetectionTest`, `DocumentCostOptimizationTest`, `HausnummerTrennungTest`, `OcrCheckCommandTest`
 - Status **ACTIVE**
 
-### F-021 Vorlagen-Parser (~43)
+### F-021 Vorlagen-Parser (~44)
 - `app/Services/Ai/TemplateParsers/*`, Reihenfolge in `AppServiceProvider` (spezialisiert vor generisch)
 - Tests je Parser unter `tests/Feature/Ai/*ParserTest`, `ParserPolicyTest`
 - Ausweiskarten: `PersonalausweisParser` + `AufenthaltstitelParser` teilen den Baustein `Concerns/LiestDeutscheAusweiskarte` (MRZ + Anschrift der Rueckseite); Parser-Ergebnis darf `pflichtangaben` tragen -> `DocumentAnalyzer` eskaliert zur KI, wenn sie fehlen. Tests `AusweiskartenRueckseiteTest`, `AufenthaltstitelParserTest`
+- Briefkopf spaltenweise lesen: gemeinsamer Baustein `Concerns/LiestSpalten` (`GehaltsabrechnungParser`, `MitgliedsbescheinigungParser`) - "auf Spaltenabstaende ist kein Verlass"
+- Krankenkassen-Bestaetigung (`MitgliedsbescheinigungParser`): Empfaenger ist der ARBEITGEBER, der Kunde steht im Fliesstext - die UMKEHRUNG der sonstigen Regel. Test `MitgliedsbescheinigungParserTest`
 - Status **ACTIVE** · Regel `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`
 
 ### F-022 Dokumenten-Anforderungen

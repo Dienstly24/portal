@@ -2,6 +2,7 @@
 
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\LiestSpalten;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 use App\Support\Adresszeile;
@@ -30,6 +31,7 @@ use App\Support\Adresszeile;
  */
 class GehaltsabrechnungParser implements DocumentTemplateParser
 {
+    use LiestSpalten;
     use ValidatesExtractedFields;
 
     /**
@@ -283,48 +285,14 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
     }
 
     /**
-     * Alle Zellen mit ihrer SPALTENPOSITION, nach Spalten gruppiert (links
-     * zuerst). Position in ZEICHEN, nicht in Bytes - ein Umlaut weiter links
-     * wuerde die Spalte sonst verschieben.
+     * Zellen nach Spalten gruppiert - die Regel steht in LiestSpalten,
+     * weil sie inzwischen fuer mehrere Briefarten gilt.
      *
      * @return list<list<array{zeile:int,spalte:int,text:string}>>
      */
     private function spalten(): array
     {
-        $zellen = [];
-        foreach ($this->lines as $i => $line) {
-            if (! preg_match_all('/\S(?:.*?\S)?(?=\h{2,}|$)/u', $line, $mm, PREG_OFFSET_CAPTURE)) {
-                continue;
-            }
-            foreach ($mm[0] as $treffer) {
-                $text = trim($treffer[0]);
-                if ($text === '') {
-                    continue;
-                }
-                $zellen[] = [
-                    'zeile' => $i,
-                    'spalte' => mb_strlen(substr($line, 0, (int) $treffer[1])),
-                    'text' => $text,
-                ];
-            }
-        }
-
-        // Nach Spalte gruppieren, kleine Abweichungen (+/- 2 Zeichen) gelten
-        // als dieselbe Spalte.
-        $gruppen = [];
-        foreach ($zellen as $zelle) {
-            foreach ($gruppen as $position => $liste) {
-                if (abs($position - $zelle['spalte']) <= 2) {
-                    $gruppen[$position][] = $zelle;
-
-                    continue 2;
-                }
-            }
-            $gruppen[$zelle['spalte']] = [$zelle];
-        }
-        ksort($gruppen);
-
-        return array_values($gruppen);
+        return $this->spaltenAus($this->lines);
     }
 
     /** Betrag nach einem Label ("Gesamtbrutto ... 2.512,00") - der erste Wert. */

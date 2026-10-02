@@ -79,6 +79,7 @@ use App\Services\Ai\TemplateParsers\KontaktSepaDatenParser;
 use App\Services\Ai\TemplateParsers\LichtblickAuftragParser;
 use App\Services\Ai\TemplateParsers\LichtblickVertragsbestaetigungParser;
 use App\Services\Ai\TemplateParsers\MeldebestaetigungParser;
+use App\Services\Ai\TemplateParsers\MitgliedsbescheinigungParser;
 use App\Services\Ai\TemplateParsers\NafiKfzAntragParser;
 use App\Services\Ai\TemplateParsers\NovitasBeitrittserklaerungParser;
 use App\Services\Ai\TemplateParsers\OnlineProtokollAntragParser;
@@ -202,6 +203,11 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(WgvKfzPoliceParser::class),
                 $app->make(NafiKfzAntragParser::class),
                 $app->make(BayerischeEscooterParser::class),
+                // VOR den Beitritts-Formularen: die Bestaetigung der Kasse ist
+                // ein ANSCHREIBEN an den Arbeitgeber, kein ausgefuelltes
+                // Formular - sie darf nicht an einem Formular-Parser haengen
+                // bleiben (spezialisiert vor generisch).
+                $app->make(MitgliedsbescheinigungParser::class),
                 $app->make(KkhBeitrittserklaerungParser::class),
                 $app->make(NovitasBeitrittserklaerungParser::class),
                 $app->make(BigGesundParser::class),

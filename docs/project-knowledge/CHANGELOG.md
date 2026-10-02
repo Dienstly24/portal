@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 02.10.2026 - Krankenkassen-Bestaetigung: der Empfaenger ist der Arbeitgeber (KI-046, KI-047)
+
+- **Task**: Betreiber-Meldung mit einem echten Schreiben einer gesetzlichen Krankenkasse ("Bestaetigung: <Name> ist bei uns versichert"): "erkenne die Datei, damit das System sie erkennt".
+- **Files Changed**: neu `app/Services/Ai/TemplateParsers/MitgliedsbescheinigungParser.php`, neu `app/Services/Ai/Concerns/LiestSpalten.php`; `GehaltsabrechnungParser` (nutzt den gemeinsamen Baustein statt einer privaten Kopie), `Document::AI_TYPES` (neuer Typ `mitgliedsbescheinigung`), `AppServiceProvider` (Registrierung vor den Beitritts-Formularen), `ClaudeDocumentAiProvider` (Prompt-Absatz); neu `tests/Feature/Ai/MitgliedsbescheinigungParserTest.php` (13 Faelle); `tests/Feature/ReportsDashboardTest.php` (KI-047); `phpstan-baseline.neon` (3 Muster nachgezogen, KEIN neuer Eintrag).
+- **Components Affected**: Dokumenten-Eingang (Typ-Erkennung, Kunden-Zuordnung, Review-Modal Gruppe "Arbeitgeber"), KI-Eskalation, Entgeltabrechnungs-Parser (nur Umbau, Verhalten unveraendert).
+- **Database Changes**: keine. `customers.employer_name`/`employer_address` bestehen seit dem Arbeitsvertrag-Parser.
+- **API Changes**: keine.
+- **Potential Side Effects**: Ein neuer Dokumenttyp erscheint in der Typ-Liste. Schreiben, die bisher "Sonstiges" waren und zur KI gingen, werden jetzt gratis gelesen - das spart je Dokument einen KI-Aufruf. Der Typ ist bewusst NICHT in `NEW_BUSINESS_TYPES`: sonst entstuende ein zweiter Kranken-Vertrag fuer dieselbe Mitgliedschaft.
+- **Tests Performed**: Am ECHTEN Schreiben gemessen - vorher kein Parser-Treffer und die Service-Adresse der Kasse als Kunden-E-Mail, nachher Name, Geburtsdatum, Geschlecht, Kasse, RVNR, Versicherungsbeginn und Arbeitgeber samt Anschrift; beide Wege (Foto/Tesseract und PDF-Textebene mit geteilten Zeilen) liefern dasselbe. Gegenprobe: verlesene RVNR wird verworfen. Mutationsprobe: ohne Registrierung bzw. ohne Typ scheitern die beiden Waechter-Tests. Volle Suite 3230/3230 gruen, 0 uebersprungen; `pint --test` sauber; PHPStan Stufe 5: 0 Fehler.
+- **Result**: KI-046 IMPLEMENTED, KI-047 FIXED.
+
+---
+
 ## 30.09.2026 - Entgeltabrechnung: Kunde und Arbeitgeber werden gelesen (KI-045)
 
 - **Task**: Betreiber-Meldung mit einer echten Abrechnung: "erkenne den Lohnzettel - uns interessieren Name und Anschrift des Kunden und der Name des Arbeitgebers; der steht ueblicherweise EINZEILIG ueber der Kundenanschrift".
