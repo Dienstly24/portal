@@ -14,9 +14,12 @@ use App\Models\Customer;
 use App\Models\Document;
 use App\Models\MeterReading;
 use App\Models\VehicleClaim;
+use App\Models\VehicleSfReference;
 use App\Services\CommissionImport\CommissionAuditLogger;
 use App\Services\ContractSwitchService;
 use App\Services\Energy\MeterReadingService;
+use App\Services\Kfz\SfReferenceService;
+use App\Services\Kfz\SfReferenceValidator;
 use App\Services\VehicleOverlapGuard;
 use App\Services\Vermittler\VermittlerLinkService;
 use Carbon\Carbon;
@@ -37,6 +40,9 @@ use Illuminate\Validation\ValidationException;
 class ContractController extends Controller
 {
     use ScopesCustomerAccess;
+
+    /** Hinweise aus dem SF-Bezug (z. B. angelegter Fremdvertrag) fuer die Erfolgsmeldung. */
+    private array $sfNotes = [];
 
     /**
      * Vertragsliste. Gruppe (aktiver Bestand / in Bearbeitung / Historie)
@@ -207,6 +213,7 @@ class ContractController extends Controller
         $this->authorizeCustomerAccess($customerId);
         $this->validateContract($request);
         $herkunft = $this->validateOrigin($request, (string) $customerId);
+        $this->precheckSfReferences($request, new Contract(['customer_id' => $customerId, 'type' => $request->type]));
 
         // Doppelversicherungs-Schutz + Wechsel-Automatik (26.07.2026):
         // Gleiches Fahrzeug, ANDERER Versicherer = Wechsel -> am Altvertrag
@@ -268,13 +275,14 @@ class ContractController extends Controller
             ->recordContractEdit($contract, ['reference_number' => null, 'vermittler_id' => null], auth()->id());
 
         return redirect()->route('admin.customer', $customerId)
-            ->with('success', 'Vertrag erfolgreich hinzugefügt.'.$switchNote);
+            ->with('success', 'Vertrag erfolgreich hinzugefügt.'.$switchNote.$this->sfNoteText());
     }
 
     public function contractEdit($id) {
-        $contract = Contract::with(['vehicleDetail.claims', 'vehicleDetail.mileageReadings', 'vehicleDetail.sfHistory', 'energyDetail.meterReadings', 'internetDetail', 'customer.user', 'revisions.changedBy'])->findOrFail($id);
+        $contract = Contract::with(['vehicleDetail.claims', 'vehicleDetail.mileageReadings', 'vehicleDetail.sfHistory', 'vehicleDetail.sfReferences.referenceContract.vehicleDetail', 'vehicleDetail.sfReferences.proofDocument', 'vehicleDetail.sfReferences.verifier', 'sfDependents.vehicleDetail.contract', 'energyDetail.meterReadings', 'internetDetail', 'customer.user', 'customer.documents', 'revisions.changedBy'])->findOrFail($id);
         $this->authorizeCustomerAccess($contract->customer_id);
-        return view('admin.contract_edit', compact('contract'));
+        $sfWarnings = $contract->type === 'kfz' ? app(SfReferenceValidator::class)->warnings($contract) : [];
+        return view('admin.contract_edit', compact('contract', 'sfWarnings'));
     }
 
     /**
@@ -356,6 +364,7 @@ class ContractController extends Controller
         $this->authorizeCustomerAccess($contract->customer_id);
         $this->validateContract($request, $contract->id);
         $herkunft = $this->validateOrigin($request, (string) $contract->customer_id, $contract);
+        $this->precheckSfReferences($request, $contract);
         $fremdHandlung = $this->guardExternalAction($request, $contract);
         if ($conflictError = $this->vehicleOverlapError($request, (string) $contract->customer_id, $contract->id)) {
             return back()->withErrors(['vehicle_overlap' => $conflictError])->withInput();
@@ -415,7 +424,7 @@ class ContractController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.customer', $contract->customer_id)->with('success', 'Vertrag aktualisiert.'.$linkNote);
+        return redirect()->route('admin.customer', $contract->customer_id)->with('success', 'Vertrag aktualisiert.'.$linkNote.$this->sfNoteText());
     }
 
     public function contractDestroy($id) {
@@ -710,6 +719,77 @@ class ContractController extends Controller
     }
 
     /** Gemeinsame Validierung fuer Anlegen und Bearbeiten von Vertraegen. */
+    /**
+     * Sofort-Suche nach dem Bezugsfahrzeug (Erstwagen): KFZ-Vertraege des
+     * Kunden und seiner verknuepften Familie, soweit der Bearbeiter sie
+     * sehen darf. Liefert reine Daten - die Trefferliste baut das Formular
+     * per textContent (Kundennamen sind Fremddaten).
+     */
+    public function sfReferenceSearch(Request $request, $customerId, SfReferenceService $service) {
+        $this->authorizeCustomerAccess($customerId);
+        $q = trim((string) $request->query('q', ''));
+        $exclude = (string) $request->query('exclude', '');
+
+        $query = $service->candidateQuery((string) $customerId, $request->user())
+            ->when($exclude !== '', fn ($w) => $w->where('id', '!=', $exclude));
+        if ($q !== '') {
+            $like = '%'.addcslashes($q, '%_\\').'%';
+            $query->where(function ($w) use ($like) {
+                $w->where('insurer', 'like', $like)
+                    ->orWhere('contract_number', 'like', $like)
+                    ->orWhereHas('vehicleDetail', fn ($v) => $v->where('license_plate', 'like', $like)
+                        ->orWhere('manufacturer', 'like', $like)->orWhere('model', 'like', $like));
+            });
+        }
+
+        $own = (string) $customerId;
+        $rows = $query->orderByDesc('start_date')->limit(20)->get()
+            ->sortBy(fn (Contract $c) => [(string) $c->customer_id === $own ? 0 : 1, $c->isCurrentlyActive() ? 0 : 1])
+            ->values()
+            ->map(fn (Contract $c) => [
+                'id' => $c->id,
+                'insurer' => $c->insurer,
+                'contract_number' => $c->contract_number,
+                'label' => VehicleSfReference::labelFor($c),
+                'plate' => data_get($c, 'vehicleDetail.license_plate'),
+                'vehicle' => trim(data_get($c, 'vehicleDetail.manufacturer', '').' '.data_get($c, 'vehicleDetail.model', '')),
+                'sf_hp' => ContractVehicleDetail::sfLabel(data_get($c, 'vehicleDetail.sf_liability_class')),
+                'sf_vk' => data_get($c, 'vehicleDetail.has_vollkasko') ? ContractVehicleDetail::sfLabel(data_get($c, 'vehicleDetail.sf_comprehensive_class')) : null,
+                'status' => $c->displayStatus()['label'],
+                'active' => $c->isCurrentlyActive(),
+                'external' => $c->origin === Contract::ORIGIN_EXTERNAL,
+                'owner' => (string) $c->customer_id === $own ? 'Kunde selbst' : data_get($c, 'customer.user.name', 'Familienmitglied'),
+                'own_customer' => (string) $c->customer_id === $own,
+                'url' => route('admin.contract.edit', $c->id),
+            ]);
+
+        return response()->json(['results' => $rows]);
+    }
+
+    /**
+     * SF-Bezug VOR dem Speichern pruefen: Zugehoerigkeit, Selbst-/Kreisbezug
+     * und - nur bei eingeschalteter Einstellung - die Bezugspflicht. So
+     * entsteht nie ein halb gespeicherter Vertrag.
+     */
+    private function precheckSfReferences(Request $request, Contract $contract): void {
+        if ($request->type !== 'kfz') return;
+        $vehicle = (array) $request->input('vehicle', []);
+        $errors = app(SfReferenceValidator::class)->blockingErrors($vehicle, $request->filled('stage') ? (string) $request->stage : null);
+        if ($errors) throw ValidationException::withMessages($errors);
+
+        $service = app(SfReferenceService::class);
+        foreach (['haftpflicht', 'vollkasko'] as $branch) {
+            $ref = (array) ($vehicle['sf_ref'][$branch] ?? []);
+            if (($ref['reference_type'] ?? null) === 'internal' && ! empty($ref['reference_contract_id'])) {
+                $service->assertAllowedReference($contract, (string) $ref['reference_contract_id'], $request->user());
+            }
+        }
+    }
+
+    private function sfNoteText(): string {
+        return $this->sfNotes ? ' '.implode(' ', $this->sfNotes) : '';
+    }
+
     private function validateContract(Request $request, ?string $ignoreId = null): array {
         return $request->validate([
             'type' => 'required|in:'.implode(',', Contract::typeKeys()),
@@ -822,6 +902,24 @@ class ContractController extends Controller
             'vehicle.previous_contract_number' => 'nullable|string|max:60',
             'vehicle.previous_insurance_since' => 'nullable|string|max:60',
             'vehicle.previous_insurance_terminated_by_insurer' => 'nullable|in:0,1',
+            'vehicle.no_previous_insurance' => 'nullable|boolean',
+            // SF-Bezug je Sparte (01.10.2026)
+            'vehicle.sf_ref' => 'nullable|array',
+            'vehicle.sf_ref.*.reference_type' => 'nullable|in:internal,external',
+            'vehicle.sf_ref.*.reference_contract_id' => 'nullable|uuid',
+            'vehicle.sf_ref.*.ext_insurer' => 'nullable|string|max:120',
+            'vehicle.sf_ref.*.ext_contract_number' => 'nullable|string|max:60',
+            'vehicle.sf_ref.*.ext_license_plate' => 'nullable|string|max:20',
+            'vehicle.sf_ref.*.ext_sf_class' => 'nullable|in:'.implode(',', ContractVehicleDetail::sfClassKeys()),
+            'vehicle.sf_ref.*.create_external' => 'nullable|boolean',
+            'vehicle.sf_ref.*.copy_from_liability' => 'nullable|boolean',
+            'vehicle.sf_ref.*.holder_relation' => 'nullable|in:'.implode(',', array_keys(VehicleSfReference::HOLDER_RELATIONS)),
+            'vehicle.sf_ref.*.holder_name' => 'nullable|string|max:120',
+            'vehicle.sf_ref.*.proof_document_id' => 'nullable|uuid',
+            'vehicle.sf_ref.*.verified' => 'nullable|boolean',
+            'vehicle.sf_ref.*.license_date' => 'nullable|date|before_or_equal:today',
+            'vehicle.sf_ref.*.campaign_name' => 'nullable|string|max:120',
+            'vehicle.sf_ref.*.note' => 'nullable|string|max:2000',
             // SF-Einstufung (Haftpflicht / Vollkasko getrennt)
             'vehicle.sf_liability_class' => 'nullable|in:'.implode(',', ContractVehicleDetail::sfClassKeys()),
             'vehicle.sf_liability_valid_from' => 'nullable|date',
@@ -931,6 +1029,8 @@ class ContractController extends Controller
             'sf_comprehensive_real_class' => null,
         ];
 
+        $noPrev = ! empty($v['no_previous_insurance']);
+
         $detail = ContractVehicleDetail::updateOrCreate(
             ['contract_id' => $contract->id],
             array_merge([
@@ -962,10 +1062,14 @@ class ContractController extends Controller
                 // "custom" = Freifeld-Wert (Sonderfaelle wie 18.500 km/Jahr).
                 'annual_mileage' => $blank('annual_mileage') === 'custom' ? $blank('annual_mileage_custom') : $blank('annual_mileage'),
                 // Vorversicherung: leerer Radio ("") = unbekannt (null).
-                'previous_insurer' => $blank('previous_insurer'),
-                'previous_contract_number' => $blank('previous_contract_number'),
-                'previous_insurance_since' => $blank('previous_insurance_since'),
-                'previous_insurance_terminated_by_insurer' => $blank('previous_insurance_terminated_by_insurer') === null
+                // "Keine Vorversicherung" (Neuzulassung/Ersterwerb) leert die
+                // Felder - sonst stuende dort weiter eine Angabe, die es fuer
+                // dieses Fahrzeug nicht gibt.
+                'no_previous_insurance' => $noPrev,
+                'previous_insurer' => $noPrev ? null : $blank('previous_insurer'),
+                'previous_contract_number' => $noPrev ? null : $blank('previous_contract_number'),
+                'previous_insurance_since' => $noPrev ? null : $blank('previous_insurance_since'),
+                'previous_insurance_terminated_by_insurer' => ($noPrev || $blank('previous_insurance_terminated_by_insurer') === null)
                     ? null : ($v['previous_insurance_terminated_by_insurer'] === '1'),
             ], $sfLiability, $sfComprehensive)
         );
@@ -1003,6 +1107,12 @@ class ContractController extends Controller
                 ]);
             }
         }
+
+        // Begruendung der Sondereinstufung (Bezugsfahrzeug usw.) - einziger
+        // Schreibweg ist der Service (Selbst-/Kreisbezug, Protokoll).
+        $this->sfNotes = app(SfReferenceService::class)
+            ->sync($contract, $detail, (array) ($v['sf_ref'] ?? []), auth()->user());
+        $detail->load('sfReferences');
 
         // SF-Verlauf fortschreiben (Teilkasko hat keine SF-Klasse).
         $this->syncSfHistory($detail, 'haftpflicht', $sfLiability['sf_liability_class'], $sfLiability['sf_liability_valid_from']);
@@ -1042,6 +1152,15 @@ class ContractController extends Controller
      */
     private function syncSfHistory(ContractVehicleDetail $detail, string $branch, ?string $class, ?string $validFrom): void {
         $open = $detail->sfHistory()->where('branch', $branch)->whereNull('valid_until')->orderByDesc('created_at')->first();
+        // Grund und Bezug stehen an JEDEM Verlaufseintrag - aendert sich der
+        // Erstwagen spaeter, bleibt nachvollziehbar, worauf die damalige
+        // Einstufung beruhte.
+        $ref = $detail->sfReference($branch);
+        $why = [
+            'special_reason' => $class ? $detail->sfSpecialReason($branch) : null,
+            'reference_label' => $class && $ref ? $ref->referenceText() : null,
+            'reference_contract_id' => $class && $ref ? $ref->reference_contract_id : null,
+        ];
 
         if (! $class) {
             if ($open) $open->update(['valid_until' => now()->toDateString()]);
@@ -1049,7 +1168,12 @@ class ContractController extends Controller
         }
         if ($open && $open->sf_class === $class) {
             $openFrom = $open->valid_from?->toDateString();
-            if ($openFrom !== $validFrom) $open->update(['valid_from' => $validFrom]);
+            $patch = [];
+            if ($openFrom !== $validFrom) $patch['valid_from'] = $validFrom;
+            foreach ($why as $key => $value) {
+                if ($open->{$key} !== $value) $patch[$key] = $value;
+            }
+            if ($patch) $open->update($patch);
             return;
         }
         if ($open) {
@@ -1057,6 +1181,6 @@ class ContractController extends Controller
                 ? Carbon::parse($validFrom)->subDay()->toDateString()
                 : now()->toDateString()]);
         }
-        $detail->sfHistory()->create(['branch' => $branch, 'sf_class' => $class, 'valid_from' => $validFrom, 'valid_until' => null]);
+        $detail->sfHistory()->create(['branch' => $branch, 'sf_class' => $class, 'valid_from' => $validFrom, 'valid_until' => null] + $why);
     }
 }

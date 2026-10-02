@@ -8,6 +8,20 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 01.10.2026 - KFZ Phase 1: SF-Sondereinstufung mit Bezugsfahrzeug (KI-046)
+
+- **Task**: Betreiber-Auftrag KFZ-Modul, Phase 1: der Erstwagen einer Zweitwagen-/Drittwagen-/Familien-Einstufung wird strukturiert und verknuepft erfasst statt zweckentfremdet in der Vorversicherung.
+- **Files Changed**: Migration `2026_10_01_100000_create_vehicle_sf_references`; neu `config/kfz_rules.php`, `app/Models/VehicleSfReference.php`, `app/Services/Kfz/SfReferenceService.php`, `SfReferenceValidator.php`, `SfReferenceNotifier.php`, `app/Console/Commands/KfzZweitwagenPruefen.php`, Views `partials/contract_kfz_sf_reference`, `partials/contract_sf_erstwagen_badge`, `docs/project-knowledge/KFZ_RULES.md`; geaendert `Contract` (Relation `sfDependents`, Listener, KI-047), `ContractVehicleDetail` (Rang/Rueckstufung/Vorschlag/Anzeige, Listener), `VehicleSfEntry`, `Admin\ContractController`, `AdminController` (Eager Loading), `SettingsController` + `UpdateSettingsRequest` + `settings.blade.php` (Schalter), Views `contract_kfz_fields`, `contract_kfz_cockpit`, `contract_edit`, `customer_show`; `routes/web.php`.
+- **Components Affected**: Vertragsformular KFZ, Vertragsakte, Kundenakte (Vertragszeile), Einstellungen, Glocke/Aufgaben.
+- **Database Changes**: neue Tabelle `vehicle_sf_references`; `vehicle_sf_history` + `special_reason`, `reference_label`, `reference_contract_id`; `contract_vehicle_details` + `no_previous_insurance`. Rein additiv, kein Datenverlust.
+- **API Changes**: neue JSON-Route `GET admin/sf-bezug/{customerId}/suche` (`admin.contract.sf_reference_search`, Portfolio-Pruefung, throttle 240/min).
+- **Potential Side Effects**: Ein als Fremdvertrag angelegter Erstwagen steht im Kundenbestand (Abschnitt Fremdvertraege, Herkunft "ungeprueft") - nicht im Eigenbestand, keine Courtage. KI-047: `deleting`-Listener am Vertrag laufen jetzt alle (bisher nur der erste).
+- **Tests Performed**: neu `SfBezugsfahrzeugTest` (19), `KfzSfRegelnTest` (6); volle Suite, `composer stan`, `composer lint` - Ergebnis im PR. Basislauf auf `main` vor der Aenderung: 1 datumsabhaengiger Fehlschlag (KI-048), 5 uebersprungen (OCR-Werkzeuge fehlen in dieser Umgebung).
+- **Nachtrag (CI)**: Beide Testjobs der CI waren rot - einzig durch den datumsabhaengigen `ReportsDashboardTest` (KI-048, am Monatsersten immer rot, auch auf `main`). Im selben PR behoben (Uhr im Test fest auf den Monatsersten), damit der PR mergebar wird.
+- **Result**: IMPLEMENTED (Phase 1 von 3; Phase 2/3 geplant, Regeln in KFZ_RULES.md).
+
+---
+
 ## 30.09.2026 - Entgeltabrechnung: Kunde und Arbeitgeber werden gelesen (KI-045)
 
 - **Task**: Betreiber-Meldung mit einer echten Abrechnung: "erkenne den Lohnzettel - uns interessieren Name und Anschrift des Kunden und der Name des Arbeitgebers; der steht ueblicherweise EINZEILIG ueber der Kundenanschrift".

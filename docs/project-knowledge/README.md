@@ -43,6 +43,7 @@ Dateien betrifft, zieht die Datei im SELBEN Pull Request mit.
 | [KNOWN_ISSUES.md](KNOWN_ISSUES.md) | **Issue Registry** (KI-xxx), einzige Quelle fuer Befunde |
 | [REPAIR_ROADMAP.md](REPAIR_ROADMAP.md) | Priorisierter Fahrplan |
 | [CHANGELOG.md](CHANGELOG.md) | Aenderungsprotokoll ab Anlage der Wissensbasis |
+| [KFZ_RULES.md](KFZ_RULES.md) | KFZ-Fachregeln: Standardwert, Quelle, Pruefstatus, Konfiguration |
 
 ## Ablauf zu Beginn jeder Sitzung
 

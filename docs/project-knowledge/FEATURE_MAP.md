@@ -74,6 +74,12 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - R Herkunft aendern nur admin/manager (mit Bestaetigung, protokolliert); Pruefliste bestaetigen alle Staff (Portfolio)
 - Tests `VertragsherkunftTest` · Status **ACTIVE** (Stand 28.09.2026, lokal ungetestet - siehe CHANGELOG)
 
+### F-012 KFZ: SF-Sondereinstufung mit Bezugsfahrzeug (Erstwagen)
+- **Beschreibung**: Zweitwagen-/Drittwagen-/Familien-Einstufungen tragen ihren Bezugsvertrag je Sparte (HP/VK) - im Bestand (Kunde + verknuepfte Familie, Sofort-Suche) oder extern (optional als Fremdvertrag angelegt). Halter, Snapshot der Erstwagen-SF bei Gewaehrung, Nachweis + Pruefvermerk (admin/manager); uebrige Gruende nur ihre Angaben (Fuehrerscheindatum, Aktion, Freitext). Vorschlag der tatsaechlichen SF aus dem Fuehrerscheindatum. Anzeige in beide Richtungen ("Zweitwagen zu ADAC ... (SF 5)" / "🔗 Erstwagen fuer ..."), SF-Verlauf mit Grund/Bezug, Warnungen, Benachrichtigung bei Rueckstufung/Kuendigung/Loeschung des Erstwagens. Vorversicherung: "Keine Vorversicherung" + Hinweis bei Zweitwagen-Text.
+- C `Admin\ContractController` (`sfReferenceSearch`, `precheckSfReferences`, `syncVehicleDetail`, `syncSfHistory`); S `Kfz\SfReferenceService`, `Kfz\SfReferenceValidator`, `Kfz\SfReferenceNotifier`; M `VehicleSfReference`, `ContractVehicleDetail` (`sfRank`, `isDowngrade`, `suggestRealClass`, `sfReasonSummary`), `Contract::sfDependents`; V `partials/contract_kfz_sf_reference`, `partials/contract_sf_erstwagen_badge`; Befehl `kfz:zweitwagen-pruefen`
+- Route `admin/sf-bezug/{customerId}/suche`; T `vehicle_sf_references`, `vehicle_sf_history` (+ `special_reason`, `reference_label`, `reference_contract_id`), `contract_vehicle_details.no_previous_insurance`; Einstellung `sf_reference_required_on_submit`; Regeln [KFZ_RULES.md](KFZ_RULES.md)
+- Tests `SfBezugsfahrzeugTest`, `KfzSfRegelnTest` · Status **ACTIVE** (01.10.2026) · Issues KI-046, KI-047
+
 ### F-020 Smart Document Upload / Dokumenten-Eingang
 - C `SmartDocumentUploadController` (Admin + Portal); S `Ai/DocumentAnalyzer`, `HeuristicDocumentClassifier`, `Ocr/*`, `DocumentIntake/DocumentIntakeService`; Job `AnalyzeDocumentJob`; Planer `documents:analyze-pending`, `documents:prune-unassigned`
 - V `admin/documents_inbox` (1636 Z.), `portal/documents`; T `documents`, `ai_decisions`

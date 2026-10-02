@@ -63,6 +63,21 @@
 </div>
 @endif
 
+{{-- SF-Bezug (01.10.2026): Erstwagen-Verknuepfung in beide Richtungen und
+     Hinweise (fehlender Bezug, Erstwagen nicht mehr aktiv, Rueckstufung ...).
+     Nur Hinweise - niemand wird aufgehalten. --}}
+@if($contract->type === 'kfz' && ($contract->sfDependents->isNotEmpty() || ! empty($sfWarnings)))
+<div style="max-width:980px;margin-bottom:16px;">
+    @include('admin.partials.contract_sf_erstwagen_badge', ['contract' => $contract])
+    @if(! empty($sfWarnings))
+    <div class="kfz-sf-warnings" style="background:#FDF2E3;border:1px solid #EBC894;color:#8A5A1B;border-radius:10px;padding:10px 14px;font-size:12.5px;margin-top:8px;">
+        <b>⚠ SF-Einstufung prüfen</b>
+        @foreach($sfWarnings as $warning)<div>• {{ $warning }}</div>@endforeach
+    </div>
+    @endif
+</div>
+@endif
+
 {{-- KFZ-Cockpit: alle Vertragsdetails auf einen Blick (Redesign 17.07.2026) --}}
 @include('admin.partials.contract_kfz_cockpit', ['contract' => $contract])
 

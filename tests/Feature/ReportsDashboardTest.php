@@ -213,11 +213,18 @@ class ReportsDashboardTest extends TestCase
     /**
      * Verlaengerung ist eine ABLEITUNG: Ablauf im Zeitraum, Vertrag laeuft
      * weiter. Derselbe Ablauf MIT Kuendigung ist keine Verlaengerung.
+     *
+     * KI-048: "Dieser Monat" reicht vom Monatsersten bis HEUTE. Der Test
+     * legte den Ablauf frueher auf "Monatserster + 2 Tage" - am 1. eines
+     * Monats lag der in der Zukunft und der Test war rot (und blockierte
+     * jeden PR). Die Uhr steht jetzt fest auf dem Monatsersten, dem
+     * engsten Fall; der Ablauf ist der Monatserste selbst.
      */
     public function test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung(): void
     {
+        $this->travelTo(now()->startOfMonth()->setTime(9, 0));
         $kunde = $this->kunde();
-        $imZeitraum = now()->startOfMonth()->addDays(2)->toDateString();
+        $imZeitraum = now()->startOfMonth()->toDateString();
         $this->vertrag($kunde, ['end_date' => $imZeitraum]);
         $this->vertrag($kunde, ['end_date' => $imZeitraum, 'cancellation_date' => $imZeitraum, 'status' => 'cancelled']);
 
