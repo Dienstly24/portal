@@ -1534,11 +1534,85 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Zaehlernummer und der eAT-Rueckseite: er kannte die Entgeltabrechnung
   ueberhaupt nicht und beschreibt sie jetzt samt Absenderzeile; Steuer-ID
   und Sozialversicherungsnummer werden ausdruecklich NICHT uebernommen.
-  BEWUSST NICHT GEAENDERT: die Namenstrennung "letztes Wort = Nachname"
-  macht aus "Yusuf Al Rahman" den Vornamen "Yusuf Al". Die Regel steht in
-  ueber zehn Parsern; sie auf Namenspartikel (Al/El/Abu/Bin/van/von)
-  umzustellen ist eine eigene Aufgabe mit eigenen Tests, kein Nebeneffekt.
+  NACHGEZOGEN 02.10.2026: die Namenstrennung "letztes Wort = Nachname"
+  machte aus "Yusuf Al Rahman" den Vornamen "Yusuf Al" - das ist behoben,
+  siehe "Namenspartikel gehoeren an den Nachnamen".
   Tests: `GehaltsabrechnungParserTest` (8 Faelle; 6 scheitern ohne den Fix).
+- **Namenspartikel gehoeren an den NACHNAMEN** (`App\Support\PersonenName`,
+  Betreiber-Auftrag 02.10.2026). Alle Vorlagen-Parser teilten einen Namen nach
+  "letztes Wort = Nachname". Fuer "Max Mustermann" stimmt das; fuer
+  "Yusuf Al Rahman" entstand der Vorname "Yusuf Al" und der Nachname
+  "Rahman" - der Artikel gehoert aber zum Familiennamen. Dasselbe bei
+  "Jan van der Berg", "Ahmed Abu Bakr", "Khalid bin Walid", "Jean Le Blanc".
+  Das trifft diesen Kundenstamm besonders oft und FAELLT KAUM AUF: der
+  Datensatz sieht vollstaendig aus; falsch wird erst die Anrede im Schreiben
+  ("Herr Rahman") und der Abgleich mit dem naechsten Dokument, das
+  "Al Rahman" schreibt.
+  **EINE Stelle, nicht 23**: die Regel haengt in
+  `ValidatesExtractedFields::validatedPerson()` - der Stelle, durch die JEDE
+  Quelle laeuft (23 Parser, KI-Antwort, OCR-Heuristik), genau wie die
+  Trennung von Strasse und Hausnummer. Sie in jeden Parser zu kopieren hiesse,
+  sie 23-mal zu pflegen.
+  **KONSERVATIV**: verschoben wird nur, was am ENDE des Vornamens steht und in
+  `PersonenName::PARTIKEL` aufgefuehrt ist - und NIE der ganze Vorname.
+  "Al Pacino" bleibt deshalb "Al" + "Pacino": bliebe kein Vorname uebrig,
+  bleibt alles unveraendert. **"abd"/"abdul" stehen bewusst NICHT in der
+  Liste** - sie sind meist Teil des RUFnamens ("Abdul Rahman"); sie
+  aufzunehmen hiesse, einen Vornamen zu zerschneiden.
+  Tests: `tests/Unit/PersonenNameTest.php` (19 Faelle).
+- **Krankenkassen-Bestaetigung: der Empfaenger ist NICHT der Kunde**
+  (`MitgliedsbescheinigungParser`, Betreiber-Meldung 02.10.2026 mit einem
+  echten Schreiben). Gemessen (Foto -> Tesseract UND PDF-Textebene) las das
+  System daraus VORHER **gar nichts**: kein Parser griff, die Heuristik stufte
+  es als "Sonstiges" ein - und uebernahm dabei ausgerechnet die
+  SERVICE-ADRESSE DER KASSE (`serviceteam2@kkh.de`) als E-Mail des Kunden.
+  Danach lief jedes solche Schreiben in die KI-Eskalation, also in Kosten.
+  **DIE REGEL, UM DIE ES GEHT - und sie ist die UMKEHRUNG der sonstigen**:
+  dieser Brief ist an den ARBEITGEBER gerichtet ("Bitte bestaetigen Sie uns
+  den Beginn der versicherungspflichtigen Beschaeftigung unseres Mitglieds
+  nach Paragraph 6 DEUEV"). Im Empfaengerblock steht deshalb die FIRMA, und
+  der Kunde steht AUSSCHLIESSLICH im Fliesstext ("... dass Frau <Name>,
+  geboren am <Datum>, ... bei uns versichert ist"). In jedem anderen
+  Schreiben gilt "Empfaengerblock = Kunde" - wer sie hier anwendet, legt den
+  ARBEITGEBER als Kunden an, mit dessen Anschrift, und der echte Kunde fehlt
+  ganz. Genau das haette auch die KI getan: der Prompt kannte diese
+  Briefart nicht (dieselbe Luecke wie bei der Zaehlernummer, der
+  eAT-Rueckseite und der Entgeltabrechnung) und beschreibt sie jetzt.
+  **BELEGT, NICHT VERMUTET**: dass der Empfaenger der Arbeitgeber ist, wird
+  aus dem Brief selbst belegt (Paragraph 6 DEUEV, Betriebsnummer,
+  Sozialversicherungsbeitraege) und landet dann in
+  `employer_name`/`employer_address` - dieselben Felder wie bei
+  Arbeitsvertrag und Entgeltabrechnung. Fehlt der Beleg und traegt der
+  Empfaengerblock den NAMEN DES MITGLIEDS, ist es die Ausfertigung an den
+  Versicherten selbst - dann ist es SEINE Anschrift. Laesst sich keines von
+  beidem belegen, bleibt das Feld LEER (der Block steht in der
+  Zusammenfassung, damit nichts verloren geht). Eine zweite Namenszeile
+  ("Standort Hafen - Jan Petersen") wird NIE in den Firmennamen gezogen -
+  ob Standort oder Person, sieht man ihr nicht an.
+  **NIE UEBERNOMMEN**: die "Krankenkassennummer" (92111581) ist die
+  Betriebsnummer der KASSE, bei allen Versicherten dieselbe - exakt die
+  Traeger-Kennnummer-Regel der Gesundheitskarte; eine
+  Krankenversichertennummer nennt dieses Schreiben gar nicht, das Feld
+  bleibt leer und die Zusammenfassung sagt es. Das Servicezeichen ist keine
+  Vertragsnummer, Telefon und Service-E-Mail der Kasse sind keine
+  Kundenkontakte.
+  **DIE RVNR PRUEFT SICH SELBST**: die Rentenversicherungsnummer traegt an
+  Stelle 3-8 ihr eigenes Geburtsdatum (TTMMJJ). Sie wird nur uebernommen,
+  wenn es zum gelesenen Geburtsdatum passt - eine verlesene Ziffer faellt
+  damit auf, statt in die Akte zu wandern (dieselbe Haltung wie Mod-97 bei
+  der IBAN und die Pruefziffern der MRZ).
+  Stufe `vertrag`: die Bescheinigung BELEGT die Mitgliedschaft und ergaenzt
+  damit den Antrags-Vertrag der Beitrittserklaerung, statt einen zweiten
+  anzulegen; sie ist bewusst KEIN neues Geschaeft (nicht in
+  `NEW_BUSINESS_TYPES`) - sonst entstuende ein ZWEITER Kranken-Vertrag fuer
+  dieselbe Mitgliedschaft.
+  **Gemeinsamer Baustein**: das spaltenweise Lesen des Briefkopfs steht
+  jetzt EINMAL in `App\Services\Ai\Concerns\LiestSpalten` (vorher privat
+  in `GehaltsabrechnungParser`) - "auf Spaltenabstaende ist kein Verlass"
+  war inzwischen viermal dieselbe Ursache. OCR-Rauschen am Zellenanfang
+  ("‚Deichweg 8") wird abgestreift: ohne das faellt die ganze Anschrift
+  durchs Raster.
+  Tests: `MitgliedsbescheinigungParserTest` (13 Faelle).
 - **Zuordnungs-Vorschlaege im Dokumenten-Eingang** (Betreiber-Vorgabe
   29.07.2026): Beim Oeffnen von „Kunden zuordnen…" / „Neuen Kunden
   erstellen" laedt der Dialog SOFORT die naechstliegenden Kunden

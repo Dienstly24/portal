@@ -30,6 +30,11 @@ class Document extends Model
         'beratungsprotokoll' => ['label' => 'Beratungsprotokoll',   'category' => 'contract'],
         'beitrittserklaerung' => ['label' => 'Beitrittserklaerung (Kranken)', 'category' => 'contract'],
         'familienversicherung' => ['label' => 'Familienversicherung (Kranken)', 'category' => 'contract'],
+        // Bestaetigung der Kasse, dass jemand bei ihr versichert ist - geht
+        // meist an den ARBEITGEBER. Sie belegt eine BESTEHENDE Mitgliedschaft
+        // und ist deshalb bewusst KEIN neues Geschaeft (NEW_BUSINESS_TYPES):
+        // der Vertrag entsteht mit der Beitrittserklaerung, nicht hier.
+        'mitgliedsbescheinigung' => ['label' => 'Mitgliedsbescheinigung (Kranken)', 'category' => 'contract'],
         'fahrzeugschein' => ['label' => 'Fahrzeugschein',       'category' => 'other'],
         'fahrzeugbrief' => ['label' => 'Fahrzeugbrief',        'category' => 'other'],
         'gesundheitskarte' => ['label' => 'Gesundheitskarte',     'category' => 'identity'],

@@ -120,8 +120,10 @@ class GehaltsabrechnungParserTest extends TestCase
 
         $p = $r['data']['person'];
         // Kunde: Name und Anschrift - darum geht es beim Zuordnen.
-        $this->assertSame('Yusuf Al', $p['first_name']);
-        $this->assertSame('Rahman', $p['last_name']);
+        // Namenspartikel gehoeren an den Nachnamen (PersonenName): aus
+        // "Yusuf Al Rahman" wird Yusuf + Al Rahman, nicht "Yusuf Al" + Rahman.
+        $this->assertSame('Yusuf', $p['first_name']);
+        $this->assertSame('Al Rahman', $p['last_name']);
         $this->assertSame('Lornsenstrasse', $p['street']);
         $this->assertSame('14', $p['house_number']);
         $this->assertSame('24837', $p['zip']);
@@ -155,7 +157,7 @@ class GehaltsabrechnungParserTest extends TestCase
         $r = (new GehaltsabrechnungParser)->parse($this->verdienstabrechnungText());
 
         $this->assertNotNull($r);
-        $this->assertSame('Rahman', $r['data']['person']['last_name']);
+        $this->assertSame('Al Rahman', $r['data']['person']['last_name']);
         $this->assertSame('24837', $r['data']['person']['zip']);
     }
 
