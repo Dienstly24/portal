@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\ContractHistoryService;
 use App\Services\ContractSwitchService;
 use App\Services\Energy\MeterReadingService;
+use App\Services\Family\FamilyRelationService;
 use App\Services\Matching\CustomerMatchingService;
 use App\Services\Matching\MatchResult;
 use App\Services\Notifications\NotificationService;
@@ -190,6 +191,103 @@ class DocumentIntakeService
         $customer->save();
 
         return array_keys($update);
+    }
+
+    /**
+     * Angehoerige eines Familienversicherungs-Antrags unter dem MITGLIED
+     * verknuepfen (Betreiber-Auftrag 02.10.2026).
+     *
+     * WARUM NICHT linkSameFamilyName: dieser Vordruck rechnet ausdruecklich
+     * mit abweichenden Familiennamen (er verlangt dafuer eine Urkunde). Im
+     * gemessenen Fall heissen Mitglied, Partnerin und Kinder dreimal
+     * verschieden - der Namensabgleich haette NICHTS verknuepft, obwohl das
+     * Formular die Verwandtschaft ausdruecklich benennt. Gelesen wird deshalb
+     * die ROLLE aus dem Formular ("Ehe-/Lebenspartner" bzw. "Kind" mit
+     * angekreuztem "leibl. Kind"), nicht der Nachname.
+     *
+     * Die Rolle des Kindes (Sohn/Tochter) folgt dem angekreuzten Geschlecht;
+     * ohne eindeutiges Kreuz bleibt es die neutrale Rolle "Kind". Ein
+     * Stiefkind, Enkel oder Pflegekind ist KEIN Kind des Mitglieds: dort
+     * entsteht nur die Beziehung "verwandt" OHNE Rolle, die ein Mensch
+     * nachtraegt (nie raten).
+     *
+     * @param  list<array{person:array<string,mixed>,customer:Customer}>  $paare
+     *         Erstes Paar ist das Mitglied (Hauptperson der Extraktion).
+     * @return list<string> Namen der tatsaechlich verknuepften Angehoerigen
+     */
+    public function linkFamilienversicherungAngehoerige(Document $document, array $paare, ?int $byUserId): array
+    {
+        // Der Dokumenttyp steht in der SPALTE ai_type - ai_extracted ist der
+        // reine Datenteil des Analyse-Ergebnisses und traegt ihn nicht.
+        if ($document->ai_type !== 'familienversicherung' || count($paare) < 2) {
+            return [];
+        }
+
+        // Das erste Paar MUSS das Mitglied sein (Hauptperson der Extraktion,
+        // deshalb ohne Rolle). Steht dort eine Rolle, fehlt das Mitglied in
+        // der Liste - dann wuerde ein KIND zur Bezugsperson und alle
+        // Beziehungen haetten die falsche Richtung. Lieber nichts verknuepfen.
+        if (($paare[0]['person']['relation'] ?? null) !== null) {
+            return [];
+        }
+
+        $mitglied = $paare[0]['customer'];
+        $linked = [];
+        foreach (array_slice($paare, 1) as $paar) {
+            $person = $paar['person'];
+            $kunde = $paar['customer'];
+            if ((string) $kunde->id === (string) $mitglied->id) {
+                continue;
+            }
+            $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
+
+            $rolle = match ($person['relation'] ?? null) {
+                'ehepartner' => 'ehepartner',
+                'kind' => match ($person['gender'] ?? null) {
+                    'male' => 'sohn',
+                    'female' => 'tochter',
+                    default => 'kind',
+                },
+                default => null,
+            };
+
+            try {
+                if ($rolle === null) {
+                    // Belegt ist nur, dass die Person im Antrag steht - die
+                    // Rolle vergibt der Mitarbeiter.
+                    app(CustomerRelationshipService::class)->markRelatedUnconfirmed(
+                        (string) $mitglied->id,
+                        (string) $kunde->id,
+                        'Aus dem Antrag auf Familienversicherung: mitzuversichernder Angehoeriger',
+                        $byUserId
+                    );
+                } else {
+                    app(FamilyRelationService::class)->link(
+                        $mitglied,
+                        $kunde,
+                        $rolle,
+                        $byUserId,
+                        'Aus dem Antrag auf Familienversicherung'
+                    );
+                }
+            } catch (\Throwable $e) {
+                // Eine fehlgeschlagene Verknuepfung darf die Kundenanlage nie
+                // zurueckdrehen - die Akten sind das Wichtigere.
+                report($e);
+
+                continue;
+            }
+
+            $linked[] = $name !== '' ? $name : (string) $kunde->customer_number;
+            ActivityLog::record('family_relation_linked', 'customer', (string) $mitglied->id, [
+                'related_customer_id' => (string) $kunde->id,
+                'role' => $rolle,
+                'source' => 'familienversicherung',
+                'document_id' => (string) $document->id,
+            ], $byUserId);
+        }
+
+        return $linked;
     }
 
     /**

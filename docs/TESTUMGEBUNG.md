@@ -24,6 +24,17 @@ Pflichtiges fehlt.
 | Node | 20 | Node LTS |
 | npm | 10 | gehoert zu Node |
 
+**Die CI laeuft auf PHP 8.3 - die Arbeitsumgebung kann neuer sein.**
+Am 02.10.2026 lief ein Testfall lokal auf PHP 8.4 gruen und in der CI
+(PHP 8.3) rot, obwohl der Code stimmte: die Testvorlage entstand aus dem
+Antragstext per `preg_replace('/^(Nachname|Vorname)\s{2,}.*$/mu', ...)`,
+und `\s` schliesst den ZEILENUMBRUCH ein - der Ausdruck frass je nach
+PCRE-Fassung unterschiedlich viel weg, also war der EINGANG des Tests
+verschieden, nicht sein Ergebnis. LEHRE: eine Testvorlage wird
+zeilenweise gebaut, nicht mit einem Ausdruck, der ueber Zeilengrenzen
+greifen kann; und ein gruener lokaler Lauf ist kein Ersatz fuer den
+CI-Lauf, solange die PHP-Fassung abweicht (`php -v` vergleichen).
+
 **`gd` ist nicht optional.** Ohne die Erweiterung existiert
 `imagecreatefromstring()` gar nicht, und ein fehlender Funktionsname ist
 ein FATALER Fehler, den kein `try` abfaengt - genau daran scheiterte am

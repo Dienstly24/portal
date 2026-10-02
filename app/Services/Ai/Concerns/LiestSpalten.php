@@ -29,20 +29,8 @@ trait LiestSpalten
     {
         $zellen = [];
         foreach ($zeilen as $i => $line) {
-            if (! preg_match_all('/\S(?:.*?\S)?(?=\h{2,}|$)/u', $line, $mm, PREG_OFFSET_CAPTURE)) {
-                continue;
-            }
-            foreach ($mm[0] as $treffer) {
-                $text = trim($treffer[0]);
-                if ($text === '') {
-                    continue;
-                }
-                $zellen[] = [
-                    'zeile' => $i,
-                    // Position in ZEICHEN, nicht in Bytes.
-                    'spalte' => mb_strlen(substr($line, 0, (int) $treffer[1])),
-                    'text' => $text,
-                ];
+            foreach ($this->zellenDerZeile($line) as $zelle) {
+                $zellen[] = ['zeile' => $i] + $zelle;
             }
         }
 
@@ -62,5 +50,33 @@ trait LiestSpalten
         ksort($gruppen);
 
         return array_values($gruppen);
+    }
+
+    /**
+     * Zellen EINER Zeile mit ihrer Spaltenposition. Eine Zelle endet an zwei
+     * aufeinanderfolgenden Leerzeichen; die Position wird in ZEICHEN gemessen
+     * (siehe Klassenkommentar - in Bytes verschoebe sie ein Umlaut).
+     *
+     * @return list<array{spalte:int,text:string}>
+     */
+    private function zellenDerZeile(string $line): array
+    {
+        if (! preg_match_all('/\S(?:.*?\S)?(?=\h{2,}|$)/u', $line, $mm, PREG_OFFSET_CAPTURE)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($mm[0] as $treffer) {
+            $text = trim($treffer[0]);
+            if ($text === '') {
+                continue;
+            }
+            $out[] = [
+                'spalte' => mb_strlen(substr($line, 0, (int) $treffer[1])),
+                'text' => $text,
+            ];
+        }
+
+        return $out;
     }
 }

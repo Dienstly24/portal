@@ -92,8 +92,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - `app/Services/Ai/TemplateParsers/*`, Reihenfolge in `AppServiceProvider` (spezialisiert vor generisch)
 - Tests je Parser unter `tests/Feature/Ai/*ParserTest`, `ParserPolicyTest`
 - Ausweiskarten: `PersonalausweisParser` + `AufenthaltstitelParser` teilen den Baustein `Concerns/LiestDeutscheAusweiskarte` (MRZ + Anschrift der Rueckseite); Parser-Ergebnis darf `pflichtangaben` tragen -> `DocumentAnalyzer` eskaliert zur KI, wenn sie fehlen. Tests `AusweiskartenRueckseiteTest`, `AufenthaltstitelParserTest`
-- Briefkopf spaltenweise lesen: gemeinsamer Baustein `Concerns/LiestSpalten` (`GehaltsabrechnungParser`, `MitgliedsbescheinigungParser`) - "auf Spaltenabstaende ist kein Verlass"
+- Briefkopf spaltenweise lesen: gemeinsamer Baustein `Concerns/LiestSpalten` (`GehaltsabrechnungParser`, `MitgliedsbescheinigungParser`, `FamilienversicherungParser`) - "auf Spaltenabstaende ist kein Verlass"
 - Krankenkassen-Bestaetigung (`MitgliedsbescheinigungParser`): Empfaenger ist der ARBEITGEBER, der Kunde steht im Fliesstext - die UMKEHRUNG der sonstigen Regel. Test `MitgliedsbescheinigungParserTest`
+- Familienversicherung (`FamilienversicherungParser`): ZWEI Bauformen in EINEM Parser (aelterer Fragebogen + KKH-Vordruck 0765 mit dreispaltiger Angehoerigen-Tabelle). Die Rolle kommt aus der Spalten-Kopfzeile, nie aus dem Nachnamen; Verknuepfung ueber `DocumentIntakeService::linkFamilienversicherungAngehoerige()`. Tests `FamilienversicherungFaveParserTest`, `FamilienversicherungAnlageTest`
+- Erkennung braucht mehr als EIN Stichwort: `GeburtsurkundeParser` verlangt zusaetzlich einen Standesamts-Beleg - das Wort "Geburtsurkunde" steht im Kleingedruckten vieler Formulare (KI-054)
 - Status **ACTIVE** · Regel `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`
 
 ### F-022 Dokumenten-Anforderungen

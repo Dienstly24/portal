@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 02.10.2026 - Antrag auf Familienversicherung: Mitglied, Partner und Kinder (KI-053, KI-054)
+
+- **Task**: Betreiber-Auftrag mit zwei echten PDF (ausgefuellter Antrag + Blankoformular): "erkenne diese Art von Familien-Antraegen, damit das System beim Hochladen den Antragsteller, die Ehefrau und die Kinder erkennt und sie automatisch unter der Akte des Antragstellers anlegt."
+- **Files Changed**: `FamilienversicherungParser` (zweite Bauform: KKH-Vordruck 0765), `GeburtsurkundeParser` (Erkennung verlangt jetzt einen Standesamts-Beleg), `LiestSpalten` (neuer Baustein `zellenDerZeile`, `spaltenAus` nutzt ihn), `DocumentIntakeService::linkFamilienversicherungAngehoerige()`, `SmartDocumentUploadController::createCustomersFromPersons` (Paarung Person<->Kunde + Aufruf der Rollen-Verknuepfung), `ClaudeDocumentAiProvider` (Prompt-Absatz), `DocumentAnalyzer::hasAnyPersonField` (versteht den Pseudo-Namen `personen`); neu `tests/Feature/Ai/FamilienversicherungFaveParserTest.php` (20 Faelle), neu `tests/Feature/FamilienversicherungAnlageTest.php` (7 Faelle); `CLAUDE.md`, `KNOWN_ISSUES.md`, `FEATURE_MAP.md`.
+- **Components Affected**: Dokumenten-Eingang (Typ-Erkennung, Mehrpersonen-Anlage "Kunden anlegen", Review-Modal), Familienbeziehungen (`customer_family_relations`, `customer_relationships`), KI-Eskalation, Geburtsurkunden-Erkennung.
+- **Database Changes**: keine. Es entstehen Zeilen in den vorhandenen Beziehungstabellen.
+- **API Changes**: keine. `POST /admin/documents/{id}/create-customers-from-persons` unveraendert; `linked` zaehlt bei einem Familienversicherungs-Antrag die ueber die ROLLE verknuepften Angehoerigen statt der Namensgleichen.
+- **Potential Side Effects**: Der `GeburtsurkundeParser` loest nicht mehr aus, wenn das Wort "Geburtsurkunde" nur im Kleingedruckten steht - ein echter Standesamts-Vordruck traegt immer Standesamt/Urkundsperson/Registernummer. Ein Foto einer Urkunde, auf dem ALLE diese Worte unlesbar sind, laeuft jetzt in die KI-Eskalation statt in eine halbe Erkennung. Die aeltere Bauform des Familienversicherungs-Fragebogens ist unberuehrt (eigener Test).
+- **Tests Performed**: An der ECHTEN PDF-Textebene gemessen (pdftotext -layout, beide Dateien). Ausgangszustand belegt: die Kette lieferte `geburtsurkunde` mit dem VORNAMEN DER EHEFRAU als "Kind". Gegenprobe ohne den Fix: 22 von 24 Faellen rot. Danach alle 27 gruen; Waechter-Test fuehrt die echte Kette AUS DEM CONTAINER. Volle Suite gruen; `pint --test` sauber; PHPStan Stufe 5 ohne neuen Baseline-Eintrag.
+- **Result**: KI-053 FIXED, KI-054 FIXED.
+
+---
+
 ## 02.10.2026 - Namenspartikel an den Nachnamen, Wissensbasis konfliktfest (KI-051, KI-052)
 
 - **Task**: Betreiber-Auftrag: "loese das Problem der arabischen Namen" und "loese, dass sich die Datei nicht mehr zusammenfuehren laesst - das war vorher nicht so".
