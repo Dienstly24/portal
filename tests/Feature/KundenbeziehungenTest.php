@@ -27,7 +27,7 @@ class KundenbeziehungenTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const MIGRATION = 'database/migrations/2026_10_01_100000_beziehungsarten_an_customer_relationships.php';
+    private const MIGRATION = 'database/migrations/2026_10_02_090000_beziehungsarten_an_customer_relationships.php';
 
     private function admin(): User
     {

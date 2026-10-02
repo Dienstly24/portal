@@ -26,9 +26,11 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-042 | MEDIUM | security | 2FA-Einrichtung als zweiter Pruefweg ohne Sperre/Protokoll (Raten, Ersatzcodes ersetzt) | FIXED |
 | KI-043 | MEDIUM | security | Zugangslinks ueberlebten Adress-/Passwortaenderung durch die Verwaltung und erneutes Senden | FIXED |
 | KI-044 | MEDIUM | correctness | Ausweis-Rueckseiten (eAT + Personalausweis) nicht erkannt: Anschrift/Geburtsort fehlten | FIXED |
-| KI-047 | LOW | test | ReportsDashboardTest: Verlaengerungs-Fall scheiterte am 1./2. jedes Monats (Datum in der Zukunft) | FIXED |
-| KI-046 | MEDIUM | correctness | Dubletten-Seite: Handler-Skript seit SEC-4 syntaktisch kaputt (Sammel-Knoepfe ohne Wirkung, Rueckfragen fehlten) | FIXED |
+| KI-049 | MEDIUM | correctness | Dubletten-Seite: Handler-Skript seit SEC-4 syntaktisch kaputt (Sammel-Knoepfe ohne Wirkung, Rueckfragen fehlten) | FIXED |
 | KI-045 | MEDIUM | correctness | Entgeltabrechnung "Verdienstabrechnung": weder Kunde noch Arbeitgeber gelesen | FIXED |
+| KI-046 | MEDIUM | correctness | Erstwagen einer Zweitwagenregelung zweckentfremdet in der Vorversicherung, Vertraege nicht verknuepft | FIXED |
+| KI-047 | MEDIUM | correctness | `Contract`: der Provisions-Listener auf `deleting` beendete die Listener-Kette (jeder spaetere deleting-Listener lief nie) | FIXED |
+| KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
 | KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
@@ -75,19 +77,34 @@ und PHPStan) auf `main` gruen ist.
 
 ## Befunde im Detail
 
-### KI-047 - Datumsabhaengiger Test blockierte am Monatsanfang jeden PR
-- **Category** test · **Severity** LOW · **Status** FIXED
-- **Location** `tests/Feature/ReportsDashboardTest.php` (`test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung`)
-- **Description** Der Test setzte den Ablauf auf "Monatsanfang + 2 Tage". Am 1. und 2. eines Monats liegt das nach HEUTE und damit ausserhalb des Zeitraums "Diesen Monat" (bis heute) - der Test wurde rot, und weil CI rot war, galt JEDER offene PR an diesen Tagen als nicht mergebar ("unstable"), unabhaengig von seinem Inhalt. Der Code (`DashboardAnalyticsService`) war richtig.
-- **Fix (01.10.2026)**: Ablauf auf den Monatsersten - liegt an jedem Tag im Zeitraum.
-- **Discovered** 01.10.2026 (CI von PR #366, auch auf dem Basis-Commit 8d16b84 rot)
-
-### KI-046 - Dubletten-Seite: Handler-Skript syntaktisch kaputt
+### KI-049 - Dubletten-Seite: Handler-Skript syntaktisch kaputt
 - **Category** functionality · **Severity** MEDIUM · **Status** FIXED
 - **Location** `resources/views/admin/customer_duplicates.blade.php` (Registrierungsblock `@pushOnce('cspScripts')`)
 - **Description** Bei der SEC-4-Umstellung (onclick -> `window.__h`) wurden zwei `confirm('…„Verwandte Kunden"…')`-Texte am geraden Anfuehrungszeichen abgeschnitten: im HTML blieb Restext hinter `data-h-submit` stehen, im Skript zwei nicht geschlossene Zeichenketten. Ein SyntaxError verwirft das GANZE Skript - damit fehlten auch die Handler der Sammel-Knoepfe "Ehepaar"/"Kein Duplikat" und die Rueckfrage der Sammel-Zusammenfuehrung. Kein 500er, keine Meldung: die Knoepfe taten einfach nichts (dieselbe Klasse wie die tote Dashboard-Suche, CLAUDE.md SEC-4 Falle 3). Der Waechter-Test prueft nur, DASS eine Registrierung existiert, nicht, dass das Skript gueltig ist.
 - **Fix (01.10.2026)**: im Zuge von "Beziehung festlegen" neu geschrieben - Einzel-Rueckfrage per `data-confirm`, Sammel-Handler intakt, typografische Anfuehrungszeichen in den JS-Texten.
 - **Discovered** 01.10.2026 (beim Umbau gelesen)
+- **Hinweis**: zuerst als KI-046 vergeben; die Nummer war parallel in PR #365 belegt, deshalb KI-049.
+
+### KI-046 - Erstwagen der Zweitwagenregelung in der Vorversicherung
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** `contract_kfz_fields` (Vorversicherung, SF-Einstufung), `ContractVehicleDetail`
+- **Description** Betreiber-Meldung 01.10.2026: Die Sondereinstufung eines Zweitwagens (z. B. SF 4) wird WEGEN eines anderen Vertrags gewaehrt. Dafuer gab es keinen Ort - der Erstwagen wurde in der Vorversicherung erfasst ("Vorheriger Versicherer: Zweite Wagen ADAC", "Vertragsnummer: AD-5406305005"). Die Vorversicherung beschreibt aber den Vorvertrag DIESES Fahrzeugs; die beiden Vertraege waren nicht verknuepft, nichts liess sich auswerten oder pruefen.
+- **Fix (01.10.2026)**: Tabelle `vehicle_sf_references` (Bezug je Sparte, intern/extern, Halter, Snapshot, Nachweis, Pruefvermerk), `SfReferenceService` als einziger Schreibweg (Selbst-/Kreisbezug abgelehnt, Protokoll), `SfReferenceValidator` (Warnungen, optionale Pflicht), `SfReferenceNotifier` (Rueckstufung/Kuendigung/Loeschung des Erstwagens), Anzeige in beide Richtungen, Chip "Keine Vorversicherung" + Hinweis bei Zweitwagen-Text. Bestand: `kfz:zweitwagen-pruefen` (nur lesend). Tests `SfBezugsfahrzeugTest`, `KfzSfRegelnTest`.
+- **Discovered** 01.10.2026 (Betreiber-Meldung)
+
+### KI-047 - deleting-Listener am Vertrag brach die Kette ab
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** `Contract::boot()` (`static::deleting` des Provisions-Stornos)
+- **Description** Gefunden beim Bau von KI-046: der Listener war eine Pfeilfunktion und lieferte die ANZAHL der Stornobuchungen zurueck. Laravel feuert `deleting` als "until"-Ereignis - jeder Rueckgabewert ausser `null` beendet die Kette. Jeder spaeter registrierte `deleting`-Listener am Vertrag lief deshalb nie, ohne Fehlermeldung. Bisher gab es keinen zweiten - der erste (Benachrichtigung beim Loeschen eines Erstwagens) waere still ausgefallen.
+- **Fix (01.10.2026)**: Listener als Block ohne Rueckgabewert; Provisionslogik unveraendert. Test `SfBezugsfahrzeugTest::test_kuendigung_und_loeschung_des_erstwagens_werden_gemeldet` (scheitert ohne den Fix).
+- **Discovered** 01.10.2026
+
+### KI-048 - Dashboard-Test scheitert am Monatsersten
+- **Category** testing · **Severity** LOW · **Status** FIXED
+- **Location** `tests/Feature/ReportsDashboardTest.php` (`test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung`)
+- **Description** Der Test legt den Ablauf auf `now()->startOfMonth()->addDays(2)`. Am 1. eines Monats liegt dieses Datum in der Zukunft und zaehlt (noch) nicht als Verlaengerung - der Test ist an diesem Tag rot, unabhaengig vom Code. Auf `main` am 01.10.2026 nachgestellt (Basislauf vor jeder Aenderung).
+- **Fix (01.10.2026, PR #365)**: der Test blockierte am 1. Oktober die Pflicht-Checks des PRs (beide Testjobs rot, Deploy uebersprungen) und wurde deshalb hier mitbehoben. Der Code war richtig ("Dieser Monat" = Monatserster bis heute), falsch war das Testdatum. Jetzt steht die Uhr fest auf dem Monatsersten (`travelTo`), der Ablauf ist der Monatserste selbst. Gegenprobe: mit dem alten Datum ist der Test nun an JEDEM Tag rot, nicht nur am Ersten.
+- **Discovered** 01.10.2026
 
 ### KI-045 - Entgeltabrechnung "Verdienstabrechnung" wurde gar nicht erkannt
 - **Category** functionality · **Severity** MEDIUM · **Status** FIXED

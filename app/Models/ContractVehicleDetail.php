@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Kfz\SfReferenceNotifier;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,7 +27,7 @@ class ContractVehicleDetail extends Model
         'has_teilkasko', 'teilkasko_deductible', 'has_vollkasko', 'vollkasko_deductible',
         'extras', 'driver_groups', 'additional_drivers', 'holder_type', 'holder_name', 'ownership_type',
         'initial_mileage', 'annual_mileage',
-        'previous_insurer', 'previous_contract_number', 'previous_insurance_since', 'previous_insurance_terminated_by_insurer',
+        'previous_insurer', 'previous_contract_number', 'previous_insurance_since', 'previous_insurance_terminated_by_insurer', 'no_previous_insurance',
         'sf_liability_class', 'sf_liability_valid_from', 'sf_liability_type', 'sf_liability_special_reason', 'sf_liability_real_class',
         'sf_comprehensive_class', 'sf_comprehensive_valid_from', 'sf_comprehensive_type', 'sf_comprehensive_special_reason', 'sf_comprehensive_real_class',
     ];
@@ -38,6 +39,7 @@ class ContractVehicleDetail extends Model
         'has_teilkasko' => 'boolean',
         'has_vollkasko' => 'boolean',
         'previous_insurance_terminated_by_insurer' => 'boolean',
+        'no_previous_insurance' => 'boolean',
         'extras' => 'array',
         'driver_groups' => 'array',
         'additional_drivers' => 'array',
@@ -185,6 +187,39 @@ class ContractVehicleDetail extends Model
         return array_merge(['M', 'S', '0', '1/2'], array_map('strval', range(1, 50)));
     }
 
+    /**
+     * Rang einer SF-Klasse: hoeher = besser (M < S < 0 < 1/2 < 1 < ... < 50).
+     * Die Reihenfolge von sfClassKeys() IST die Rangfolge. Null = unbekannt.
+     */
+    public static function sfRank(?string $class): ?int {
+        if ($class === null || $class === '') return null;
+        $pos = array_search($class, self::sfClassKeys(), true);
+        return $pos === false ? null : (int) $pos;
+    }
+
+    /** Verschlechtert sich die Klasse von $old auf $new (Rueckstufung)? */
+    public static function isDowngrade(?string $old, ?string $new): bool {
+        $a = self::sfRank($old);
+        $b = self::sfRank($new);
+        return $a !== null && $b !== null && $b < $a;
+    }
+
+    /**
+     * VORSCHLAG fuer die tatsaechliche SF-Klasse nach Fuehrerscheindauer
+     * (Regel SF-VORSCHLAG-FUEHRERSCHEIN, config/kfz_rules.php). Nur ein
+     * Vorschlag - gespeichert wird, was der Mitarbeiter waehlt.
+     */
+    public static function suggestRealClass(?Carbon $licenseDate, ?Carbon $asOf = null): ?string {
+        if (! $licenseDate) return null;
+        $rule = (array) config('kfz_rules.rules.SF-VORSCHLAG-FUEHRERSCHEIN.werte', []);
+        $years = (int) ($rule['mindestjahre'] ?? 3);
+        $asOf = ($asOf ?? Carbon::today())->copy()->startOfDay();
+        if ($licenseDate->copy()->startOfDay()->gt($asOf)) return null; // Zukunft: nichts vorschlagen
+        return $licenseDate->copy()->startOfDay()->addYears($years)->lte($asOf)
+            ? (string) ($rule['klasse_ab_mindestjahre'] ?? '1/2')
+            : (string) ($rule['klasse_darunter'] ?? '0');
+    }
+
     /** Anzeige einer SF-Klasse ("4" -> "SF 4", "M" -> "Klasse M"). */
     public static function sfLabel(?string $class): ?string {
         if ($class === null || $class === '') return null;
@@ -200,6 +235,16 @@ class ContractVehicleDetail extends Model
     protected static function boot() {
         parent::boot();
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
+        // SF-Bezug (01.10.2026): Rueckstufung eines Erstwagens melden - an
+        // JEDEM Schreibweg (Formular, Dokumenten-Eingang, Import). Die
+        // Hoeherstufung meldet der Notifier bewusst nicht.
+        static::updated(function (ContractVehicleDetail $m) {
+            foreach (['haftpflicht' => 'sf_liability_class', 'vollkasko' => 'sf_comprehensive_class'] as $branch => $col) {
+                if ($m->wasChanged($col)) {
+                    app(SfReferenceNotifier::class)->sfChanged($m, $branch, $m->getRawOriginal($col), $m->{$col});
+                }
+            }
+        });
     }
 
     /** @return BelongsTo<Contract, $this> */
@@ -208,6 +253,43 @@ class ContractVehicleDetail extends Model
     public function claims(): HasMany { return $this->hasMany(VehicleClaim::class)->orderByDesc('claim_date'); }
     /** @return HasMany<VehicleMileageReading, $this> */
     public function mileageReadings(): HasMany { return $this->hasMany(VehicleMileageReading::class)->orderByDesc('reading_date')->orderByDesc('created_at'); }
+    /** @return HasMany<VehicleSfReference, $this> */
+    public function sfReferences(): HasMany { return $this->hasMany(VehicleSfReference::class); }
+
+    /** Begruendung der Sondereinstufung einer Sparte (haftpflicht|vollkasko). */
+    public function sfReference(string $branch): ?VehicleSfReference {
+        return $this->sfReferences->firstWhere('branch', $branch);
+    }
+
+    /** Grund der Sondereinstufung einer Sparte (null bei tatsaechlicher Klasse). */
+    public function sfSpecialReason(string $branch): ?string {
+        $type = $branch === 'vollkasko' ? $this->sf_comprehensive_type : $this->sf_liability_type;
+        if ($type !== 'sondereinstufung') return null;
+        return $branch === 'vollkasko' ? $this->sf_comprehensive_special_reason : $this->sf_liability_special_reason;
+    }
+
+    /**
+     * Begruendung der Sondereinstufung einer Sparte fuer die Anzeige:
+     * ['text' => 'Zweitwagen zu ADAC AD-5406305005 (SF 5)', 'url' => Link
+     * zum Erstwagen oder null]. Null, wenn nichts zu sagen ist.
+     *
+     * @return array{text:string,url:?string}|null
+     */
+    public function sfReasonSummary(string $branch): ?array {
+        $reason = $this->sfSpecialReason($branch);
+        if ($reason === null) return null;
+        $ref = $this->sfReference($branch);
+        $text = $ref?->summary($reason);
+        if ($text === null) {
+            return VehicleSfReference::reasonNeedsReference($reason)
+                ? ['text' => (self::SF_SPECIAL_REASONS[$reason] ?? $reason).' – ⚠ Bezugsfahrzeug fehlt', 'url' => null]
+                : ['text' => self::SF_SPECIAL_REASONS[$reason] ?? $reason, 'url' => null];
+        }
+        $url = $ref->reference_type === VehicleSfReference::TYPE_INTERNAL && $ref->reference_contract_id && $ref->referenceContract
+            ? route('admin.contract.edit', $ref->reference_contract_id) : null;
+        return ['text' => $text, 'url' => $url];
+    }
+
     /** @return HasMany<VehicleSfEntry, $this> */
     public function sfHistory(): HasMany { return $this->hasMany(VehicleSfEntry::class)->orderBy('branch')->orderByRaw('valid_from is null')->orderBy('valid_from'); }
 

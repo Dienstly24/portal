@@ -37,6 +37,9 @@
             @endif
         </div>
     </div>
+    @if($contract->relationLoaded('sfDependents') && $contract->sfDependents->isNotEmpty())
+    <div style="margin-top:10px;">@include('admin.partials.contract_sf_erstwagen_badge', ['contract' => $contract, 'dark' => true])</div>
+    @endif
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
         @php $chip = 'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;'; @endphp
@@ -78,6 +81,10 @@
             </div>
             @if($type === 'sondereinstufung')
             <div style="font-size:11.5px;color:#E8B25A;margin-top:3px;">⭐ {{ VD::SF_SPECIAL_REASONS[$veh->{$prefix . '_special_reason'}] ?? 'Sondereinstufung' }}@if($veh->{$prefix . '_real_class'}) · Tatsächlich: <b>{{ VD::sfLabel($veh->{$prefix . '_real_class'}) }}</b>@endif</div>
+            @php $sfWhy = $veh->sfReasonSummary($branch); @endphp
+            @if($sfWhy && $sfWhy['text'] !== (VD::SF_SPECIAL_REASONS[$veh->{$prefix . '_special_reason'}] ?? null))
+            <div style="font-size:11.5px;color:#C9CDD4;margin-top:2px;">🔗 @if($sfWhy['url'])<a href="{{ $sfWhy['url'] }}" style="color:#E8B25A;">{{ $sfWhy['text'] }}</a>@else{{ $sfWhy['text'] }}@endif</div>
+            @endif
             @endif
             <div style="font-size:11.5px;margin-top:4px;font-weight:700;color:{{ $transferable ? '#5BD79A' : '#F08A8A' }};">
                 {{ $transferable ? '🟢 Übertragbar zur anderen Versicherung' : '🔴 Nicht übertragbar (Sondereinstufung)' }}

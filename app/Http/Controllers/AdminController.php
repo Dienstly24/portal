@@ -299,7 +299,7 @@ class AdminController extends Controller
                 ['viewed_at' => now()]
             );
         }
-        $customer = Customer::with(['user', 'contracts.vehicleDetail.claims', 'contracts.vehicleDetail.mileageReadings', 'contracts.energyDetail.meterReadings', 'contracts.internetDetail', 'contracts.switchReminders', 'contracts.predecessor', 'contracts.successor', 'tickets', 'documents', 'family', 'changeRequests.reviewer'])->findOrFail($id);
+        $customer = Customer::with(['user', 'contracts.vehicleDetail.claims', 'contracts.vehicleDetail.mileageReadings', 'contracts.vehicleDetail.sfReferences.referenceContract.vehicleDetail', 'contracts.sfDependents.vehicleDetail.contract', 'contracts.energyDetail.meterReadings', 'contracts.internetDetail', 'contracts.switchReminders', 'contracts.predecessor', 'contracts.successor', 'tickets', 'documents', 'family', 'changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->orderBy('id')->get();
         $internalNotes = InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();

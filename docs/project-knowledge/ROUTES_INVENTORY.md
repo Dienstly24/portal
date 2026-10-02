@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 01.10.2026 aus `php artisan route:list --json` (515 Routen).
+Generiert am 02.10.2026 aus `php artisan route:list --json` (516 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -322,6 +322,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/service-pages/{servicePage}/toggle` | admin.service_pages.toggle | auth role:staff role:admin,manager |
 | GET | `admin/settings` | admin.settings | auth role:staff role:admin |
 | PUT | `admin/settings` | admin.settings.update | auth role:staff role:admin |
+| GET | `admin/sf-bezug/{customerId}/suche` | admin.contract.sf_reference_search | auth role:staff throttle:240,1 |
 | GET | `admin/signaturen` | admin.signatures.index | auth role:staff |
 | POST | `admin/signaturen` | admin.signatures.store | auth role:staff throttle:60,10 |
 | GET | `admin/signaturen/kunden-suche` | admin.signatures.customer_search | auth role:staff |

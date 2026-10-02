@@ -2409,6 +2409,71 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   kein Handeln am Vertrag. Sparten-Kampagnen ebenso.
 - Tests: `VertragsherkunftTest`.
 
+## KFZ Phase 1: SF-Sondereinstufung mit Bezugsfahrzeug (Betreiber-Auftrag 01.10.2026)
+
+KFZ-Modul in drei Phasen (je ein PR); Phase 2 (Vertragsjahr, Fristen,
+SF-Entwicklung) und Phase 3 (Wechsel-Erinnerung, Wechselsaison) sind
+abgestimmt, aber noch NICHT gebaut. Alle Fachregeln mit Quelle und
+Pruefstatus: `docs/project-knowledge/KFZ_RULES.md`, technisch
+`config/kfz_rules.php` (ein Test haelt beide deckungsgleich). **Keine
+Rechtsregel raten**: ungepruefte stehen als "zu pruefen"; die AKB des
+Versicherers gehen jedem Standardwert vor.
+
+- **Anlass**: der Erstwagen einer Zweitwagenregelung stand zweckentfremdet
+  in der VORVERSICHERUNG ("Zweite Wagen ADAC", "AD-5406305005").
+  Vorversicherung = Vorvertrag DIESES Fahrzeugs; der Erstwagen ist der
+  Grund der Sondereinstufung. Beides war nicht verknuepft (KI-046).
+- **`vehicle_sf_references`**: je Fahrzeug + Sparte (HP/VK) eine Zeile,
+  nur bei Sondereinstufung. Bei Zweitwagen/Drittwagen/Familie der Bezug:
+  INTERN (`reference_contract_id`, nullOnDelete + Kopie
+  `reference_label`, damit die Anzeige das Loeschen uebersteht) oder
+  EXTERN (Versicherer, Nummer, Kennzeichen, SF des Erstwagens in dieser
+  Sparte). Dazu Halter, **Snapshot** der Erstwagen-SF bei Gewaehrung (neu
+  gesetzt nur, wenn sich der Bezug aendert - sonst waere es kein Stand
+  "bei Gewaehrung"), Nachweis + Pruefvermerk. Uebrige Gruende speichern
+  nur ihre Angabe (Fuehrerscheindatum, Aktionsname, Freitext). Grund und
+  Bezug stehen zusaetzlich an jedem Eintrag des SF-Verlaufs.
+- **`SfReferenceService` ist der EINZIGE Schreibweg**: Bezug nur auf
+  KFZ-Vertraege des Kunden oder seiner verknuepften Familie
+  (`customer_family_relations`, beide Richtungen), die der Bearbeiter
+  sehen darf; nie auf sich selbst, nie im Kreis (Kette wird verfolgt).
+  Geprueft wird VOR dem Speichern (`precheckSfReferences`) - es entsteht
+  nie ein halb gespeicherter Vertrag. Jede Aenderung: Version History
+  (`sf_reference_<sparte>`) + ActivityLog `sf_reference_changed`.
+  "Geprueft" setzen nur admin/manager; speichert ein anderer, bleibt der
+  Vermerk stehen; ein geaenderter Bezug verliert ihn.
+- **Externer Erstwagen als Fremdvertrag** (Haken, Standard AN): `origin =
+  external`, `status = active`, `origin_verified = false` - also
+  Fremdbestand, keine Courtage, nicht im Eigenbestand (bestehende Regeln
+  von `ownPortfolio()` / `ContractProvisionService`, nur getestet). Ein
+  Vertrag mit gleicher Nummer und aehnlichem Versicherer wird
+  wiederverwendet, nie doppelt angelegt.
+- **Warnungen statt Sperren** (`SfReferenceValidator`): fehlender Bezug,
+  Erstwagen nicht aktiv/geloescht, Halter ist ein anderer Kunde ohne
+  angegebene Beziehung, Erstwagen seit Gewaehrung zurueckgestuft,
+  Vorversicherung sieht nach Erstwagen aus. Blockiert wird nur mit
+  Einstellung `sf_reference_required_on_submit` (Standard AUS) und nur bei
+  Stufe Antrag/Vertrag.
+- **Benachrichtigung NUR bei Rueckstufung, Kuendigung/Ende, Loeschung des
+  Erstwagens** (`SfReferenceNotifier`, Modell-Listener - gilt fuer jeden
+  Schreibweg): Glocke an die Betreuer (dedup_key) + EINE offene Aufgabe am
+  Zweitwagen. Die jaehrliche HOEHERSTUFUNG loest nichts aus.
+  "Rueckstufung" ueber `ContractVehicleDetail::sfRank()` (M < S < 0 < 1/2
+  < 1 ... 50) - nie Zeichenkettenvergleich ("10" < "9").
+- **Vorschlag der tatsaechlichen SF** (Fuehrerschein >= 3 Jahre -> SF 1/2,
+  sonst SF 0) ist nur ein Hinweis im Formular mit "uebernehmen"; gespeichert
+  wird, was der Mitarbeiter waehlt. Versichererspezifische
+  Zweitwagenregeln sind bewusst NICHT eingebaut.
+- **Laravel-Falle (KI-047)**: ein Listener auf ein "-ing"-Ereignis
+  (`deleting`, `saving` ...), der einen Wert ungleich `null` liefert,
+  beendet die Kette - jeder spaeter registrierte Listener laeuft nie. Der
+  Provisions-Listener am Vertrag war eine Pfeilfunktion mit Rueckgabewert.
+  Solche Listener immer als Block ohne Rueckgabe schreiben.
+- **Bestand**: `php artisan kfz:zweitwagen-pruefen [--csv=datei]` listet
+  zweckentfremdete Vorversicherungen mit Vorschlag - STRENG LESEND.
+  Uebernommen wird erst nach Freigabe des Betreibers.
+- Tests: `SfBezugsfahrzeugTest`, `tests/Unit/KfzSfRegelnTest.php`.
+
 ## Provisionen sieht nur der Admin (Betreiber-Vorgabe 23.09.2026)
 
 - **Gemeldet am Screenshot der Vertragsakte**: die Box "🤝 Vermittler /
@@ -4175,12 +4240,12 @@ Merge von PR #358, Teil E/F).
   `admin.customers.search`, Portfolio-Scope fuer BEIDE Seiten). Die
   Unterueberschrift der Familienkarte heisst jetzt "Familie (verknuepfte
   Kundenakten)", sonst stuende "Verknuepfte Kunden" zweimal auf der Seite.
-- **Nebenbefund (KI-046)**: auf der Dubletten-Seite war der Handler-Block
+- **Nebenbefund (KI-049)**: auf der Dubletten-Seite war der Handler-Block
   seit SEC-4 syntaktisch kaputt (ein „…"-Anfuehrungszeichen hatte zwei
   JS-Zeichenketten abgeschnitten). Ein SyntaxError verwirft das GANZE
   Skript - die Sammel-Knoepfe "Ehepaar"/"Kein Duplikat" taten nichts, die
   Einzel-Rueckfragen fehlten. Jetzt `data-confirm` bzw. intakte Handler.
-- **Migration** `2026_10_01_100000_beziehungsarten_an_customer_relationships`:
+- **Migration** `2026_10_02_090000_beziehungsarten_an_customer_relationships`:
   spouse->ehepartner (OHNE Rolle), household->gleicher_haushalt, family->
   aus den Familienrollen abgeleitet (elternteil_kind MIT Richtung,
   geschwister ...), sonst sonstige_verwandte; Konflikt (spouse, aber Rolle

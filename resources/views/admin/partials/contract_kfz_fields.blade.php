@@ -68,6 +68,75 @@
     }
     $claimRows = array_values(array_filter((array) $claimRows, 'is_array'));
 
+    // ---- SF-Bezug (01.10.2026): Formularwerte je Sparte ----
+    $formCustomer = $customer ?? $c?->customer;
+    $sfRefCtx = [
+        'customerId' => $formCustomer?->id,
+        'contractId' => $c?->id,
+        'documents' => $formCustomer ? $formCustomer->documents()->latest()->limit(50)->get(['id', 'file_name', 'created_at']) : collect(),
+        'mayVerify' => app(\App\Services\Kfz\SfReferenceService::class)->mayVerify(auth()->user()),
+    ];
+    $sfRefData = [];
+    $sfRefModels = [];
+    foreach (['haftpflicht', 'vollkasko'] as $branchKey) {
+        $m = $veh?->sfReference($branchKey);
+        $o = fn ($field, $default = null) => old("vehicle.sf_ref.$branchKey.$field", $default);
+        $refId = (string) $o('reference_contract_id', $m?->reference_contract_id ?? '');
+        $refContract = $refId !== '' ? ($m && $m->reference_contract_id === $refId ? $m->referenceContract : \App\Models\Contract::with('vehicleDetail')->find($refId)) : null;
+        $card = null;
+        if ($refContract) {
+            $rv = $refContract->vehicleDetail;
+            $card = [
+                'label' => \App\Models\VehicleSfReference::labelFor($refContract),
+                'meta' => implode(' · ', array_filter([
+                    $rv?->license_plate, trim(($rv?->manufacturer ?? '').' '.($rv?->model ?? '')) ?: null,
+                    $rv?->sf_liability_class ? 'HP '.VD::sfLabel($rv->sf_liability_class) : null,
+                    ($rv?->has_vollkasko && $rv?->sf_comprehensive_class) ? 'VK '.VD::sfLabel($rv->sf_comprehensive_class) : null,
+                    $refContract->displayStatus()['label'],
+                    $refContract->origin === \App\Models\Contract::ORIGIN_EXTERNAL ? 'Fremdvertrag' : null,
+                ])),
+                'url' => route('admin.contract.edit', $refContract->id),
+                'customer_id' => (string) $refContract->customer_id,
+            ];
+        } elseif ($m && $m->reference_type === 'internal' && $m->reference_label) {
+            $card = ['label' => $m->reference_label.' (gelöscht)', 'meta' => 'Der Erstwagen wurde gelöscht – bitte neu zuordnen.', 'url' => null, 'customer_id' => null];
+        }
+        $sfRefData[$branchKey] = [
+            'reference_type' => (string) $o('reference_type', $m?->reference_type ?? ''),
+            'reference_contract_id' => $refId,
+            'card' => $card,
+            'ext_insurer' => (string) $o('ext_insurer', $m?->ext_insurer ?? ''),
+            'ext_contract_number' => (string) $o('ext_contract_number', $m?->ext_contract_number ?? ''),
+            'ext_license_plate' => (string) $o('ext_license_plate', $m?->ext_license_plate ?? ''),
+            'ext_sf_class' => (string) $o('ext_sf_class', $m?->ext_sf_class ?? ''),
+            // Neuanlage: Fremdvertrag anlegen ist voreingestellt
+            'create_external' => (bool) $o('create_external', old('vehicle') === null),
+            'copy_from_liability' => (bool) $o('copy_from_liability', false),
+            'holder_relation' => (string) $o('holder_relation', $m?->holder_relation ?? ''),
+            'holder_name' => (string) $o('holder_name', $m?->holder_name ?? ''),
+            'proof_document_id' => (string) $o('proof_document_id', $m?->proof_document_id ?? ''),
+            'verified' => (bool) $o('verified', $m?->verified ?? false),
+            'license_date' => (string) $o('license_date', $m?->license_date?->format('Y-m-d') ?? ''),
+            'campaign_name' => (string) $o('campaign_name', $m?->campaign_name ?? ''),
+            'note' => (string) $o('note', $m?->note ?? ''),
+        ];
+        $sfRefModels[$branchKey] = $m;
+    }
+    // Vorschlaege fuer den Versicherer des Erstwagens: die im Bestand
+    // vorkommenden Namen (es gibt keine Versicherer-Stammdaten), Freitext bleibt.
+    $insurerSuggestions = \App\Models\Contract::query()->whereNotNull('insurer')->where('insurer', '!=', '')
+        ->distinct()->orderBy('insurer')->limit(400)->pluck('insurer');
+    $noPrevious = (string) $vd('no_previous_insurance', ($veh->no_previous_insurance ?? false) ? '1' : '0') === '1';
+    $sfSuggestRule = (array) config('kfz_rules.rules.SF-VORSCHLAG-FUEHRERSCHEIN.werte', []);
+    $kfzSfrefJs = [
+    'searchUrlTemplate' => route('admin.contract.sf_reference_search', '__KUNDE__'),
+    'customerId' => $sfRefCtx['customerId'],
+    'contractId' => $sfRefCtx['contractId'],
+    'suggestYears' => (int) ($sfSuggestRule['mindestjahre'] ?? 3),
+    'suggestAbove' => (string) ($sfSuggestRule['klasse_ab_mindestjahre'] ?? '1/2'),
+    'suggestBelow' => (string) ($sfSuggestRule['klasse_darunter'] ?? '0'),
+];
+
     $latestReading = $veh?->latestMileageReading();
     $mileageStatus = $veh?->mileageStatus();
     $sfHistory = $veh ? $veh->sfHistory : collect();
@@ -104,7 +173,27 @@
 .kfz-sf-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px;}
 .kfz-sf-table th{text-align:left;padding:6px 8px;color:var(--ink-soft);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--line);}
 .kfz-sf-table td{padding:7px 8px;border-bottom:1px solid var(--line);}
+.kfz-ref-title{font-size:13px;font-weight:700;margin-top:14px;}
+.kfz-ref-sub{font-size:12px;color:var(--ink-soft);margin:2px 0 10px;}
+.kfz-ref-card{display:flex;align-items:center;gap:10px;border:1.5px solid var(--emerald);background:#E7F6EE;border-radius:10px;padding:10px 12px;}
+.kfz-ref-card-title{font-weight:700;font-size:13px;}
+.kfz-ref-card-meta{font-size:12px;color:var(--ink-soft);}
+.kfz-ref-card-link{font-size:12px;font-weight:600;white-space:nowrap;}
+.kfz-ref-clear,.kfz-ref-back{border:none;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:12.5px;}
+.kfz-ref-results{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.kfz-ref-hit{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface);cursor:pointer;}
+.kfz-ref-hit:hover{border-color:var(--emerald);}
+.kfz-ref-hit b{font-size:13px;}
+.kfz-ref-hit small{display:block;font-size:11.5px;color:var(--ink-soft);}
+.kfz-ref-empty{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+.kfz-check{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;margin-top:8px;}
+.kfz-hint{font-size:11.5px;color:var(--ink-soft);}
+.kfz-suggest{display:inline-flex;align-items:center;gap:8px;font-size:12px;background:#FDF8EC;border:1px dashed var(--gold);border-radius:8px;padding:5px 10px;margin-top:6px;}
+.kfz-suggest button{border:none;background:transparent;color:#0E7A41;font-weight:700;cursor:pointer;font-size:12px;}
 </style>
+<datalist id="kfz-insurer-list">
+    @foreach($insurerSuggestions as $insurerName)<option value="{{ $insurerName }}">@endforeach
+</datalist>
 
 {{-- ===== Live-Ueberblick (aktualisiert sich beim Klicken) ===== --}}
 <div class="kfz-summary" id="kfz-summary">
@@ -315,7 +404,12 @@
 @endphp
 <div class="kfz-card">
     <div class="kfz-card-title">↩️ Vorversicherung</div>
-    <div class="kfz-card-sub">Wo war der Kunde vor diesem Vertrag versichert? Wird beim Wechsel aus dem Beratungsprotokoll übernommen.</div>
+    <div class="kfz-card-sub">Wo war <b>dieses Fahrzeug</b> vor diesem Vertrag versichert? Wird beim Wechsel aus dem Beratungsprotokoll übernommen. Der Erstwagen einer Zweitwagenregelung gehört <b>nicht</b> hierher, sondern zur SF-Sondereinstufung.</div>
+    <div class="kfz-chip-row" style="margin-bottom:10px;">
+        <input type="hidden" name="vehicle[no_previous_insurance]" value="0">
+        <label class="kfz-chip"><input type="checkbox" id="kfz-no-prev" name="vehicle[no_previous_insurance]" value="1" {{ $noPrevious ? 'checked' : '' }}><span>🆕 Keine Vorversicherung (Neuzulassung/Ersterwerb)</span></label>
+    </div>
+    <div id="kfz-prev-fields">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="field"><label>Vorheriger Versicherer</label><input type="text" name="vehicle[previous_insurer]" maxlength="120" value="{{ $vd('previous_insurer', $veh->previous_insurer ?? '') }}" placeholder="z. B. Generali" style="{{ $kfzInputStyle }}" aria-label="Vorheriger Versicherer"></div>
         <div class="field"><label>Vertragsnummer beim Vorversicherer</label><input type="text" name="vehicle[previous_contract_number]" maxlength="60" value="{{ $vd('previous_contract_number', $veh->previous_contract_number ?? '') }}" placeholder="Nummer des alten Vertrags" style="{{ $kfzInputStyle }}" aria-label="Vertragsnummer beim Vorversicherer"></div>
@@ -326,6 +420,8 @@
         <label class="kfz-chip"><input type="radio" name="vehicle[previous_insurance_terminated_by_insurer]" value="" {{ $curPrevTerm === '' ? 'checked' : '' }}><span>unbekannt</span></label>
         <label class="kfz-chip"><input type="radio" name="vehicle[previous_insurance_terminated_by_insurer]" value="0" {{ $curPrevTerm === '0' ? 'checked' : '' }}><span>Nein</span></label>
         <label class="kfz-chip"><input type="radio" name="vehicle[previous_insurance_terminated_by_insurer]" value="1" {{ $curPrevTerm === '1' ? 'checked' : '' }}><span>Ja</span></label>
+    </div>
+    <div class="kfz-warn" id="kfz-prev-zweitwagen" hidden>💡 Das sieht nach dem <b>Erstwagen</b> aus (Zweitwagenregelung). Die Vorversicherung beschreibt den Vorvertrag <b>dieses</b> Fahrzeugs. Den Erstwagen bitte unter „Schadenfreiheitsklasse → Sondereinstufung → Bezugsfahrzeug“ erfassen – dort wird er mit dem Vertrag verknüpft.</div>
     </div>
 </div>
 
@@ -367,14 +463,24 @@
                 <label class="kfz-chip"><input type="radio" name="vehicle[{{ $branch['prefix'] }}_special_reason]" value="{{ $key }}" {{ $branch['data']['reason'] === $key ? 'checked' : '' }}><span>{{ $label }}</span></label>
                 @endforeach
             </div>
+            @include('admin.partials.contract_kfz_sf_reference', [
+                'branchKey' => $branch['short'] === 'liability' ? 'haftpflicht' : 'vollkasko',
+                'short' => $branch['short'],
+                'ref' => $sfRefData[$branch['short'] === 'liability' ? 'haftpflicht' : 'vollkasko'],
+                'refModel' => $sfRefModels[$branch['short'] === 'liability' ? 'haftpflicht' : 'vollkasko'],
+            ])
             <div class="field" style="margin-top:10px;max-width:280px;"><label>Tatsächliche SF-Klasse (übertragbar)</label>
-                <select name="vehicle[{{ $branch['prefix'] }}_real_class]" style="{{ $kfzInputStyle }}" aria-label="Tatsächliche SF-Klasse (übertragbar)">
+                <select name="vehicle[{{ $branch['prefix'] }}_real_class]" id="kfz-real-{{ $branch['short'] }}" style="{{ $kfzInputStyle }}" aria-label="Tatsächliche SF-Klasse (übertragbar)">
                     <option value="">— keine Angabe —</option>
                     @foreach(VD::sfClassKeys() as $key)
                     <option value="{{ $key }}" {{ $branch['data']['real'] === $key ? 'selected' : '' }}>{{ VD::sfLabel($key) }}</option>
                     @endforeach
                 </select>
                 <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Diese Klasse gilt beim Wechsel zu einem anderen Versicherer – nicht die gewährte Sondereinstufung.</div>
+                <div class="kfz-suggest" id="kfz-suggest-{{ $branch['short'] }}" hidden>
+                    <span>Vorschlag: <b class="kfz-suggest-val"></b> <span class="kfz-suggest-why"></span></span>
+                    <button type="button" class="kfz-suggest-apply" data-target="kfz-real-{{ $branch['short'] }}">übernehmen</button>
+                </div>
             </div>
         </div>
     </div>
@@ -383,7 +489,7 @@
     @if($sfHistory->isNotEmpty())
     <div class="kfz-subline">SF-Verlauf</div>
     <table class="kfz-sf-table">
-        <thead><tr><th>Sparte</th><th>SF-Klasse</th><th>Gültig ab</th><th>Gültig bis</th></tr></thead>
+        <thead><tr><th>Sparte</th><th>SF-Klasse</th><th>Gültig ab</th><th>Gültig bis</th><th>Grund / Bezug</th></tr></thead>
         <tbody>
         @foreach($sfHistory as $entry)
         <tr>
@@ -391,6 +497,7 @@
             <td style="font-weight:700;">{{ VD::sfLabel($entry->sf_class) }}</td>
             <td>{{ $entry->valid_from?->format('d.m.Y') ?? '—' }}</td>
             <td>{{ $entry->valid_until?->format('d.m.Y') ?? 'aktuell' }}</td>
+            <td>@if($entry->reference_contract_id && $entry->referenceContract)<a href="{{ route('admin.contract.edit', $entry->reference_contract_id) }}">{{ $entry->reasonText() }}</a>@else{{ $entry->reasonText() ?? '—' }}@endif</td>
         </tr>
         @endforeach
         </tbody>
@@ -492,6 +599,8 @@ function kfzSync() {
         const type = document.querySelector(`input[name="vehicle[${prefix}_type]"]:checked`);
         const sonder = type && type.value === 'sondereinstufung';
         document.getElementById('kfz-sonder-' + branch).style.display = sonder ? 'block' : 'none';
+        const reason = document.querySelector(`input[name="vehicle[${prefix}_special_reason]"]:checked`);
+        kfzRefVisibility(branch, sonder ? (reason ? reason.value : '') : '');
         const cls = document.querySelector(`select[name="vehicle[${prefix}_class]"]`).value;
         const badge = document.getElementById('kfz-transfer-' + branch);
         badge.innerHTML = !cls ? '' : (sonder
@@ -532,7 +641,156 @@ function kfzSummary() {
     q('#kfz-sum-sf').textContent = [sfl ? 'HF: SF ' + sfl : null, (vk && sfv) ? 'VK: SF ' + sfv : null].filter(Boolean).join(' · ') || '—';
 }
 
+// ---- SF-Bezugsfahrzeug (01.10.2026) ----
+const KFZ_SFREF = @json($kfzSfrefJs);
+const KFZ_ZWEITWAGEN_RE = /(zweit|dritt|erstwagen|\b[123]\.\s*(wagen|fahrzeug|auto|pkw)\b)/i;
+
+// Bloecke je Grund ein-/ausblenden; verborgene Felder deaktivieren, damit
+// nur die Angaben des gewaehlten Grundes gesendet werden.
+function kfzRefVisibility(branch, reason) {
+    const root = document.querySelector(`.kfz-sfref[data-short="${branch}"]`);
+    if (!root) return;
+    root.querySelectorAll('.kfz-sfref-block').forEach(block => {
+        const show = reason !== '' && block.dataset.reasons.split(',').includes(reason);
+        block.hidden = !show;
+        block.querySelectorAll('input,select,textarea,button').forEach(el => { el.disabled = !show; });
+    });
+    // VK "wie Haftpflicht": eigene Auswahl ausblenden
+    const copy = root.querySelector('.kfz-ref-copy');
+    const own = root.querySelector('.kfz-ref-own');
+    if (copy && own && !copy.disabled) {
+        own.hidden = copy.checked;
+        own.querySelectorAll('input,select,textarea,button').forEach(el => { if (copy.checked) el.disabled = true; });
+    }
+    kfzRefHolderState(root);
+    kfzSuggest(branch, root);
+}
+
+function kfzCustomerId() {
+    const sel = document.getElementById('customer_id_selected');
+    return KFZ_SFREF.customerId || (sel ? sel.value : '');
+}
+
+function kfzRefSelect(root, hit) {
+    root.querySelector('.kfz-ref-type').value = 'internal';
+    root.querySelector('.kfz-ref-id').value = hit.id;
+    const card = root.querySelector('.kfz-ref-card');
+    card.querySelector('.kfz-ref-card-title').textContent = hit.label;
+    card.querySelector('.kfz-ref-card-meta').textContent = [hit.plate, hit.vehicle, hit.sf_hp ? 'HP ' + hit.sf_hp : null, hit.sf_vk ? 'VK ' + hit.sf_vk : null, hit.status, hit.external ? 'Fremdvertrag' : null, hit.own_customer ? null : hit.owner].filter(Boolean).join(' · ');
+    const link = card.querySelector('.kfz-ref-card-link');
+    link.href = hit.url; link.hidden = false;
+    card.dataset.otherCustomer = hit.own_customer ? '' : '1';
+    card.hidden = false;
+    root.querySelector('.kfz-ref-search').hidden = true;
+    root.querySelector('.kfz-ref-ext').hidden = true;
+    if (!hit.own_customer && !root.querySelector('.kfz-ref-holder:checked')) {
+        const fam = root.querySelector('.kfz-ref-holder[value="familie"]');
+        if (fam) fam.checked = true;
+    }
+    kfzRefHolderState(root);
+}
+
+function kfzRefClear(root) {
+    root.querySelector('.kfz-ref-type').value = '';
+    root.querySelector('.kfz-ref-id').value = '';
+    const card = root.querySelector('.kfz-ref-card');
+    card.hidden = true; card.dataset.otherCustomer = '';
+    root.querySelector('.kfz-ref-search').hidden = false;
+    root.querySelector('.kfz-ref-ext').hidden = true;
+    kfzRefSearch(root);
+}
+
+function kfzRefHolderState(root) {
+    const holder = root.querySelector('.kfz-ref-holder:checked');
+    const nameBox = root.querySelector('.kfz-ref-holder-name');
+    if (nameBox) nameBox.hidden = !(holder && ['partner', 'familie', 'sonstige'].includes(holder.value));
+    const warn = root.querySelector('.kfz-ref-holder-warn');
+    const card = root.querySelector('.kfz-ref-card');
+    if (warn) warn.hidden = !(card && !card.hidden && card.dataset.otherCustomer === '1' && (!holder || holder.value === 'kunde'));
+}
+
+let kfzRefTimer = null;
+function kfzRefSearch(root) {
+    const customerId = kfzCustomerId();
+    const box = root.querySelector('.kfz-ref-results');
+    const empty = root.querySelector('.kfz-ref-empty');
+    if (!customerId) { box.textContent = ''; empty.hidden = false; empty.textContent = 'Bitte zuerst den Kunden wählen.'; return; }
+    const url = new URL(KFZ_SFREF.searchUrlTemplate.replace('__KUNDE__', encodeURIComponent(customerId)), window.location.origin);
+    url.searchParams.set('q', root.querySelector('.kfz-ref-q').value.trim());
+    if (KFZ_SFREF.contractId) url.searchParams.set('exclude', KFZ_SFREF.contractId);
+    fetch(url, {headers: {'Accept': 'application/json'}}).then(r => r.ok ? r.json() : {results: []}).then(data => {
+        box.textContent = '';
+        (data.results || []).forEach(hit => {
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.className = 'kfz-ref-hit';
+            const title = document.createElement('b'); title.textContent = hit.label + (hit.active ? '' : ' – ' + hit.status);
+            const meta = document.createElement('small');
+            meta.textContent = [hit.plate, hit.vehicle, hit.sf_hp ? 'HP ' + hit.sf_hp : null, hit.sf_vk ? 'VK ' + hit.sf_vk : null, hit.owner, hit.external ? 'Fremdvertrag' : null].filter(Boolean).join(' · ');
+            btn.append(title, meta);
+            btn.addEventListener('click', () => kfzRefSelect(root, hit));
+            box.appendChild(btn);
+        });
+        empty.textContent = 'Kein passender KFZ-Vertrag bei Kunde oder Familie.';
+        empty.hidden = (data.results || []).length > 0;
+    }).catch(() => {});
+}
+
+// SF-Vorschlag aus dem Fuehrerscheindatum (Regel SF-VORSCHLAG-FUEHRERSCHEIN).
+function kfzSuggest(branch, root) {
+    const box = document.getElementById('kfz-suggest-' + branch);
+    if (!box) return;
+    const input = root.querySelector('.kfz-ref-license');
+    const value = input && !input.disabled ? input.value : '';
+    if (!value) { box.hidden = true; return; }
+    const lic = new Date(value + 'T00:00:00'); const today = new Date(); today.setHours(0, 0, 0, 0);
+    if (isNaN(lic) || lic > today) { box.hidden = true; return; }
+    const limit = new Date(lic); limit.setFullYear(limit.getFullYear() + KFZ_SFREF.suggestYears);
+    const cls = limit <= today ? KFZ_SFREF.suggestAbove : KFZ_SFREF.suggestBelow;
+    box.querySelector('.kfz-suggest-val').textContent = 'SF ' + (cls === '1/2' ? '½' : cls);
+    box.querySelector('.kfz-suggest-why').textContent = '(Führerschein ' + (limit <= today ? 'seit mind. ' : 'kürzer als ') + KFZ_SFREF.suggestYears + ' Jahre – bitte mit den AKB des Versicherers abgleichen)';
+    box.querySelector('.kfz-suggest-apply').dataset.value = cls;
+    box.hidden = false;
+}
+
+function kfzPrevState() {
+    const none = document.getElementById('kfz-no-prev');
+    const fields = document.getElementById('kfz-prev-fields');
+    if (!none || !fields) return;
+    fields.hidden = none.checked;
+    fields.querySelectorAll('input').forEach(el => { el.disabled = none.checked; });
+    const ins = document.querySelector('input[name="vehicle[previous_insurer]"]').value;
+    const nr = document.querySelector('input[name="vehicle[previous_contract_number]"]').value;
+    document.getElementById('kfz-prev-zweitwagen').hidden = none.checked || !KFZ_ZWEITWAGEN_RE.test(ins + ' ' + nr);
+}
+
+function kfzRefInit() {
+    document.querySelectorAll('.kfz-sfref').forEach(root => {
+        const q = root.querySelector('.kfz-ref-q');
+        if (q) q.addEventListener('input', () => { clearTimeout(kfzRefTimer); kfzRefTimer = setTimeout(() => kfzRefSearch(root), 250); });
+        if (q) q.addEventListener('focus', () => { if (!root.querySelector('.kfz-ref-results').children.length) kfzRefSearch(root); });
+        root.querySelector('.kfz-ref-clear')?.addEventListener('click', () => kfzRefClear(root));
+        root.querySelector('.kfz-ref-ext-btn')?.addEventListener('click', () => {
+            root.querySelector('.kfz-ref-type').value = 'external';
+            root.querySelector('.kfz-ref-id').value = '';
+            root.querySelector('.kfz-ref-search').hidden = true;
+            root.querySelector('.kfz-ref-ext').hidden = false;
+        });
+        root.querySelector('.kfz-ref-back')?.addEventListener('click', () => kfzRefClear(root));
+        root.querySelectorAll('.kfz-ref-holder').forEach(r => r.addEventListener('change', () => kfzRefHolderState(root)));
+        root.querySelector('.kfz-ref-license')?.addEventListener('input', () => kfzSuggest(root.dataset.short, root));
+    });
+    document.querySelectorAll('.kfz-suggest-apply').forEach(btn => btn.addEventListener('click', () => {
+        const sel = document.getElementById(btn.dataset.target);
+        if (sel && btn.dataset.value) { sel.value = btn.dataset.value; sel.dispatchEvent(new Event('change', {bubbles: true})); }
+    }));
+    document.getElementById('kfz-no-prev')?.addEventListener('change', kfzPrevState);
+    ['vehicle[previous_insurer]', 'vehicle[previous_contract_number]'].forEach(name =>
+        document.querySelector(`input[name="${name}"]`)?.addEventListener('input', kfzPrevState));
+    kfzPrevState();
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+    kfzRefInit();
     KFZ_DRIVERS_INIT.forEach(d => kfzAddDriver(d));
     KFZ_CLAIMS_INIT.forEach(cl => kfzAddClaim(cl));
     kfzSync();
