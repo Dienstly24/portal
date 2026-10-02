@@ -3,9 +3,11 @@
 namespace App\Services\Ai\Concerns;
 
 use App\Models\Contract;
+
 use App\Models\ContractVehicleDetail;
 use App\Models\MeterReading;
 use App\Services\Ai\KrankenkasseType;
+use App\Support\PersonenName;
 
 /**
  * Harte Validierung extrahierter Dokumentfelder - unabhaengig davon, ob
@@ -25,9 +27,18 @@ trait ValidatesExtractedFields
             $in['street'] ?? null,
             $in['house_number'] ?? null
         );
+        // Namenspartikel gehoeren an den NACHNAMEN ("Yusuf Al Rahman" ist
+        // Yusuf + Al Rahman, nicht "Yusuf Al" + Rahman). Die Regel steht hier,
+        // weil JEDE Quelle hier durchlaeuft - Parser, KI und OCR-Heuristik -
+        // genau wie die Trennung von Strasse und Hausnummer.
+        [$vorname, $nachname] = PersonenName::teile(
+            $this->cleanString($in['first_name'] ?? null, 80),
+            $this->cleanString($in['last_name'] ?? null, 80)
+        );
+
         return array_filter([
-            'first_name' => $this->cleanString($in['first_name'] ?? null, 80),
-            'last_name' => $this->cleanString($in['last_name'] ?? null, 80),
+            'first_name' => $vorname,
+            'last_name' => $nachname,
             'birth_date' => $this->cleanDate($in['birth_date'] ?? null),
             'birth_place' => $this->cleanString($in['birth_place'] ?? null, 100),
             'street' => $this->cleanString($street, 120),

@@ -1534,11 +1534,32 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Zaehlernummer und der eAT-Rueckseite: er kannte die Entgeltabrechnung
   ueberhaupt nicht und beschreibt sie jetzt samt Absenderzeile; Steuer-ID
   und Sozialversicherungsnummer werden ausdruecklich NICHT uebernommen.
-  BEWUSST NICHT GEAENDERT: die Namenstrennung "letztes Wort = Nachname"
-  macht aus "Yusuf Al Rahman" den Vornamen "Yusuf Al". Die Regel steht in
-  ueber zehn Parsern; sie auf Namenspartikel (Al/El/Abu/Bin/van/von)
-  umzustellen ist eine eigene Aufgabe mit eigenen Tests, kein Nebeneffekt.
+  NACHGEZOGEN 02.10.2026: die Namenstrennung "letztes Wort = Nachname"
+  machte aus "Yusuf Al Rahman" den Vornamen "Yusuf Al" - das ist behoben,
+  siehe "Namenspartikel gehoeren an den Nachnamen".
   Tests: `GehaltsabrechnungParserTest` (8 Faelle; 6 scheitern ohne den Fix).
+- **Namenspartikel gehoeren an den NACHNAMEN** (`App\Support\PersonenName`,
+  Betreiber-Auftrag 02.10.2026). Alle Vorlagen-Parser teilten einen Namen nach
+  "letztes Wort = Nachname". Fuer "Max Mustermann" stimmt das; fuer
+  "Yusuf Al Rahman" entstand der Vorname "Yusuf Al" und der Nachname
+  "Rahman" - der Artikel gehoert aber zum Familiennamen. Dasselbe bei
+  "Jan van der Berg", "Ahmed Abu Bakr", "Khalid bin Walid", "Jean Le Blanc".
+  Das trifft diesen Kundenstamm besonders oft und FAELLT KAUM AUF: der
+  Datensatz sieht vollstaendig aus; falsch wird erst die Anrede im Schreiben
+  ("Herr Rahman") und der Abgleich mit dem naechsten Dokument, das
+  "Al Rahman" schreibt.
+  **EINE Stelle, nicht 23**: die Regel haengt in
+  `ValidatesExtractedFields::validatedPerson()` - der Stelle, durch die JEDE
+  Quelle laeuft (23 Parser, KI-Antwort, OCR-Heuristik), genau wie die
+  Trennung von Strasse und Hausnummer. Sie in jeden Parser zu kopieren hiesse,
+  sie 23-mal zu pflegen.
+  **KONSERVATIV**: verschoben wird nur, was am ENDE des Vornamens steht und in
+  `PersonenName::PARTIKEL` aufgefuehrt ist - und NIE der ganze Vorname.
+  "Al Pacino" bleibt deshalb "Al" + "Pacino": bliebe kein Vorname uebrig,
+  bleibt alles unveraendert. **"abd"/"abdul" stehen bewusst NICHT in der
+  Liste** - sie sind meist Teil des RUFnamens ("Abdul Rahman"); sie
+  aufzunehmen hiesse, einen Vornamen zu zerschneiden.
+  Tests: `tests/Unit/PersonenNameTest.php` (19 Faelle).
 - **Krankenkassen-Bestaetigung: der Empfaenger ist NICHT der Kunde**
   (`MitgliedsbescheinigungParser`, Betreiber-Meldung 02.10.2026 mit einem
   echten Schreiben). Gemessen (Foto -> Tesseract UND PDF-Textebene) las das

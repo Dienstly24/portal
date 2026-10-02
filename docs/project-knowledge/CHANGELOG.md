@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 02.10.2026 - Namenspartikel an den Nachnamen, Wissensbasis konfliktfest (KI-051, KI-052)
+
+- **Task**: Betreiber-Auftrag: "loese das Problem der arabischen Namen" und "loese, dass sich die Datei nicht mehr zusammenfuehren laesst - das war vorher nicht so".
+- **Files Changed**: neu `app/Support/PersonenName.php`, neu `tests/Unit/PersonenNameTest.php` (19 Faelle); `ValidatesExtractedFields::validatedPerson()` (Regel eingehaengt); neu `.gitattributes`, neu `tests/Feature/WissensbasisRegisterTest.php` (5 Faelle); `GehaltsabrechnungParserTest` (Erwartung auf das richtige Ergebnis nachgezogen); `CLAUDE.md`, `KNOWN_ISSUES.md`.
+- **Components Affected**: JEDE Quelle von Personendaten - 23 Vorlagen-Parser, KI-Antwort, OCR-Heuristik, Mehrpersonen-Liste. Zusammenfuehren von Zweigen.
+- **Database Changes**: keine. Bestandsdaten werden NICHT nachtraeglich umgeschrieben - die Regel wirkt ab der naechsten Analyse.
+- **API Changes**: keine.
+- **Potential Side Effects**: Neu analysierte Dokumente liefern fuer Namen mit Partikel einen anderen (richtigen) Schnitt als frueher. Fuer den Kundenabgleich ist das unkritisch, weil dort ueber Namensteile verglichen wird; Altbestand bleibt unveraendert. `merge=union` gilt nur fuer die zwei Protokolldateien.
+- **Tests Performed**: 19 Unit-Faelle inkl. der Gegenproben ("Al Pacino" bleibt, "abdul" wird nicht angefasst); durch die ECHTE Parser-Kette geprueft ("Yusuf Al Rahman" -> Yusuf / Al Rahman). union-Merge am Versuchsaufbau nachgestellt (zwei Zweige, beide Eintraege erhalten, kein Konflikt). Mutationsprobe am Waechter: doppelte Kennung -> 2 von 5 Faellen rot. Volle Suite gruen; `pint --test` sauber; PHPStan Stufe 5: 0 Fehler.
+- **Result**: KI-051 FIXED, KI-052 FIXED.
+
+---
+
 ## 02.10.2026 - Krankenkassen-Bestaetigung: der Empfaenger ist der Arbeitgeber (KI-050)
 
 - **Task**: Betreiber-Meldung mit einem echten Schreiben einer gesetzlichen Krankenkasse ("Bestaetigung: <Name> ist bei uns versichert"): "erkenne die Datei, damit das System sie erkennt".

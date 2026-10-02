@@ -32,6 +32,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-047 | MEDIUM | correctness | `Contract`: der Provisions-Listener auf `deleting` beendete die Listener-Kette (jeder spaetere deleting-Listener lief nie) | FIXED |
 | KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | FIXED |
 | KI-050 | MEDIUM | correctness | Krankenkassen-Bestaetigung an den Arbeitgeber: nicht erkannt, Service-Adresse der Kasse als Kunden-E-Mail | FIXED |
+| KI-051 | MEDIUM | correctness | Namenspartikel (Al/El/Abu/bin/van/von) landeten im VORnamen: "Yusuf Al" + "Rahman" | FIXED |
+| KI-052 | LOW | maintenance | Wissensbasis-Dateien kollidierten bei jedem parallelen Zweig (immer dieselbe Zeile) | FIXED |
 | KI-040 | HIGH | security | Mitarbeiterverwaltung lud jedes Konto: Kundenkonto -> manager, sperren, loeschen | FIXED |
 | KI-027 | MEDIUM | security | E-Signatur: Code-Versand unbegrenzt, Fehlversuche je Code zurueckgesetzt | FIXED |
 | KI-028 | MEDIUM | security | HTML-Injection per innerHTML in Such-/Trefferlisten | FIXED |
@@ -107,6 +109,20 @@ und PHPStan) auf `main` gruen ist.
 - **Fix (01.10.2026, PR #365)**: der Test blockierte am 1. Oktober die Pflicht-Checks des PRs (beide Testjobs rot, Deploy uebersprungen) und wurde deshalb hier mitbehoben. Der Code war richtig ("Dieser Monat" = Monatserster bis heute), falsch war das Testdatum. Jetzt steht die Uhr fest auf dem Monatsersten (`travelTo`), der Ablauf ist der Monatserste selbst. Gegenprobe: mit dem alten Datum ist der Test nun an JEDEM Tag rot, nicht nur am Ersten.
 - **Discovered** 01.10.2026
 
+### KI-051 - Namenspartikel landeten im Vornamen
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** neu `App\Support\PersonenName`, `ValidatesExtractedFields::validatedPerson()`
+- **Description** Alle Vorlagen-Parser teilen einen Namen nach "letztes Wort = Nachname". Aus "Yusuf Al Rahman" wurde damit der Vorname "Yusuf Al" und der Nachname "Rahman" - der Artikel gehoert aber zum Familiennamen. Gleiches bei "Jan van der Berg", "Ahmed Abu Bakr", "Khalid bin Walid", "Jean Le Blanc". Der Befund faellt kaum auf, weil der Datensatz vollstaendig AUSSIEHT; falsch wird erst die Anrede im Schreiben ("Herr Rahman") und der Abgleich mit dem naechsten Dokument, das "Al Rahman" schreibt. Bei einem Kundenstamm mit vielen arabischen Namen trifft das haeufig.
+- **Fix (02.10.2026)**: `PersonenName::teile()` schiebt Partikel vom Ende des Vornamens an den Anfang des Nachnamens; eingehaengt in `validatedPerson()` - der EINEN Stelle, durch die 23 Parser, die KI-Antwort und die OCR-Heuristik laufen (dieselbe Entscheidung wie bei der Hausnummer-Trennung). Konservativ: nie der ganze Vorname ("Al Pacino" bleibt "Al" + "Pacino"), und "abd"/"abdul" stehen bewusst NICHT in der Liste (meist Teil des Rufnamens). Tests `tests/Unit/PersonenNameTest.php` (19 Faelle).
+- **Discovered** 30.09.2026 (beim Entgeltabrechnungs-Parser notiert), behoben auf Betreiber-Auftrag 02.10.2026
+
+### KI-052 - Wissensbasis kollidierte bei jedem parallelen Zweig
+- **Category** maintenance · **Severity** LOW · **Status** FIXED
+- **Location** `.gitattributes`, `tests/Feature/WissensbasisRegisterTest.php`
+- **Description** Vom Betreiber gemeldet ("die Datei ist nicht zusammenfuehrbar, das war vorher nicht so"). Gemessen: 29 Aenderungen am CHANGELOG und 22 am Issue-Register in 14 Tagen - und JEDE fuegt ihren Eintrag OBEN ein. Zwei parallele Zweige schreiben damit zwangslaeufig auf dieselbe Zeile derselben Datei; der Konflikt ist kein Pech, sondern der Normalfall, seit mehrere Sitzungen gleichzeitig arbeiten. Dazu kamen doppelt vergebene Kennungen (KI-046/047 in #365, KI-049 in #366), weil jeder Zweig die naechste freie Nummer aus SEINEM Stand nimmt.
+- **Fix (02.10.2026)**: `.gitattributes` setzt die beiden PROTOKOLL-Dateien auf `merge=union` - Git behaelt dann beide Seiten, statt zu scheitern (am Versuchsaufbau nachgestellt). Bewusst NUR diese zwei: `CLAUDE.md` und `FEATURE_MAP.md` werden mitten im Text geaendert, dort waere "union" gefaehrlich. Weil "union" nie scheitert, wuerde es eine doppelte Kennung still durchwinken - deshalb der Waechter `WissensbasisRegisterTest` (doppelte Nummer, Uebersicht gegen Detail, doppelte Kopfzeile, offene Konfliktmarker). Gegenprobe: mit einer doppelten Nummer werden 2 der 5 Faelle rot.
+- **Discovered** 02.10.2026 (Betreiber-Meldung)
+
 ### KI-050 - Krankenkassen-Bestaetigung: Empfaenger ist der ARBEITGEBER, nicht der Kunde
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED
 - **Location** neu `MitgliedsbescheinigungParser`, neu `App\Services\Ai\Concerns\LiestSpalten`, `Document::AI_TYPES`, `AppServiceProvider`, `ClaudeDocumentAiProvider` (Prompt)
@@ -122,7 +138,7 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `GehaltsabrechnungParser`, neu `App\Support\Adresszeile`, `ClaudeDocumentAiProvider` (Prompt)
 - **Description** Vom Betreiber mit einer echten Abrechnung gemeldet. Vier Ursachen, jede fuer sich ausreichend, damit das Dokument als "Sonstiges / kein Kunde gefunden" im Eingang landet: (1) die Typ-Erkennung kannte nur vier Ueberschriften, das Dokument heisst "Verdienstabrechnung"; (2) der Empfaengerblock wurde ueber die Anrede "Herrn/Frau" gesucht, die dort fehlt; (3) gelesen wurde "die erste Zelle der Zeile" - im Empfaengerblock bleibt aber eine Zeile links LEER, dort steht die Merkmalsspalte ("Telefon") - dieselbe Klasse wie beim Gruenwelt-Briefkopf und der eAT-Rueckseite; (4) der Arbeitgeber wurde ueber eine Rechtsform (GmbH/AG/...) gesucht, viele Traeger fuehren keine. Nebenbefunde am selben Dokument: `Geburtsdatum: …` (Doppelpunkt statt Spaltenabstand), `Auf Konto (IBAN) : …` und "Gesetzliches Netto" statt "Gesamtnetto" fielen still weg.
 - **Fix (30.09.2026)**: Titel-Liste `GehaltsabrechnungParser::TITEL`; Empfaengerblock ueber die FORM seiner Zellen an der SPALTENPOSITION (eine Zelle "PLZ Ort", darueber Strasse und Name; Anrede optional, liefert nur noch das Geschlecht); Arbeitgeber aus der einzeiligen ABSENDERZEILE ueber dem Empfaenger (`Adresszeile::mitName`) bzw. aus dem Block darueber (`Adresszeile::anschrift`) - welcher Fall gilt, entscheidet das Umfeld, nicht die Zeichenkette. Der Arbeitgeber steht jetzt in `employer_name`/`employer_address` (im Review als Gruppe "Arbeitgeber" uebernehmbar) statt nur in der Zusammenfassung. Laesst sich die Strasse nicht sicher loesen, bleibt das Feld LEER. KI-Prompt kannte die Entgeltabrechnung gar nicht und beschreibt sie jetzt inkl. Absenderzeile. Tests `GehaltsabrechnungParserTest` (8 Faelle, 6 scheitern ohne den Fix).
-- **Bewusst offen**: die Namenstrennung "letztes Wort = Nachname" macht aus "Yusuf Al Rahman" den Vornamen "Yusuf Al" und den Nachnamen "Rahman". Die Regel steht in ueber zehn Parsern und in `CLAUDE.md`; sie zentral auf Namenspartikel (Al/El/Abu/Bin/van/von) umzustellen ist eine eigene Aufgabe.
+- **Nachgezogen (02.10.2026)**: die damals offen gelassene Namenstrennung ist behoben - siehe KI-051.
 - **Discovered** 30.09.2026 (Betreiber-Meldung mit echtem Dokument)
 
 ### KI-001 - `can_see_all_customers` Default `true`

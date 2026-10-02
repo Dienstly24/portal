@@ -1,11 +1,19 @@
-* text=auto eol=lf
-
-*.blade.php diff=html
-*.css diff=css
-*.html diff=html
-*.md diff=markdown
-*.php diff=php
-
-/.github export-ignore
-CHANGELOG.md export-ignore
-.styleci.yml export-ignore
+# Wissensbasis: Eintraege werden IMMER oben eingefuegt - jeder PR schreibt
+# damit auf dieselbe Zeile derselben Datei. Bei mehreren parallelen Zweigen
+# ist ein Konflikt dort nicht Pech, sondern der Normalfall (gemessen:
+# 29 Aenderungen am CHANGELOG in 14 Tagen, alle an derselben Stelle).
+#
+# "union" loest das mechanisch: statt eines Konflikts behaelt Git BEIDE
+# Seiten - und genau das ist bei einem Protokoll immer die richtige Antwort.
+#
+# ABSICHTLICH NUR DIESE ZWEI DATEIEN. "union" kann nie scheitern, es fuegt
+# auch dann beide Fassungen zusammen, wenn sich zwei Zweige WIDERSPRECHEN.
+# Fuer ein Protokoll ist das richtig, fuer Fliesstext waere es fatal:
+# CLAUDE.md und FEATURE_MAP.md werden MITTEN im Text geaendert und bleiben
+# deshalb bewusst beim normalen Konflikt, den ein Mensch liest.
+#
+# Das Netz dazu ist `WissensbasisRegisterTest`: weil "union" nie scheitert,
+# wuerde es eine doppelt vergebene KI-Nummer still durchwinken. Der Test
+# macht genau das rot.
+docs/project-knowledge/CHANGELOG.md     merge=union
+docs/project-knowledge/KNOWN_ISSUES.md  merge=union
