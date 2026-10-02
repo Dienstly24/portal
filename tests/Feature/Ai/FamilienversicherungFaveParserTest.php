@@ -359,9 +359,16 @@ TEXT;
 
     public function test_ohne_lesbare_angehoerige_liest_die_ki_das_formular(): void
     {
-        // Spaltentabelle zerstoert (ein Scan, der das Raster verliert): der
-        // Parser greift weiter, aber das Ergebnis traegt keine Angehoerigen.
-        $ohneTabelle = (string) preg_replace('/^(Nachname|Vorname)\s{2,}.*$/mu', '$1', $this->antrag());
+        $ohneTabelle = $this->antragOhneTabelle();
+
+        // Vorbedingung des Falles ausdruecklich festhalten: der Parser greift
+        // weiter (Ueberschrift und Mitglied stehen ja da), liefert aber keine
+        // Angehoerigen. Ohne diese Zusicherung wuerde ein spaeterer Wechsel
+        // der Vorlage den Fall still entkernen - er wuerde gruen bleiben und
+        // nichts mehr pruefen.
+        $vorlage = $this->parse($ohneTabelle);
+        $this->assertNotNull($vorlage, 'Der Antrag muss weiter erkannt werden.');
+        $this->assertSame([], $vorlage['data']['personen'], 'Die Vorlage darf hier keine Angehoerigen liefern.');
 
         $ki = $this->kiProvider([
             'type' => 'familienversicherung', 'confidence' => 90, 'summary' => 'ok', 'title' => null,
@@ -462,5 +469,32 @@ TEXT;
                 return $this->antwort;
             }
         };
+    }
+
+    /**
+     * Derselbe Antrag, aber mit ZERSTOERTER Spaltentabelle (ein Scan, der das
+     * Raster verliert): die beiden Datenzeilen Nachname und Vorname tragen nur
+     * noch ihre Beschriftung.
+     *
+     * Gebaut wird das zeilenweise und ohne Regex ueber Zeilengrenzen. Die
+     * erste Fassung benutzte `^(Nachname|Vorname)\s{2,}.*$` mit /m - und `\s`
+     * schliesst den Zeilenumbruch ein, der Ausdruck frass also je nach
+     * PCRE-Fassung unterschiedlich viel weg. Lokal (PHP 8.4) entstand damit
+     * ein anderer Text als in der CI (PHP 8.3), und der Fall war dort rot,
+     * obwohl der Code stimmte. Eine Testvorlage darf nicht davon abhaengen,
+     * wie gierig ein Ausdruck gerade ist.
+     */
+    private function antragOhneTabelle(): string
+    {
+        $zeilen = preg_split('/\R/', $this->antrag()) ?: [];
+        foreach ($zeilen as $i => $zeile) {
+            foreach (['Nachname', 'Vorname'] as $label) {
+                if (str_starts_with($zeile, $label)) {
+                    $zeilen[$i] = $label;
+                }
+            }
+        }
+
+        return implode("\n", $zeilen);
     }
 }
