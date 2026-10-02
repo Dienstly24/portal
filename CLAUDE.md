@@ -3729,6 +3729,41 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
 - Tests: `UnternehmenssignaturTest` (19 Faelle), `CompanySignatureAssetTest`
   (nachgezogen: der Firmenname muss im PDF stehen).
 
+### Unterschrift fehlt im fertigen PDF: erst diagnostizieren (Betreiber-Meldung 02.10.2026)
+
+- **Gemeldet**: Kundenunterschrift UND Firmenstempel fehlen im fertigen
+  PDF, das Protokoll vermerkt "Unterschrieben". Im Nachbau zwei Ursachen,
+  beide mit Pixelvergleich belegt: (1) `PdfStamper` bettet JEDES Bild als
+  EINE Farbe + Alphakanal ein - ein deckendes Logo (JPG, weisser Grund)
+  wird zur weissen Flaeche (KI-055); (2) ein INDIREKTES `/Contents`-Array
+  wird als Strom angehaengt, poppler verwirft die Stempel (KI-056). Dazu
+  KI-057 (Vorschau zeigt nach Abschluss das Original), KI-058 (kein
+  Selbsttest), KI-059/060 (Verdacht, PdfDocument/Generation).
+- **Betreiber-Vorgabe: ERST diagnostizieren, dann reparieren.**
+  `php artisan signaturen:diagnose <id>` (ausfuehrlich, `--json`),
+  `--alle` (alle betroffenen mit Ursache), `--zeichen` (Zeichen in Namen,
+  die die PDF-Schrift WinAnsi nicht kann - Grundlage fuer die Entscheidung
+  ueber eine eingebettete Schrift). STRENG LESEND, keine Personendaten in
+  der Ausgabe. Das Urteil "sichtbar/unsichtbar" ist ein BILDVERGLEICH
+  (pdftoppm, Original gegen Ergebnis im Feldkasten; beim Firmenfeld nur
+  der Bildbereich, sonst machte der sichtbare Firmenname ein unsichtbares
+  Logo "sichtbar"). Passt keine bekannte Ursache, steht dort
+  `UX_UNSICHTBAR_OHNE_BEKANNTE_URSACHE` - dann gibt es eine weitere, und
+  sie wird gesucht, BEVOR repariert wird. Fehlt das fertige PDF, wird es
+  nur im Speicher nachgebaut, nie gespeichert.
+- **Lehre**: die bisherigen Tests prueften `/Subtype /Image` im PDF-TEXT -
+  ein weisser Kasten erfuellt das (KI-061). Sichtbarkeit wird nur am
+  gerenderten Bild bewiesen.
+- **Beschlossen, NOCH NICHT gebaut** (Betreiber 02.10.2026, Folge-PRs):
+  Feldpositionen bleiben ANTEILE der Anzeige-Seite (nach `/Rotate`,
+  bezogen auf die MediaBox), mit EINER Umrechnungsfunktion fuer Editor,
+  Stempler und Selbsttest; "Tippen" als Signaturart bleibt verboten (nur
+  gezeichnet, Regel 10.09.2026); interne Unterschrift ohne Neu-Anmeldung,
+  solange die letzte 2FA-Bestaetigung juenger als 4 h ist (einstellbar),
+  sonst EINMAL 2FA-Code - die Bestaetigung "Ich unterschreibe dieses
+  Dokument als [Name, Rolle]" ist in JEDEM Fall Pflicht.
+- Tests: `SignaturDiagnoseTest`.
+
 ## System-Audit 15.09.2026: Befunde und Behebung
 
 Vollstaendiger Bericht: `docs/AUDIT_2026-09-15_BEHEBUNG.md`. Was man im

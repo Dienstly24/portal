@@ -75,7 +75,7 @@ Regel: `retry_after` (360 s bzw. 2100 s) > laengster `timeout` (`QueueTimeoutTes
 ## Artisan-Befehle (54)
 
 Betrieb/Planer: `mailboxes:sync`, `emails:prune-unmatched`, `tickets:auto-close`,
-`signaturen:ablaufen`, `tickets:purge-website-leads`, `media:purge-trash`,
+`signaturen:ablaufen`, `signaturen:diagnose` (nur lesend), `tickets:purge-website-leads`, `media:purge-trash`,
 `activity:close-stale`, `activity:prune`, `document-requests:remind`, `tasks:remind`,
 `familie:uebergaenge-anwenden`, `tasks:send-auto-emails`, `documents:analyze-pending`,
 `ai:answer-pending`, `errors:prune`, `google:bewertungen-holen`,

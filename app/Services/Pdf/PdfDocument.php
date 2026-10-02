@@ -121,6 +121,60 @@ final class PdfDocument
         return null;
     }
 
+    /**
+     * Wie oft steht ein Objekt im KLARTEXT in der Datei, mit welcher
+     * Generationsnummer, und liegt es ZUSAETZLICH in einem Objekt-Strom?
+     * Rein lesend, fuer die Diagnose: mehrere Fassungen derselben Nummer
+     * heissen, dass die Datei fortgeschrieben wurde - welche davon gilt,
+     * entscheidet dann die Querverweistabelle, nicht die Position.
+     *
+     * @return array{klartext: int, generationen: list<int>, im_objektstrom: bool}
+     */
+    public function objectVersions(int $number): array
+    {
+        preg_match_all('/(?<![0-9])'.$number.'[\x00\t\n\x0C\r ]+(\d+)[\x00\t\n\x0C\r ]+obj\b/', $this->raw, $m);
+
+        return [
+            'klartext' => count($m[1]),
+            'generationen' => array_values(array_unique(array_map('intval', $m[1]))),
+            'im_objektstrom' => in_array($number, $this->objectStreamMembers(), true),
+        ];
+    }
+
+    /** @return list<int> Objektnummern, die in einem Objekt-Strom (/ObjStm) stehen */
+    public function objectStreamMembers(): array
+    {
+        $members = [];
+        foreach ($this->objects as $body) {
+            if (! str_contains($body, '/ObjStm')) {
+                continue;
+            }
+            $dict = PdfSyntax::dictEntries($body);
+            if (($dict['Type'] ?? '') !== '/ObjStm') {
+                continue;
+            }
+            $data = $this->streamData($body, $dict);
+            if ($data === null) {
+                continue;
+            }
+            $header = substr($data, 0, (int) ($dict['First'] ?? 0));
+            preg_match_all('/(\d+)\s+(\d+)/', $header, $m, PREG_SET_ORDER);
+            foreach (array_slice($m, 0, (int) ($dict['N'] ?? 0)) as $entry) {
+                $members[] = (int) $entry[1];
+            }
+        }
+
+        return array_values(array_unique($members));
+    }
+
+    /** Byte-Position von "%PDF-" - groesser 0 heisst: Vorspann vor dem PDF. */
+    public function headerOffset(): int
+    {
+        $at = strpos($this->raw, '%PDF-');
+
+        return $at === false ? 0 : $at;
+    }
+
     /** Woerterbuch eines Objekts als Schluessel => Rohwert. */
     public function dict(int $number): array
     {
