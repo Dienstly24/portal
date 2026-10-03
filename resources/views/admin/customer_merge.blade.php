@@ -67,12 +67,12 @@ $labels = [
             @if($errors->any())
             <div class="alert alert-error" style="margin-bottom:10px;">@foreach($errors->all() as $e)<div>✗ {{ $e }}</div>@endforeach</div>
             @endif
-            <strong>⛔ Vermutlich verschiedene Personen</strong>
+            <strong>⛔ Zusammenführen gesperrt</strong>
             @foreach($konflikte as $k)<div>⚠ {{ $k }}</div>@endforeach
-            <div style="margin-top:6px;">Bei Familienmitgliedern bitte NICHT zusammenführen, sondern in der Dubletten-Prüfung „Beziehung festlegen". Nur wenn eine der Akten nachweislich falsch erfasst ist (z. B. Tippfehler im Geburtsdatum), kann ein Admin trotzdem zusammenführen:</div>
+            <div style="margin-top:6px;">Bei Familienmitgliedern bitte NICHT zusammenführen, sondern in der Dubletten-Prüfung „Beziehung festlegen". Nur wenn eine der Akten nachweislich falsch erfasst ist (z. B. Tippfehler im Geburtsdatum), kann ein Admin trotzdem zusammenführen. Haben beide einen aktiven Portalzugang, wird der Zugang des Duplikats dabei <strong>deaktiviert, nicht gelöscht</strong>.</div>
             <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;cursor:pointer;">
                 <input type="checkbox" name="konflikt_bestaetigt" value="1" style="margin-top:3px;" @checked(old('konflikt_bestaetigt'))>
-                <span>Ich habe beide Akten geprüft: es ist <strong>dieselbe Person</strong>, der Widerspruch ist ein Erfassungsfehler.</span>
+                <span>Ich habe beide Akten geprüft: es ist <strong>dieselbe Person</strong>, der Widerspruch ist ein Erfassungsfehler bzw. der zweite Zugang wird nicht mehr gebraucht.</span>
             </label>
             <div class="field" style="margin-top:10px;margin-bottom:0;">
                 <label for="konflikt_begruendung">Begründung (wird protokolliert)</label>

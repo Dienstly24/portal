@@ -21,21 +21,23 @@ class DuplicateBulkMergeTest extends TestCase
         return User::factory()->create(['role' => 'admin']);
     }
 
-    private function customer(string $name, string $email): Customer
+    private function customer(string $name, string $email, ?string $geburtsdatum = null): Customer
     {
         $user = User::factory()->create(['role' => 'customer', 'name' => $name, 'email' => $email]);
         return Customer::create([
             'user_id' => $user->id,
             'customer_number' => 'C-'.strtoupper(substr(md5($email.microtime()), 0, 8)),
+            'birth_date' => $geburtsdatum,
         ]);
     }
 
     public function test_bulk_merge_of_two_pairs_merges_both(): void
     {
-        $a1 = $this->customer('Anna Eins', 'a1@example.com');
-        $a2 = $this->customer('Anna Eins', 'a2@example.com');
-        $b1 = $this->customer('Bernd Zwei', 'b1@example.com');
-        $b2 = $this->customer('Bernd Zwei', 'b2@example.com');
+        // Sammel-Merge nur fuer "sicher": gleicher Name UND Geburtsdatum (KI-068).
+        $a1 = $this->customer('Anna Eins', 'a1@example.com', '1980-01-01');
+        $a2 = $this->customer('Anna Eins', 'a2@example.com', '1980-01-01');
+        $b1 = $this->customer('Bernd Zwei', 'b1@example.com', '1975-06-15');
+        $b2 = $this->customer('Bernd Zwei', 'b2@example.com', '1975-06-15');
 
         $response = $this->actingAs($this->admin())->post(route('admin.customers.duplicates.merge'), [
             'pairs' => ["{$a1->id}|{$a2->id}", "{$b1->id}|{$b2->id}"],
@@ -52,7 +54,7 @@ class DuplicateBulkMergeTest extends TestCase
         // Fuenf Datensaetze derselben Person, ueber ueberlappende Paare verknuepft.
         $c = [];
         foreach (range(1, 5) as $i) {
-            $c[$i] = $this->customer('Ahmad Albhre', "ahmad{$i}@example.com");
+            $c[$i] = $this->customer('Ahmad Albhre', "ahmad{$i}@example.com", '1990-04-04');
         }
         Contract::create(['customer_id' => $c[3]->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active']);
 

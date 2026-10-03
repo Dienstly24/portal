@@ -244,15 +244,16 @@ class CustomerMergeDataPreservationTest extends TestCase
         // die Kette ueberleben.
         $admin = User::factory()->create(['role' => 'admin']);
 
-        $oldest = $this->makeImportStub('Karim Aziz');
+        // Sammel-Merge nur fuer "sicher" (gleicher Name UND Geburtsdatum, KI-068).
+        $oldest = $this->makeImportStub('Karim Aziz', ['birth_date' => '1984-02-02']);
         $oldest->created_at = now()->subDays(30);
         $oldest->save();
 
-        $portal = $this->makePortalCustomer('Karim Aziz', 'karim@example.com');
+        $portal = $this->makePortalCustomer('Karim Aziz', 'karim@example.com', ['birth_date' => '1984-02-02']);
         $portal->created_at = now()->subDays(20);
         $portal->save();
 
-        $newest = $this->makeImportStub('Karim Aziz');
+        $newest = $this->makeImportStub('Karim Aziz', ['birth_date' => '1984-02-02']);
         $newest->created_at = now()->subDays(10);
         $newest->save();
 
