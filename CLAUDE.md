@@ -4497,7 +4497,7 @@ Merge von PR #358, Teil E/F).
   `CustomerFamilyRelationTest`, `MeldebestaetigungHaushaltTest`,
   `GeburtsurkundeVerknuepfungTest`, `CustomerMergeDataPreservationTest`.
 
-## Dubletten: Familie ist keine Dublette (Betreiber-Auftrag 03.10.2026, KI-062)
+## Dubletten: Familie ist keine Dublette (Betreiber-Auftrag 03.10.2026, KI-063)
 
 - **Anlass**: Vater und Sohn (Maher Abboud, geb. 1971 / Ahmad Jihad
   Abboud, geb. 2002) standen nur wegen derselben E-Mail als
@@ -4530,11 +4530,11 @@ Merge von PR #358, Teil E/F).
   `customer_relationships`.
 - **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-2
   Merge-Sperren (beide mit aktivem Portalzugang, Login wird nicht mehr
-  geloescht KI-064, Familienrollen-Rueckrichtung KI-065,
-  KI-Unterhaltung KI-066, Massen-Merge nur `sicher` KI-067); PR-3
+  geloescht KI-065, Familienrollen-Rueckrichtung KI-066,
+  KI-Unterhaltung KI-067, Massen-Merge nur `sicher` KI-068); PR-3
   Archiv statt Hard-Delete (`merged_into_id`/`archived_at`, nicht
-  SoftDeletes), Kundennummer-Alias, Feldwahl, Undo 30 Tage (KI-063);
-  PR-4 geteilte Kontaktdaten + Adressnormalisierung (KI-068); PR-5
+  SoftDeletes), Kundennummer-Alias, Feldwahl, Undo 30 Tage (KI-064);
+  PR-4 geteilte Kontaktdaten + Adressnormalisierung (KI-069); PR-5
   Haushalt + weitere Beziehungsarten + Uebernahme des Bestands; PR-6
   Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
   Person, Kinderzugang ab 16, Elternzugriff Standard AUS, endet mit 18;

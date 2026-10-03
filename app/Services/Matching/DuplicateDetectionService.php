@@ -37,7 +37,7 @@ class DuplicateDetectionService
     public const AUTO_MERGE_MIN_SCORE = 40;
 
     /**
-     * Klassifikation eines Paares (Betreiber-Auftrag 03.10.2026, KI-062).
+     * Klassifikation eines Paares (Betreiber-Auftrag 03.10.2026, KI-063).
      * Der Score bleibt eine SORTIER-Zahl; was mit einem Paar geschehen darf,
      * entscheidet ausschliesslich die Klasse - und zwar an EINER Stelle
      * (classify()), die Anzeige, Sammel-Merge, "Alle sicheren" und der
@@ -531,7 +531,7 @@ class DuplicateDetectionService
     /**
      * Duerfen zwei Kunden zusammengefuehrt werden, ohne dass ein Admin den
      * Widerspruch ausdruecklich uebersteuert? Nein, sobald ein
-     * Identitaetsmerkmal WIDERSPRICHT (Audit MERGE-1, KI-062).
+     * Identitaetsmerkmal WIDERSPRICHT (Audit MERGE-1, KI-063).
      */
     public function hasIdentityConflict(Customer $a, Customer $b): bool
     {

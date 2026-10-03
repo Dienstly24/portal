@@ -69,7 +69,7 @@ class DuplicateController extends Controller
         }, $result['pairs']);
 
         // Dieselbe Klasse wie im Merge-All-Pfad - die Button-Zahl entspricht
-        // damit genau der Aktion (KI-062).
+        // damit genau der Aktion (KI-063).
         $strongCount = count(array_filter($pairs, fn ($p) => $p['klasse'] === DuplicateDetectionService::KLASSE_SICHER));
 
         return view('admin.customer_duplicates', [
@@ -324,7 +324,7 @@ class DuplicateController extends Controller
 
         // Verschiedene Personen (abweichendes Geburtsdatum/Vorname) werden
         // NIE ueber die Sammelauswahl zusammengefuehrt - "Alle auswaehlen"
-        // erfasste sonst Vater und Sohn mit (KI-062). Geprueft wird JEDES
+        // erfasste sonst Vater und Sohn mit (KI-063). Geprueft wird JEDES
         // Paar einer Gruppe, nicht nur die ausgewaehlten Kanten: ueber eine
         // Akte ohne Geburtsdatum koennten sonst zwei Personen in dieselbe
         // Gruppe rutschen.
@@ -350,7 +350,7 @@ class DuplicateController extends Controller
         $result = $detection->scan($this->visibleCustomerIds());
         // NUR die Klasse "sicher" (gleicher Name UND gleiches Geburtsdatum,
         // kein Widerspruch). Gemeinsame E-Mail/Telefon/Anschrift/IBAN allein
-        // reichen nie - genau die teilen Familien (KI-062, Audit MERGE-1).
+        // reichen nie - genau die teilen Familien (KI-063, Audit MERGE-1).
         $strong = array_values(array_filter(
             $result['pairs'],
             fn ($p) => $p['klasse'] === DuplicateDetectionService::KLASSE_SICHER
@@ -446,7 +446,7 @@ class DuplicateController extends Controller
         // Widerspricht ein Identitaetsmerkmal (abweichendes Geburtsdatum,
         // anderer Vorname), sind es verschiedene Personen. Zusammenfuehren
         // nur, wenn der Admin den Widerspruch ausdruecklich uebersteuert und
-        // begruendet - protokolliert (KI-062). Vorher genuegte ein Klick.
+        // begruendet - protokolliert (KI-063). Vorher genuegte ein Klick.
         $konflikte = app(DuplicateDetectionService::class)->identityConflicts($primary, $dup);
         if ($konflikte !== []) {
             // Zurueck IMMER auf das Formular MIT diesem Duplikat - nur dort

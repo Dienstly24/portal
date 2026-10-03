@@ -61,7 +61,7 @@ $labels = [
             </div>
         </div>
         @if(!empty($konflikte))
-        {{-- Widerspruch (KI-062): verschiedene Personen. Zusammenfuehren nur
+        {{-- Widerspruch (KI-063): verschiedene Personen. Zusammenfuehren nur
              mit ausdruecklicher Bestaetigung und Begruendung (protokolliert). --}}
         <div id="merge-konflikt" style="background:#FDECEC;border:1px solid #F3B8B8;border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:#7A1F1F;line-height:1.6;">
             @if($errors->any())

@@ -120,7 +120,7 @@ $chipDefs = [
             @endif
             @if($istFamilie)
             {{-- Keine Prozentzahl: "44 %" liest sich wie "fast sicher dieselbe
-                 Person", und genau das sind diese Paare nicht (KI-062). --}}
+                 Person", und genau das sind diese Paare nicht (KI-063). --}}
             <span class="dup-klasse dup-klasse-familie" style="background:#EDE7F6;color:#4527A0;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">👪 Mögliche Familie · verschiedene Personen</span>
             @elseif($istSicher)
             <span style="background:{{ $badgeColor }};color:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">{{ $score }}% · Dublette</span>
