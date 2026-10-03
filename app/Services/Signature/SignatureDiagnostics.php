@@ -7,10 +7,8 @@ use App\Models\SignatureRequest;
 use App\Services\Pdf\PdfDocument;
 use App\Services\Pdf\PdfPage;
 use App\Services\Pdf\PdfSyntax;
-use App\Support\Firmensignatur;
 use App\Support\SignatureStatus;
 use Illuminate\Database\Eloquent\Builder;
-use Symfony\Component\Process\Process;
 
 /**
  * Warum steht eine Unterschrift NICHT im fertigen PDF?
@@ -70,13 +68,10 @@ class SignatureDiagnostics
 
     public const UNBEKANNT = 'UX_UNSICHTBAR_OHNE_BEKANNTE_URSACHE';
 
-    /** Aufloesung des Vergleichsbildes - genug fuer eine Unterschrift, schnell genug fuer den Bestand. */
-    private const DPI = 60;
-
-    /** Anteil veraenderter Pixel im Feldkasten, ab dem ein Feld als sichtbar gilt. */
-    private const MIN_ANTEIL = 0.004;
-
-    public function __construct(private readonly SignatureStorage $storage)
+    public function __construct(
+        private readonly SignatureStorage $storage,
+        private readonly PdfSichtbarkeit $sichtbarkeit,
+    )
     {
     }
 
@@ -188,8 +183,8 @@ class SignatureDiagnostics
 
             if ($rendern && $signiert !== null && $original !== null && $eintrag['gefuellt']
                 && isset($seiten[$field->page])) {
-                $render[$field->page] ??= $this->renderPaar($original, $signiert, (int) $field->page);
-                $eintrag['sichtbarkeit'] = $this->sichtbarkeit($render[$field->page], $this->bildBereich($field, $seiten[$field->page]));
+                $render[$field->page] ??= $this->sichtbarkeit->renderPaar($original, $signiert, (int) $field->page);
+                $eintrag['sichtbarkeit'] = $this->sichtbarkeit->vergleiche($render[$field->page], $this->sichtbarkeit->bildBereich($field, (float) $seiten[$field->page]['anzeige'][1]));
                 // Eine Meldung zaehlt NUR, wenn poppler wirklich gerendert
                 // hat. Fehlt das Programm, steht in stderr "nicht gefunden" -
                 // das ist eine Eigenschaft des Servers, keine Ursache am
@@ -202,6 +197,16 @@ class SignatureDiagnostics
                 $eintrag['sichtbarkeit'] = ['urteil' => $eintrag['gefuellt'] ? 'nicht_geprueft' : 'nicht_ausgefuellt'];
             }
 
+            // EINE URSACHE ERKLAERT EIN UNSICHTBARES FELD. Ist das Feld im
+            // Bild nachweislich sichtbar, ist ein Strukturbefund (deckendes
+            // Bild, indirektes /Contents ...) seit dem Fix vom 03.10.2026
+            // kein Defekt mehr, sondern nur noch eine Eigenschaft der Datei
+            // - er wandert zu den Risiken, sonst stuende ein einwandfreies
+            // Dokument in der Liste der betroffenen.
+            if (($eintrag['sichtbarkeit']['urteil'] ?? null) === 'sichtbar') {
+                $eintrag['risiken'] = array_values(array_unique(array_merge($eintrag['risiken'], $feldUrsachen)));
+                $feldUrsachen = [];
+            }
             if (($eintrag['sichtbarkeit']['urteil'] ?? null) === 'unsichtbar' && $feldUrsachen === []) {
                 $feldUrsachen[] = self::UNBEKANNT;
             }
@@ -443,123 +448,6 @@ class SignatureDiagnostics
         $b = hexdec(substr($hex, 5, 2));
 
         return 0.299 * $r + 0.587 * $g + 0.114 * $b;
-    }
-
-    /**
-     * Rendert dieselbe Seite aus Original und Ergebnis.
-     *
-     * @return array<string, mixed>
-     */
-    private function renderPaar(string $original, string $signiert, int $seite): array
-    {
-        $ergebnis = ['seite' => $seite, 'verfuegbar' => false, 'original' => null, 'signiert' => null,
-            'stderr_original' => '', 'stderr_signiert' => ''];
-        $dir = sys_get_temp_dir().'/signatur-diagnose-'.bin2hex(random_bytes(6));
-        if (! @mkdir($dir, 0700) && ! is_dir($dir)) {
-            return $ergebnis;
-        }
-        try {
-            foreach (['original' => $original, 'signiert' => $signiert] as $art => $pdf) {
-                file_put_contents($dir.'/'.$art.'.pdf', $pdf);
-                $process = new Process([
-                    (string) config('services.ocr.pdftoppm_binary', 'pdftoppm'),
-                    '-png', '-r', (string) self::DPI, '-f', (string) $seite, '-l', (string) $seite,
-                    '-singlefile', $dir.'/'.$art.'.pdf', $dir.'/'.$art,
-                ]);
-                $process->setTimeout(60);
-                try {
-                    $process->run();
-                } catch (\Throwable) {
-                    return $ergebnis;
-                }
-                $ergebnis['stderr_'.$art] = mb_substr(trim($process->getErrorOutput()), 0, 300);
-                $datei = $dir.'/'.$art.'.png';
-                if (is_file($datei)) {
-                    $ergebnis[$art] = @imagecreatefrompng($datei) ?: null;
-                }
-            }
-            $ergebnis['verfuegbar'] = $ergebnis['original'] !== null && $ergebnis['signiert'] !== null;
-
-            return $ergebnis;
-        } finally {
-            foreach (glob($dir.'/*') ?: [] as $f) {
-                @unlink($f);
-            }
-            @rmdir($dir);
-        }
-    }
-
-    /**
-     * Vergleicht den Feldkasten in beiden Bildern. Die Feldkoordinaten
-     * sind Anteile der ANZEIGE-Seite (nach /Rotate, bezogen auf die
-     * MediaBox) - pdftoppm rendert ohne -cropbox genau diese Flaeche.
-     *
-     * @param  array<string, mixed>  $paar
-     * @return array<string, mixed>
-     */
-    private function sichtbarkeit(array $paar, array $box): array
-    {
-        [$bx, $by, $bw, $bh] = $box;
-        if (! $paar['verfuegbar']) {
-            return ['urteil' => 'nicht_pruefbar', 'grund' => 'pdftoppm fehlt oder konnte die Seite nicht rendern'];
-        }
-        $a = $paar['original'];
-        $b = $paar['signiert'];
-        $w = min(imagesx($a), imagesx($b));
-        $h = min(imagesy($a), imagesy($b));
-        $x0 = max(0, (int) floor($bx * $w));
-        $y0 = max(0, (int) floor($by * $h));
-        $x1 = min($w, (int) ceil(($bx + $bw) * $w));
-        $y1 = min($h, (int) ceil(($by + $bh) * $h));
-        $flaeche = max(0, $x1 - $x0) * max(0, $y1 - $y0);
-        if ($flaeche === 0) {
-            return ['urteil' => 'unsichtbar', 'geaendert_anteil' => 0.0, 'pixel' => 0];
-        }
-        $geaendert = 0;
-        for ($y = $y0; $y < $y1; $y++) {
-            for ($x = $x0; $x < $x1; $x++) {
-                $p = imagecolorat($a, $x, $y);
-                $q = imagecolorat($b, $x, $y);
-                $d = abs((($p >> 16) & 0xFF) - (($q >> 16) & 0xFF))
-                    + abs((($p >> 8) & 0xFF) - (($q >> 8) & 0xFF))
-                    + abs(($p & 0xFF) - ($q & 0xFF));
-                if ($d > 60) {
-                    $geaendert++;
-                }
-            }
-        }
-        $anteil = $geaendert / $flaeche;
-
-        return [
-            'urteil' => $anteil >= self::MIN_ANTEIL ? 'sichtbar' : 'unsichtbar',
-            'geaendert_anteil' => round($anteil, 4),
-            'pixel' => $flaeche,
-        ];
-    }
-
-    /**
-     * Der Bereich, in dem das BILD stehen muss (Anteile der Anzeige-Seite).
-     * Bei der Unternehmenssignatur liegt unter dem Bild noch Linie und
-     * Firmenname (SignedPdfBuilder::stempleFirmensignatur) - wuerde der ganze
-     * Kasten verglichen, machte der sichtbare Name ein unsichtbares Logo
-     * "sichtbar". Dieselbe Rechnung wie dort.
-     *
-     * @param  array<string, mixed>  $seite
-     * @return array{0: float, 1: float, 2: float, 3: float}
-     */
-    private function bildBereich(SignatureField $field, array $seite): array
-    {
-        $box = [(float) $field->pos_x, (float) $field->pos_y, (float) $field->width, (float) $field->height];
-        if (! $field->isCompany()) {
-            return $box;
-        }
-        $hoehePt = $box[3] * $seite['anzeige'][1];
-        $zeile = Firmensignatur::name() === '' ? 0.0 : min(12.0, max(7.0, $hoehePt * 0.22));
-        if ($hoehePt >= 26.0 && $zeile > 0.0) {
-            $box[3] = ($hoehePt - $zeile * 1.45) / $seite['anzeige'][1];
-        }
-
-        return $box;
     }
 
     /**

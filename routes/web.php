@@ -535,6 +535,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/signaturen/{id}/erinnern', [AdminSignatureController::class, 'remind'])
         ->middleware('throttle:60,10')->name('signatures.remind');
     Route::post('/signaturen/{id}/abbrechen', [AdminSignatureController::class, 'cancel'])->name('signatures.cancel');
+    Route::post('/signaturen/{id}/neu-erzeugen', [AdminSignatureController::class, 'regenerate'])
+        ->middleware('throttle:20,10')->name('signatures.regenerate');
     // Loeschen gibt es NUR fuer Entwuerfe - alles Versandte wird storniert,
     // nie entfernt (der Nachweis bleibt). Die Grenze steht im Controller
     // und in der Policy, nicht nur hier.

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\SignatureRequest;
 use App\Models\User;
+use App\Support\SignatureStatus;
 
 /**
  * Wer darf was mit einer Signaturanfrage?
@@ -57,6 +58,18 @@ class SignatureRequestPolicy
     public function send(User $user, SignatureRequest $request): bool
     {
         return $this->update($user, $request);
+    }
+
+    /**
+     * "Erneut erzeugen" nach einem gescheiterten Abschluss: alle haben
+     * unterschrieben, nur das fertige Dokument fehlt oder hat den
+     * Selbsttest nicht bestanden. Es aendert keine Unterschrift - es
+     * erzeugt das Dokument aus den gespeicherten Daten neu.
+     */
+    public function regenerate(User $user, SignatureRequest $request): bool
+    {
+        return $request->status === SignatureStatus::COMPLETION_FAILED
+            && $this->update($user, $request);
     }
 
     public function cancel(User $user, SignatureRequest $request): bool

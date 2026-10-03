@@ -21,6 +21,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 03.10.2026 - E-Signatur Phase 0: Unterschriften sichtbar, Selbsttest, Neuerzeugung (KI-055..058, 061, 062)
+
+- **Task**: Betreiber-Auftrag Phase 0 "Signaturen fehlen im fertigen PDF". Grundlage: Ausgabe von `signaturen:diagnose` auf dem Server (17 geprueft, 11 betroffen; Ursachen U11 8x, U1 6x, U2 1x; poppler "XObject 'D24Sig1x0' is unknown"; `--zeichen`: 0 von 1424 Namen ausserhalb WinAnsi).
+- **Files Changed**: `PdfStamper` (Ressourcen per Referenz KI-062, indirektes /Contents KI-056, Farbbild + /SMask KI-055, `platzierteBilder()`), `PdfStamp` (`freistellen`), neu `App\Support\Bildfreistellung`, neu `App\Support\FeldGeometrie`, `SignedPdfBuilder` (eine Umrechnung, Firmenbild freigestellt, Protokollzeile "Neu erzeugt"), neu `PdfSichtbarkeit` (aus der Diagnose herausgeloest), neu `SignedPdfVerifier`, neu `SignedPdfRegenerator`, `SignatureSigningService` (Selbsttest vor Abschluss, beide Hashes im Ereignis), `SignatureStatus::COMPLETION_FAILED`, `SignaturePageRenderer` (KI-057), `SignatureDiagnostics` (Ursachen nur fuer unsichtbare Felder, sonst Risiken), `SignatureRequestPolicy::regenerate`, Route `admin.signatures.regenerate`, `admin/signatures/show.blade.php`, `SignatureEvent` (`pdf_regenerated`), neu `signaturen:neu-erzeugen`; Tests neu `SignaturPdfSichtbarkeitTest` (10), `tests/Unit/BildfreistellungTest.php` (5), umgebaut `SignaturDiagnoseTest` (9); `CLAUDE.md`, `KNOWN_ISSUES.md`, `FEATURE_MAP.md`, `BACKEND_MAP.md`.
+- **Components Affected**: Abschluss einer Signaturanfrage, fertiges PDF, Vorschau, Detailseite (Fehlerzustand), Uebersicht (Reiter "In Bearbeitung" enthaelt den neuen Zustand).
+- **Database Changes**: keine Migration. Neuer Statuswert `completion_failed` in der bestehenden String-Spalte.
+- **API Changes**: neue Route POST `/admin/signaturen/{id}/neu-erzeugen`.
+- **Potential Side Effects**: Firmenbilder mit weissem Grund erscheinen freigestellt (gewollt). Neue PDF sind etwas groesser (Farbbild statt 1x1-Flaeche), aber kleiner als vorher bei grossen Stempeln (Verkleinern auf 300 dpi). Ein Abschluss kann jetzt sichtbar scheitern statt still ein unbrauchbares Dokument zu liefern. Bestand wird NICHT automatisch geaendert - erst `signaturen:neu-erzeugen --alle --ausfuehren`; das alte PDF bleibt liegen.
+- **Tests Performed**: Gegenprobe mit dem alten Stempler: 4 von 10 neuen Faellen rot (Ressourcen-Referenz, indirektes /Contents, Stempel farbig, nur Stempel). Ergebnis-PDF gerendert und angesehen (Unterschrift, roter Stempel, Formularlinie unter dem freigestellten Stempel sichtbar). Volle Suite 3355/3355 gruen, 0 uebersprungen; `composer stan` 0 Fehler; `composer lint` gruen.
+- **Result**: KI-055, KI-056, KI-057, KI-058, KI-061, KI-062 FIXED. KI-059/060 bleiben OPEN (Verdacht; auf dem Server nicht beobachtet: keine Fortschreibungen, Generation 0).
+
+---
+
 ## 02.10.2026 - E-Signatur: Diagnosebefehl `signaturen:diagnose` (KI-055..061 erfasst)
 
 - **Task**: Betreiber-Meldung "Unterschriften erscheinen nicht im fertigen PDF" (Kunde UND Firmenstempel, Beispiel 9982d7a2-...). Betreiber-Vorgabe: VOR jedem Fix einen Diagnosebefehl bauen, auf der gemeldeten Anfrage laufen lassen und alle betroffenen Anfragen mit Ursache listen.

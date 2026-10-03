@@ -33,6 +33,15 @@ final class SignatureStatus
 
     public const DECLINED = 'declined';
 
+    /**
+     * Alle haben unterschrieben, aber das fertige PDF hat den Selbsttest
+     * nicht bestanden (oder liess sich nicht erzeugen). "Abgeschlossen" darf
+     * erst dastehen, wenn ein GEPRUEFTES Dokument existiert (KI-058) - sonst
+     * gilt ein Vorgang als erledigt, dessen Dokument die Unterschrift gar
+     * nicht zeigt. Kein Endzustand: "Erneut erzeugen" fuehrt weiter.
+     */
+    public const COMPLETION_FAILED = 'completion_failed';
+
     public const LABELS = [
         self::DRAFT => 'Entwurf',
         self::SENT => 'Gesendet',
@@ -42,6 +51,7 @@ final class SignatureStatus
         self::EXPIRED => 'Abgelaufen',
         self::CANCELLED => 'Abgebrochen',
         self::DECLINED => 'Abgelehnt',
+        self::COMPLETION_FAILED => 'Fehler bei Fertigstellung',
     ];
 
     /** Zustaende, in denen noch unterschrieben werden kann. */
@@ -62,7 +72,7 @@ final class SignatureStatus
         'alle' => ['label' => 'Alle', 'statuses' => []],
         'entwuerfe' => ['label' => 'Entwürfe', 'statuses' => [self::DRAFT]],
         'gesendet' => ['label' => 'Gesendet', 'statuses' => [self::SENT]],
-        'in-bearbeitung' => ['label' => 'In Bearbeitung', 'statuses' => [self::VIEWED, self::PARTIALLY_SIGNED]],
+        'in-bearbeitung' => ['label' => 'In Bearbeitung', 'statuses' => [self::VIEWED, self::PARTIALLY_SIGNED, self::COMPLETION_FAILED]],
         'abgeschlossen' => ['label' => 'Abgeschlossen', 'statuses' => [self::COMPLETED]],
         'abgelaufen' => ['label' => 'Abgelaufen', 'statuses' => [self::EXPIRED]],
         'abgebrochen' => ['label' => 'Abgebrochen', 'statuses' => [self::CANCELLED, self::DECLINED]],
@@ -78,7 +88,7 @@ final class SignatureStatus
     {
         return match ($status) {
             self::COMPLETED => 'badge-success',
-            self::CANCELLED, self::DECLINED, self::EXPIRED => 'badge-danger',
+            self::CANCELLED, self::DECLINED, self::EXPIRED, self::COMPLETION_FAILED => 'badge-danger',
             self::DRAFT => 'badge-muted',
             default => 'badge-pending',
         };

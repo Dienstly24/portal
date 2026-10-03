@@ -45,13 +45,21 @@ class SignaturePageRenderer
      */
     public function page(SignatureRequest $request, int $page): ?string
     {
-        $path = $this->storage->pagePreviewPath($request, $page);
+        // NACH DEM ABSCHLUSS zeigt die Vorschau das UNTERSCHRIEBENE Dokument
+        // (KI-057). Vorher kam auch dann das Original - wer den fertigen
+        // Vorgang oeffnete, sah keine Unterschrift und hielt sie fuer
+        // verloren. Der Hash steht im Namen: ein neu erzeugtes Dokument
+        // bekommt neue Bilder statt der alten aus dem Speicher.
+        $signiert = $request->isCompleted() && $request->signed_path !== null && $request->signed_hash !== null;
+        $path = $signiert
+            ? substr($this->storage->pagePreviewPath($request, $page), 0, -4).'-signiert-'.substr((string) $request->signed_hash, 0, 12).'.png'
+            : $this->storage->pagePreviewPath($request, $page);
         $cached = $this->storage->read($path);
         if ($cached !== null) {
             return $cached;
         }
 
-        $pdf = $this->storage->read($request->original_path);
+        $pdf = $this->storage->read($signiert ? $request->signed_path : $request->original_path);
         if ($pdf === null) {
             return null;
         }
