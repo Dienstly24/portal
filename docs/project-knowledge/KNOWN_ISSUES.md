@@ -30,6 +30,13 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-045 | MEDIUM | correctness | Entgeltabrechnung "Verdienstabrechnung": weder Kunde noch Arbeitgeber gelesen | FIXED |
 | KI-046 | MEDIUM | correctness | Erstwagen einer Zweitwagenregelung zweckentfremdet in der Vorversicherung, Vertraege nicht verknuepft | FIXED |
 | KI-047 | MEDIUM | correctness | `Contract`: der Provisions-Listener auf `deleting` beendete die Listener-Kette (jeder spaetere deleting-Listener lief nie) | FIXED |
+| KI-055 | HIGH | correctness | E-Signatur: Firmenlogo/-stempel im fertigen PDF unsichtbar (Stempler setzt EINE Farbe -> weisse Flaeche) | OPEN (diagnostiziert, Fix folgt) |
+| KI-056 | HIGH | correctness | E-Signatur: indirektes `/Contents`-Array -> Seite fuer poppler kaputt, Unterschrift faellt weg | OPEN (diagnostiziert, Fix folgt) |
+| KI-057 | MEDIUM | correctness | E-Signatur: Seitenvorschau zeigt nach Abschluss weiter das ORIGINAL (ohne Unterschriften) | OPEN |
+| KI-058 | MEDIUM | correctness | E-Signatur: kein Selbsttest des fertigen PDF, kein Zustand "Fehler bei Fertigstellung" | OPEN |
+| KI-059 | MEDIUM | correctness | `PdfDocument`: "Klartext ist juenger als Objekt-Strom" gilt bei Fortschreibungen nicht (Verdacht) | OPEN |
+| KI-060 | LOW | correctness | `PdfStamper` schreibt Seitenobjekte immer mit Generation 0 (Verdacht) | OPEN |
+| KI-061 | MEDIUM | testing | Signatur-Tests pruefen nur `/Subtype /Image` im Text, nie die SICHTBARKEIT - KI-055/056 blieben deshalb unentdeckt | OPEN |
 | KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | FIXED |
 | KI-050 | MEDIUM | correctness | Krankenkassen-Bestaetigung an den Arbeitgeber: nicht erkannt, Service-Adresse der Kasse als Kunden-E-Mail | FIXED |
 | KI-051 | MEDIUM | correctness | Namenspartikel (Al/El/Abu/bin/van/von) landeten im VORnamen: "Yusuf Al" + "Rahman" | FIXED |
@@ -110,6 +117,51 @@ und PHPStan) auf `main` gruen ist.
 - **Description** Der Test legt den Ablauf auf `now()->startOfMonth()->addDays(2)`. Am 1. eines Monats liegt dieses Datum in der Zukunft und zaehlt (noch) nicht als Verlaengerung - der Test ist an diesem Tag rot, unabhaengig vom Code. Auf `main` am 01.10.2026 nachgestellt (Basislauf vor jeder Aenderung).
 - **Fix (01.10.2026, PR #365)**: der Test blockierte am 1. Oktober die Pflicht-Checks des PRs (beide Testjobs rot, Deploy uebersprungen) und wurde deshalb hier mitbehoben. Der Code war richtig ("Dieser Monat" = Monatserster bis heute), falsch war das Testdatum. Jetzt steht die Uhr fest auf dem Monatsersten (`travelTo`), der Ablauf ist der Monatserste selbst. Gegenprobe: mit dem alten Datum ist der Test nun an JEDEM Tag rot, nicht nur am Ersten.
 - **Discovered** 01.10.2026
+
+### KI-055 - E-Signatur: Firmenbild im fertigen PDF unsichtbar
+- **Category** correctness · **Severity** HIGH · **Status** OPEN (diagnostiziert 02.10.2026, Fix im naechsten PR)
+- **Location** `PdfStamper::addSignatureImage`
+- **Description** Betreiber-Meldung 02.10.2026 (Anfrage 9982d7a2-...): Protokoll nennt "Firmenstempel (Seite 1)", im PDF fehlt er. Der Stempler bettet JEDES Bild als 1x1-Farbflaeche + Alphakanal ein - Farbe = erstes deckendes Pixel. Das passt fuer die durchsichtige Handschrift, nicht fuer ein Logo: ein deckendes Bild (JPG, PNG mit weissem Grund) wird zur Flaeche in der Farbe des ersten Pixels, meist WEISS -> unsichtbar; ein mehrfarbiges Logo wird einfarbig. Nachgebaut: 0 sichtbare Pixel im Logo-Kasten.
+- **Nachweis** `signaturen:diagnose` Ursache `U1_BILD_OPAK_WIRD_FLAECHE`, Test `SignaturDiagnoseTest`.
+- **Discovered** 02.10.2026
+
+### KI-056 - E-Signatur: indirektes /Contents-Array laesst die Unterschrift wegfallen
+- **Category** correctness · **Severity** HIGH · **Status** OPEN (diagnostiziert, Fix im naechsten PR)
+- **Location** `PdfStamper::stampPage` / `contentRefs`
+- **Description** Zeigt `/Contents` einer Seite auf ein Array-OBJEKT (`/Contents 6 0 R`, `6 0 obj [4 0 R] endobj` - von vielen PDF-Programmen geschrieben), uebernimmt der Stempler die Referenz als Strom. poppler meldet "Weird page contents", die Stempel fallen weg (0/7500 Pixel). Andere Bauformen (Objekt-Stroeme, linearisiert, /Rotate 90, xref-Strom) wurden geprueft und sind in Ordnung.
+- **Nachweis** Ursache `U2_CONTENTS_INDIREKTES_ARRAY`, Test `SignaturDiagnoseTest`.
+- **Offen** Ob die gemeldete Anfrage daran scheitert, sagt erst `signaturen:diagnose` auf dem Server. Passt keine bekannte Ursache, meldet der Befehl `UX_UNSICHTBAR_OHNE_BEKANNTE_URSACHE`.
+- **Discovered** 02.10.2026
+
+### KI-057 - E-Signatur: Vorschau zeigt nach Abschluss das Original
+- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Location** `SignaturePageRenderer::page` (liest immer `original_path`)
+- **Description** Auch nach dem Abschluss sind die Seitenbilder in Beraterwelt und Unterzeichner-Seite die des Originals - das unterschriebene Dokument "sieht unveraendert aus", selbst wenn das PDF stimmt.
+- **Discovered** 02.10.2026
+
+### KI-058 - E-Signatur: kein Selbsttest, kein Fehlerzustand bei der Fertigstellung
+- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Location** `SignatureSigningService::completeUnterSperre`
+- **Description** "Abgeschlossen" wird gesetzt, sobald IRGENDEIN PDF geschrieben ist - ob die Stempel darin sichtbar sind, prueft niemand. Scheitert die Erzeugung, bleibt der Vorgang offen, es gibt aber weder Zustand "Fehler bei Fertigstellung" noch "Erneut erzeugen".
+- **Discovered** 02.10.2026
+
+### KI-059 - PdfDocument: Klartext gilt pauschal als juengere Fassung
+- **Category** correctness · **Severity** MEDIUM · **Status** OPEN (Verdacht, nicht nachgebaut)
+- **Location** `PdfDocument::indexObjectStreams`
+- **Description** Steht ein Objekt im Klartext UND in einem Objekt-Strom, gewinnt immer der Klartext. Bei einer Fortschreibung, die das Objekt in einen NEUEN Objekt-Strom legt, ist das die ALTE Fassung - gestempelt wuerde eine veraltete Seite. Die Querverweistabelle entscheidet, nicht die Position. Diagnose-Kennung `U8_...`.
+- **Discovered** 02.10.2026
+
+### KI-060 - PdfStamper: Generation immer 0
+- **Category** correctness · **Severity** LOW · **Status** OPEN (Verdacht)
+- **Location** `PdfStamper::writeIncrementalUpdate`
+- **Description** Fortgeschriebene Seitenobjekte werden als "N 0 obj" geschrieben; hat das Original Generation > 0, passt die Fortschreibung nicht zur Referenz. Diagnose-Kennung `U9_...`.
+- **Discovered** 02.10.2026
+
+### KI-061 - Signatur-Tests pruefen keine Sichtbarkeit
+- **Category** testing · **Severity** MEDIUM · **Status** OPEN
+- **Location** `UnternehmenssignaturTest`, `SignatureModuleTest`, `PdfStamperTest`
+- **Description** Geprueft wurde, dass `/Subtype /Image` im PDF-Text steht - ein weisser Kasten erfuellt das. Erster Bildvergleich (pdftoppm, Pixel im Feldkasten) jetzt in `SignaturDiagnoseTest`; die Pixelpruefung fuer alle Faelle (mehrseitig, gedreht, Zoom, Geraetepixel) folgt mit dem Fix.
+- **Discovered** 02.10.2026
 
 ### KI-051 - Namenspartikel landeten im Vornamen
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED

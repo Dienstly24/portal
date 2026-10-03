@@ -135,6 +135,15 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # Dieselben Systempakete wie im SQLite-Job. Ohne poppler (pdftoppm)
+      # kann die Signatur-Diagnose keine Seite rendern und meldet
+      # "nicht_pruefbar" - die Tests dazu scheiterten hier, waehrend sie
+      # im SQLite-Job gruen waren. Ohne tesseract uebersprangen sich hier
+      # ausserdem die fuenf OCR-Faelle still. Zwei Jobs, zwei Umgebungen
+      # waren genau die Luecke.
+      - name: Dokumenterkennung bereitstellen (wie im SQLite-Job)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-deu poppler-utils
+
       # Erst die Migrationen: laufen sie auf MySQL nicht durch, ist die
       # Ursache eine andere als ein fehlgeschlagener Test - und dann soll
       # im Log auch genau das stehen.
