@@ -29,7 +29,7 @@
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         @if($strongCount > 0)
         <form method="POST" action="{{ route('admin.customers.duplicates.merge_all') }}" style="margin:0;"
-              data-confirm="Alle sicheren Treffer (>= {{ $autoMin }} % Übereinstimmung) automatisch zusammenführen?&#10;&#10;Nur eindeutige Dubletten (gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum). Schwächere Treffer (nur gleicher Name) bleiben zur manuellen Prüfung. Alle Daten bleiben erhalten.">
+              data-confirm="Alle {{ $strongCount }} sicheren Dubletten automatisch zusammenführen?&#10;&#10;Sicher heißt: gleicher Vor- und Nachname UND gleiches Geburtsdatum, kein widersprechendes Merkmal. Gemeinsame E-Mail, Telefon, Anschrift oder IBAN allein zählen nie als sicher – das sind oft Familienmitglieder.">
             @csrf
             <button type="submit" class="btn btn-primary" style="background:var(--emerald-deep);">✓ Alle sicheren zusammenführen ({{ $strongCount }})</button>
         </form>
@@ -44,6 +44,7 @@
 @php
 $chipDefs = [
     'all'       => ['Alle', count($pairs)],
+    'familie'   => ['👪 Mögliche Familie', $catCounts['familie'] ?? 0],
     'name'      => ['👤 Namen', $catCounts['name'] ?? 0],
     'address'   => ['📍 Adressen', $catCounts['address'] ?? 0],
     'email'     => ['✉ E-Mails', $catCounts['email'] ?? 0],
@@ -71,7 +72,7 @@ $chipDefs = [
 
 @if($canBulk)
 <div class="card" style="background:#EEF6F1;padding:11px 16px;margin-bottom:14px;font-size:12.5px;color:var(--graphite);line-height:1.5;">
-    💡 <strong>Sichere Treffer (≥ {{ $autoMin }} %)</strong> – gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum – können mit einem Klick automatisch zusammengeführt werden. <strong>Schwächere Treffer (nur gleicher Name)</strong> bitte einzeln prüfen und per Auswahl zusammenführen.
+    💡 <strong>Sicher</strong> ist nur ein Paar mit gleichem Vor- und Nachnamen <em>und</em> gleichem Geburtsdatum ohne widersprechendes Merkmal – nur diese lassen sich mit einem Klick zusammenführen. Gemeinsame E-Mail, Telefon, Anschrift oder IBAN allein reichen nie. <strong>👪 Mögliche Familie</strong> (abweichendes Geburtsdatum oder Vorname) sind verschiedene Personen: bitte „Beziehung festlegen" – sie werden nie zusammengeführt, auch nicht über „Alle auswählen".
 </div>
 @endif
 
@@ -107,19 +108,26 @@ $chipDefs = [
     $primary = $pair['primary']; $duplicate = $pair['duplicate'];
     $score = $pair['score'];
     $badgeColor = $score >= 90 ? '#A32D2D' : ($score >= 80 ? '#B45309' : '#185FA5');
-    $tierLabel = $pair['tier'] === 'auto' ? 'Sehr wahrscheinlich' : 'Wahrscheinlich';
+    $klasse = $pair['klasse'];
+    $istFamilie = $klasse === \App\Services\Matching\DuplicateDetectionService::KLASSE_FAMILIE;
+    $istSicher = $klasse === \App\Services\Matching\DuplicateDetectionService::KLASSE_SICHER;
 @endphp
 <div class="card dupCard" data-cats="{{ implode(' ', $pair['categories'] ?? []) }}" style="margin-bottom:16px;padding:0;overflow:hidden;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:10px;">
         <div style="display:flex;align-items:center;gap:12px;">
             @if($canBulk)
-            <input type="checkbox" class="pairCheck" name="pairs[]" value="{{ $primary->id }}|{{ $duplicate->id }}" form="bulkMergeForm" style="width:17px;height:17px;cursor:pointer;accent-color:var(--emerald);" title="Für Sammel-Zusammenführung auswählen">
+            <input type="checkbox" class="pairCheck" name="pairs[]" value="{{ $primary->id }}|{{ $duplicate->id }}" form="bulkMergeForm" @if($istFamilie) data-familie="1" @endif style="width:17px;height:17px;cursor:pointer;accent-color:var(--emerald);" title="Für Sammel-Zusammenführung auswählen">
             @endif
-            <span style="background:{{ $badgeColor }};color:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">{{ $score }}% · {{ $tierLabel }}</span>
-            @if($score >= $autoMin)
-            <span style="background:var(--emerald-soft);color:var(--emerald-deep);border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">✓ sicher</span>
+            @if($istFamilie)
+            {{-- Keine Prozentzahl: "44 %" liest sich wie "fast sicher dieselbe
+                 Person", und genau das sind diese Paare nicht (KI-062). --}}
+            <span class="dup-klasse dup-klasse-familie" style="background:#EDE7F6;color:#4527A0;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">👪 Mögliche Familie · verschiedene Personen</span>
+            @elseif($istSicher)
+            <span style="background:{{ $badgeColor }};color:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">{{ $score }}% · Dublette</span>
+            <span class="dup-klasse dup-klasse-sicher" style="background:var(--emerald-soft);color:var(--emerald-deep);border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">✓ sicher</span>
             @else
-            <span style="background:#FEF3C7;color:#92400E;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">manuell prüfen</span>
+            <span style="background:{{ $badgeColor }};color:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">{{ $score }}% · Möglich</span>
+            <span class="dup-klasse dup-klasse-moeglich" style="background:#FEF3C7;color:#92400E;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">manuell prüfen</span>
             @endif
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -142,11 +150,15 @@ $chipDefs = [
                 <input type="hidden" name="customer_b" value="{{ $duplicate->id }}">
                 <button type="submit" class="btn btn-ghost" style="padding:8px 14px;" title="Kein Duplikat und keine bestimmte Beziehung">✕ Kein Duplikat</button>
             </form>
+            @unless($istFamilie)
             <a href="{{ route('admin.customer.merge', $primary->id) }}?duplicate={{ $duplicate->id }}" class="btn btn-primary" style="padding:8px 16px;">Prüfen &amp; zusammenführen →</a>
+            @endunless
         </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
-        @foreach([['c'=>$primary,'label'=>'Hauptkunde (bleibt bestehen)','bg'=>'var(--emerald-soft)'],['c'=>$duplicate,'label'=>'Duplikat (wird übernommen)','bg'=>'#FEF3C7']] as $col)
+        @foreach($istFamilie
+            ? [['c'=>$primary,'label'=>'Person A'],['c'=>$duplicate,'label'=>'Person B']]
+            : [['c'=>$primary,'label'=>'Hauptkunde (bleibt bestehen)'],['c'=>$duplicate,'label'=>'Duplikat (wird übernommen)']] as $col)
         @php $c = $col['c']; @endphp
         <div style="padding:16px 20px;{{ $loop->first ? 'border-right:1px solid var(--line);' : '' }}">
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:8px;">{{ $col['label'] }}</div>
@@ -161,6 +173,13 @@ $chipDefs = [
         </div>
         @endforeach
     </div>
+    @if($istFamilie && !empty($pair['konflikte']))
+    <div style="padding:12px 20px;background:#F5F1FB;border-top:1px solid var(--line);font-size:12.5px;color:#4527A0;line-height:1.6;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Widersprechende Merkmale</div>
+        @foreach($pair['konflikte'] as $k)<div>⚠ {{ $k }}</div>@endforeach
+        <div style="margin-top:4px;">Gemeinsame Kontaktdaten sind hier typisch für eine Familie oder einen Haushalt. Bitte die Beziehung festlegen – beide Akten bleiben mit Kundennummer, Verträgen und Dokumenten erhalten.</div>
+    </div>
+    @endif
     @if(!empty($pair['signals']))
     <div style="padding:12px 20px;background:var(--surface);border-top:1px solid var(--line);">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:6px;">Übereinstimmende Merkmale</div>
@@ -225,7 +244,9 @@ if (master) master.addEventListener('change', function () {
 function confirmBulkMerge(form) {
     var checked = document.querySelectorAll('.pairCheck:checked');
     if (checked.length === 0) { alert('Bitte zuerst mindestens ein Paar auswählen.'); return false; }
-    return confirm(checked.length + ' ausgewählte Dubletten-Paar(e) jetzt zusammenführen?\n\nZusammengehörige Datensätze werden zu einem Kunden vereint. Alle Verträge, Dokumente und Daten bleiben erhalten – nur die leeren Duplikat-Akten werden entfernt. Diese Aktion kann nicht rückgängig gemacht werden.');
+    var familie = document.querySelectorAll('.pairCheck:checked[data-familie]').length;
+    var hinweis = familie > 0 ? '\n\n⚠ ' + familie + ' davon sind „Mögliche Familie" (verschiedene Personen) und werden NICHT zusammengeführt.' : '';
+    return confirm(checked.length + ' ausgewählte Dubletten-Paar(e) jetzt zusammenführen?' + hinweis + '\n\nZusammengehörige Datensätze werden zu einem Kunden vereint. Alle Verträge, Dokumente und Daten bleiben erhalten – nur die leeren Duplikat-Akten werden entfernt. Diese Aktion kann nicht rückgängig gemacht werden.');
 }
 
 // Sammel-"Kein Duplikat"/"Beziehung festlegen": ausgewaehlte Paare ins

@@ -8,6 +8,18 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 03.10.2026 - Dubletten: Familienmitglieder nie als "sicher", nie per Ein-Klick zusammengefuehrt (KI-062)
+
+- **Task**: Betreiber-Auftrag "Moegliche Dubletten / Verwandte Kunden / Beziehung festlegen", Schritt 1 (Bestandsaufnahme, Befunde KI-062..068) und Schritt 2 Teil 1 (PR-1 des freigegebenen Plans). Anlass: Vater und Sohn Abboud als "44 % · ✓ sicher".
+- **Files Changed**: `DuplicateDetectionService` (`classify()`, `identityConflicts()`, Familienrollen-Paare ausgeschlossen, Sortierung nach Klasse), `Admin\DuplicateController` (alle drei Merge-Wege lesen die Klasse; Gruppenpruefung; Uebersteuern mit Begruendung), `admin/customer_duplicates.blade.php`, `admin/customer_merge.blade.php`; neu `tests/Feature/DublettenFamilieTest.php`; `DuplicateBulkMergeTest` (sicheres Paar braucht jetzt gleiches Geburtsdatum); `CLAUDE.md`, `KNOWN_ISSUES.md`, `FEATURE_MAP.md`.
+- **Components Affected**: Dubletten-Seite, "Alle sicheren zusammenfuehren", Sammel-Merge, Einzel-Merge.
+- **Database Changes**: keine. **API Changes**: `POST /admin/customers/{id}/merge` nimmt bei Widerspruch zusaetzlich `konflikt_bestaetigt` + `konflikt_begruendung`.
+- **Potential Side Effects**: "Alle sicheren zusammenfuehren" erfasst deutlich weniger Paare - nur noch gleicher Name UND gleiches Geburtsdatum (vorher genuegte z. B. gleiche IBAN/E-Mail). Paare mit Widerspruch verschwinden nicht, sie stehen als "Moegliche Familie" am Ende der Liste. Der Score bleibt als Sortierzahl.
+- **Tests Performed**: `DublettenFamilieTest` 10 Faelle; ohne Fix 5 rot (die uebrigen nutzen die neue Schnittstelle). Volle Suite 3349 gruen, 5 uebersprungen (OCR, tesseract lokal nicht installiert; CI hat es). PHPStan 0 Fehler, Pint sauber. Im Browser (Headless-Chromium, 1280 px und 390 px) nachgesehen: Familien-Karte ohne Prozent/"sicher"/Merge-Knopf, Merge-Formular mit Widerspruch und Uebersteuern, kein waagerechter Bildlauf, keine JS-Fehler.
+- **Result**: KI-062 FIXED; KI-063..068 erfasst (OPEN, Folge-PRs).
+
+---
+
 ## 02.10.2026 - Antrag auf Familienversicherung: Mitglied, Partner und Kinder (KI-053, KI-054)
 
 - **Task**: Betreiber-Auftrag mit zwei echten PDF (ausgefuellter Antrag + Blankoformular): "erkenne diese Art von Familien-Antraegen, damit das System beim Hochladen den Antragsteller, die Ehefrau und die Kinder erkennt und sie automatisch unter der Akte des Antragstellers anlegt."

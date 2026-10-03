@@ -60,6 +60,26 @@ $labels = [
                 @if($suggested)✓ Vorgeschlagener Treffer ist ausgewählt – bitte prüfen.@else Mindestens zwei Zeichen eingeben.@endif
             </div>
         </div>
+        @if(!empty($konflikte))
+        {{-- Widerspruch (KI-062): verschiedene Personen. Zusammenfuehren nur
+             mit ausdruecklicher Bestaetigung und Begruendung (protokolliert). --}}
+        <div id="merge-konflikt" style="background:#FDECEC;border:1px solid #F3B8B8;border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:#7A1F1F;line-height:1.6;">
+            @if($errors->any())
+            <div class="alert alert-error" style="margin-bottom:10px;">@foreach($errors->all() as $e)<div>✗ {{ $e }}</div>@endforeach</div>
+            @endif
+            <strong>⛔ Vermutlich verschiedene Personen</strong>
+            @foreach($konflikte as $k)<div>⚠ {{ $k }}</div>@endforeach
+            <div style="margin-top:6px;">Bei Familienmitgliedern bitte NICHT zusammenführen, sondern in der Dubletten-Prüfung „Beziehung festlegen". Nur wenn eine der Akten nachweislich falsch erfasst ist (z. B. Tippfehler im Geburtsdatum), kann ein Admin trotzdem zusammenführen:</div>
+            <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;cursor:pointer;">
+                <input type="checkbox" name="konflikt_bestaetigt" value="1" style="margin-top:3px;" @checked(old('konflikt_bestaetigt'))>
+                <span>Ich habe beide Akten geprüft: es ist <strong>dieselbe Person</strong>, der Widerspruch ist ein Erfassungsfehler.</span>
+            </label>
+            <div class="field" style="margin-top:10px;margin-bottom:0;">
+                <label for="konflikt_begruendung">Begründung (wird protokolliert)</label>
+                <textarea id="konflikt_begruendung" name="konflikt_begruendung" rows="2" maxlength="500" style="width:100%;" placeholder="z. B. Geburtsdatum in der Import-Akte vertippt, laut Ausweis 10.02.1971">{{ old('konflikt_begruendung') }}</textarea>
+            </div>
+        </div>
+        @endif
         <div style="display:flex;gap:10px;">
             <button type="submit" class="btn btn-primary">Zusammenführen</button>
             <a href="{{ route('admin.customer', $customer->id) }}" class="btn btn-ghost">Abbrechen</a>

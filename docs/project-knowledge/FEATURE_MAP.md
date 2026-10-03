@@ -28,7 +28,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - V `admin/customer_duplicates`, `admin/customer_relationships` (Filter "Ehepaar (unbestaetigt)"), `admin/partials/beziehung_festlegen`, `admin/partials/linked_customers` (Kundenakte "Verknuepfte Kunden")
 - R Merge/Sammel-Merge admin/manager; Beziehungen alle Personalrollen im Portfolio
 - Gleichlauf mit F-003 (Familienrollen) in einer Transaktion, seit 01.10.2026
-- Tests `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
+- Klassifikation `DuplicateDetectionService::classify()` (sicher / moeglich / moegliche Familie) seit 03.10.2026 - EINE Quelle fuer Anzeige und alle Merge-Wege (KI-062)
+- Tests `DublettenFamilieTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
 - Status **ACTIVE**
 
 ### F-003 Familie und Kundenbeziehungen (inkl. Uebergang mit 15)
