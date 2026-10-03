@@ -181,35 +181,67 @@ class SignaturDiagnoseTest extends TestCase
         $this->assertSame(0, $bericht['zusammenfassung']['unsichtbar']);
     }
 
-    public function test_ein_deckendes_firmenlogo_wird_als_unsichtbar_mit_ursache_erkannt(): void
+    /**
+     * Stellt eine VOR dem Fix erzeugte Datei nach: die Bild-Namen stehen im
+     * Inhaltsstrom, sind aber in den Seitenressourcen nicht auffindbar -
+     * genau der Befund vom Server ("XObject 'D24Sig1x0' is unknown", KI-062).
+     */
+    private function alterDefekt(SignatureRequest $request): SignatureRequest
     {
-        // URSACHE 1 aus dem Nachbau: der Stempler setzt EINE Farbe (die des
-        // ersten deckenden Pixels = weisser Hintergrund) -> weisser Kasten.
+        $storage = app(SignatureStorage::class);
+        $pdf = (string) $storage->read($request->signed_path);
+        $kaputt = (string) preg_replace('#(/XObject\s*<<\s*)/D24Sig#', '$1/X24Sig', $pdf);
+        $this->assertNotSame($pdf, $kaputt, 'Testaufbau: die Ressourcen muessen umbenannt sein.');
+        $storage->disk()->put($request->signed_path, $kaputt);
+        $request->forceFill(['signed_hash' => hash('sha256', $kaputt), 'signed_size' => strlen($kaputt)])->save();
+
+        return $request->fresh();
+    }
+
+    public function test_ein_alter_defekt_wird_als_unsichtbar_mit_ursache_erkannt(): void
+    {
+        $request = $this->alterDefekt($this->unterschreiben($this->vorgang()));
+
+        $bericht = $this->diagnose($request);
+        $feld = $this->feld($bericht, SignatureFieldType::SIGNATURE);
+
+        $this->assertSame('unsichtbar', $feld['sichtbarkeit']['urteil']);
+        $this->assertContains(SignatureDiagnostics::RENDER_FEHLER, $feld['ursachen']);
+        $this->assertStringContainsString('is unknown', $bericht['poppler'][0]['meldung_signiert']);
+        $this->assertNotContains(SignatureDiagnostics::UNBEKANNT, $bericht['ursachen']);
+    }
+
+    public function test_ein_deckendes_firmenlogo_ist_jetzt_sichtbar_und_nur_noch_ein_risiko(): void
+    {
+        // KI-055 behoben: das Logo traegt seine echten Farben. Die
+        // Eigenschaft "deckend" bleibt als Risiko vermerkt, ist aber keine
+        // Ursache mehr - sonst stuende ein einwandfreies Dokument als
+        // betroffen in der Liste.
         $request = $this->unterschreiben($this->vorgang(mitLogo: true));
+        $this->assertSame(SignatureStatus::COMPLETED, $request->status);
 
         $bericht = $this->diagnose($request);
         $logo = $this->feld($bericht, SignatureFieldType::COMPANY);
 
-        $this->assertSame('unsichtbar', $logo['sichtbarkeit']['urteil']);
-        $this->assertContains(SignatureDiagnostics::FIRMENBILD_OPAK, $logo['ursachen']);
-        $this->assertSame('#ffffff', $logo['bild']['stempel_farbe']);
-        // Die Unterschrift daneben ist sichtbar - die Diagnose trennt je Feld.
-        $this->assertSame('sichtbar', $this->feld($bericht, SignatureFieldType::SIGNATURE)['sichtbarkeit']['urteil']);
+        $this->assertSame('sichtbar', $logo['sichtbarkeit']['urteil']);
+        $this->assertSame([], $logo['ursachen']);
+        $this->assertContains(SignatureDiagnostics::FIRMENBILD_OPAK, $logo['risiken']);
+        $this->assertSame([], $bericht['ursachen']);
     }
 
-    public function test_ein_indirektes_contents_array_wird_als_ursache_erkannt(): void
+    public function test_ein_indirektes_contents_array_ist_jetzt_sichtbar(): void
     {
-        // URSACHE 2 aus dem Nachbau: poppler meldet "Weird page contents",
-        // die Unterschrift faellt weg.
+        // KI-056 behoben: das Array wird aufgeloest statt als Strom
+        // angehaengt.
         $request = $this->unterschreiben($this->vorgang(indirekt: true));
 
         $bericht = $this->diagnose($request);
         $feld = $this->feld($bericht, SignatureFieldType::SIGNATURE);
 
         $this->assertSame('array-indirekt', $bericht['seiten'][0]['contents']);
-        $this->assertSame('unsichtbar', $feld['sichtbarkeit']['urteil']);
-        $this->assertContains(SignatureDiagnostics::CONTENTS_INDIREKT, $feld['ursachen']);
-        $this->assertNotContains(SignatureDiagnostics::UNBEKANNT, $bericht['ursachen']);
+        $this->assertSame('sichtbar', $feld['sichtbarkeit']['urteil']);
+        $this->assertContains(SignatureDiagnostics::CONTENTS_INDIREKT, $feld['risiken']);
+        $this->assertSame('', $bericht['poppler'][0]['meldung_signiert'], 'poppler darf nichts mehr melden.');
     }
 
     public function test_fehlt_das_fertige_pdf_wird_es_nur_im_speicher_nachgebaut(): void
@@ -229,7 +261,7 @@ class SignaturDiagnoseTest extends TestCase
 
     public function test_der_befehl_veraendert_nichts_und_nennt_keine_personendaten(): void
     {
-        $request = $this->unterschreiben($this->vorgang(mitLogo: true));
+        $request = $this->alterDefekt($this->unterschreiben($this->vorgang(mitLogo: true)));
         $storage = app(SignatureStorage::class);
         $vorherDateien = $storage->disk()->allFiles();
         $vorherEreignisse = SignatureEvent::count();
@@ -239,7 +271,7 @@ class SignaturDiagnoseTest extends TestCase
         $ausgabe = Artisan::output();
 
         $this->assertSame(1, $code, 'Betroffen = Exitcode 1.');
-        $this->assertStringContainsString(SignatureDiagnostics::FIRMENBILD_OPAK, $ausgabe);
+        $this->assertStringContainsString(SignatureDiagnostics::RENDER_FEHLER, $ausgabe);
         $this->assertStringNotContainsString('Max Mustermann', $ausgabe);
         $this->assertStringNotContainsString('max@example.com', $ausgabe);
         $this->assertStringNotContainsString('Arbeitsvertrag Max', $ausgabe);
@@ -252,7 +284,7 @@ class SignaturDiagnoseTest extends TestCase
     public function test_der_bestandslauf_listet_nur_betroffene_anfragen_mit_ursache(): void
     {
         $sauber = $this->unterschreiben($this->vorgang());
-        $kaputt = $this->unterschreiben($this->vorgang(indirekt: true));
+        $kaputt = $this->alterDefekt($this->unterschreiben($this->vorgang()));
 
         Artisan::call('signaturen:diagnose', ['--alle' => true, '--json' => true]);
         $json = json_decode(Artisan::output(), true);
@@ -262,7 +294,7 @@ class SignaturDiagnoseTest extends TestCase
         $ids = array_column($json['anfragen'], 'id');
         $this->assertContains($kaputt->id, $ids);
         $this->assertNotContains($sauber->id, $ids);
-        $this->assertSame(1, $json['ursachen'][SignatureDiagnostics::CONTENTS_INDIREKT]);
+        $this->assertSame(1, $json['ursachen'][SignatureDiagnostics::RENDER_FEHLER]);
     }
 
     public function test_ohne_pdftoppm_ist_nichts_pruefbar_aber_nichts_beschuldigt(): void

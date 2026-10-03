@@ -7,6 +7,7 @@ use App\Services\Pdf\PdfDocument;
 use App\Services\Pdf\PdfException;
 use App\Services\Pdf\PdfStamp;
 use App\Services\Pdf\PdfStamper;
+use App\Support\FeldGeometrie;
 use App\Support\Firmensignatur;
 use App\Support\LocalTime;
 use App\Support\SignatureFieldType;
@@ -33,11 +34,16 @@ class SignedPdfBuilder
     }
 
     /**
-     * @return array{pdf: string, hash: string}
+     * @return array{pdf: string, hash: string, bilder: list<array{page: int, name: string, object: int}>}
      *
      * @throws PdfException
      */
-    public function build(SignatureRequest $request): array
+    /**
+     * @param  \DateTimeInterface|null  $neuErzeugt  gesetzt bei einer Neuerzeugung
+     *                                            (signaturen:neu-erzeugen) - das
+     *                                            Protokoll sagt es dann ausdruecklich
+     */
+    public function build(SignatureRequest $request, ?\DateTimeInterface $neuErzeugt = null): array
     {
         $original = $this->storage->read($request->original_path);
         if ($original === null) {
@@ -59,11 +65,9 @@ class SignedPdfBuilder
             }
             $page = $document->page($pageIndex);
 
-            // Anteilige Position in Punkte der ANZEIGE-Seite umrechnen.
-            $x = $field->pos_x * $page->displayWidth();
-            $y = $field->pos_y * $page->displayHeight();
-            $width = $field->width * $page->displayWidth();
-            $height = $field->height * $page->displayHeight();
+            // Anteilige Position in Punkte der ANZEIGE-Seite - die EINE
+            // Umrechnung, die auch Selbsttest und Diagnose benutzen.
+            [$x, $y, $width, $height] = FeldGeometrie::punkte($field, $page);
 
             if ($field->isDrawn()) {
                 $png = $this->storage->read($field->image_path);
@@ -113,11 +117,11 @@ class SignedPdfBuilder
             ));
         }
 
-        $stamper->withProtocolPage('Signaturprotokoll', $this->protocolSections($request));
+        $stamper->withProtocolPage('Signaturprotokoll', $this->protocolSections($request, $neuErzeugt));
 
         $pdf = $stamper->build();
 
-        return ['pdf' => $pdf, 'hash' => hash('sha256', $pdf)];
+        return ['pdf' => $pdf, 'hash' => hash('sha256', $pdf), 'bilder' => $stamper->platzierteBilder()];
     }
 
     /**
@@ -165,7 +169,9 @@ class SignedPdfBuilder
         $bildHoehe = $platzFuerNamen ? $height - $zeile * 1.45 : $height;
 
         [$bx, $by, $bw, $bh] = Unterschriftsbild::einpassen($png, $x, $y, $width, $bildHoehe);
-        $stamper->add(PdfStamp::image($pageIndex, $png, $bx, $by, $bw, $bh));
+        // freistellen: ein deckendes Firmenbild (JPG, weisser Grund) waere
+        // sonst ein weisser Kasten ueber der Formularlinie (KI-055).
+        $stamper->add(PdfStamp::image($pageIndex, $png, $bx, $by, $bw, $bh, freistellen: true));
 
         if (! $platzFuerNamen) {
             return;
@@ -185,7 +191,7 @@ class SignedPdfBuilder
     }
 
     /** @return list<array{title: string, lines: list<string>}> */
-    private function protocolSections(SignatureRequest $request): array
+    private function protocolSections(SignatureRequest $request, ?\DateTimeInterface $neuErzeugt = null): array
     {
         $request->loadMissing(['fields.companyAsset.creator']);
         // Zeitpunkte in deutscher Ortszeit - gespeichert wird UTC
@@ -202,6 +208,12 @@ class SignedPdfBuilder
                 $request->reference !== null ? 'Referenz: '.$request->reference : null,
                 'Erstellt: '.$this->zeit($request->created_at),
                 'Versendet: '.$this->zeit($request->sent_at),
+                // EHRLICH: eine neu erzeugte Datei sagt, dass sie das ist.
+                // Die Unterschriften selbst sind unveraendert - neu ist nur
+                // ihre Darstellung im Dokument.
+                $neuErzeugt !== null
+                    ? 'Neu erzeugt: '.$this->zeit($neuErzeugt).' (Korrektur der Darstellung, Unterschriften unveraendert)'
+                    : null,
             ])),
         ]];
 

@@ -30,13 +30,14 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-045 | MEDIUM | correctness | Entgeltabrechnung "Verdienstabrechnung": weder Kunde noch Arbeitgeber gelesen | FIXED |
 | KI-046 | MEDIUM | correctness | Erstwagen einer Zweitwagenregelung zweckentfremdet in der Vorversicherung, Vertraege nicht verknuepft | FIXED |
 | KI-047 | MEDIUM | correctness | `Contract`: der Provisions-Listener auf `deleting` beendete die Listener-Kette (jeder spaetere deleting-Listener lief nie) | FIXED |
-| KI-055 | HIGH | correctness | E-Signatur: Firmenlogo/-stempel im fertigen PDF unsichtbar (Stempler setzt EINE Farbe -> weisse Flaeche) | OPEN (diagnostiziert, Fix folgt) |
-| KI-056 | HIGH | correctness | E-Signatur: indirektes `/Contents`-Array -> Seite fuer poppler kaputt, Unterschrift faellt weg | OPEN (diagnostiziert, Fix folgt) |
-| KI-057 | MEDIUM | correctness | E-Signatur: Seitenvorschau zeigt nach Abschluss weiter das ORIGINAL (ohne Unterschriften) | OPEN |
-| KI-058 | MEDIUM | correctness | E-Signatur: kein Selbsttest des fertigen PDF, kein Zustand "Fehler bei Fertigstellung" | OPEN |
+| KI-062 | HIGH | correctness | E-Signatur: /Resources als Referenz -> Bilder in verschachteltes /Resources geschrieben, "XObject unknown" (8 von 11 Vorgaengen) | FIXED |
+| KI-055 | HIGH | correctness | E-Signatur: Firmenlogo/-stempel im fertigen PDF unsichtbar (Stempler setzt EINE Farbe -> weisse Flaeche) | FIXED |
+| KI-056 | HIGH | correctness | E-Signatur: indirektes `/Contents`-Array -> Seite fuer poppler kaputt, Unterschrift faellt weg | FIXED |
+| KI-057 | MEDIUM | correctness | E-Signatur: Seitenvorschau zeigt nach Abschluss weiter das ORIGINAL (ohne Unterschriften) | FIXED |
+| KI-058 | MEDIUM | correctness | E-Signatur: kein Selbsttest des fertigen PDF, kein Zustand "Fehler bei Fertigstellung" | FIXED |
 | KI-059 | MEDIUM | correctness | `PdfDocument`: "Klartext ist juenger als Objekt-Strom" gilt bei Fortschreibungen nicht (Verdacht) | OPEN |
 | KI-060 | LOW | correctness | `PdfStamper` schreibt Seitenobjekte immer mit Generation 0 (Verdacht) | OPEN |
-| KI-061 | MEDIUM | testing | Signatur-Tests pruefen nur `/Subtype /Image` im Text, nie die SICHTBARKEIT - KI-055/056 blieben deshalb unentdeckt | OPEN |
+| KI-061 | MEDIUM | testing | Signatur-Tests pruefen nur `/Subtype /Image` im Text, nie die SICHTBARKEIT - KI-055/056 blieben deshalb unentdeckt | FIXED |
 | KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | FIXED |
 | KI-050 | MEDIUM | correctness | Krankenkassen-Bestaetigung an den Arbeitgeber: nicht erkannt, Service-Adresse der Kasse als Kunden-E-Mail | FIXED |
 | KI-051 | MEDIUM | correctness | Namenspartikel (Al/El/Abu/bin/van/von) landeten im VORnamen: "Yusuf Al" + "Rahman" | FIXED |
@@ -118,15 +119,24 @@ und PHPStan) auf `main` gruen ist.
 - **Fix (01.10.2026, PR #365)**: der Test blockierte am 1. Oktober die Pflicht-Checks des PRs (beide Testjobs rot, Deploy uebersprungen) und wurde deshalb hier mitbehoben. Der Code war richtig ("Dieser Monat" = Monatserster bis heute), falsch war das Testdatum. Jetzt steht die Uhr fest auf dem Monatsersten (`travelTo`), der Ablauf ist der Monatserste selbst. Gegenprobe: mit dem alten Datum ist der Test nun an JEDEM Tag rot, nicht nur am Ersten.
 - **Discovered** 01.10.2026
 
+### KI-062 - E-Signatur: /Resources als Referenz - Bilder unauffindbar ("XObject unknown")
+- **Category** correctness · **Severity** HIGH · **Status** FIXED (03.10.2026)
+- **Location** `PdfStamper::registerResources`
+- **Description** Gefunden durch `signaturen:diagnose` auf dem Server (03.10.2026): 8 von 11 betroffenen Vorgaengen, auch die gemeldete Anfrage 9982d7a2-..., poppler: "XObject 'D24Sig1x0' is unknown". Zeigt `/Resources` der Seite auf ein eigenes Objekt (Word, LibreOffice und viele Generatoren schreiben so), liefert `resourcesOwner()` das RESSOURCEN-Objekt selbst; `registerResources` suchte darin erneut nach `/Resources`, fand keins und legte ein VERSCHACHTELTES `/Resources << /XObject ... >>` an. Die Unterschrift stand im Inhaltsstrom, ihr Bild war fuer keinen Betrachter auffindbar - deshalb fehlte auch die KUNDENunterschrift, nicht nur das Firmenbild. Die alten Tests merkten es nicht: ihre Test-PDF hatten gar kein /Resources.
+- **Fix** Ist das Ressourcen-Objekt selbst der Eigentuemer, wird DIREKT darin ergaenzt. Test `SignaturPdfSichtbarkeitTest::test_ressourcen_als_referenz_die_haeufigste_ursache_auf_dem_server` (rot ohne den Fix). Der Selbsttest (KI-058) prueft genau diese Auffindbarkeit fuer jedes gesetzte Bild.
+- **Discovered** 03.10.2026 (Diagnose auf dem Server)
+
 ### KI-055 - E-Signatur: Firmenbild im fertigen PDF unsichtbar
-- **Category** correctness · **Severity** HIGH · **Status** OPEN (diagnostiziert 02.10.2026, Fix im naechsten PR)
+- **Category** correctness · **Severity** HIGH · **Status** FIXED (03.10.2026)
+- **Fix** Bilder werden als echtes Farbbild (/DeviceRGB) mit Alphakanal als /SMask eingebettet, auf 300 dpi des Feldes verkleinert; bei Firmenbildern wird ein VOLLSTAENDIG deckender weisser Hintergrund vom Rand aus freigestellt (`App\Support\Bildfreistellung`) - weiss innerhalb des Logos bleibt, ein schon freigestelltes Bild wird nie angefasst. Server-Befund: beide Firmenbilder 100 % deckend, Stempelfarbe #fefffe/#fdfffe.
 - **Location** `PdfStamper::addSignatureImage`
 - **Description** Betreiber-Meldung 02.10.2026 (Anfrage 9982d7a2-...): Protokoll nennt "Firmenstempel (Seite 1)", im PDF fehlt er. Der Stempler bettet JEDES Bild als 1x1-Farbflaeche + Alphakanal ein - Farbe = erstes deckendes Pixel. Das passt fuer die durchsichtige Handschrift, nicht fuer ein Logo: ein deckendes Bild (JPG, PNG mit weissem Grund) wird zur Flaeche in der Farbe des ersten Pixels, meist WEISS -> unsichtbar; ein mehrfarbiges Logo wird einfarbig. Nachgebaut: 0 sichtbare Pixel im Logo-Kasten.
 - **Nachweis** `signaturen:diagnose` Ursache `U1_BILD_OPAK_WIRD_FLAECHE`, Test `SignaturDiagnoseTest`.
 - **Discovered** 02.10.2026
 
 ### KI-056 - E-Signatur: indirektes /Contents-Array laesst die Unterschrift wegfallen
-- **Category** correctness · **Severity** HIGH · **Status** OPEN (diagnostiziert, Fix im naechsten PR)
+- **Category** correctness · **Severity** HIGH · **Status** FIXED (03.10.2026)
+- **Fix** `PdfStamper::contentRefs` loest das Array-Objekt auf. Server-Befund: 1 Vorgang.
 - **Location** `PdfStamper::stampPage` / `contentRefs`
 - **Description** Zeigt `/Contents` einer Seite auf ein Array-OBJEKT (`/Contents 6 0 R`, `6 0 obj [4 0 R] endobj` - von vielen PDF-Programmen geschrieben), uebernimmt der Stempler die Referenz als Strom. poppler meldet "Weird page contents", die Stempel fallen weg (0/7500 Pixel). Andere Bauformen (Objekt-Stroeme, linearisiert, /Rotate 90, xref-Strom) wurden geprueft und sind in Ordnung.
 - **Nachweis** Ursache `U2_CONTENTS_INDIREKTES_ARRAY`, Test `SignaturDiagnoseTest`.
@@ -134,13 +144,15 @@ und PHPStan) auf `main` gruen ist.
 - **Discovered** 02.10.2026
 
 ### KI-057 - E-Signatur: Vorschau zeigt nach Abschluss das Original
-- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (03.10.2026)
+- **Fix** `SignaturePageRenderer::page` rendert nach dem Abschluss aus `signed_path`, Speicherpfad traegt den Hash (neu erzeugte Datei = neue Bilder).
 - **Location** `SignaturePageRenderer::page` (liest immer `original_path`)
 - **Description** Auch nach dem Abschluss sind die Seitenbilder in Beraterwelt und Unterzeichner-Seite die des Originals - das unterschriebene Dokument "sieht unveraendert aus", selbst wenn das PDF stimmt.
 - **Discovered** 02.10.2026
 
 ### KI-058 - E-Signatur: kein Selbsttest, kein Fehlerzustand bei der Fertigstellung
-- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (03.10.2026)
+- **Fix** `SignedPdfVerifier` (Fortschreibung, jedes Bild in den Seitenressourcen auffindbar, Sichtbarkeit am Bild per `PdfSichtbarkeit`) VOR Speichern/Versand; sonst Status `completion_failed` ("Fehler bei Fertigstellung"), Glocke, Knopf "Erneut erzeugen" (`admin.signatures.regenerate`). Bestand: `signaturen:neu-erzeugen`.
 - **Location** `SignatureSigningService::completeUnterSperre`
 - **Description** "Abgeschlossen" wird gesetzt, sobald IRGENDEIN PDF geschrieben ist - ob die Stempel darin sichtbar sind, prueft niemand. Scheitert die Erzeugung, bleibt der Vorgang offen, es gibt aber weder Zustand "Fehler bei Fertigstellung" noch "Erneut erzeugen".
 - **Discovered** 02.10.2026
@@ -158,7 +170,8 @@ und PHPStan) auf `main` gruen ist.
 - **Discovered** 02.10.2026
 
 ### KI-061 - Signatur-Tests pruefen keine Sichtbarkeit
-- **Category** testing · **Severity** MEDIUM · **Status** OPEN
+- **Category** testing · **Severity** MEDIUM · **Status** FIXED (03.10.2026)
+- **Fix** `SignaturPdfSichtbarkeitTest` (10 Faelle, Pixel im Feldkasten + Gegenprobe an falscher Stelle; 4 davon rot mit dem alten Stempler).
 - **Location** `UnternehmenssignaturTest`, `SignatureModuleTest`, `PdfStamperTest`
 - **Description** Geprueft wurde, dass `/Subtype /Image` im PDF-Text steht - ein weisser Kasten erfuellt das. Erster Bildvergleich (pdftoppm, Pixel im Feldkasten) jetzt in `SignaturDiagnoseTest`; die Pixelpruefung fuer alle Faelle (mehrseitig, gedreht, Zoom, Geraetepixel) folgt mit dem Fix.
 - **Discovered** 02.10.2026

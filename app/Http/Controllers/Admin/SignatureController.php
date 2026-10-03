@@ -17,6 +17,7 @@ use App\Services\Signature\SignatureAuditService;
 use App\Services\Signature\SignatureDocumentService;
 use App\Services\Signature\SignaturePageRenderer;
 use App\Services\Signature\SignatureRequestService;
+use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureStorage;
 use App\Support\Bildverarbeitung;
 use App\Support\Firmensignatur;
@@ -524,6 +525,24 @@ class SignatureController extends Controller
         return back()->with($count > 0 ? 'success' : 'error', $count > 0
             ? 'Erinnerung an '.$count.' Unterzeichner versendet.'
             : 'Es konnte keine Erinnerung versendet werden.');
+    }
+
+    /**
+     * "Erneut erzeugen" nach "Fehler bei Fertigstellung" (KI-058). Derselbe
+     * Abschluss wie nach der letzten Unterschrift - mit Selbsttest; besteht
+     * er wieder nicht, bleibt der Zustand und die Meldung nennt den Grund.
+     */
+    public function regenerate(string $id)
+    {
+        $signature = $this->find($id);
+        Gate::authorize('regenerate', $signature);
+
+        app(SignatureSigningService::class)->complete($signature->load(['signers', 'fields']));
+        $signature->refresh();
+
+        return back()->with($signature->isCompleted() ? 'success' : 'error', $signature->isCompleted()
+            ? 'Das unterschriebene Dokument wurde erzeugt und geprüft.'
+            : 'Das Dokument hat die Prüfung erneut nicht bestanden. Details stehen im Protokoll.');
     }
 
     public function cancel(Request $request, string $id)

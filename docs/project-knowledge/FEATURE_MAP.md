@@ -106,9 +106,9 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - S `Energy/*`; T `meter_readings`; Tests `MeterReadingTest` · Status **ACTIVE**
 
 ### F-024 E-Signatur
-- C `Admin\SignatureController`, `SignatureSigningController`, `Admin\CompanySignatureAssetController`; S `Signature/*`, `Pdf/*`; V `admin/signatures/*`, `signature/*`; T `signature_*`, `company_signature_assets`; Planer `signaturen:ablaufen`; Diagnose `signaturen:diagnose` (nur lesend)
+- C `Admin\SignatureController`, `SignatureSigningController`, `Admin\CompanySignatureAssetController`; S `Signature/*`, `Pdf/*`; V `admin/signatures/*`, `signature/*`; T `signature_*`, `company_signature_assets`; Planer `signaturen:ablaufen`; Diagnose `signaturen:diagnose` (nur lesend), Reparatur `signaturen:neu-erzeugen`
 - R Policy `SignatureRequestPolicy`, Gates `firmensignatur-*`
-- Tests `SignatureModuleTest`, `SignatureSecurityTest`, `SignaturGruppeTest`, `SignaturWorkflowTest`, `SignaturBenachrichtigungTest`, `UnternehmenssignaturTest`, `FaultInjectionSignatureTest`, `SignerIdentityTest`, `SignatureLocalizationTest`, `SignatureCreateFlowTest`, `CompanySignatureAssetTest`, `PdfStamperTest`, `BildverarbeitungFehltTest`, `SignaturDiagnoseTest`
+- Tests `SignatureModuleTest`, `SignatureSecurityTest`, `SignaturGruppeTest`, `SignaturWorkflowTest`, `SignaturBenachrichtigungTest`, `UnternehmenssignaturTest`, `FaultInjectionSignatureTest`, `SignerIdentityTest`, `SignatureLocalizationTest`, `SignatureCreateFlowTest`, `CompanySignatureAssetTest`, `PdfStamperTest`, `BildverarbeitungFehltTest`, `SignaturDiagnoseTest`, `SignaturPdfSichtbarkeitTest`, `BildfreistellungTest`
 - Status **ACTIVE** · rechtliche Einordnung je Geschaeftsfall offen (KI-009)
 
 ## C. Kommunikation
