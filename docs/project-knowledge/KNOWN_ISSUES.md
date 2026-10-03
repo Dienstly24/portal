@@ -39,10 +39,10 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-060 | LOW | correctness | `PdfStamper` schreibt Seitenobjekte immer mit Generation 0 (Verdacht) | OPEN |
 | KI-063 | CRITICAL | correctness | Dubletten: Vater/Sohn mit gleicher E-Mail als "✓ sicher" angezeigt; Sammel- und Einzel-Merge ohne Widerspruchspruefung, anderer Vorname kein Widerspruch | FIXED |
 | KI-064 | HIGH | correctness | Merge loescht die Duplikat-Akte HART: kein Archiv, kein Undo, alte Kundennummer nicht mehr suchbar | OPEN (PR-3) |
-| KI-065 | HIGH | correctness | Merge loescht den Portal-Login des unterlegenen Kontos, wenn beide einen echten Zugang haben | OPEN (PR-2) |
-| KI-066 | HIGH | correctness | Merge: `customer_family_relations` mit `related_customer_id` = Duplikat fallen per Kaskade weg (Rueckrichtung der Familienrolle verloren) | OPEN (PR-2) |
-| KI-067 | MEDIUM | correctness | Merge: KI-Unterhaltung (`ai_conversations`, UNIQUE customer_id) des Duplikats wird still verworfen | OPEN (PR-2) |
-| KI-068 | MEDIUM | correctness | Sammel-Merge auch fuer nur "moegliche" Dubletten (z. B. nur gleicher Name); Vorgabe: Massen-Merge nur fuer sichere | OPEN (PR-2) |
+| KI-065 | HIGH | correctness | Merge loescht den Portal-Login des unterlegenen Kontos, wenn beide einen echten Zugang haben | FIXED |
+| KI-066 | HIGH | correctness | Merge: `customer_family_relations` mit `related_customer_id` = Duplikat fallen per Kaskade weg (Rueckrichtung der Familienrolle verloren) | FIXED |
+| KI-067 | MEDIUM | correctness | Merge: KI-Unterhaltung (`ai_conversations`, UNIQUE customer_id) des Duplikats wird still verworfen | WONT_FIX (Fehlbefund) |
+| KI-068 | MEDIUM | correctness | Sammel-Merge auch fuer nur "moegliche" Dubletten (z. B. nur gleicher Name); Vorgabe: Massen-Merge nur fuer sichere | FIXED |
 | KI-069 | MEDIUM | correctness | Anschrift doppelt nummeriert ("Nagelshof 20 51"): Hausnummer in `address_street` UND Feld; Haushalts-Schluessel weicht ab | OPEN (PR-4) |
 | KI-061 | MEDIUM | testing | Signatur-Tests pruefen nur `/Subtype /Image` im Text, nie die SICHTBARKEIT - KI-055/056 blieben deshalb unentdeckt | FIXED |
 | KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | FIXED |
@@ -140,27 +140,31 @@ und PHPStan) auf `main` gruen ist.
 - **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
 
 ### KI-065 - Merge loescht den Portal-Login des unterlegenen Kontos
-- **Category** correctness · **Severity** HIGH · **Status** OPEN
+- **Category** correctness · **Severity** HIGH · **Status** FIXED
 - **Location** `CustomerMergeService::preservePortalAccount`
 - **Description** Der unterlegene User wird geloescht, sobald keine Akte mehr auf ihn zeigt; seine Adresse wandert nur nach `email2`, wenn dort nichts steht. Bei einem Fehl-Merge verliert eine Person Zugang und Passwort. Plan PR-2: Merge sperren, wenn beide einen aktiven Zugang haben.
+- **Fix (03.10.2026)**: `CustomerMergeService::mergeBlockers()` ist die EINE Sperrliste (Identitaets-Widersprueche + "beide haben einen aktiven Portalzugang" = echte Adresse, schon angemeldet, nicht deaktiviert). `merge()` selbst verweigert sich ohne Begruendung (`MergeBlockedException`) - jeder Aufrufweg ist damit abgedeckt. Uebersteuert ein Admin, wird der unterlegene, benutzte Zugang DEAKTIVIERT statt geloescht; Begruendung und Gruende stehen im ActivityLog. Test `MergeSperrenTest`.
 - **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
 
 ### KI-066 - Merge verliert die Rueckrichtung der Familienrolle
-- **Category** correctness · **Severity** HIGH · **Status** OPEN
+- **Category** correctness · **Severity** HIGH · **Status** FIXED
 - **Location** `CustomerMergeService`, `customer_family_relations`
 - **Description** `related_customer_id` laeuft nicht ueber den customer_id-Abgleich und kaskadiert beim Loeschen des Duplikats; eine Zeile Duplikat->Hauptkunde wird zum Selbst-Paar. Plan PR-2.
+- **Fix (03.10.2026)**: `mergeFamilyRelations()` haengt BEIDE Spalten um, verwirft Zeilen zwischen Hauptkunde und Duplikat (kein Selbst-Paar) und bei Kollision die Zeile des Duplikats. Test `MergeSperrenTest::test_familienrolle_bleibt_in_beiden_richtungen_erhalten` (ohne Fix rot).
 - **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
 
 ### KI-067 - Merge verwirft die KI-Unterhaltung des Duplikats
-- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Category** correctness · **Severity** MEDIUM · **Status** WONT_FIX
 - **Location** `CustomerMergeService::deleteCollidingDuplicateRows`, `ai_conversations`
 - **Description** UNIQUE(customer_id): existiert am Hauptkunden schon eine Zeile, wird die des Duplikats still geloescht (Zustand, Uebergabe, Zustaendiger). Plan PR-2.
+- **Fehlbefund (03.10.2026)**: der UNIQUE auf `ai_conversations.customer_id` wurde mit `2026_09_06_110000_make_ai_channel_aware` entfernt (eindeutig ist jetzt `omnichannel_conversation_id`). Beide Unterhaltungen ueberleben den Merge - belegt durch `MergeSperrenTest::test_ki_unterhaltungen_beider_akten_bleiben_erhalten` (gruen auch ohne Aenderung). Der Eintrag bleibt als Nachweis stehen.
 - **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
 
 ### KI-068 - Sammel-Merge auch fuer nur moegliche Dubletten
-- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
 - **Location** `Admin\DuplicateController::duplicatesMerge`
 - **Description** Seit KI-063 werden Widersprueche ausgelassen, Paare der Klasse `moeglich` (z. B. nur gleicher Name) bleiben sammel-zusammenfuehrbar. Vorgabe: Massen-Merge nur fuer `sicher`. Plan PR-2.
+- **Fix (03.10.2026)**: die Gruppenpruefung der Sammelauswahl laesst nur Gruppen durch, in denen JEDES Paar `sicher` ist und keine Merge-Sperre traegt; die uebrigen werden mit Grund gemeldet ("nicht eindeutig dieselbe Person"). Test `MergeSperrenTest` (2 Faelle).
 - **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
 
 ### KI-069 - Anschrift doppelt nummeriert ("Nagelshof 20 51")

@@ -45,16 +45,67 @@ class CustomerMergeService
      */
     private const PIVOT_TABLE = 'employee_customers';
 
+    /**
+     * Familienrollen fuehren den Kunden in ZWEI Spalten (customer_id UND
+     * related_customer_id). Der generische customer_id-Abgleich kennt nur
+     * die erste - die Rueckrichtung fiel per Kaskade weg, und die Zeile
+     * Duplikat->Hauptkunde wurde zum Selbst-Paar (KI-066).
+     */
+    private const FAMILY_TABLE = 'customer_family_relations';
+
     public function __construct(private readonly ?DuplicateDetectionService $detection = null)
     {
     }
 
     /**
+     * Gruende, aus denen zwei Akten NICHT zusammengefuehrt werden duerfen,
+     * ohne dass ein Admin es ausdruecklich und begruendet uebersteuert
+     * (KI-063/KI-065). Die EINE Stelle dafuer - Einzel-, Sammel- und
+     * Ein-Klick-Merge laufen alle hierueber, und `merge()` selbst
+     * verweigert sich ohne Begruendung. Eine Pruefung nur in der
+     * Oberflaeche haette jeder neue Aufrufweg wieder umgangen.
+     *
+     * @return list<string>
+     */
+    public function mergeBlockers(Customer $a, Customer $b): array
+    {
+        $gruende = $this->detection()->identityConflicts($a, $b);
+
+        // Zwei Menschen, die sich beide schon im Portal angemeldet haben,
+        // sind zwei Konten - ein Merge haette eines davon geloescht: Login,
+        // Passwort, Zugang weg (KI-065).
+        if ($this->hasActivePortalAccess($a->user) && $this->hasActivePortalAccess($b->user)
+            && (int) $a->user->id !== (int) $b->user->id) {
+            $gruende[] = 'Beide haben einen aktiven Portalzugang ('.$a->user->email.' / '.$b->user->email.')';
+        }
+
+        return $gruende;
+    }
+
+    /** Aktiver Portalzugang = echte Adresse, nicht deaktiviert, schon einmal angemeldet. */
+    public function hasActivePortalAccess(?User $user): bool
+    {
+        return $user !== null
+            && $user->hasRealEmail()
+            && $user->first_login_at !== null
+            && ! (isset($user->is_active) && ! $user->is_active);
+    }
+
+    private function detection(): DuplicateDetectionService
+    {
+        return $this->detection ?? app(DuplicateDetectionService::class);
+    }
+
+    /**
+     * @param ?string $uebersteuertMit Begruendung des Admins, wenn
+     *        `mergeBlockers()` etwas meldet. Ohne sie wird nichts angefasst.
      * @return array<string, int> Zusammenfassung: umgehaengte Datensaetze je Tabelle.
      * @throws \InvalidArgumentException bei ungueltigen Eingaben (Selbst-Merge,
      *         Nicht-Kunden-Account) - Schutz analog CustomerDeletionService.
+     * @throws MergeBlockedException wenn Sperrgruende bestehen und keine
+     *         Begruendung vorliegt.
      */
-    public function merge(Customer $primary, Customer $duplicate, ?int $actorId = null): array
+    public function merge(Customer $primary, Customer $duplicate, ?int $actorId = null, ?string $uebersteuertMit = null): array
     {
         if ((string) $primary->id === (string) $duplicate->id) {
             throw new \InvalidArgumentException('Haupt- und Duplikat-Kunde sind identisch.');
@@ -67,12 +118,17 @@ class CustomerMergeService
             throw new \InvalidArgumentException('Duplikat ist kein Kundenkonto.');
         }
 
-        return DB::transaction(function () use ($primary, $duplicate, $actorId) {
+        $sperren = $this->mergeBlockers($primary, $duplicate);
+        if ($sperren !== [] && trim((string) $uebersteuertMit) === '') {
+            throw new MergeBlockedException($sperren);
+        }
+
+        return DB::transaction(function () use ($primary, $duplicate, $actorId, $sperren, $uebersteuertMit) {
             $moved = [];
 
             // 1) Jede Tabelle mit customer_id-Spalte umhaengen (inkl. Pivot).
             foreach ($this->customerIdTables() as $table) {
-                if ($table === self::PIVOT_TABLE) {
+                if ($table === self::PIVOT_TABLE || $table === self::FAMILY_TABLE) {
                     continue; // eigene Dedup-Logik unten
                 }
                 $count = $this->moveCustomerIdRows($table, $primary, $duplicate);
@@ -91,6 +147,7 @@ class CustomerMergeService
             //     umhaengen - die laufen NICHT ueber den customer_id-Abgleich
             //     und wuerden sonst per FK-Kaskade mitgeloescht (Familie weg).
             $moved['customer_relationships'] = $this->mergeRelationships($primary, $duplicate);
+            $moved[self::FAMILY_TABLE] = $this->mergeFamilyRelations($primary, $duplicate);
 
             // 4) Portal-Zugang sichern: der besser gepflegte Account bleibt.
             $dupName = $duplicate->user?->name;
@@ -107,10 +164,19 @@ class CustomerMergeService
             //    customers.user_id kaskadiert, ein verfruehtes Loeschen wuerde
             //    eine noch verknuepfte Akte mitreissen.
             $duplicate->delete();
+            $portalDeaktiviert = false;
             if ($loserUser
                 && (int) $loserUser->id !== (int) $primary->user_id
                 && ! Customer::where('user_id', $loserUser->id)->exists()) {
-                $loserUser->delete();
+                if ($this->hasActivePortalAccess($loserUser)) {
+                    // Nur bei ausdruecklich uebersteuertem Merge erreichbar:
+                    // ein benutzter Zugang wird NIE geloescht, sondern
+                    // stillgelegt - ein Irrtum laesst sich dann noch beheben.
+                    $loserUser->forceFill(['is_active' => false])->save();
+                    $portalDeaktiviert = true;
+                } else {
+                    $loserUser->delete();
+                }
             }
 
             $moved = array_filter($moved, fn ($n) => $n > 0);
@@ -128,6 +194,8 @@ class CustomerMergeService
                     'into_number' => $primary->customer_number,
                     // Nachvollziehbar, welcher Portal-Zugang ueberlebt hat.
                     'portal_account' => (int) $primary->user_id === (int) $userIdBefore ? 'hauptkunde' : 'duplikat',
+                    'portal_account_deaktiviert' => $portalDeaktiviert,
+                    'uebersteuert' => $sperren === [] ? null : ['gruende' => $sperren, 'begruendung' => $uebersteuertMit],
                     'moved' => $moved,
                 ], JSON_UNESCAPED_UNICODE),
             ]);
@@ -169,6 +237,12 @@ class CustomerMergeService
             ->where('referenceable_id', $duplicate->id)->count();
         if ($refs > 0) {
             $counts['external_references'] = $refs;
+        }
+        if (Schema::hasTable(self::FAMILY_TABLE)) {
+            $fam = DB::table(self::FAMILY_TABLE)->where('related_customer_id', $duplicate->id)->count();
+            if ($fam > 0) {
+                $counts[self::FAMILY_TABLE] = ($counts[self::FAMILY_TABLE] ?? 0) + $fam;
+            }
         }
         if (Schema::hasTable('customer_relationships')) {
             $rels = DB::table('customer_relationships')
@@ -333,6 +407,45 @@ class CustomerMergeService
             ]);
             $moved++;
         }
+        return $moved;
+    }
+
+    /**
+     * Familienrollen umhaengen - BEIDE Spalten (KI-066). Lesart einer Zeile:
+     * "related_customer_id ist relationship_type von customer_id".
+     * Zeilen zwischen Hauptkunde und Duplikat sind nach dem Merge
+     * gegenstandslos; kollidiert eine Zeile mit einer schon vorhandenen des
+     * Hauptkunden (UNIQUE customer_id/related_customer_id), gewinnt die des
+     * Hauptkunden.
+     */
+    private function mergeFamilyRelations(Customer $primary, Customer $duplicate): int
+    {
+        if (! Schema::hasTable(self::FAMILY_TABLE)) {
+            return 0;
+        }
+
+        $p = (string) $primary->id;
+        $d = (string) $duplicate->id;
+        $t = self::FAMILY_TABLE;
+
+        DB::table($t)->where(function ($q) use ($p, $d) {
+            $q->where(fn ($qq) => $qq->where('customer_id', $p)->where('related_customer_id', $d))
+                ->orWhere(fn ($qq) => $qq->where('customer_id', $d)->where('related_customer_id', $p));
+        })->delete();
+
+        $moved = 0;
+        foreach (['customer_id' => 'related_customer_id', 'related_customer_id' => 'customer_id'] as $spalte => $gegenspalte) {
+            foreach (DB::table($t)->where($spalte, $d)->get() as $row) {
+                $kollision = DB::table($t)->where($spalte, $p)->where($gegenspalte, $row->$gegenspalte)->exists();
+                if ($kollision) {
+                    DB::table($t)->where('id', $row->id)->delete();
+                    continue;
+                }
+                DB::table($t)->where('id', $row->id)->update([$spalte => $p]);
+                $moved++;
+            }
+        }
+
         return $moved;
     }
 

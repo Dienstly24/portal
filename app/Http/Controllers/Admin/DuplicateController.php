@@ -328,12 +328,15 @@ class DuplicateController extends Controller
         // Paar einer Gruppe, nicht nur die ausgewaehlten Kanten: ueber eine
         // Akte ohne Geburtsdatum koennten sonst zwei Personen in dieselbe
         // Gruppe rutschen.
-        [$clusters, $blocked] = $this->withoutConflictingClusters($clusters, app(DuplicateDetectionService::class));
+        [$clusters, $blocked, $nichtSicher] = $this->withoutConflictingClusters($clusters, app(DuplicateDetectionService::class), $merge);
 
         $res = $this->mergeClusters($clusters, $merge);
         $message = $this->mergeSummary($res, false);
         if ($blocked > 0) {
             $message .= ' '.$blocked.' Auswahl(en) NICHT zusammengeführt: widersprechende Identitätsmerkmale (z. B. abweichendes Geburtsdatum oder Vorname) – das sind verschiedene Personen. Bitte „Beziehung festlegen".';
+        }
+        if ($nichtSicher > 0) {
+            $message .= ' '.$nichtSicher.' Auswahl(en) NICHT zusammengeführt: nicht eindeutig dieselbe Person (gleicher Name UND gleiches Geburtsdatum fehlen) oder beide haben einen aktiven Portalzugang. Bitte einzeln über „Prüfen & zusammenführen" entscheiden.';
         }
         return redirect()->route('admin.customers.duplicates')->with('success', $message);
     }
@@ -377,7 +380,7 @@ class DuplicateController extends Controller
         }
 
         // Cluster bilden, dann pro Lauf deckeln (Rest beim naechsten Klick).
-        [$clusters] = $this->withoutConflictingClusters($this->clusterPairs($edges, $ids), $detection);
+        [$clusters] = $this->withoutConflictingClusters($this->clusterPairs($edges, $ids), $detection, $merge);
         $limited = [];
         $removals = 0;
         foreach ($clusters as $cluster) {
@@ -429,7 +432,7 @@ class DuplicateController extends Controller
         $konflikte = [];
         if ($suggested) {
             $preview = $merge->preview($suggested);
-            $konflikte = app(DuplicateDetectionService::class)->identityConflicts($customer, $suggested);
+            $konflikte = $merge->mergeBlockers($customer, $suggested);
         }
 
         return view('admin.customer_merge', compact('customer', 'suggested', 'preview', 'konflikte'));
@@ -447,7 +450,9 @@ class DuplicateController extends Controller
         // anderer Vorname), sind es verschiedene Personen. Zusammenfuehren
         // nur, wenn der Admin den Widerspruch ausdruecklich uebersteuert und
         // begruendet - protokolliert (KI-063). Vorher genuegte ein Klick.
-        $konflikte = app(DuplicateDetectionService::class)->identityConflicts($primary, $dup);
+        // Auch zwei aktive Portalzugaenge sperren (KI-065) - dieselbe
+        // Liste, die merge() selbst prueft.
+        $konflikte = $merge->mergeBlockers($primary, $dup);
         if ($konflikte !== []) {
             // Zurueck IMMER auf das Formular MIT diesem Duplikat - nur dort
             // stehen die Widersprueche und die Felder zum Uebersteuern (auch
@@ -456,7 +461,7 @@ class DuplicateController extends Controller
                 'konflikt_bestaetigt' => 'accepted',
                 'konflikt_begruendung' => 'required|string|min:15|max:500',
             ], [
-                'konflikt_bestaetigt.accepted' => 'Die beiden Akten widersprechen sich ('.implode('; ', $konflikte).'). Bitte bestätigen Sie ausdrücklich, dass es trotzdem dieselbe Person ist – oder legen Sie eine Beziehung fest.',
+                'konflikt_bestaetigt.accepted' => 'Zusammenführen gesperrt ('.implode('; ', $konflikte).'). Bitte bestätigen Sie ausdrücklich, dass es trotzdem dieselbe Person ist – oder legen Sie eine Beziehung fest.',
                 'konflikt_begruendung.required' => 'Bitte begründen Sie, warum es trotz des Widerspruchs dieselbe Person ist.',
                 'konflikt_begruendung.min' => 'Die Begründung muss mindestens 15 Zeichen lang sein.',
             ]);
@@ -472,7 +477,7 @@ class DuplicateController extends Controller
             ]);
         }
 
-        $moved = $merge->merge($primary, $dup, auth()->id());
+        $moved = $merge->merge($primary, $dup, auth()->id(), $konflikte === [] ? null : (string) $request->input('konflikt_begruendung'));
 
         $summary = collect($moved)->sum();
         return redirect()->route('admin.customer', $primary->id)
@@ -481,37 +486,54 @@ class DuplicateController extends Controller
 
     /**
      * Entfernt Gruppen, in denen IRGENDEIN Paar einen Identitaets-Widerspruch
-     * hat (verschiedene Personen). Gibt die verbleibenden Gruppen und die
-     * Anzahl der verworfenen zurueck.
+     * hat (verschiedene Personen), nicht "sicher" ist oder eine Merge-Sperre
+     * traegt. Gibt die verbleibenden Gruppen und die Anzahl der verworfenen
+     * zurueck (Familie / nicht sicher getrennt gezaehlt).
      *
      * @param array<int, array<int, string>> $clusters
-     * @return array{0: array<int, array<int, string>>, 1: int}
+     * @return array{0: array<int, array<int, string>>, 1: int, 2: int}
      */
-    private function withoutConflictingClusters(array $clusters, DuplicateDetectionService $detection): array {
+    private function withoutConflictingClusters(array $clusters, DuplicateDetectionService $detection, ?CustomerMergeService $merge = null): array {
+        $merge ??= app(CustomerMergeService::class);
         $allIds = array_merge([], ...array_map('array_values', $clusters));
         $customers = Customer::with('user')->whereIn('id', $allIds)->get()->keyBy(fn ($c) => (string) $c->id);
 
         $ok = [];
-        $blocked = 0;
+        $familie = 0;
+        $nichtSicher = 0;
         foreach ($clusters as $members) {
             $present = array_values(array_filter($members, fn ($id) => $customers->has((string) $id)));
-            $conflict = false;
-            for ($i = 0; $i < count($present) && ! $conflict; $i++) {
+            $grund = null;
+            for ($i = 0; $i < count($present) && $grund !== 'familie'; $i++) {
                 for ($j = $i + 1; $j < count($present); $j++) {
-                    if ($detection->hasIdentityConflict($customers[(string) $present[$i]], $customers[(string) $present[$j]])) {
-                        $conflict = true;
+                    $a = $customers[(string) $present[$i]];
+                    $b = $customers[(string) $present[$j]];
+                    if ($detection->hasIdentityConflict($a, $b)) {
+                        $grund = 'familie';
                         break;
+                    }
+                    // Sammel-Merge NUR fuer die Klasse "sicher" und nie
+                    // ueber eine Merge-Sperre (z. B. zwei aktive
+                    // Portalzugaenge) hinweg - alles andere ist eine
+                    // Einzelentscheidung mit Vorschau (KI-065/KI-068).
+                    if ($detection->classify($a, $b)['klasse'] !== DuplicateDetectionService::KLASSE_SICHER
+                        || $merge->mergeBlockers($a, $b) !== []) {
+                        $grund = 'nicht_sicher';
                     }
                 }
             }
-            if ($conflict) {
-                $blocked++;
+            if ($grund === 'familie') {
+                $familie++;
+                continue;
+            }
+            if ($grund === 'nicht_sicher') {
+                $nichtSicher++;
                 continue;
             }
             $ok[] = $members;
         }
 
-        return [$ok, $blocked];
+        return [$ok, $familie, $nichtSicher];
     }
 
     /**

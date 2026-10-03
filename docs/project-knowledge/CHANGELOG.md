@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 03.10.2026 - Merge-Sperren: zwei Portalzugaenge, Familienrollen, Sammel-Merge nur "sicher" (KI-065/066/068)
+
+- **Task**: PR-2 des freigegebenen Dubletten-Plans (Schritt 3, erster Teil).
+- **Files Changed**: `CustomerMergeService` (`mergeBlockers()`, `hasActivePortalAccess()`, `merge(..., $uebersteuertMit)`, `mergeFamilyRelations()`, unterlegener aktiver Zugang wird deaktiviert statt geloescht), neu `MergeBlockedException`; `Admin\DuplicateController` (Einzel-Merge und Formular lesen `mergeBlockers()`, Sammel-Merge nur `sicher` ohne Sperre); `admin/customer_merge.blade.php` ("Zusammenfuehren gesperrt"); neu `tests/Feature/MergeSperrenTest.php`; `DuplicateBulkMergeTest`, `CustomerMergeDataPreservationTest`, `DublettenFamilieTest` nachgezogen (Sammel-Merge braucht jetzt gleiches Geburtsdatum); `CLAUDE.md`, `KNOWN_ISSUES.md`, `FEATURE_MAP.md`.
+- **Components Affected**: Einzel-, Sammel- und Ein-Klick-Merge.
+- **Database Changes**: keine.
+- **API Changes**: `CustomerMergeService::merge()` wirft `MergeBlockedException`, wenn Sperrgruende bestehen und keine Begruendung uebergeben wird.
+- **Potential Side Effects**: Paare mit gleichem Namen OHNE Geburtsdatum sind nicht mehr sammel-zusammenfuehrbar - sie laufen einzeln ueber "Pruefen & zusammenfuehren".
+- **Tests Performed**: `MergeSperrenTest` 8 Faelle; ohne Fix 7 rot (der achte belegt den Fehlbefund KI-067). Volle Suite 3373, 3368 gruen, 5 uebersprungen (OCR, tesseract lokal nicht installiert). PHPStan 0 Fehler, Pint sauber.
+- **Result**: KI-065, KI-066, KI-068 FIXED; KI-067 WONT_FIX (Fehlbefund).
+
+---
+
 ## 03.10.2026 - Dubletten: Familienmitglieder nie als "sicher", nie per Ein-Klick zusammengefuehrt (KI-063)
 
 - **Task**: Betreiber-Auftrag "Moegliche Dubletten / Verwandte Kunden / Beziehung festlegen", Schritt 1 (Bestandsaufnahme, Befunde KI-063..068) und Schritt 2 Teil 1 (PR-1 des freigegebenen Plans). Anlass: Vater und Sohn Abboud als "44 % · ✓ sicher".
