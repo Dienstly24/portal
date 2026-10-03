@@ -63,6 +63,13 @@ dieselbe Suite ZUSAETZLICH gegen **MySQL 8** laufen
 MySQL an einigen Stellen verschieden vergleichen - zuletzt aufgefallen bei
 `date(COALESCE(...))` im Auswertungs-Dashboard.
 
+**Beide Jobs brauchen dieselben Systempakete** (tesseract, poppler-utils).
+Bis 03.10.2026 installierte nur der SQLite-Job sie: im MySQL-Job
+uebersprangen sich die OCR-Faelle still, und die Signatur-Diagnose
+(Bildvergleich mit `pdftoppm`) scheiterte dort, waehrend sie im
+SQLite-Job gruen war. Weil der Deploy an BEIDEN Jobs haengt, haette das
+den Deploy still uebersprungen.
+
 Lokal gegen MySQL testen (optional):
 
 ```

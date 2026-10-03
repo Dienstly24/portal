@@ -265,6 +265,26 @@ class SignaturDiagnoseTest extends TestCase
         $this->assertSame(1, $json['ursachen'][SignatureDiagnostics::CONTENTS_INDIREKT]);
     }
 
+    public function test_ohne_pdftoppm_ist_nichts_pruefbar_aber_nichts_beschuldigt(): void
+    {
+        // Gefunden in der CI (Job ohne poppler): die "nicht gefunden"-
+        // Meldung der Shell zaehlte als Ursache U11 - jede Anfrage stand
+        // als betroffen da. Ein fehlendes Programm ist ein Befund ueber den
+        // SERVER, keiner ueber das Dokument.
+        $sauber = $this->unterschreiben($this->vorgang());
+        config(['services.ocr.pdftoppm_binary' => '/gibt/es/nicht/pdftoppm']);
+
+        $bericht = $this->diagnose($sauber);
+
+        $this->assertSame('nicht_pruefbar', $this->feld($bericht, SignatureFieldType::SIGNATURE)['sichtbarkeit']['urteil']);
+        $this->assertNotContains(SignatureDiagnostics::RENDER_FEHLER, $bericht['ursachen']);
+        $this->assertSame([], $bericht['ursachen']);
+        $this->assertStringContainsString('poppler-utils', implode(' ', $bericht['hinweise']));
+
+        Artisan::call('signaturen:diagnose', ['--alle' => true, '--json' => true]);
+        $this->assertSame(0, json_decode(Artisan::output(), true)['betroffen']);
+    }
+
     public function test_zeichen_ausserhalb_winansi_werden_ohne_namen_gemeldet(): void
     {
         $this->assertSame([], DiagnoseSignatures::zeichenAusserhalbWinAnsi('Jürgen Größe-Müller'));

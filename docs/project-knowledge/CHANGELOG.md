@@ -29,6 +29,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Database Changes**: keine. **API Changes**: keine (ein neuer Artisan-Befehl).
 - **Potential Side Effects**: keine im Betrieb. Der Bildvergleich rendert mit pdftoppm in ein Temp-Verzeichnis und loescht es.
 - **Tests Performed**: 7 neue Faelle (sauber -> sichtbar ohne Ursache; deckendes Logo -> U1; indirektes /Contents -> U2; fehlendes PDF -> Nachbau im Speicher, nichts gespeichert; Befehl veraendert weder Dateien noch Ereignisse noch die Zeile und nennt keine Personendaten; Bestandslauf listet nur Betroffene; WinAnsi-Pruefung nennt Zeichen, nie Namen). Volle Suite 3338/3338 gruen, 0 uebersprungen, `composer stan` 0 Fehler, `composer lint` gruen.
+- **Nachtrag 03.10.2026 (CI rot im MySQL-Job)**: dort fehlte poppler - der Job installiert jetzt dieselben Pakete wie der SQLite-Job (`deploy.yml`, `docs/TESTUMGEBUNG.md`). Dabei aufgefallen: ohne `pdftoppm` wertete der Befehl die "nicht gefunden"-Meldung als Ursache U11 und fuehrte JEDE Anfrage als betroffen. U11 zaehlt jetzt nur bei tatsaechlich gerenderter Seite, sonst "nicht_pruefbar" + Hinweis (Test `test_ohne_pdftoppm_ist_nichts_pruefbar_aber_nichts_beschuldigt`, scheitert ohne die Aenderung).
 - **Result**: Ursachen KI-055 (Firmenbild) und KI-056 (indirektes /Contents) am echten Ablauf belegt; KI-057..061 erfasst. Fix bewusst NICHT in diesem PR - erst die Ausgabe vom Server.
 
 ---

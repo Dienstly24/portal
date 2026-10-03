@@ -190,7 +190,12 @@ class SignatureDiagnostics
                 && isset($seiten[$field->page])) {
                 $render[$field->page] ??= $this->renderPaar($original, $signiert, (int) $field->page);
                 $eintrag['sichtbarkeit'] = $this->sichtbarkeit($render[$field->page], $this->bildBereich($field, $seiten[$field->page]));
-                if ($render[$field->page]['stderr_signiert'] !== '') {
+                // Eine Meldung zaehlt NUR, wenn poppler wirklich gerendert
+                // hat. Fehlt das Programm, steht in stderr "nicht gefunden" -
+                // das ist eine Eigenschaft des Servers, keine Ursache am
+                // Dokument, und wuerde sonst JEDE Anfrage als betroffen
+                // ausweisen.
+                if ($render[$field->page]['verfuegbar'] && $render[$field->page]['stderr_signiert'] !== '') {
                     $feldUrsachen[] = self::RENDER_FEHLER;
                 }
             } else {
@@ -222,6 +227,10 @@ class SignatureDiagnostics
             'unsichtbar' => $unsichtbar,
         ];
         $bericht['ursachen'] = array_values(array_unique($ursachen));
+        if ($render !== [] && collect($render)->every(fn ($r) => ! $r['verfuegbar'])) {
+            $hinweise[] = 'Bildvergleich nicht moeglich: pdftoppm (poppler-utils) fehlt oder rendert nicht - '
+                .'Sichtbarkeit ungeprueft. Installation: apt install poppler-utils';
+        }
         $bericht['hinweise'] = $hinweise;
         $bericht['log'] = $logs ? $this->logZeilen($request->id) : [];
 
