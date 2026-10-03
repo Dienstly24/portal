@@ -37,6 +37,7 @@ class SignatureSigningService
         private readonly SignatureAuditService $audit,
         private readonly SignedPdfBuilder $pdf,
         private readonly SignatureRequestService $requests,
+        private readonly SignedPdfVerifier $verifier,
     ) {
     }
 
@@ -392,6 +393,15 @@ class SignatureSigningService
     {
         try {
             $result = $this->pdf->build($request);
+            // SELBSTTEST VOR "Abgeschlossen" (KI-058): ein Dokument, das
+            // die Unterschrift nicht zeigt, wird weder gespeichert noch
+            // verschickt - der Vorgang steht dann sichtbar auf "Fehler bei
+            // Fertigstellung" und laesst sich neu erzeugen.
+            $original = (string) $this->storage->read($request->original_path);
+            $befunde = $this->verifier->pruefe($request, $original, $result['pdf'], $result['bilder']);
+            if ($befunde !== []) {
+                throw new \RuntimeException('Selbsttest nicht bestanden: '.implode(' ', $befunde));
+            }
             $path = $this->storage->signedPath($request);
             if ($this->storage->disk()->put($path, $result['pdf']) === false) {
                 throw new \RuntimeException('Das fertige PDF konnte nicht abgelegt werden.');
@@ -400,9 +410,14 @@ class SignatureSigningService
             Log::error('Signatur: unterschriebenes PDF konnte nicht erzeugt werden: '.$e->getMessage(), [
                 'signature_request_id' => $request->id,
             ]);
+            $request->forceFill([
+                'status' => SignatureStatus::COMPLETION_FAILED,
+                'last_activity_at' => now(),
+            ])->save();
             $this->audit->record($request, 'pdf_generated', description: 'FEHLGESCHLAGEN: '.mb_substr($e->getMessage(), 0, 200));
-            $this->requests->notifyCreator($request, 'Signatur: PDF konnte nicht erzeugt werden',
-                'Alle Unterschriften liegen vor, das fertige PDF von "'.$request->title.'" fehlt aber. Bitte prüfen.');
+            $this->requests->notifyCreator($request, 'Signatur: Fehler bei Fertigstellung',
+                'Alle Unterschriften liegen vor, das fertige PDF von "'.$request->title.'" hat die Prüfung aber nicht bestanden. '
+                .'In der Signaturanfrage „Erneut erzeugen" wählen.');
 
             return;
         }
@@ -416,9 +431,13 @@ class SignatureSigningService
             'last_activity_at' => now(),
         ])->save();
 
-        $this->audit->record($request, 'pdf_generated', description: 'SHA-256 '.$result['hash'], meta: [
+        // BEIDE Hashes im Protokoll: das Original belegt den Vertragstext,
+        // das Ergebnis die fertige Datei.
+        $this->audit->record($request, 'pdf_generated', description: 'SHA-256 '.$result['hash'].' · Selbsttest bestanden', meta: [
             'sha256' => $result['hash'],
+            'sha256_original' => $request->original_hash,
             'bytes' => strlen($result['pdf']),
+            'selbsttest' => 'bestanden',
         ]);
         $this->audit->record($request, 'completed');
 

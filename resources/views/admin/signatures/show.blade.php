@@ -52,12 +52,14 @@
      ("ist es raus? worauf warten wir?") musste er sich aus Abzeichen und
      Verlauf zusammensuchen. Sie steht jetzt oben, in einem Satz. --}}
 <div class="card" style="padding:16px 20px;margin-bottom:16px;border-left:4px solid
-    {{ $signature->isCompleted() ? 'var(--emerald)' : ($signature->isDraft() ? 'var(--line)' : 'var(--status-warning)') }};">
+    {{ $signature->isCompleted() ? 'var(--emerald)' : ($signature->status === 'completion_failed' ? 'var(--status-danger)' : ($signature->isDraft() ? 'var(--line)' : 'var(--status-warning)')) }};">
     <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
         <div style="min-width:220px;">
             <div style="font-weight:700;font-size:15px;">
                 @if($signature->isCompleted())
                     ✓ Dokument unterschrieben
+                @elseif($signature->status === 'completion_failed')
+                    ⚠ Fehler bei Fertigstellung
                 @elseif($signature->status === 'cancelled')
                     Auftrag storniert
                 @elseif($signature->status === 'declined')
@@ -73,6 +75,15 @@
             <div class="muted-sm" style="margin-top:3px;">
                 @if($signature->isCompleted())
                     Alle Unterzeichner sind fertig.
+                @elseif($signature->status === 'completion_failed')
+                    Alle haben unterschrieben, aber das fertige Dokument hat die automatische Prüfung
+                    nicht bestanden und wurde deshalb weder gespeichert noch verschickt. Den Grund nennt das Protokoll.
+                    @can('regenerate', $signature)
+                        <form method="POST" action="{{ route('admin.signatures.regenerate', $signature->id) }}" style="margin-top:8px;">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-emerald">Erneut erzeugen</button>
+                        </form>
+                    @endcan
                 @elseif($signature->acceptsSignatures())
                     Warten auf die Unterschrift
                     @if($signature->customer) von {{ $signature->customer->user?->name }}

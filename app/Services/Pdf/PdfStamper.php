@@ -2,6 +2,8 @@
 
 namespace App\Services\Pdf;
 
+use App\Support\Bildfreistellung;
+
 /**
  * Schreibt Unterschriften, Namen, Daten und Kreuze in ein vorhandenes PDF -
  * als FORTSCHREIBUNG (incremental update).
@@ -15,10 +17,11 @@ namespace App\Services\Pdf;
  * Struktur und genau diesen Nachweis.
  *
  * WAS ANGEHAENGT WIRD:
- *  - je Unterschriftsbild zwei Objekte (1x1-Pixel-Farbe + Alphakanal als
- *    /SMask). Warum so: der Alphakanal traegt die volle Aufloesung der
- *    Handschrift, die Farbe braucht dafuer genau drei Bytes. Ein
- *    weiss hinterlegtes JPEG waere ein weisser Kasten ueber dem Vertragstext.
+ *  - je Bild ein Farbbild (/DeviceRGB) mit dem Alphakanal als /SMask -
+ *    durchsichtig, wo das Bild durchsichtig ist (Handschrift,
+ *    freigestellter Stempel), farbig, wo es Farbe traegt. Bis 03.10.2026
+ *    war es eine 1x1-Farbflaeche + Maske: fuer Handschrift richtig, fuer
+ *    ein deckendes Logo ein weisser Kasten (KI-055).
  *  - je bestempelter Seite ein "q" davor und die Stempel-Anweisungen
  *    dahinter. Das "q"/"Q"-Paar ist Pflicht: liesse der urspruengliche
  *    Seiteninhalt den Grafikzustand veraendert zurueck (Drehung, Skalierung),
@@ -49,6 +52,9 @@ final class PdfStamper
 
     private string $protocolTitle = 'Signaturprotokoll';
 
+    /** @var list<array{page: int, name: string, object: int}> gesetzte Bilder - fuer den Selbsttest */
+    private array $platziert = [];
+
     public function __construct(private readonly PdfDocument $document)
     {
         $this->nextObject = $this->document->maxObjectNumber() + 1;
@@ -73,6 +79,18 @@ final class PdfStamper
         $this->protocolSections = $sections;
 
         return $this;
+    }
+
+    /**
+     * Welche Bilder unter welchem Namen auf welcher Seite gesetzt wurden.
+     * Der Selbsttest prueft damit im FERTIGEN Dokument, ob jeder Name in den
+     * Ressourcen seiner Seite auffindbar ist (KI-062).
+     *
+     * @return list<array{page: int, name: string, object: int}>
+     */
+    public function platzierteBilder(): array
+    {
+        return $this->platziert;
     }
 
     public function build(): string
@@ -121,11 +139,12 @@ final class PdfStamper
 
             if ($stamp->type === PdfStamp::TYPE_IMAGE && $stamp->png !== null) {
                 $name = 'D24Sig'.$page->objectNumber.'x'.$i;
-                $imageObject = $this->addSignatureImage($stamp->png);
+                $imageObject = $this->addImage($stamp->png, $stamp->width, $stamp->height, $stamp->freistellen);
                 if ($imageObject === null) {
                     continue;
                 }
                 $xobjects[$name] = $imageObject;
+                $this->platziert[] = ['page' => $page->index, 'name' => $name, 'object' => $imageObject];
                 $ops[] = 'q '.PdfSyntax::num($stamp->width).' 0 0 '.PdfSyntax::num($stamp->height)
                     .' '.PdfSyntax::num($x).' '.PdfSyntax::num($y).' cm /'.$name.' Do Q';
             } elseif ($stamp->type === PdfStamp::TYPE_TEXT && $stamp->text !== null) {
@@ -161,9 +180,26 @@ final class PdfStamper
         $this->registerResources($page, $xobjects, $fonts);
     }
 
-    /** @return list<string> Referenzen der bisherigen Inhalts-Stroeme */
+    /**
+     * Referenzen der bisherigen Inhalts-Stroeme.
+     *
+     * /Contents darf auf ein ARRAY-OBJEKT zeigen ("/Contents 6 0 R" mit
+     * "6 0 obj [4 0 R 7 0 R] endobj"). Frueher wurde diese Referenz wie
+     * ein Strom behandelt - die Seite bestand danach aus "Strom, Array,
+     * Strom", poppler meldete "Weird page contents" und verwarf die
+     * Stempel (KI-056). Das Array wird jetzt aufgeloest.
+     *
+     * @return list<string>
+     */
     private function contentRefs(string $contents): array
     {
+        if (PdfSyntax::isReference($contents)) {
+            $number = PdfSyntax::referenceNumber($contents);
+            $target = $number === null ? null : ($this->rewrites[$number] ?? $this->document->objectBody($number));
+            if ($target !== null && str_starts_with(ltrim($target), '[')) {
+                $contents = $target;
+            }
+        }
         preg_match_all('/(\d+)\s+(\d+)\s+R/', $contents, $m, PREG_SET_ORDER);
 
         return array_map(fn ($x) => $x[1].' '.$x[2].' R', $m);
@@ -185,6 +221,21 @@ final class PdfStamper
         $owner = $this->document->resourcesOwner($page);
         $ownerNumber = $owner['object'];
         $body = $this->bodyOf($ownerNumber);
+
+        // ZEIGT /Resources AUF EIN EIGENES OBJEKT ("/Resources 5 0 R"),
+        // liefert resourcesOwner() DIESES Objekt - also das Ressourcen-
+        // Woerterbuch selbst, nicht die Seite. Darin gibt es kein
+        // /Resources mehr; frueher entstand hier deshalb ein VERSCHACHTELTES
+        // "/Resources << /XObject ... >>" im Ressourcen-Objekt, und jeder
+        // Betrachter meldete "XObject 'D24Sig...' is unknown" - die
+        // Unterschrift stand im Inhaltsstrom, aber ihr Bild war nirgends
+        // auffindbar (Betreiber-Meldung 02.10.2026, 8 von 11 Anfragen;
+        // Word, LibreOffice und viele Generatoren schreiben genau so).
+        if (! $owner['inline']) {
+            $this->rewrites[$ownerNumber] = $this->mergeResourceDict($body, $xobjects, $fonts);
+
+            return;
+        }
 
         $resources = PdfSyntax::dictEntries($body)['Resources'] ?? null;
         if ($resources !== null && PdfSyntax::isReference($resources)) {
@@ -252,61 +303,75 @@ final class PdfStamper
     // ---------------------------------------------------------------- Bilder
 
     /**
-     * Unterschriftsbild als Objektpaar: eine 1x1-Pixel-Farbflaeche mit dem
-     * Alphakanal der Handschrift als /SMask. Der Alphakanal traegt die
-     * Aufloesung, die Farbflaeche drei Bytes - und die Schrift bleibt
-     * durchscheinend, ueberdeckt also keinen Vertragstext.
+     * Bild als Farbbild (/DeviceRGB) mit dem Alphakanal als /SMask.
      *
+     * FRUEHER: eine 1x1-Farbflaeche (Farbe des ERSTEN deckenden Pixels) mit
+     * dem Alphakanal als Maske. Fuer durchsichtige Handschrift ging das gut,
+     * fuer Firmenlogo und Stempel nicht (KI-055): ein deckendes Bild wurde
+     * zur Flaeche in der Farbe seines ersten Pixels - bei weissem
+     * Hintergrund ein WEISSER KASTEN, also unsichtbar; ein mehrfarbiges
+     * Logo wurde einfarbig. Jetzt traegt das Bild seine echten Farben.
+     *
+     * Verkleinert wird auf die Aufloesung, die das Feld im Druck braucht
+     * (300 dpi) - ein 1600-px-Stempel in einem 131-pt-Feld waere Ballast.
+     *
+     * @param  bool  $freistellen  weissen Hintergrund eines VOLLSTAENDIG
+     *                             deckenden Bildes durchsichtig machen
+     *                             (Firmenbilder, siehe Bildfreistellung)
      * @return int|null Objektnummer des Bildes; null, wenn das PNG unlesbar ist
      */
-    private function addSignatureImage(string $png): ?int
+    private function addImage(string $png, float $widthPt, float $heightPt, bool $freistellen = false): ?int
     {
+        $info = @getimagesizefromstring($png);
+        // Dekompressionsbomben-Schutz wie im ImagesToPdfService: zu viele
+        // Pixel werden gar nicht erst entpackt.
+        if ($info === false || (int) $info[0] * (int) $info[1] > 4_000_000) {
+            return null;
+        }
         $image = @imagecreatefromstring($png);
         if ($image === false) {
             return null;
         }
-        $width = imagesx($image);
-        $height = imagesy($image);
-        // Dekompressionsbomben-Schutz wie im ImagesToPdfService: mehr
-        // Pixel wird gar nicht erst in einen Alphakanal umgeschrieben.
-        if ($width * $height > 4_000_000) {
-            imagedestroy($image);
-
-            return null;
+        $image = Bildfreistellung::verkleinern($image, $widthPt, $heightPt);
+        if ($freistellen) {
+            Bildfreistellung::weissenRandFreistellen($image);
         }
 
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $rgb = '';
         $alpha = '';
-        $ink = [0, 0, 0];
-        $inkFound = false;
+        $transparent = false;
         for ($y = 0; $y < $height; $y++) {
-            $row = '';
             for ($x = 0; $x < $width; $x++) {
-                $rgba = imagecolorat($image, $x, $y);
-                $a = ($rgba >> 24) & 0x7F;      // GD: 0 = deckend, 127 = klar
-                $opacity = (int) round((127 - $a) * 255 / 127);
-                if (! $inkFound && $opacity > 200) {
-                    $ink = [($rgba >> 16) & 0xFF, ($rgba >> 8) & 0xFF, $rgba & 0xFF];
-                    $inkFound = true;
+                $c = imagecolorat($image, $x, $y);
+                $a = ($c >> 24) & 0x7F;      // GD: 0 = deckend, 127 = klar
+                if ($a > 0) {
+                    $transparent = true;
                 }
-                $row .= chr($opacity);
+                $rgb .= chr(($c >> 16) & 0xFF).chr(($c >> 8) & 0xFF).chr($c & 0xFF);
+                $alpha .= chr((int) round((127 - $a) * 255 / 127));
             }
-            $alpha .= $row;
         }
         imagedestroy($image);
 
-        $smaskData = gzcompress($alpha, 6);
-        $smask = $this->newObject(
-            '<< /Type /XObject /Subtype /Image /Width '.$width.' /Height '.$height
-            .' /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length '.strlen($smaskData).' >>'
-            ."\nstream\n".$smaskData."\nendstream"
-        );
+        $smaskRef = '';
+        if ($transparent) {
+            $smaskData = (string) gzcompress($alpha, 6);
+            $smask = $this->newObject(
+                '<< /Type /XObject /Subtype /Image /Width '.$width.' /Height '.$height
+                .' /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length '.strlen($smaskData).' >>'
+                ."\nstream\n".$smaskData."\nendstream"
+            );
+            $smaskRef = ' /SMask '.$smask.' 0 R';
+        }
 
-        $color = chr($ink[0]).chr($ink[1]).chr($ink[2]);
+        $data = (string) gzcompress($rgb, 6);
 
         return $this->newObject(
-            '<< /Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace /DeviceRGB'
-            .' /BitsPerComponent 8 /SMask '.$smask.' 0 R /Length 3 >>'
-            ."\nstream\n".$color."\nendstream"
+            '<< /Type /XObject /Subtype /Image /Width '.$width.' /Height '.$height.' /ColorSpace /DeviceRGB'
+            .' /BitsPerComponent 8 /Filter /FlateDecode'.$smaskRef.' /Length '.strlen($data).' >>'
+            ."\nstream\n".$data."\nendstream"
         );
     }
 

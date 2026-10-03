@@ -3274,10 +3274,10 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   Unterschrift auf jedem quer gescannten Vertrag verdreht am Rand, und
   zwar erst im fertigen Dokument, nie im Editor; (3) Umlaute - Helvetica
   kennt kein UTF-8, ohne WinAnsi-Umsetzung steht Kauderwelsch im Vertrag.
-  Die Unterschrift wird als 1x1-Farbflaeche mit dem Alphakanal als
-  `/SMask` eingebettet: volle Aufloesung der Handschrift, drei Bytes
-  Farbe, und sie bleibt DURCHSCHEINEND - ein weiss hinterlegtes JPEG
-  waere ein weisser Kasten ueber dem Vertragstext.
+  Jedes Bild wird als Farbbild mit dem Alphakanal als `/SMask`
+  eingebettet und bleibt DURCHSCHEINEND, wo es durchsichtig ist (bis
+  03.10.2026 eine 1x1-Farbflaeche - fuer ein deckendes Logo ein weisser
+  Kasten, KI-055; siehe "Unterschrift fehlt im fertigen PDF").
 - **Geprueft wird beim HOCHLADEN, nicht beim Erzeugen**: ein
   verschluesseltes oder defektes PDF wird sofort abgelehnt. Ein
   Fehlschlag NACH dem Unterschreiben waere dem Unterzeichner nicht zu
@@ -3754,15 +3754,58 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
 - **Lehre**: die bisherigen Tests prueften `/Subtype /Image` im PDF-TEXT -
   ein weisser Kasten erfuellt das (KI-061). Sichtbarkeit wird nur am
   gerenderten Bild bewiesen.
+- **Befund vom Server (03.10.2026)**: 17 Vorgaenge geprueft, 11 betroffen.
+  Die HAEUFIGSTE Ursache war keine der beiden vermuteten, sondern eine
+  dritte, die erst die Diagnose zeigte (KI-062, 8 von 11, auch die
+  gemeldete Anfrage): zeigt `/Resources` auf ein eigenes Objekt (Word,
+  LibreOffice ...), schrieb der Stempler die Bilder in ein VERSCHACHTELTES
+  `/Resources` - "XObject 'D24Sig1x0' is unknown", auch die
+  KUNDENunterschrift fehlte. Die alten Test-PDF hatten gar kein
+  /Resources, deshalb fiel es nie auf. LEHRE: Test-PDF muessen gebaut sein
+  wie echte (Ressourcen per Referenz, indirektes /Contents, Drehung).
+- **Behoben (Phase 0, 03.10.2026)**: Ressourcen per Referenz (KI-062),
+  indirektes `/Contents`-Array (KI-056), Bilder als Farbbild + Alphakanal,
+  verkleinert auf 300 dpi des Feldes (KI-055). Firmenbilder: ein
+  VOLLSTAENDIG deckender weisser Hintergrund wird VOM RAND AUS freigestellt
+  (`App\Support\Bildfreistellung`) - sonst laege ein weisser Kasten ueber
+  der Formularlinie, auf die der Stempel gehoert; weiss INNERHALB des Logos
+  bleibt, ein schon freigestelltes Bild wird nie angefasst.
+- **"Abgeschlossen" erst nach bestandenem SELBSTTEST** (`SignedPdfVerifier`,
+  KI-058): Fortschreibung des Originals, jedes gesetzte Bild in den
+  Ressourcen SEINER Seite auffindbar, und - mit poppler - jedes
+  Unterschrifts-/Firmenfeld im gerenderten Bild sichtbar (`PdfSichtbarkeit`,
+  dieselbe Regel wie die Diagnose). Besteht es nicht, wird nichts
+  gespeichert und nichts verschickt: Status `completion_failed`
+  ("Fehler bei Fertigstellung", Reiter "In Bearbeitung"), Glocke, Knopf
+  "Erneut erzeugen". Fehlt poppler, entfaellt nur die Bildpruefung. Das
+  Ereignis `pdf_generated` traegt BEIDE Hashes (Original + Ergebnis).
+- **Vorschau nach Abschluss** zeigt das unterschriebene Dokument (KI-057).
+- **Bestand**: `php artisan signaturen:neu-erzeugen --alle` (Probelauf),
+  `--ausfuehren` erzeugt neu, `--kopie-senden` schickt die korrigierte
+  Fassung an die Unterzeichner. Unterschriften und Zeitpunkte bleiben
+  unveraendert, das ALTE PDF bleibt liegen (es ist die verschickte Datei),
+  die neue Datei sagt im Protokoll "Neu erzeugt ... (Korrektur der
+  Darstellung)", Ereignis `pdf_regenerated` mit altem und neuem SHA-256.
+- **Koordinaten** (Betreiber-Entscheidung 02.10.2026): Feldpositionen
+  bleiben ANTEILE der Anzeige-Seite (nach `/Rotate`, bezogen auf die
+  MediaBox - so rendert auch pdftoppm die Vorschau, auf der das Feld
+  gesetzt wird). Der Editor teilt durch die Groesse des gezoomten
+  Seitenrahmens, damit ist jeder Zoom gleich. EINE Umrechnung in Punkte:
+  `App\Support\FeldGeometrie` (Stempler, Selbsttest, Diagnose); Ursprung
+  unten links und Drehung rechnet ausschliesslich der `PdfStamper`.
+- **Schrift**: `--zeichen` fand 0 von 1424 Namen mit Zeichen ausserhalb
+  WinAnsi - eine eingebettete Unicode-Schrift ist derzeit NICHT noetig.
 - **Beschlossen, NOCH NICHT gebaut** (Betreiber 02.10.2026, Folge-PRs):
-  Feldpositionen bleiben ANTEILE der Anzeige-Seite (nach `/Rotate`,
-  bezogen auf die MediaBox), mit EINER Umrechnungsfunktion fuer Editor,
-  Stempler und Selbsttest; "Tippen" als Signaturart bleibt verboten (nur
-  gezeichnet, Regel 10.09.2026); interne Unterschrift ohne Neu-Anmeldung,
-  solange die letzte 2FA-Bestaetigung juenger als 4 h ist (einstellbar),
-  sonst EINMAL 2FA-Code - die Bestaetigung "Ich unterschreibe dieses
-  Dokument als [Name, Rolle]" ist in JEDEM Fall Pflicht.
-- Tests: `SignaturDiagnoseTest`.
+  "Tippen" als Signaturart bleibt verboten (nur gezeichnet, Regel
+  10.09.2026); interne Unterschrift ohne Neu-Anmeldung, solange die
+  letzte 2FA-Bestaetigung juenger als 4 h ist (einstellbar), sonst EINMAL
+  2FA-Code - die Bestaetigung "Ich unterschreibe dieses Dokument als
+  [Name, Rolle]" ist in JEDEM Fall Pflicht.
+- Tests: `SignaturDiagnoseTest`, `SignaturPdfSichtbarkeitTest` (10 Faelle:
+  Ressourcen per Referenz, indirektes /Contents, mehrseitig, Drehung
+  90/180/270, Zeichnung mit Geraeteverhaeltnis 2 und 3, Kunde + Stempel
+  ueber Formularlinie, nur Stempel, Selbsttest scheitert -> Erneut
+  erzeugen, Reparaturbefehl, Vorschau), `tests/Unit/BildfreistellungTest.php`.
 
 ## System-Audit 15.09.2026: Befunde und Behebung
 

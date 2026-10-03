@@ -30,12 +30,14 @@ final class PdfStamp
         public readonly ?string $png = null,
         public readonly ?string $text = null,
         public readonly float $fontSize = 10.0,
+        public readonly bool $freistellen = false,
     ) {
     }
 
-    public static function image(int $pageIndex, string $png, float $x, float $y, float $width, float $height): self
+    /** @param  bool  $freistellen  weissen Hintergrund eines deckenden Bildes durchsichtig machen (Firmenbilder) */
+    public static function image(int $pageIndex, string $png, float $x, float $y, float $width, float $height, bool $freistellen = false): self
     {
-        return new self($pageIndex, self::TYPE_IMAGE, $x, $y, $width, $height, png: $png);
+        return new self($pageIndex, self::TYPE_IMAGE, $x, $y, $width, $height, png: $png, freistellen: $freistellen);
     }
 
     public static function text(int $pageIndex, string $text, float $x, float $y, float $width, float $height, float $fontSize = 10.0): self

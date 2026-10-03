@@ -68,6 +68,7 @@ class SignatureEvent extends Model
         'declined' => 'Unterschrift abgelehnt',
         'completed' => 'Signaturvorgang abgeschlossen',
         'pdf_generated' => 'Unterschriebenes PDF erzeugt',
+        'pdf_regenerated' => 'Unterschriebenes PDF neu erzeugt (Korrektur der Darstellung)',
         'downloaded' => 'Dokument heruntergeladen',
         'customer_linked' => 'Kunde zugeordnet',
         'contract_linked' => 'Vertrag zugeordnet',
