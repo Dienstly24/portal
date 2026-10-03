@@ -4497,6 +4497,52 @@ Merge von PR #358, Teil E/F).
   `CustomerFamilyRelationTest`, `MeldebestaetigungHaushaltTest`,
   `GeburtsurkundeVerknuepfungTest`, `CustomerMergeDataPreservationTest`.
 
+## Dubletten: Familie ist keine Dublette (Betreiber-Auftrag 03.10.2026, KI-063)
+
+- **Anlass**: Vater und Sohn (Maher Abboud, geb. 1971 / Ahmad Jihad
+  Abboud, geb. 2002) standen nur wegen derselben E-Mail als
+  "44 % · ✓ sicher" in der Liste und waren per "Alle auswaehlen" +
+  "Zusammenfuehren" verschmelzbar - ein Merge LOESCHT die Akte des Sohnes.
+- **Der Score sortiert, die KLASSE entscheidet**:
+  `DuplicateDetectionService::classify()` ist die EINE Stelle, die Anzeige,
+  "Alle sicheren zusammenfuehren", Sammel-Merge und Einzel-Merge lesen.
+  `sicher` = gleicher Vor- und Nachname UND gleiches Geburtsdatum, kein
+  Widerspruch. `moeglich` = kein Widerspruch, aber nichts Eindeutiges.
+  `moegliche_familie` = ein Merkmal WIDERSPRICHT (`identityConflicts()`):
+  abweichendes Geburtsdatum (beide gesetzt), abweichender Vorname
+  (auf BEIDEN Seiten bleibt ein Namensteil uebrig; ein zusaetzlicher
+  zweiter Vorname auf nur einer Seite und Tippfehler zaehlen nicht) oder
+  kein gemeinsamer Namensbestandteil. Gemeinsame E-Mail, Telefon,
+  Anschrift oder IBAN allein machen NIE eine sichere Dublette - genau die
+  teilen Familien. Der Score kommt aus dem Import-Abgleich und gibt fuer
+  ein abweichendes Geburtsdatum nur 0 Punkte, keine Sperre - deshalb darf
+  ihn nichts mehr als Freigabe lesen.
+- **Familie wird nie zusammengefuehrt**: ohne Prozentzahl ("44 %" liest
+  sich wie "fast dieselbe Person"), ohne "Pruefen & zusammenfuehren",
+  Gruende sichtbar, "Beziehung festlegen" als Weg. Der Sammel-Merge
+  prueft JEDES Paar einer Gruppe, nicht nur die angeklickten Kanten -
+  ueber eine Akte ohne Geburtsdatum rutschten sonst zwei Personen in
+  dieselbe Gruppe. Einzel-Merge bei Widerspruch nur, wenn der Admin
+  bestaetigt UND begruendet (ActivityLog `customer_merge_override`) - fuer
+  den echten Erfassungsfehler (vertipptes Geburtsdatum).
+- Paare mit Familienrolle (`customer_family_relations`) erscheinen nicht
+  mehr als Verdachtsfall, auch ohne Gleichlauf-Zeile in
+  `customer_relationships`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-2
+  Merge-Sperren (beide mit aktivem Portalzugang, Login wird nicht mehr
+  geloescht KI-065, Familienrollen-Rueckrichtung KI-066,
+  KI-Unterhaltung KI-067, Massen-Merge nur `sicher` KI-068); PR-3
+  Archiv statt Hard-Delete (`merged_into_id`/`archived_at`, nicht
+  SoftDeletes), Kundennummer-Alias, Feldwahl, Undo 30 Tage (KI-064);
+  PR-4 geteilte Kontaktdaten + Adressnormalisierung (KI-069); PR-5
+  Haushalt + weitere Beziehungsarten + Uebernahme des Bestands; PR-6
+  Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
+  Person, Kinderzugang ab 16, Elternzugriff Standard AUS, endet mit 18;
+  PR-8 Lebensereignisse. Altersgrenzen getrennt und einstellbar:
+  "abhaengig" bleibt 15 (`Customer::DEPENDENT_AGE`), eigener
+  Portalzugang 16.
+- Tests: `DublettenFamilieTest`; nachgezogen `DuplicateBulkMergeTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

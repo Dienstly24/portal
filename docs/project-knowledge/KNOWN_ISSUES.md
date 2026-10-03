@@ -37,6 +37,13 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-058 | MEDIUM | correctness | E-Signatur: kein Selbsttest des fertigen PDF, kein Zustand "Fehler bei Fertigstellung" | FIXED |
 | KI-059 | MEDIUM | correctness | `PdfDocument`: "Klartext ist juenger als Objekt-Strom" gilt bei Fortschreibungen nicht (Verdacht) | OPEN |
 | KI-060 | LOW | correctness | `PdfStamper` schreibt Seitenobjekte immer mit Generation 0 (Verdacht) | OPEN |
+| KI-063 | CRITICAL | correctness | Dubletten: Vater/Sohn mit gleicher E-Mail als "✓ sicher" angezeigt; Sammel- und Einzel-Merge ohne Widerspruchspruefung, anderer Vorname kein Widerspruch | FIXED |
+| KI-064 | HIGH | correctness | Merge loescht die Duplikat-Akte HART: kein Archiv, kein Undo, alte Kundennummer nicht mehr suchbar | OPEN (PR-3) |
+| KI-065 | HIGH | correctness | Merge loescht den Portal-Login des unterlegenen Kontos, wenn beide einen echten Zugang haben | OPEN (PR-2) |
+| KI-066 | HIGH | correctness | Merge: `customer_family_relations` mit `related_customer_id` = Duplikat fallen per Kaskade weg (Rueckrichtung der Familienrolle verloren) | OPEN (PR-2) |
+| KI-067 | MEDIUM | correctness | Merge: KI-Unterhaltung (`ai_conversations`, UNIQUE customer_id) des Duplikats wird still verworfen | OPEN (PR-2) |
+| KI-068 | MEDIUM | correctness | Sammel-Merge auch fuer nur "moegliche" Dubletten (z. B. nur gleicher Name); Vorgabe: Massen-Merge nur fuer sichere | OPEN (PR-2) |
+| KI-069 | MEDIUM | correctness | Anschrift doppelt nummeriert ("Nagelshof 20 51"): Hausnummer in `address_street` UND Feld; Haushalts-Schluessel weicht ab | OPEN (PR-4) |
 | KI-061 | MEDIUM | testing | Signatur-Tests pruefen nur `/Subtype /Image` im Text, nie die SICHTBARKEIT - KI-055/056 blieben deshalb unentdeckt | FIXED |
 | KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | FIXED |
 | KI-050 | MEDIUM | correctness | Krankenkassen-Bestaetigung an den Arbeitgeber: nicht erkannt, Service-Adresse der Kasse als Kunden-E-Mail | FIXED |
@@ -119,6 +126,48 @@ und PHPStan) auf `main` gruen ist.
 - **Fix (01.10.2026, PR #365)**: der Test blockierte am 1. Oktober die Pflicht-Checks des PRs (beide Testjobs rot, Deploy uebersprungen) und wurde deshalb hier mitbehoben. Der Code war richtig ("Dieser Monat" = Monatserster bis heute), falsch war das Testdatum. Jetzt steht die Uhr fest auf dem Monatsersten (`travelTo`), der Ablauf ist der Monatserste selbst. Gegenprobe: mit dem alten Datum ist der Test nun an JEDEM Tag rot, nicht nur am Ersten.
 - **Discovered** 01.10.2026
 
+### KI-063 - Dubletten: Familienmitglieder als "sicher" und per Ein-Klick zusammenfuehrbar
+- **Category** correctness · **Severity** CRITICAL · **Status** FIXED
+- **Location** `DuplicateDetectionService`, `Admin\DuplicateController`, `admin/customer_duplicates`, `admin/customer_merge`
+- **Description** Vom Betreiber gemeldet (Screenshot): Maher Abboud (geb. 10.02.1971) und Ahmad Jihad Abboud (geb. 2002) standen als "44 % · Wahrscheinlich · ✓ sicher" in der Liste - Vater und Sohn, nur wegen derselben E-Mail. Vier Ursachen: (1) die Kennzeichnung "sicher" las nur den Score (>= 40), nicht den Widerspruch; der Score kommt aus dem Import-Abgleich und vergibt fuer ein abweichendes Geburtsdatum lediglich 0 Punkte statt einer Sperre. (2) Die Sammelauswahl ("Alle auswaehlen" + "Zusammenfuehren") pruefte gar nichts. (3) "Pruefen & zusammenfuehren" ebenfalls nicht. (4) Fehlte EIN Geburtsdatum, war ein anderer Vorname bei gleichem Nachnamen kein Widerspruch - "Alle sicheren" verschmolz solche Paare mit gemeinsamer IBAN automatisch. Ein Merge loescht die Duplikat-Akte (KI-064).
+- **Fix (03.10.2026)**: EINE Klassifikation `classify()` (sicher / moeglich / moegliche Familie), die Anzeige und alle drei Merge-Wege lesen. Sicher nur bei gleichem Namen UND gleichem Geburtsdatum ohne Widerspruch. Widerspruch = abweichendes Geburtsdatum, abweichender Vorname (beidseitig ein Namensteil uebrig, Tippfehler toleriert) oder kein gemeinsamer Namensbestandteil -> "Moegliche Familie", ohne Prozentzahl, ohne Merge-Knopf. Sammel-Merge prueft JEDES Paar einer Gruppe. Einzel-Merge bei Widerspruch nur mit Bestaetigung + Begruendung (Admin), ActivityLog `customer_merge_override`. Paare mit Familienrolle (`customer_family_relations`) erscheinen nicht mehr. Test `DublettenFamilieTest` (10 Faelle, Kernfaelle ohne Fix rot).
+- **Discovered** 03.10.2026
+
+### KI-064 - Merge loescht die Duplikat-Akte hart
+- **Category** correctness · **Severity** HIGH · **Status** OPEN
+- **Location** `CustomerMergeService::merge`
+- **Description** `$duplicate->delete()` (kein SoftDeletes, kein Archiv): Undo unmoeglich, alte Kundennummer nur noch als Text im ActivityLog. Plan PR-3: `merged_into_id`/`archived_at`, Kundennummer-Alias, Undo 30 Tage.
+- **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
+
+### KI-065 - Merge loescht den Portal-Login des unterlegenen Kontos
+- **Category** correctness · **Severity** HIGH · **Status** OPEN
+- **Location** `CustomerMergeService::preservePortalAccount`
+- **Description** Der unterlegene User wird geloescht, sobald keine Akte mehr auf ihn zeigt; seine Adresse wandert nur nach `email2`, wenn dort nichts steht. Bei einem Fehl-Merge verliert eine Person Zugang und Passwort. Plan PR-2: Merge sperren, wenn beide einen aktiven Zugang haben.
+- **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
+
+### KI-066 - Merge verliert die Rueckrichtung der Familienrolle
+- **Category** correctness · **Severity** HIGH · **Status** OPEN
+- **Location** `CustomerMergeService`, `customer_family_relations`
+- **Description** `related_customer_id` laeuft nicht ueber den customer_id-Abgleich und kaskadiert beim Loeschen des Duplikats; eine Zeile Duplikat->Hauptkunde wird zum Selbst-Paar. Plan PR-2.
+- **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
+
+### KI-067 - Merge verwirft die KI-Unterhaltung des Duplikats
+- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Location** `CustomerMergeService::deleteCollidingDuplicateRows`, `ai_conversations`
+- **Description** UNIQUE(customer_id): existiert am Hauptkunden schon eine Zeile, wird die des Duplikats still geloescht (Zustand, Uebergabe, Zustaendiger). Plan PR-2.
+- **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
+
+### KI-068 - Sammel-Merge auch fuer nur moegliche Dubletten
+- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Location** `Admin\DuplicateController::duplicatesMerge`
+- **Description** Seit KI-063 werden Widersprueche ausgelassen, Paare der Klasse `moeglich` (z. B. nur gleicher Name) bleiben sammel-zusammenfuehrbar. Vorgabe: Massen-Merge nur fuer `sicher`. Plan PR-2.
+- **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
+
+### KI-069 - Anschrift doppelt nummeriert ("Nagelshof 20 51")
+- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Location** `Customer::fullAddress()`, `householdKey()`
+- **Description** Strasse + Hausnummer + Zusatz werden ungeprueft zusammengesetzt; steht die Nummer schon in `address_street`, erscheint sie doppelt, und der Haushalts-Schluessel derselben Anschrift weicht ab. Plan PR-4.
+- **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
 ### KI-062 - E-Signatur: /Resources als Referenz - Bilder unauffindbar ("XObject unknown")
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (03.10.2026)
 - **Location** `PdfStamper::registerResources`

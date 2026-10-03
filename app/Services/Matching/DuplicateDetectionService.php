@@ -3,7 +3,9 @@
 namespace App\Services\Matching;
 
 use App\Models\Customer;
+use App\Models\CustomerFamilyRelation;
 use App\Models\CustomerRelationship;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -34,6 +36,28 @@ class DuplicateDetectionService
      */
     public const AUTO_MERGE_MIN_SCORE = 40;
 
+    /**
+     * Klassifikation eines Paares (Betreiber-Auftrag 03.10.2026, KI-063).
+     * Der Score bleibt eine SORTIER-Zahl; was mit einem Paar geschehen darf,
+     * entscheidet ausschliesslich die Klasse - und zwar an EINER Stelle
+     * (classify()), die Anzeige, Sammel-Merge, "Alle sicheren" und der
+     * Einzel-Merge gleichermassen lesen.
+     *
+     * SICHER:  gleicher Name UND gleiches Geburtsdatum, kein Widerspruch.
+     * MOEGLICH: kein Widerspruch, aber nichts Eindeutiges (z. B. nur Name).
+     * FAMILIE: ein Identitaetsmerkmal WIDERSPRICHT (Geburtsdatum, Vorname,
+     *          kein gemeinsamer Namensbestandteil) - verschiedene Personen,
+     *          die sich Kontaktdaten teilen. Nie zusammenfuehren.
+     */
+    public const KLASSE_SICHER = 'dublette_sicher';
+
+    public const KLASSE_MOEGLICH = 'dublette_moeglich';
+
+    public const KLASSE_FAMILIE = 'moegliche_familie';
+
+    /** Reihenfolge der Anzeige: zuerst was zu tun ist, Familie zuletzt. */
+    private const KLASSE_RANG = [self::KLASSE_SICHER => 0, self::KLASSE_MOEGLICH => 1, self::KLASSE_FAMILIE => 2];
+
     /** Sicherheitsdeckel gegen Extrembestaende (Blocking ist ~O(n)). */
     private const MAX_SCAN = 20000;
 
@@ -52,7 +76,7 @@ class DuplicateDetectionService
 
     /**
      * @param ?array<int, string> $visibleIds Portfolio-Sicht; null = alle.
-     * @return array{pairs: array<int, array{primary: Customer, duplicate: Customer, score: int, tier: string, signals: array<int, string>}>, scanned: int, capped: bool}
+     * @return array{pairs: array<int, array{primary: Customer, duplicate: Customer, score: int, tier: string, klasse: string, konflikte: list<string>, signals: array<int, string>}>, scanned: int, capped: bool}
      */
     public function scan(?array $visibleIds = null): array
     {
@@ -83,7 +107,10 @@ class DuplicateDetectionService
         });
 
         // Als "Kein Duplikat" markierte Paare (Verwandte Kunden) ausschliessen.
-        $dismissed = CustomerRelationship::dismissedKeySet();
+        // Ebenso Paare mit einer Familienrolle (customer_family_relations):
+        // eine festgelegte Beziehung erscheint nie wieder als Verdachtsfall,
+        // auch wenn die Gleichlauf-Zeile in customer_relationships fehlt.
+        $dismissed = CustomerRelationship::dismissedKeySet() + $this->familyPairKeySet();
 
         // 2) Kandidatenpaare aus allen Bloecken einsammeln (dedupliziert).
         $pairIndex = [];  // "i|j" => true
@@ -117,7 +144,7 @@ class DuplicateDetectionService
             }
         }
 
-        usort($pairs, fn ($a, $b) => $b['score'] <=> $a['score']);
+        usort($pairs, fn ($a, $b) => [self::KLASSE_RANG[$a['klasse']], $b['score']] <=> [self::KLASSE_RANG[$b['klasse']], $a['score']]);
 
         return [
             'pairs' => $pairs,
@@ -356,11 +383,14 @@ class DuplicateDetectionService
         [$primary, $duplicate] = $a->created_at <= $b->created_at ? [$a, $b] : [$b, $a];
 
         $score = $this->confidence($a, $b, $signals);
+        $einstufung = $this->classify($a, $b);
         $pairs[] = [
             'primary' => $primary,
             'duplicate' => $duplicate,
             'score' => $score,
             'tier' => $score >= 80 ? 'auto' : ($score >= 50 ? 'confirm' : 'manual'),
+            'klasse' => $einstufung['klasse'],
+            'konflikte' => $einstufung['konflikte'],
             'signals' => array_values($signals),
         ];
     }
@@ -424,29 +454,153 @@ class DuplicateDetectionService
     }
 
     /**
-     * Duerfen zwei Kunden UNBEAUFSICHTIGT (Ein-Klick "Alle sicheren
-     * zusammenfuehren") verschmolzen werden? Nein, sobald ein HARTES
-     * Identitaetsmerkmal WIDERSPRICHT - denn ein gemeinsames Konto (IBAN) oder
-     * eine gemeinsame Vertragsnummer hebt den Score auf >= 85, obwohl es sich
-     * um ZWEI verschiedene Personen handeln kann (Ehepaar mit gemeinsamem
-     * Konto, Eltern/Kind). Ein irreversibler Merge wuerde dann eine echte
-     * Person loeschen (Audit MERGE-1). Solche Paare bleiben der MANUELLEN
-     * Einzelpruefung vorbehalten.
+     * Klasse eines Paares - die EINE Stelle, die entscheidet, ob zwei Akten
+     * zusammengefuehrt werden duerfen.
+     *
+     * Gemeinsame E-Mail, Telefonnummer, Anschrift oder IBAN allein machen
+     * NIE eine sichere Dublette: genau diese Merkmale teilen Familien
+     * (Vater und Sohn mit derselben Familien-Adresse, Kind ueber das Konto
+     * der Eltern). Frueher hob ein solches Merkmal den Score ueber die
+     * Ein-Klick-Grenze, und die Seite zeigte Vater und Sohn als "sicher".
+     *
+     * @return array{klasse: string, konflikte: list<string>}
+     */
+    public function classify(Customer $a, Customer $b): array
+    {
+        $konflikte = $this->identityConflicts($a, $b);
+        if ($konflikte !== []) {
+            return ['klasse' => self::KLASSE_FAMILIE, 'konflikte' => $konflikte];
+        }
+
+        $nameA = $this->nameKey($a->user?->name);
+        $gleicherName = $nameA !== '' && $nameA === $this->nameKey($b->user?->name);
+        $gleichesGeburtsdatum = ! empty($a->birth_date) && ! empty($b->birth_date)
+            && $this->datum($a->birth_date) === $this->datum($b->birth_date);
+
+        return [
+            'klasse' => $gleicherName && $gleichesGeburtsdatum ? self::KLASSE_SICHER : self::KLASSE_MOEGLICH,
+            'konflikte' => [],
+        ];
+    }
+
+    /**
+     * Widersprechende Identitaetsmerkmale eines Paares, als lesbare Gruende.
+     * Ein einziger Eintrag genuegt: die beiden Akten sind verschiedene
+     * Personen und werden nie unbeaufsichtigt zusammengefuehrt.
+     *
+     * @return list<string>
+     */
+    public function identityConflicts(Customer $a, Customer $b): array
+    {
+        $gruende = [];
+
+        // Verschiedene, jeweils gesetzte Geburtsdaten -> verschiedene Personen.
+        if (! empty($a->birth_date) && ! empty($b->birth_date)
+            && $this->datum($a->birth_date) !== $this->datum($b->birth_date)) {
+            $gruende[] = 'Abweichendes Geburtsdatum ('.$this->datumAnzeige($a->birth_date)
+                .' / '.$this->datumAnzeige($b->birth_date).')';
+        }
+
+        $ta = $this->nameTokens($a->user?->name);
+        $tb = $this->nameTokens($b->user?->name);
+        if ($ta !== [] && $tb !== []) {
+            $gemeinsam = array_intersect($ta, $tb);
+            if ($gemeinsam === []) {
+                $gruende[] = 'Kein gemeinsamer Namensbestandteil';
+            } else {
+                // Gleicher Nachname, aber ein ANDERER Vorname: auf beiden
+                // Seiten bleibt ein Namensteil uebrig, der auf der anderen
+                // fehlt ("Maher Abboud" / "Ahmad Jihad Abboud"). Ein
+                // zusaetzlicher zweiter Vorname auf nur EINER Seite ist kein
+                // Widerspruch ("Ahmad Abboud" / "Ahmad Jihad Abboud"), ein
+                // Tippfehler ebenfalls nicht ("Mohamad" / "Mohammad").
+                [$restA, $restB] = $this->ohneTippfehler(
+                    array_values(array_diff($ta, $gemeinsam)),
+                    array_values(array_diff($tb, $gemeinsam))
+                );
+                if ($restA !== [] && $restB !== []) {
+                    $gruende[] = 'Abweichender Vorname ('.implode(' ', array_map('ucfirst', $restA))
+                        .' / '.implode(' ', array_map('ucfirst', $restB)).')';
+                }
+            }
+        }
+
+        return $gruende;
+    }
+
+    /**
+     * Duerfen zwei Kunden zusammengefuehrt werden, ohne dass ein Admin den
+     * Widerspruch ausdruecklich uebersteuert? Nein, sobald ein
+     * Identitaetsmerkmal WIDERSPRICHT (Audit MERGE-1, KI-063).
      */
     public function hasIdentityConflict(Customer $a, Customer $b): bool
     {
-        // Verschiedene, jeweils gesetzte Geburtsdaten -> verschiedene Personen.
-        if (! empty($a->birth_date) && ! empty($b->birth_date)
-            && (string) $a->birth_date !== (string) $b->birth_date) {
-            return true;
+        return $this->identityConflicts($a, $b) !== [];
+    }
+
+    /**
+     * Entfernt Namensteile, die auf der Gegenseite als Tippfehler-Variante
+     * vorkommen (Levenshtein <= 1 bei kurzen, <= 2 bei langen Woertern).
+     *
+     * @param list<string> $a
+     * @param list<string> $b
+     * @return array{0: list<string>, 1: list<string>}
+     */
+    private function ohneTippfehler(array $a, array $b): array
+    {
+        foreach ($a as $i => $x) {
+            foreach ($b as $j => $y) {
+                $grenze = min(strlen($x), strlen($y)) >= 6 ? 2 : 1;
+                if (min(strlen($x), strlen($y)) >= 4 && levenshtein($x, $y) <= $grenze) {
+                    unset($a[$i], $b[$j]);
+                    break;
+                }
+            }
         }
-        // Namen ohne EIN gemeinsames Wort -> verschiedene Personen.
-        $ta = array_values(array_filter(explode(' ', $this->nameKey($a->user?->name)), fn ($t) => $t !== ''));
-        $tb = array_values(array_filter(explode(' ', $this->nameKey($b->user?->name)), fn ($t) => $t !== ''));
-        if ($ta !== [] && $tb !== [] && array_intersect($ta, $tb) === []) {
-            return true;
+
+        return [array_values($a), array_values($b)];
+    }
+
+    /** @return list<string> */
+    private function nameTokens(?string $name): array
+    {
+        return array_values(array_unique(array_filter(explode(' ', $this->nameKey($name)), fn ($t) => $t !== '')));
+    }
+
+    /** Geburtsdatum normiert (Y-m-d) - die Spalte kommt als Datum ODER Zeichenkette. */
+    private function datum(mixed $wert): string
+    {
+        try {
+            return Carbon::parse($wert)->format('Y-m-d');
+        } catch (\Throwable) {
+            return (string) $wert;
         }
-        return false;
+    }
+
+    private function datumAnzeige(mixed $wert): string
+    {
+        try {
+            return Carbon::parse($wert)->format('d.m.Y');
+        } catch (\Throwable) {
+            return (string) $wert;
+        }
+    }
+
+    /**
+     * Paare mit festgelegter Familienrolle als Schluessel "a|b" (sortiert
+     * wie CustomerRelationship::pairKey).
+     *
+     * @return array<string, bool>
+     */
+    private function familyPairKeySet(): array
+    {
+        $set = [];
+        foreach (CustomerFamilyRelation::query()->get(['customer_id', 'related_customer_id']) as $r) {
+            [$ka, $kb] = CustomerRelationship::pairKey((string) $r->customer_id, (string) $r->related_customer_id);
+            $set[$ka.'|'.$kb] = true;
+        }
+
+        return $set;
     }
 
     /** @param array<int, ?string> $left @param array<int, ?string> $right */

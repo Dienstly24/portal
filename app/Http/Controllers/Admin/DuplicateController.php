@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\CustomerRelationship;
 use App\Services\Matching\CustomerMatchingService;
@@ -49,9 +50,12 @@ class DuplicateController extends Controller
 
         // Jedes Paar mit Filterkategorien versehen + Kategorie-Zaehler fuer die
         // Schnellfilter-Buttons (Namen / Adressen / E-Mails / Telefon / IBAN ...).
-        $counts = ['name' => 0, 'address' => 0, 'email' => 0, 'phone' => 0, 'iban' => 0, 'contract' => 0, 'birthdate' => 0];
+        $counts = ['familie' => 0, 'name' => 0, 'address' => 0, 'email' => 0, 'phone' => 0, 'iban' => 0, 'contract' => 0, 'birthdate' => 0];
         $pairs = array_map(function ($p) use (&$counts) {
             $cats = [];
+            if ($p['klasse'] === DuplicateDetectionService::KLASSE_FAMILIE) {
+                $cats['familie'] = true;
+            }
             foreach ($p['signals'] as $s) {
                 if (isset(self::SIGNAL_CATEGORIES[$s])) {
                     $cats[self::SIGNAL_CATEGORIES[$s]] = true;
@@ -64,13 +68,9 @@ class DuplicateController extends Controller
             return $p;
         }, $result['pairs']);
 
-        // Wie im Merge-All-Pfad: Paare mit widersprechendem Identitaetsmerkmal
-        // zaehlen NICHT als "sicher" (Audit MERGE-1), damit die Button-Zahl der
-        // tatsaechlichen Aktion entspricht.
-        $strongCount = count(array_filter(
-            $pairs,
-            fn ($p) => $p['score'] >= $autoMin && ! $detection->hasIdentityConflict($p['primary'], $p['duplicate'])
-        ));
+        // Dieselbe Klasse wie im Merge-All-Pfad - die Button-Zahl entspricht
+        // damit genau der Aktion (KI-063).
+        $strongCount = count(array_filter($pairs, fn ($p) => $p['klasse'] === DuplicateDetectionService::KLASSE_SICHER));
 
         return view('admin.customer_duplicates', [
             'pairs' => $pairs,
@@ -322,8 +322,20 @@ class DuplicateController extends Controller
             return back()->with('error', 'Zu viele auf einmal: höchstens '.self::MANUAL_MERGE_CAP.' Zusammenführungen pro Aktion. Bitte Auswahl verkleinern oder „Alle sicheren zusammenführen" nutzen.');
         }
 
+        // Verschiedene Personen (abweichendes Geburtsdatum/Vorname) werden
+        // NIE ueber die Sammelauswahl zusammengefuehrt - "Alle auswaehlen"
+        // erfasste sonst Vater und Sohn mit (KI-063). Geprueft wird JEDES
+        // Paar einer Gruppe, nicht nur die ausgewaehlten Kanten: ueber eine
+        // Akte ohne Geburtsdatum koennten sonst zwei Personen in dieselbe
+        // Gruppe rutschen.
+        [$clusters, $blocked] = $this->withoutConflictingClusters($clusters, app(DuplicateDetectionService::class));
+
         $res = $this->mergeClusters($clusters, $merge);
-        return redirect()->route('admin.customers.duplicates')->with('success', $this->mergeSummary($res, false));
+        $message = $this->mergeSummary($res, false);
+        if ($blocked > 0) {
+            $message .= ' '.$blocked.' Auswahl(en) NICHT zusammengeführt: widersprechende Identitätsmerkmale (z. B. abweichendes Geburtsdatum oder Vorname) – das sind verschiedene Personen. Bitte „Beziehung festlegen".';
+        }
+        return redirect()->route('admin.customers.duplicates')->with('success', $message);
     }
 
     /**
@@ -334,24 +346,20 @@ class DuplicateController extends Controller
      * bei Bedarf zum erneuten Klick auf, bis alles bereinigt ist.
      */
     public function duplicatesMergeAll(DuplicateDetectionService $detection, CustomerMergeService $merge) {
-        $min = DuplicateDetectionService::AUTO_MERGE_MIN_SCORE;
-
         // Frischer Scan (nie auf veraltete Seiten-Daten verlassen).
         $result = $detection->scan($this->visibleCustomerIds());
-        // Paare mit widersprechendem Identitaetsmerkmal (verschiedenes
-        // Geburtsdatum/kein gemeinsames Namenswort) NIE unbeaufsichtigt
-        // zusammenfuehren - gemeinsames Konto/Vertrag hebt den Score sonst auf
-        // >= 85, obwohl es zwei Personen sein koennen (Audit MERGE-1). Diese
-        // bleiben der manuellen Einzelpruefung vorbehalten.
+        // NUR die Klasse "sicher" (gleicher Name UND gleiches Geburtsdatum,
+        // kein Widerspruch). Gemeinsame E-Mail/Telefon/Anschrift/IBAN allein
+        // reichen nie - genau die teilen Familien (KI-063, Audit MERGE-1).
         $strong = array_values(array_filter(
             $result['pairs'],
-            fn ($p) => $p['score'] >= $min && ! $detection->hasIdentityConflict($p['primary'], $p['duplicate'])
+            fn ($p) => $p['klasse'] === DuplicateDetectionService::KLASSE_SICHER
         ));
 
         if ($strong === []) {
             return redirect()->route('admin.customers.duplicates')
-                ->with('success', "Keine sicheren Treffer (>= {$min} %) zum automatischen Zusammenführen gefunden. "
-                    .'Verdachtsfaelle mit abweichendem Geburtsdatum/Namen bitte einzeln pruefen.');
+                ->with('success', 'Keine sicheren Dubletten (gleicher Name und gleiches Geburtsdatum) zum automatischen Zusammenführen gefunden. '
+                    .'Alle übrigen Verdachtsfälle bitte einzeln prüfen.');
         }
 
         $edges = [];
@@ -369,7 +377,7 @@ class DuplicateController extends Controller
         }
 
         // Cluster bilden, dann pro Lauf deckeln (Rest beim naechsten Klick).
-        $clusters = $this->clusterPairs($edges, $ids);
+        [$clusters] = $this->withoutConflictingClusters($this->clusterPairs($edges, $ids), $detection);
         $limited = [];
         $removals = 0;
         foreach ($clusters as $cluster) {
@@ -383,7 +391,7 @@ class DuplicateController extends Controller
 
         $res = $this->mergeClusters($limited, $merge);
         $more = count($limited) < count($clusters);
-        $message = "{$res['merged']} sichere Zusammenführung(en) (>= {$min} %) durchgeführt.";
+        $message = "{$res['merged']} sichere Zusammenführung(en) durchgeführt.";
         if ($more) {
             $message .= ' Es waren mehr vorhanden – bitte erneut klicken, um die restlichen zu bereinigen.';
         }
@@ -418,11 +426,13 @@ class DuplicateController extends Controller
                     ->where('customers.id', (string) $match->customer->id)->first();
             }
         }
+        $konflikte = [];
         if ($suggested) {
             $preview = $merge->preview($suggested);
+            $konflikte = app(DuplicateDetectionService::class)->identityConflicts($customer, $suggested);
         }
 
-        return view('admin.customer_merge', compact('customer', 'suggested', 'preview'));
+        return view('admin.customer_merge', compact('customer', 'suggested', 'preview', 'konflikte'));
     }
 
     public function mergeCustomers(Request $request, $id, CustomerMergeService $merge) {
@@ -433,11 +443,75 @@ class DuplicateController extends Controller
         $dup = Customer::with('user')->findOrFail($request->duplicate_id);
         if ((string) $primary->id === (string) $dup->id) return back()->with('success', 'Gleicher Kunde gewählt.');
 
+        // Widerspricht ein Identitaetsmerkmal (abweichendes Geburtsdatum,
+        // anderer Vorname), sind es verschiedene Personen. Zusammenfuehren
+        // nur, wenn der Admin den Widerspruch ausdruecklich uebersteuert und
+        // begruendet - protokolliert (KI-063). Vorher genuegte ein Klick.
+        $konflikte = app(DuplicateDetectionService::class)->identityConflicts($primary, $dup);
+        if ($konflikte !== []) {
+            // Zurueck IMMER auf das Formular MIT diesem Duplikat - nur dort
+            // stehen die Widersprueche und die Felder zum Uebersteuern (auch
+            // wenn es per Sofort-Suche statt per Vorschlag gewaehlt wurde).
+            $pruefung = validator($request->all(), [
+                'konflikt_bestaetigt' => 'accepted',
+                'konflikt_begruendung' => 'required|string|min:15|max:500',
+            ], [
+                'konflikt_bestaetigt.accepted' => 'Die beiden Akten widersprechen sich ('.implode('; ', $konflikte).'). Bitte bestätigen Sie ausdrücklich, dass es trotzdem dieselbe Person ist – oder legen Sie eine Beziehung fest.',
+                'konflikt_begruendung.required' => 'Bitte begründen Sie, warum es trotz des Widerspruchs dieselbe Person ist.',
+                'konflikt_begruendung.min' => 'Die Begründung muss mindestens 15 Zeichen lang sein.',
+            ]);
+            if ($pruefung->fails()) {
+                return redirect()->to(route('admin.customer.merge', $primary->id).'?duplicate='.$dup->id)
+                    ->withErrors($pruefung)->withInput();
+            }
+            ActivityLog::record('customer_merge_override', 'customer', $primary->id, [
+                'duplicate_id' => (string) $dup->id,
+                'duplicate_number' => $dup->customer_number,
+                'konflikte' => $konflikte,
+                'begruendung' => (string) $request->input('konflikt_begruendung'),
+            ]);
+        }
+
         $moved = $merge->merge($primary, $dup, auth()->id());
 
         $summary = collect($moved)->sum();
         return redirect()->route('admin.customer', $primary->id)
             ->with('success', "Kunden erfolgreich zusammengeführt. {$summary} verknüpfte Datensätze wurden übertragen, nichts wurde gelöscht.");
+    }
+
+    /**
+     * Entfernt Gruppen, in denen IRGENDEIN Paar einen Identitaets-Widerspruch
+     * hat (verschiedene Personen). Gibt die verbleibenden Gruppen und die
+     * Anzahl der verworfenen zurueck.
+     *
+     * @param array<int, array<int, string>> $clusters
+     * @return array{0: array<int, array<int, string>>, 1: int}
+     */
+    private function withoutConflictingClusters(array $clusters, DuplicateDetectionService $detection): array {
+        $allIds = array_merge([], ...array_map('array_values', $clusters));
+        $customers = Customer::with('user')->whereIn('id', $allIds)->get()->keyBy(fn ($c) => (string) $c->id);
+
+        $ok = [];
+        $blocked = 0;
+        foreach ($clusters as $members) {
+            $present = array_values(array_filter($members, fn ($id) => $customers->has((string) $id)));
+            $conflict = false;
+            for ($i = 0; $i < count($present) && ! $conflict; $i++) {
+                for ($j = $i + 1; $j < count($present); $j++) {
+                    if ($detection->hasIdentityConflict($customers[(string) $present[$i]], $customers[(string) $present[$j]])) {
+                        $conflict = true;
+                        break;
+                    }
+                }
+            }
+            if ($conflict) {
+                $blocked++;
+                continue;
+            }
+            $ok[] = $members;
+        }
+
+        return [$ok, $blocked];
     }
 
     /**

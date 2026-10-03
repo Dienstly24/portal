@@ -97,8 +97,9 @@ class DuplicateBulkMergeTest extends TestCase
         // gleiche IBAN, damit Score sicher >= 40 liegt.
         $s1 = $this->customer('Stark Eins', 'stark1@example.com');
         $s2 = $this->customer('Stark Eins', 'stark2@example.com');
-        $s1->update(['iban' => 'DE89370400440532013000']);
-        $s2->update(['iban' => 'DE89 3704 0044 0532 0130 00']);
+        // Sicher heisst seit KI-063: gleicher Name UND gleiches Geburtsdatum.
+        $s1->update(['iban' => 'DE89370400440532013000', 'birth_date' => '1980-01-01']);
+        $s2->update(['iban' => 'DE89 3704 0044 0532 0130 00', 'birth_date' => '1980-01-01']);
 
         // Schwacher Treffer: NUR gleicher Name (Score 30 < 40).
         $w1 = $this->customer('Schwach Zwei', 'schwach1@example.com');
