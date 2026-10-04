@@ -209,7 +209,7 @@ class DublettenFamilieTest extends TestCase
 
         // Das Formular zeigt den Widerspruch und die Felder zum Uebersteuern.
         $this->actingAs($admin)->get(route('admin.customer.merge', $vater->id).'?duplicate='.$sohn->id)
-            ->assertOk()->assertSee('Vermutlich verschiedene Personen')->assertSee('konflikt_begruendung', false);
+            ->assertOk()->assertSee('Zusammenführen gesperrt')->assertSee('Abweichendes Geburtsdatum')->assertSee('konflikt_begruendung', false);
 
         // Bewusst uebersteuert: wird zusammengefuehrt UND protokolliert.
         $this->actingAs($admin)->post(route('admin.customer.merge.do', $vater->id), [

@@ -4528,10 +4528,20 @@ Merge von PR #358, Teil E/F).
 - Paare mit Familienrolle (`customer_family_relations`) erscheinen nicht
   mehr als Verdachtsfall, auch ohne Gleichlauf-Zeile in
   `customer_relationships`.
-- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-2
-  Merge-Sperren (beide mit aktivem Portalzugang, Login wird nicht mehr
-  geloescht KI-065, Familienrollen-Rueckrichtung KI-066,
-  KI-Unterhaltung KI-067, Massen-Merge nur `sicher` KI-068); PR-3
+- **Merge-Sperren (PR-2, 03.10.2026)**: `CustomerMergeService::
+  mergeBlockers()` ist die EINE Sperrliste - Identitaets-Widersprueche
+  plus "beide haben einen aktiven Portalzugang" (echte Adresse, schon
+  angemeldet, nicht deaktiviert). `merge()` SELBST verweigert sich ohne
+  Begruendung (`MergeBlockedException`), damit kein neuer Aufrufweg die
+  Pruefung umgeht. Uebersteuert ein Admin, wird ein benutzter
+  unterlegener Zugang DEAKTIVIERT, nie geloescht (KI-065).
+  `customer_family_relations` wird in BEIDEN Spalten umgehaengt, ohne
+  Selbst-Paar (KI-066). Sammel-Merge nur, wenn JEDES Paar einer Gruppe
+  `sicher` ist und keine Sperre traegt (KI-068). KI-067
+  (KI-Unterhaltung) war ein Fehlbefund - der UNIQUE auf
+  `ai_conversations.customer_id` existiert seit 06.09.2026 nicht mehr.
+  Tests: `MergeSperrenTest`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-3
   Archiv statt Hard-Delete (`merged_into_id`/`archived_at`, nicht
   SoftDeletes), Kundennummer-Alias, Feldwahl, Undo 30 Tage (KI-064);
   PR-4 geteilte Kontaktdaten + Adressnormalisierung (KI-069); PR-5

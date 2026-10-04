@@ -29,7 +29,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - R Merge/Sammel-Merge admin/manager; Beziehungen alle Personalrollen im Portfolio
 - Gleichlauf mit F-003 (Familienrollen) in einer Transaktion, seit 01.10.2026
 - Klassifikation `DuplicateDetectionService::classify()` (sicher / moeglich / moegliche Familie) seit 03.10.2026 - EINE Quelle fuer Anzeige und alle Merge-Wege (KI-063)
-- Tests `DublettenFamilieTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
+- Merge-Sperren `CustomerMergeService::mergeBlockers()` (Widerspruch, zwei aktive Portalzugaenge) - `merge()` verweigert sich ohne Begruendung; Sammel-Merge nur `sicher` (KI-065/068)
+- Tests `DublettenFamilieTest`, `MergeSperrenTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
 - Status **ACTIVE**
 
 ### F-003 Familie und Kundenbeziehungen (inkl. Uebergang mit 15)
