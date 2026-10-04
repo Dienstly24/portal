@@ -11,6 +11,8 @@ use App\Models\ErrorEvent;
 use App\Models\ScheduledTaskRun;
 use App\Models\User;
 use App\Services\Ai\Assistant\AssistantSettings;
+use App\Services\Pdf\PdfEingangspruefung;
+use App\Services\Signature\SignatureQualityGate;
 use App\Support\Bildverarbeitung;
 use App\Support\LocalTime;
 use Illuminate\Console\Scheduling\Schedule;
@@ -371,6 +373,28 @@ class SystemHealthService
             'value' => $bildFehlt === [] ? 'verfuegbar' : 'fehlt',
             'status' => $bildFehlt === [] ? self::OK : self::FAIL,
             'hint' => $bildFehlt === [] ? null : Bildverarbeitung::hinweisFuerBetrieb(),
+        ];
+
+        // --- SIGNATUREN: Strukturpruefung und Qualitaetsgate (04.10.2026)
+        //
+        // qpdf prueft hochgeladene PDF und repariert beschaedigte; ohne
+        // qpdf laeuft das Modul weiter, nur diese Pruefung entfaellt - also
+        // ein Hinweis, kein Ausfall. Die Qualitaets-Zeile ist dagegen ROT,
+        // sobald ein Dokument die Pruefung nicht besteht: genau das ist der
+        // stille Ausfall, der am 03.10.2026 elf Vorgaenge betraf.
+        $qpdf = PdfEingangspruefung::qpdfVerfuegbar();
+        $items[] = [
+            'label' => 'PDF-Pruefung (qpdf)',
+            'value' => $qpdf ? 'verfuegbar' : 'fehlt',
+            'status' => $qpdf ? self::OK : self::WARN,
+            'hint' => $qpdf ? null : 'Signaturen pruefen hochgeladene PDF dann nicht auf Schaeden. Installation: apt install qpdf',
+        ];
+        $betroffen = SignatureQualityGate::betroffene()->count();
+        $items[] = [
+            'label' => 'Signatur-Qualitaet',
+            'value' => $betroffen === 0 ? 'keine Befunde' : $betroffen.' Vorgang/Vorgaenge mit Befund',
+            'status' => $betroffen === 0 ? self::OK : self::FAIL,
+            'hint' => $betroffen === 0 ? null : 'Signaturen -> Qualitaet: Dokument neu erzeugen oder Vorgang pruefen.',
         ];
 
         // --- KANAL-ZUGAENGE (WhatsApp & Co.)

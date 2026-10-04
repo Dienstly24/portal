@@ -51,7 +51,7 @@ class SignedPdfBuilder
         }
 
         $document = PdfDocument::open($original);
-        $stamper = new PdfStamper($document);
+        $stamper = new PdfStamper($document, $request->nutztCropBox());
 
         $request->loadMissing(['fields.signer', 'fields.companyAsset', 'signers']);
 
@@ -63,7 +63,7 @@ class SignedPdfBuilder
             if ($pageIndex >= $document->pageCount()) {
                 continue; // Eine Seite, die es nicht (mehr) gibt, wird uebersprungen statt geraten.
             }
-            $page = $document->page($pageIndex);
+            $page = FeldGeometrie::bezugsseite($request, $document->page($pageIndex));
 
             // Anteilige Position in Punkte der ANZEIGE-Seite - die EINE
             // Umrechnung, die auch Selbsttest und Diagnose benutzen.
@@ -204,6 +204,12 @@ class SignedPdfBuilder
                 'Titel: '.$request->title,
                 'Original-Datei: '.$request->original_name,
                 'SHA-256 des Originals: '.$request->original_hash,
+                // Wurde beim Hochladen repariert (qpdf), nennt das Protokoll
+                // BEIDE Dateien: die hochgeladene und die geprueft reparierte
+                // Basis, auf der unterschrieben wurde.
+                $request->upload_original_hash !== null
+                    ? 'SHA-256 der hochgeladenen Datei (vor der Reparatur): '.$request->upload_original_hash
+                    : null,
                 'Signaturanfrage: '.$request->id,
                 $request->reference !== null ? 'Referenz: '.$request->reference : null,
                 'Erstellt: '.$this->zeit($request->created_at),
@@ -212,7 +218,7 @@ class SignedPdfBuilder
                 // Die Unterschriften selbst sind unveraendert - neu ist nur
                 // ihre Darstellung im Dokument.
                 $neuErzeugt !== null
-                    ? 'Neu erzeugt: '.$this->zeit($neuErzeugt).' (Korrektur der Darstellung, Unterschriften unveraendert)'
+                    ? 'Neu erzeugt: '.$this->zeit($neuErzeugt).' (Korrektur der Darstellung, Unterschriften unverändert)'
                     : null,
             ])),
         ]];
@@ -223,12 +229,12 @@ class SignedPdfBuilder
                 'lines' => array_values(array_filter([
                     'E-Mail: '.$signer->email,
                     $signer->verified_at
-                        ? 'E-Mail bestaetigt: '.$this->zeit($signer->verified_at)
-                        : 'E-Mail-Bestaetigung: nicht angefordert',
-                    $signer->viewed_at ? 'Dokument geoeffnet: '.$this->zeit($signer->viewed_at) : null,
+                        ? 'E-Mail bestätigt: '.$this->zeit($signer->verified_at)
+                        : 'E-Mail-Bestätigung: nicht angefordert',
+                    $signer->viewed_at ? 'Dokument geöffnet: '.$this->zeit($signer->viewed_at) : null,
                     $signer->signed_at ? 'Unterschrieben: '.$this->zeit($signer->signed_at) : null,
                     $signer->ip_address ? 'IP-Adresse: '.$signer->ip_address : null,
-                    $signer->user_agent ? 'Geraet: '.mb_substr($signer->user_agent, 0, 90) : null,
+                    $signer->user_agent ? 'Gerät: '.$signer->user_agent : null,
                 ])),
             ];
         }
@@ -247,10 +253,10 @@ class SignedPdfBuilder
                 }
                 $zeilen[] = $asset->typeLabel().': '.$asset->name.' (Seite '.$feld->page.')';
                 $zeilen[] = '  eingesetzt von: '.($asset->creator->name ?? 'unbekannt')
-                    .'; SHA-256 des Bildes: '.mb_substr($asset->hash, 0, 32).'...';
+                    .'; SHA-256 des Bildes: '.$asset->hash;
             }
             $zeilen[] = 'Die Unternehmenssignatur ist KEINE Unterschrift einer Person und keine';
-            $zeilen[] = 'Willenserklaerung eines Unterzeichners - sie wird vom Betrieb aufgebracht.';
+            $zeilen[] = 'Willenserklärung eines Unterzeichners - sie wird vom Betrieb aufgebracht.';
             // Der Firmenname steht in der UEBERSCHRIFT: wer das Protokoll
             // liest, soll nicht erst in den Zeilen suchen muessen, WELCHE
             // Firma hier gezeichnet hat.
@@ -269,9 +275,9 @@ class SignedPdfBuilder
             'title' => 'Rechtlicher Hinweis',
             'lines' => array_values(array_filter([
                 'Einfache elektronische Signatur (eIDAS Art. 3 Nr. 10) mit technischem Nachweis.',
-                'Keine qualifizierte elektronische Signatur; keine Signaturpruefung durch einen Vertrauensdienst.',
-                $request->consent_text ? 'Zustimmungstext: '.mb_substr($request->consent_text, 0, 160) : null,
-                'Vollstaendiges Ereignisprotokoll: im Dienstly24-Portal zur Signaturanfrage.',
+                'Keine qualifizierte elektronische Signatur; keine Signaturprüfung durch einen Vertrauensdienst.',
+                $request->consent_text ? 'Zustimmungstext: '.$request->consent_text : null,
+                'Vollständiges Ereignisprotokoll: im Dienstly24-Portal zur Signaturanfrage.',
             ])),
         ];
 

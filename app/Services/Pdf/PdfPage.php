@@ -20,7 +20,43 @@ final class PdfPage
         /** @var array{0: float, 1: float, 2: float, 3: float} */
         public readonly array $mediaBox,
         public readonly int $rotate,
+        /** @var array{0: float, 1: float, 2: float, 3: float}|null auf die MediaBox beschnitten; null = wie MediaBox */
+        public readonly ?array $cropBox = null,
     ) {
+    }
+
+    /** Weicht der sichtbare Bereich (CropBox) von der MediaBox ab? */
+    public function hatAbweichendeCropBox(): bool
+    {
+        if ($this->cropBox === null) {
+            return false;
+        }
+        foreach ([0, 1, 2, 3] as $i) {
+            if (abs($this->cropBox[$i] - $this->mediaBox[$i]) > 0.5) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Dieselbe Seite, aber mit dem SICHTBAREN Bereich als Bezugsflaeche.
+     *
+     * Ein Betrachter (Acrobat, Browser, Vorschau) zeigt die CropBox, nicht
+     * die MediaBox. Wird ein Feld auf die MediaBox bezogen, kann es in
+     * einem Rand liegen, den der Kunde nie zu sehen bekommt. Mit dieser
+     * Fassung rechnen Stempler, Selbsttest und Diagnose fuer Anfragen mit
+     * Feldbezug "cropbox" - Drehung und Versatz laufen unveraendert ueber
+     * dieselben Formeln, nur die Flaeche ist eine andere.
+     */
+    public function alsSichtbereich(): self
+    {
+        if ($this->cropBox === null) {
+            return $this;
+        }
+
+        return new self($this->index, $this->objectNumber, $this->cropBox, $this->rotate, null);
     }
 
     public function width(): float

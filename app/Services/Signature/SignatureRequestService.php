@@ -10,6 +10,7 @@ use App\Models\SignatureSigner;
 use App\Models\User;
 use App\Services\Notifications\NotificationService;
 use App\Services\Pdf\PdfDocument;
+use App\Services\Pdf\PdfEingangspruefung;
 use App\Services\Pdf\PdfException;
 use App\Support\SignatureFieldType;
 use App\Support\SignatureStatus;
@@ -34,6 +35,7 @@ class SignatureRequestService
         private readonly SignatureTokenService $tokens,
         private readonly SignatureAuditService $audit,
         private readonly NotificationService $notifications,
+        private readonly PdfEingangspruefung $eingang,
     ) {
     }
 
@@ -49,10 +51,16 @@ class SignatureRequestService
      */
     public function createFromUpload(UploadedFile $file, array $attributes, ?User $user = null): SignatureRequest
     {
-        $binary = file_get_contents($file->getRealPath());
-        if ($binary === false || $binary === '') {
+        $hochgeladen = file_get_contents($file->getRealPath());
+        if ($hochgeladen === false || $hochgeladen === '') {
             throw new PdfException('Die hochgeladene Datei ist leer.');
         }
+        // EINGANGSPRUEFUNG (A3, 04.10.2026): verschluesselt -> klare
+        // Meldung; beschaedigt -> von qpdf neu geschrieben und erneut
+        // geprueft. Die Basis fuer Felder und Stempel ist danach eine
+        // Datei, die die Strukturpruefung besteht.
+        $eingang = $this->eingang->pruefe($hochgeladen);
+        $binary = $eingang['pdf'];
         $pageCount = $this->inspect($binary);
 
         $request = new SignatureRequest([
@@ -66,6 +74,9 @@ class SignatureRequestService
             'original_hash' => hash('sha256', $binary),
             'original_size' => strlen($binary),
             'page_count' => $pageCount,
+            // Neue Anfragen beziehen ihre Felder auf die CropBox - die
+            // Flaeche, die jeder Betrachter zeigt (siehe FeldGeometrie).
+            'feld_bezug' => SignatureRequest::BEZUG_CROPBOX,
             'signing_order' => ($attributes['signing_order'] ?? 'sequential') === 'parallel' ? 'parallel' : 'sequential',
             // Voreinstellung KEINE (Betreiber-Vorgabe 13.09.2026): eine
             // zusaetzliche Huerde wird bewusst gewaehlt, nie stillschweigend
@@ -85,16 +96,35 @@ class SignatureRequestService
         ]);
         $request->id = (string) Str::uuid();
         $request->original_path = $this->storage->originalPath($request);
+        if ($eingang['repariert']) {
+            $request->upload_original_path = $this->storage->uploadOriginalPath($request);
+            $request->upload_original_hash = hash('sha256', $hochgeladen);
+        }
         $request->save();
 
         $this->storage->disk()->put($request->original_path, $binary);
+        if ($eingang['repariert']) {
+            // Die hochgeladene Datei bleibt erhalten - mit ihrem Hash.
+            $this->storage->disk()->put((string) $request->upload_original_path, $hochgeladen);
+        }
 
         $this->audit->record($request, 'created', description: $request->title);
         $this->audit->record($request, 'document_uploaded', description: $request->original_name, meta: [
             'sha256' => $request->original_hash,
             'seiten' => $pageCount,
             'bytes' => $request->original_size,
+            'qpdf' => $eingang['qpdf'],
         ]);
+        if ($eingang['repariert']) {
+            $this->audit->record($request, 'document_repaired',
+                description: 'Beim Hochladen repariert (qpdf). Hochgeladen SHA-256 '.$request->upload_original_hash
+                    .' -> Basis SHA-256 '.$request->original_hash,
+                meta: [
+                    'sha256_hochgeladen' => $request->upload_original_hash,
+                    'sha256_basis' => $request->original_hash,
+                    'befunde' => $eingang['meldungen'],
+                ]);
+        }
 
         return $request;
     }
@@ -317,6 +347,22 @@ class SignatureRequestService
         $blockers = $this->blockersForSending($request);
         if ($blockers !== []) {
             throw new \RuntimeException(implode(' ', $blockers));
+        }
+
+        // QUALITAETSGATE VOR DEM VERSAND (A1, 04.10.2026): was der Betrieb
+        // schon jetzt ins Dokument setzt (Unternehmenssignatur), wird im
+        // Speicher gestempelt und am Bild geprueft. Ein unsichtbarer Stempel
+        // faellt damit HIER auf - nicht erst, wenn der Kunde unterschrieben
+        // hat und das fertige Dokument die Pruefung nicht besteht.
+        $request->loadMissing(['fields.companyAsset']);
+        if ($request->fields->contains(fn (SignatureField $f) => $f->isFilled())) {
+            $gate = app(SignatureQualityGate::class);
+            $start = hrtime(true);
+            $befunde = $gate->vorschau($request);
+            $gate->vermerke($request, $befunde, 'Versand', (int) round((hrtime(true) - $start) / 1_000_000));
+            if ($befunde !== []) {
+                throw new \RuntimeException('Vor dem Versand geprüft - nicht versendet: '.implode(' ', $befunde));
+            }
         }
 
         $request->forceFill([

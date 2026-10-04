@@ -45,7 +45,7 @@ EmployeeController 576 · Admin\PostfachController 516.
 | `Commission/` | `CommissionReadService` (Leseschicht ueber 3 Straenge), `CommissionWorkflowService` (Gutschriften), Quellen/Parser |
 | `Provision/` | `ContractProvisionService` (Ausgang, Hook am Contract), `ProvisionRateResolver` |
 | `Vermittler/` | TARIFCHECK24-Abrechnung + Vorgangsliste |
-| `Signature/`, `Pdf/` | Anfrage, Token, Identitaet, Seitenbilder, PDF-Stempeln (incremental update), Firmenbilder, Audit |
+| `Signature/`, `Pdf/` | Anfrage, Token, Identitaet, Seitenbilder, PDF-Stempeln (incremental update), Firmenbilder, Audit, Qualitaetsgate (`SignatureQualityGate`), Eingangspruefung (`PdfEingangspruefung`, qpdf) |
 | `ChangeRequest/` | Nachweispolitik, Beleg-Pruefung, Mitteilungen an Gesellschaften |
 | `Energy/` | Zaehlerfoto lesen, Ablesungen/Verbrauch |
 | `Family/`, `Health/` | Familienbeziehungen, Krankenkassen-Wechsel |
@@ -75,7 +75,7 @@ Regel: `retry_after` (360 s bzw. 2100 s) > laengster `timeout` (`QueueTimeoutTes
 ## Artisan-Befehle (54)
 
 Betrieb/Planer: `mailboxes:sync`, `emails:prune-unmatched`, `tickets:auto-close`,
-`signaturen:ablaufen`, `signaturen:diagnose` (nur lesend), `signaturen:neu-erzeugen`, `tickets:purge-website-leads`, `media:purge-trash`,
+`signaturen:ablaufen`, `signaturen:qualitaet-pruefen`, `signaturen:diagnose` (nur lesend), `signaturen:neu-erzeugen`, `tickets:purge-website-leads`, `media:purge-trash`,
 `activity:close-stale`, `activity:prune`, `document-requests:remind`, `tasks:remind`,
 `familie:uebergaenge-anwenden`, `tasks:send-auto-emails`, `documents:analyze-pending`,
 `ai:answer-pending`, `errors:prune`, `google:bewertungen-holen`,
@@ -111,7 +111,7 @@ Import: `energie:import`, `lexoffice:import`. KI: `ki:wissensbasis-vorschlag`,
 | alle 15 Min | `activity:close-stale`, `social:publish-scheduled` |
 | stuendlich | `tasks:send-auto-emails` (8-18), `portal:send-invitations` (8-19) |
 | alle 6 h | `social:refresh-insights` |
-| taeglich | 03:30 emails:prune-unmatched · 03:40 registrierungen:aufraeumen · 03:45 activity:prune · 03:50 documents:prune-unassigned · 03:55 errors:prune · 04:00 tickets:auto-close · 04:05 signaturen:ablaufen · 04:10 tickets:purge-website-leads + provisionen:status-aktualisieren · 04:15 media:purge-trash · 04:45 google:bewertungen-holen · 05:15 contracts:apply-endings · 05:40 familie:uebergaenge-anwenden · 06:30 health:apply-due-switches · 07:30 kind-wird-15-aufgabe · 07:45 tasks:remind · 08:00 geburtstags-mails · 08:15 document-requests:remind · 08:30 wechsel-erinnerungen · 08:40 escooter · 08:45 schutzbrief · 09:00 portal-erinnerung |
+| taeglich | 03:30 emails:prune-unmatched · 03:40 registrierungen:aufraeumen · 03:45 activity:prune · 03:50 documents:prune-unassigned · 03:55 errors:prune · 04:00 tickets:auto-close · 04:05 signaturen:ablaufen · 04:10 tickets:purge-website-leads + provisionen:status-aktualisieren · 04:15 media:purge-trash · 04:25 signaturen:qualitaet-pruefen · 04:45 google:bewertungen-holen · 05:15 contracts:apply-endings · 05:40 familie:uebergaenge-anwenden · 06:30 health:apply-due-switches · 07:30 kind-wird-15-aufgabe · 07:45 tasks:remind · 08:00 geburtstags-mails · 08:15 document-requests:remind · 08:30 wechsel-erinnerungen · 08:40 escooter · 08:45 schutzbrief · 09:00 portal-erinnerung |
 
 Jeder Lauf wird in `scheduled_task_runs` protokolliert (sichtbar auf `/admin/systemzustand`).
 Cron-Eintrag `schedule:run` auf dem Server: **UNKNOWN** (nicht im Repo; die

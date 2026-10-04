@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\SignatureField;
+use App\Models\SignatureRequest;
 use App\Services\Pdf\PdfPage;
 
 /**
@@ -12,9 +13,11 @@ use App\Services\Pdf\PdfPage;
  *
  * WAS GESPEICHERT IST (`signature_fields.pos_x/pos_y/width/height`):
  * ANTEILE von 0 bis 1 der ANZEIGE-Seite - also der Seite NACH Anwendung
- * von /Rotate, bezogen auf die MediaBox (so rendert auch pdftoppm ohne
- * -cropbox die Vorschau, auf der das Feld gesetzt wurde), Ursprung OBEN
- * LINKS. Damit sind die Werte unabhaengig vom Zoom des Editors und von
+ * von /Rotate, Ursprung OBEN LINKS. Bezugsflaeche ist je Anfrage
+ * `signature_requests.feld_bezug`: "mediabox" fuer den Bestand vor
+ * 04.10.2026 (Vorschau ohne -cropbox gerendert), "cropbox" fuer alle neuen
+ * Anfragen (Vorschau mit -cropbox - die Flaeche, die jeder Betrachter
+ * zeigt). Ohne CropBox sind beide gleich. Damit sind die Werte unabhaengig vom Zoom des Editors und von
  * der Bildschirmaufloesung: ein Feld bei 75 %, 100 % oder 150 % ergibt
  * denselben Anteil.
  *
@@ -25,7 +28,11 @@ use App\Services\Pdf\PdfPage;
  */
 final class FeldGeometrie
 {
-    /** @return array{0: float, 1: float, 2: float, 3: float} */
+    /**
+     * @param  PdfPage  $page  bereits in der Bezugsflaeche der Anfrage
+     *                         (siehe bezugsseite())
+     * @return array{0: float, 1: float, 2: float, 3: float}
+     */
     public static function punkte(SignatureField $field, PdfPage $page): array
     {
         return self::ausAnteilen(
@@ -36,6 +43,15 @@ final class FeldGeometrie
             $page->displayWidth(),
             $page->displayHeight(),
         );
+    }
+
+    /**
+     * Die Seite in der Flaeche, auf die sich die Feldanteile DIESER Anfrage
+     * beziehen: MediaBox (Bestand) oder CropBox (neu seit 04.10.2026).
+     */
+    public static function bezugsseite(?SignatureRequest $request, PdfPage $page): PdfPage
+    {
+        return $request !== null && $request->nutztCropBox() ? $page->alsSichtbereich() : $page;
     }
 
     /** @return array{0: float, 1: float, 2: float, 3: float} */

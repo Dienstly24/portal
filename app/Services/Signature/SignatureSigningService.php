@@ -32,12 +32,15 @@ class SignatureSigningService
     /** Groesse des Unterschriftsbildes - genug fuer den Druck, wenig fuers Netz. */
     private const MAX_SIGNATURE_PX = 1600;
 
+    /** So lange zeigt der Link nach dem Abschluss noch das fertige Dokument. */
+    public const NACHLAUF_TAGE = 7;
+
     public function __construct(
         private readonly SignatureStorage $storage,
         private readonly SignatureAuditService $audit,
         private readonly SignedPdfBuilder $pdf,
         private readonly SignatureRequestService $requests,
-        private readonly SignedPdfVerifier $verifier,
+        private readonly SignatureQualityGate $gate,
     ) {
     }
 
@@ -391,6 +394,7 @@ class SignatureSigningService
 
     private function completeUnterSperre(SignatureRequest $request): void
     {
+        $start = hrtime(true);
         try {
             $result = $this->pdf->build($request);
             // SELBSTTEST VOR "Abgeschlossen" (KI-058): ein Dokument, das
@@ -398,7 +402,8 @@ class SignatureSigningService
             // verschickt - der Vorgang steht dann sichtbar auf "Fehler bei
             // Fertigstellung" und laesst sich neu erzeugen.
             $original = (string) $this->storage->read($request->original_path);
-            $befunde = $this->verifier->pruefe($request, $original, $result['pdf'], $result['bilder']);
+            $befunde = $this->gate->pruefe($request, $original, $result['pdf'], $result['bilder']);
+            $this->gate->vermerke($request, $befunde, 'Abschluss', $this->ms($start));
             if ($befunde !== []) {
                 throw new \RuntimeException('Selbsttest nicht bestanden: '.implode(' ', $befunde));
             }
@@ -409,7 +414,13 @@ class SignatureSigningService
         } catch (\Throwable $e) {
             Log::error('Signatur: unterschriebenes PDF konnte nicht erzeugt werden: '.$e->getMessage(), [
                 'signature_request_id' => $request->id,
+                'dauer_ms' => $this->ms($start),
             ]);
+            if (! isset($befunde)) {
+                // Fehler VOR der Pruefung (Erzeugung selbst gescheitert) -
+                // auch das gehoert in die Qualitaetsliste.
+                $this->gate->vermerke($request, ['Erzeugung gescheitert: '.mb_substr($e->getMessage(), 0, 200)], 'Abschluss', $this->ms($start));
+            }
             $request->forceFill([
                 'status' => SignatureStatus::COMPLETION_FAILED,
                 'last_activity_at' => now(),
@@ -436,10 +447,25 @@ class SignatureSigningService
         $this->audit->record($request, 'pdf_generated', description: 'SHA-256 '.$result['hash'].' · Selbsttest bestanden', meta: [
             'sha256' => $result['hash'],
             'sha256_original' => $request->original_hash,
+            'sha256_hochgeladen' => $request->upload_original_hash,
             'bytes' => strlen($result['pdf']),
             'selbsttest' => 'bestanden',
+            'dauer_ms' => $request->render_ms,
         ]);
         $this->audit->record($request, 'completed');
+
+        // NACH DEM ABSCHLUSS (A4, 04.10.2026): der Link kann nichts mehr
+        // ausloesen - wer unterschrieben hat, wird nur noch auf die
+        // Abschlussseite gefuehrt. Lesen darf er das fertige Dokument noch
+        // NACHLAUF_TAGE lang (die Kopie liegt ohnehin als Anhang in seinem
+        // Postfach); danach ist der Link tot statt bis zu 30 Tage lang ein
+        // Zugang zu einem unterschriebenen Vertrag.
+        $grenze = now()->addDays(self::NACHLAUF_TAGE);
+        foreach ($request->signers as $signer) {
+            if ($signer->token_hash !== null && ($signer->token_expires_at === null || $signer->token_expires_at->gt($grenze))) {
+                $signer->forceFill(['token_expires_at' => $grenze])->save();
+            }
+        }
 
         foreach ($request->signers as $signer) {
             if (! $signer->hasSigned()) {
@@ -459,6 +485,11 @@ class SignatureSigningService
 
         $this->requests->notifyCreator($request, 'Signatur abgeschlossen',
             '"'.$request->title.'" ist vollständig unterschrieben.');
+    }
+
+    private function ms(int $start): int
+    {
+        return (int) round((hrtime(true) - $start) / 1_000_000);
     }
 
     /**

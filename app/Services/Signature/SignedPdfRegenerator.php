@@ -33,7 +33,7 @@ class SignedPdfRegenerator
     public function __construct(
         private readonly SignatureStorage $storage,
         private readonly SignedPdfBuilder $builder,
-        private readonly SignedPdfVerifier $verifier,
+        private readonly SignatureQualityGate $gate,
         private readonly SignatureAuditService $audit,
         private readonly SignatureSigningService $signing,
     ) {
@@ -71,9 +71,13 @@ class SignedPdfRegenerator
         }
 
         $jetzt = now();
+        $start = hrtime(true);
         $result = $this->builder->build($request, $jetzt);
-        $befunde = $this->verifier->pruefe($request, $original, $result['pdf'], $result['bilder']);
+        $befunde = $this->gate->pruefe($request, $original, $result['pdf'], $result['bilder']);
+        $dauer = (int) round((hrtime(true) - $start) / 1_000_000);
         if ($befunde !== []) {
+            $this->gate->vermerke($request, $befunde, 'Neu erzeugen', $dauer);
+
             return ['ergebnis' => 'nicht_bestanden', 'befunde' => $befunde, 'alt' => $request->signed_hash, 'neu' => null];
         }
 
@@ -89,6 +93,7 @@ class SignedPdfRegenerator
             'signed_hash' => $result['hash'],
             'signed_size' => strlen($result['pdf']),
         ])->save();
+        $this->gate->vermerke($request, [], 'Neu erzeugen', $dauer);
 
         $this->audit->record($request, 'pdf_regenerated',
             description: 'SHA-256 alt '.substr((string) $alt, 0, 16).'… → neu '.substr($result['hash'], 0, 16).'… · Selbsttest bestanden',

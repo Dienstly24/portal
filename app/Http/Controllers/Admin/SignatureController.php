@@ -574,10 +574,10 @@ class SignatureController extends Controller
         if ($binary === null) {
             abort(404, 'Die Datei ist nicht (mehr) vorhanden.');
         }
-        if ($which !== 'original') {
-            app(SignatureAuditService::class)
-                ->record($signature, 'downloaded', description: 'Mitarbeiter-Download');
-        }
+        // JEDER Download steht im Protokoll - auch der des Originals
+        // (bis 04.10.2026 nur der des unterschriebenen Dokuments).
+        app(SignatureAuditService::class)
+            ->record($signature, 'downloaded', description: $which === 'original' ? 'Mitarbeiter-Download (Original)' : 'Mitarbeiter-Download');
 
         $name = ($which === 'original' ? 'Original-' : 'Unterschrieben-').Str::slug($signature->title).'.pdf';
 

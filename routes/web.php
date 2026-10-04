@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
 use App\Http\Controllers\Admin\KiTrainingController;
 use App\Http\Controllers\Admin\PostfachController;
 use App\Http\Controllers\Admin\SignatureController as AdminSignatureController;
+use App\Http\Controllers\Admin\SignatureQualityController;
 use App\Http\Controllers\Admin\WhatsAppOnboardingController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminCustomerChatController;
@@ -518,6 +519,15 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/firmensignaturen/{id}/bild', [CompanySignatureAssetController::class, 'image'])
         ->name('signatures.company.image');
     Route::get('/signaturen/neu', [AdminSignatureController::class, 'create'])->name('signatures.create');
+    // SIGNATUR-QUALITAET (A1, 04.10.2026): nur admin - an der Route UND im
+    // Controller. VOR /signaturen/{id}, sonst deutet die Routenreihenfolge
+    // "qualitaet" als Signatur-ID.
+    Route::get('/signaturen/qualitaet', [SignatureQualityController::class, 'index'])
+        ->middleware('role:admin')->name('signatures.quality');
+    Route::post('/signaturen/{id}/qualitaet-pruefen', [SignatureQualityController::class, 'check'])
+        ->middleware(['role:admin', 'throttle:30,10'])->name('signatures.quality.check');
+    Route::post('/signaturen/{id}/qualitaet-neu-erzeugen', [SignatureQualityController::class, 'regenerate'])
+        ->middleware(['role:admin', 'throttle:20,10'])->name('signatures.quality.regenerate');
     // Sofort-Suche fuer das Anlage-Formular. VOR /signaturen/{id}, sonst
     // deutet die Routenreihenfolge "kunden-suche" als Signatur-ID.
     Route::get('/signaturen/kunden-suche', [AdminSignatureController::class, 'customerSearch'])

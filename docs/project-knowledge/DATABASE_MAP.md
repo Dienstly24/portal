@@ -74,7 +74,9 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 | EINGANG beliebige Quellen / Provisionsmanagement | `contract_commissions`, `commission_imports`, `commission_import_rows`, `commission_audit_logs` (kein Loeschweg), `commission_pools`, `commission_followups`, `commission_reference_links` |
 
 ### E-Signatur
-`signature_requests` (customer_id/contract_id NULLBAR), `signature_signers`,
+`signature_requests` (customer_id/contract_id NULLBAR; seit 04.10.2026
+`feld_bezug` mediabox|cropbox, `upload_original_path/_hash` bei reparierter
+Datei, `quality_status/_checked_at/_findings`, `render_ms`), `signature_signers`,
 `signature_fields`, `signature_events` (append-only, kein updated_at),
 `company_signature_assets`.
 

@@ -29,7 +29,7 @@ class PdfSichtbarkeit
      *
      * @return array<string, mixed>
      */
-    public function renderPaar(string $original, string $signiert, int $seite): array
+    public function renderPaar(string $original, string $signiert, int $seite, bool $cropBox = false): array
     {
         $ergebnis = ['seite' => $seite, 'verfuegbar' => false, 'original' => null, 'signiert' => null,
             'stderr_original' => '', 'stderr_signiert' => ''];
@@ -40,11 +40,12 @@ class PdfSichtbarkeit
         try {
             foreach (['original' => $original, 'signiert' => $signiert] as $art => $pdf) {
                 file_put_contents($dir.'/'.$art.'.pdf', $pdf);
-                $process = new Process([
-                    (string) config('services.ocr.pdftoppm_binary', 'pdftoppm'),
-                    '-png', '-r', (string) self::DPI, '-f', (string) $seite, '-l', (string) $seite,
-                    '-singlefile', $dir.'/'.$art.'.pdf', $dir.'/'.$art,
-                ]);
+                $process = new Process(array_merge(
+                    [(string) config('services.ocr.pdftoppm_binary', 'pdftoppm'), '-png'],
+                    $cropBox ? ['-cropbox'] : [],
+                    ['-r', (string) self::DPI, '-f', (string) $seite, '-l', (string) $seite,
+                        '-singlefile', $dir.'/'.$art.'.pdf', $dir.'/'.$art],
+                ));
                 $process->setTimeout(60);
                 try {
                     $process->run();
@@ -70,8 +71,9 @@ class PdfSichtbarkeit
 
     /**
      * Vergleicht den Feldkasten in beiden Bildern. Die Feldkoordinaten
-     * sind Anteile der ANZEIGE-Seite (nach /Rotate, bezogen auf die
-     * MediaBox) - pdftoppm rendert ohne -cropbox genau diese Flaeche.
+     * sind Anteile der ANZEIGE-Seite (nach /Rotate) in der Bezugsflaeche
+     * der Anfrage - renderPaar() rendert mit bzw. ohne -cropbox genau
+     * diese Flaeche.
      *
      * @param  array<string, mixed>  $paar
      * @param  array{0: float, 1: float, 2: float, 3: float}  $box  Anteile der Anzeige-Seite

@@ -469,10 +469,26 @@ final class PdfDocument
             $rotate = (int) trim($this->resolve($inherited['Rotate'] ?? '0') ?? '0');
             $rotate = ((($rotate % 360) + 360) % 360);
             $rotate -= $rotate % 90;
-            $out[] = new PdfPage(count($out), $number, [
+            $media = [
                 min($box[0], $box[2]), min($box[1], $box[3]),
                 max($box[0], $box[2]), max($box[1], $box[3]),
-            ], $rotate);
+            ];
+            // CropBox: der Bereich, den ein Betrachter ZEIGT. Laut PDF-Norm
+            // wird er auf die MediaBox beschnitten; fehlt er, gilt die
+            // MediaBox. Eine kaputte (leere) CropBox zaehlt als fehlend -
+            // eine Seite ohne sichtbare Flaeche gibt es nicht.
+            $crop = PdfSyntax::numbers($this->resolve($inherited['CropBox'] ?? '') ?? '');
+            $cropBox = null;
+            if (count($crop) === 4) {
+                $c = [
+                    max($media[0], min($crop[0], $crop[2])), max($media[1], min($crop[1], $crop[3])),
+                    min($media[2], max($crop[0], $crop[2])), min($media[3], max($crop[1], $crop[3])),
+                ];
+                if ($c[2] - $c[0] > 1 && $c[3] - $c[1] > 1) {
+                    $cropBox = $c;
+                }
+            }
+            $out[] = new PdfPage(count($out), $number, $media, $rotate, $cropBox);
 
             return;
         }
