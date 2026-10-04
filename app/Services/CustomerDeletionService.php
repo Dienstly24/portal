@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Models\ActivityLog;
 use App\Models\AiDecision;
 use App\Models\Customer;
+use App\Models\CustomerMerge;
 use App\Models\EmailMessage;
+use App\Models\User;
 use App\Services\Mailbox\EmailAttachmentService;
 use Illuminate\Support\Facades\Storage;
 
@@ -71,9 +73,30 @@ class CustomerDeletionService
             $mail->delete();
         }
 
+        // Archivierte Huellen zusammengefuehrter Akten (KI-064) und die
+        // stillgelegten Zugaenge aus diesen Zusammenfuehrungen gehen mit:
+        // es sind Daten DIESES Kunden, auch wenn keine Liste sie zeigt
+        // (Art. 17 DSGVO). Die Zeilen selbst entfernt die FK-Kaskade
+        // (merged_into_id, customer_merges); die Konten muss man einsammeln,
+        // BEVOR die Protokolle verschwinden.
+        $nebenKonten = Customer::mitArchiv()->where('merged_into_id', $customer->id)->pluck('user_id')
+            ->merge(CustomerMerge::where('primary_customer_id', $customer->id)->get()
+                ->map(fn (CustomerMerge $m) => $m->protokoll['konto']['verlierer_user_id'] ?? null))
+            ->filter()->unique()->values();
+
         // Kunde (FK-Kaskaden: Verträge, Tickets, Notizen, Familie,
         // Dokumente-Zeilen, Timeline, Aufgaben, Dokumentanfragen, ...)
         $customer->delete();
+
+        foreach ($nebenKonten as $kontoId) {
+            $konto = User::find($kontoId);
+            // Nur Kundenkonten, und nur, wenn KEINE Akte (auch keine
+            // archivierte) mehr darauf zeigt.
+            if ($konto && $konto->role === 'customer'
+                && ! Customer::mitArchiv()->where('user_id', $konto->id)->exists()) {
+                $konto->delete();
+            }
+        }
 
         // Portal-Login-Account entfernen – aber NUR echte Kunden-Accounts.
         // Sollte ein Kundendatensatz (etwa durch fehlerhaften Import) mit einem

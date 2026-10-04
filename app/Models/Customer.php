@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\SafeEncrypted;
 use App\Services\CustomerNumberGenerator;
 use App\Services\Matching\DuplicateDetectionService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -56,6 +58,7 @@ class Customer extends Model
         return [
             'marketing_consent' => 'boolean',
             'unsubscribed_at' => 'datetime',
+            'archived_at' => 'datetime',
             // SafeEncrypted: verschluesselt at rest (DSGVO), aber robust gegen
             // Alt-Klartext-Bestaende (sonst HTTP 500 beim Oeffnen/Speichern).
             'health_insurance_number' => SafeEncrypted::class,
@@ -267,6 +270,11 @@ class Customer extends Model
             $query->where(function ($w) use ($like, $birthDate) {
                 // Direkte Kundenfelder (inkl. strukturierte Anschrift + PLZ/Ort).
                 $w->where('customer_number', 'like', $like)
+                  // Alias (KI-064): die Nummer einer zusammengefuehrten,
+                  // archivierten Akte findet die Akte, in der sie aufging.
+                  // Bewusst als Unterabfrage am globalen Scope vorbei.
+                    ->orWhereIn('customers.id', fn ($s) => $s->select('merged_into_id')->from('customers')
+                        ->whereNotNull('archived_at')->where('customer_number', 'like', $like))
                     ->orWhere('phone', 'like', $like)
                     ->orWhere('mobile', 'like', $like)
                     ->orWhere('email2', 'like', $like)
@@ -356,6 +364,55 @@ class Customer extends Model
         'address', 'address2', 'address_street', 'address_house_number',
         'address_house_suffix', 'address_zip', 'address_city',
     ];
+
+    /**
+     * Archivierte Huellen zusammengefuehrter Akten (KI-064) sind fuer die
+     * Anwendung NICHT vorhanden: keine Liste, keine Suche, kein Zaehler, keine
+     * Relation liefert sie. Als globaler Scope statt als Bedingung an jeder
+     * Abfrage - die naechste neue Abfrage wuerde die Bedingung vergessen, und
+     * dieselbe Person stuende wieder zweimal im Bestand. Bewusst daran
+     * vorbei: `mitArchiv()` fuer die wenigen Stellen, die genau die Huelle
+     * meinen (Alias, Nummernvergabe, Loeschen, Zusammenfuehren).
+     */
+    public const SCOPE_NICHT_ARCHIVIERT = 'nicht_archiviert';
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(self::SCOPE_NICHT_ARCHIVIERT, function (Builder $query) {
+            $query->whereNull($query->qualifyColumn('archived_at'));
+        });
+    }
+
+    /** Abfrage EINSCHLIESSLICH der archivierten Huellen. */
+    public static function mitArchiv(): Builder
+    {
+        return static::withoutGlobalScope(self::SCOPE_NICHT_ARCHIVIERT);
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
+    }
+
+    /**
+     * Kennung der Akte, in der diese (archivierte) Kennung heute lebt - oder
+     * null, wenn es keine Huelle ist. Ketten (A in B, spaeter B in C) werden
+     * beim Zusammenfuehren auf das Ende umgehaengt; die Schleife ist nur das
+     * Netz fuer Altbestand und bricht nach wenigen Schritten ab.
+     */
+    public static function aufgegangenIn(string $id): ?string
+    {
+        $ziel = null;
+        for ($i = 0; $i < 10; $i++) {
+            $naechstes = DB::table('customers')->where('id', $id)->whereNotNull('archived_at')->value('merged_into_id');
+            if ($naechstes === null) {
+                break;
+            }
+            $ziel = $id = (string) $naechstes;
+        }
+
+        return $ziel;
+    }
 
     protected static function boot() {
         parent::boot();

@@ -2436,9 +2436,11 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   dann Passwort gesetzt/Logins/Einladung), egal in welcher Richtung
   zusammengefuehrt wird - der Hauptkunde uebernimmt notfalls den User des
   Duplikats (inkl. dessen Portal-Sprache). Die Login-Adresse des
-  unterlegenen Accounts wandert nach email2 (Platzhalter nie); geloescht
-  wird der unterlegene User nur, wenn KEINE Kundenakte mehr auf ihn zeigt
-  (customers.user_id kaskadiert!). Marketing-Abmeldung des Duplikats wirkt
+  unterlegenen Accounts wandert nach email2 (Platzhalter nie); seit
+  04.10.2026 wird der unterlegene User STILLGELEGT statt geloescht (nur,
+  wenn keine lebende Kundenakte mehr auf ihn zeigt), und das Duplikat wird
+  archiviert statt geloescht - siehe "Dubletten: Familie ist keine
+  Dublette". Marketing-Abmeldung des Duplikats wirkt
   fort (DSGVO-Opt-out geht nie verloren), `last_contact` nimmt den neueren
   Stand. Bulk-/Auto-Merge vereint weiterhin in den AELTESTEN Datensatz
   (Kundennummern-Kontinuitaet) - der Portal-Account wandert dank Adoption
@@ -4541,9 +4543,23 @@ Merge von PR #358, Teil E/F).
   (KI-Unterhaltung) war ein Fehlbefund - der UNIQUE auf
   `ai_conversations.customer_id` existiert seit 06.09.2026 nicht mehr.
   Tests: `MergeSperrenTest`.
-- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-3
-  Archiv statt Hard-Delete (`merged_into_id`/`archived_at`, nicht
-  SoftDeletes), Kundennummer-Alias, Feldwahl, Undo 30 Tage (KI-064);
+- **Archiv statt Loeschen (PR-3a, 04.10.2026, KI-064)**: das Duplikat
+  wird ARCHIVIERT (`customers.merged_into_id`/`archived_at`), nicht
+  geloescht - bewusst KEIN SoftDeletes (zusammengefuehrt ist nicht
+  geloescht). Ein GLOBALER SCOPE (`Customer::SCOPE_NICHT_ARCHIVIERT`)
+  blendet Huellen ueberall aus; wer sie meint, nimmt `Customer::mitArchiv()`
+  (Alias, Nummernvergabe, Loeschen, Merge). Die alte Kundennummer bleibt
+  belegt und findet ueber `scopeSearch` den Hauptkunden, alte Links auf
+  die Akte leiten weiter (`Customer::aufgegangenIn()`), Ketten (A in B,
+  B in C) zeigen immer auf die lebende Akte. Der unterlegene Zugang wird
+  STILLGELEGT, nie mehr geloescht. `customer_merges` haelt je Merge fest,
+  was umgehaengt und was VERWORFEN wurde (Kollisionszeilen vollstaendig,
+  Protokoll verschluesselt) - die Grundlage fuers Rueckgaengigmachen.
+  Wird der Hauptkunde geloescht, gehen Huellen und stillgelegte Konten mit
+  (Art. 17 DSGVO). Tests: `MergeArchivTest`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-3b
+  Rueckgaengig 30 Tage + Feldwahl in der Vorschau + Aufbewahrungsfrist
+  der Huellen (Rest von KI-064);
   PR-4 geteilte Kontaktdaten + Adressnormalisierung (KI-069); PR-5
   Haushalt + weitere Beziehungsarten + Uebernahme des Bestands; PR-6
   Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
