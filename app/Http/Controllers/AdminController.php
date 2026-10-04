@@ -289,6 +289,14 @@ class AdminController extends Controller
     }
 
     public function customerShow($id) {
+        // Eine zusammengefuehrte (archivierte) Akte fuehrt zur Akte, in der
+        // sie aufgegangen ist (KI-064) - alte Lesezeichen, Links in Mails
+        // und Protokollen bleiben so brauchbar. Der Zugriff wird dort
+        // geprueft, nicht hier.
+        if ($ziel = Customer::aufgegangenIn((string) $id)) {
+            return redirect()->route('admin.customer', $ziel)
+                ->with('warning', 'Diese Kundenakte wurde zusammengeführt - Sie sehen die Akte, in der sie aufgegangen ist.');
+        }
         $this->authorizeCustomerAccess($id);
         // "Zuletzt geoeffnet" pro Mitarbeiter festhalten: jeder Aufruf der Akte
         // aktualisiert den Zeitstempel, damit das Dashboard die reale Reihenfolge

@@ -91,8 +91,9 @@ class CustomerMergeDataPreservationTest extends TestCase
         $this->assertNotNull($primary->user->first_login_at, 'Login-Historie darf nicht verloren gehen');
         $this->assertNotEquals('kein_account', $primary->portalStatus()['key']);
 
-        // Der Import-Rumpf-User ist weg, die Platzhalter-Adresse wird NICHT als email2 gesichert.
-        $this->assertNull(User::find($stubUserId));
+        // Der Import-Rumpf-User ist stillgelegt (seit KI-064 nicht mehr
+        // geloescht), die Platzhalter-Adresse wird NICHT als email2 gesichert.
+        $this->assertFalse((bool) User::find($stubUserId)->is_active);
         $this->assertEmpty($primary->email2, 'Platzhalter-Adressen duerfen nicht als alternative E-Mail gesichert werden');
 
         // Portal-Sprache des uebernommenen Accounts gilt weiter.
@@ -120,7 +121,7 @@ class CustomerMergeDataPreservationTest extends TestCase
 
         $this->assertEquals($primaryUserId, $primary->user_id);
         $this->assertEquals('sara@example.com', $primary->user->email);
-        $this->assertNull(User::find($dupUserId), 'Der unterlegene Duplikat-User wird aufgeraeumt');
+        $this->assertFalse((bool) User::find($dupUserId)->is_active, 'Der unterlegene Duplikat-User wird stillgelegt (KI-064)');
         $this->assertEquals('sara.alt@example.com', $primary->email2, 'Die zweite echte E-Mail-Adresse darf nicht verloren gehen');
     }
 

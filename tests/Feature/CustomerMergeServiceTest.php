@@ -53,9 +53,11 @@ class CustomerMergeServiceTest extends TestCase
         $this->assertEquals($primary->id, $message->fresh()->customer_id, 'Portal-Nachricht darf beim Merge nicht verloren gehen');
         $this->assertEquals($primary->id, $ref->fresh()->referenceable_id);
 
-        // Duplikat-Huelle + verwaister User weg.
+        // Duplikat-Huelle archiviert (fuer die Anwendung unsichtbar), der
+        // verwaiste User stillgelegt - beides seit KI-064 nicht mehr geloescht.
         $this->assertNull(Customer::find($duplicate->id));
-        $this->assertNull(User::find($dupUserId));
+        $this->assertNotNull(Customer::mitArchiv()->find($duplicate->id)?->archived_at);
+        $this->assertFalse((bool) User::find($dupUserId)->is_active);
 
         // Fehlendes Feld ergaenzt.
         $this->assertEquals('030999', $primary->fresh()->phone);

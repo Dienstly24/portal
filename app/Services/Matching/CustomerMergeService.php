@@ -4,9 +4,11 @@ namespace App\Services\Matching;
 
 use App\Models\ActivityLog;
 use App\Models\Customer;
+use App\Models\CustomerMerge;
 use App\Models\CustomerRelationship;
 use App\Models\CustomerTimeline;
 use App\Models\User;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -52,6 +54,19 @@ class CustomerMergeService
      * Duplikat->Hauptkunde wurde zum Selbst-Paar (KI-066).
      */
     private const FAMILY_TABLE = 'customer_family_relations';
+
+    /**
+     * Protokoll des laufenden Merges (KI-064): umgehaengte Zeilen, verworfene
+     * Kollisionszeilen (vollstaendig), ergaenzte Felder, Konto. Wird als
+     * `customer_merges`-Datensatz gespeichert - die Grundlage zum
+     * Rueckgaengigmachen. Je merge() neu begonnen.
+     *
+     * @var array<string, mixed>
+     */
+    private array $protokoll = [];
+
+    /** @var array<string, bool> */
+    private static array $hatIdSpalte = [];
 
     public function __construct(private readonly ?DuplicateDetectionService $detection = null)
     {
@@ -123,6 +138,8 @@ class CustomerMergeService
             throw new MergeBlockedException($sperren);
         }
 
+        $this->protokoll = ['umgehaengt' => [], 'verworfen' => [], 'ergaenzt' => [], 'konto' => null];
+
         return DB::transaction(function () use ($primary, $duplicate, $actorId, $sperren, $uebersteuertMit) {
             $moved = [];
 
@@ -153,30 +170,44 @@ class CustomerMergeService
             $dupName = $duplicate->user?->name;
             $dupNumber = $duplicate->customer_number;
             $userIdBefore = $primary->user_id;
+            $email2Vorher = $primary->email2;
+            $langVorher = $primary->preferred_lang;
             $loserUser = $this->preservePortalAccount($primary, $duplicate);
+            $this->protokoll['konto'] = [
+                'user_vorher' => $userIdBefore,
+                'getauscht' => (int) $primary->user_id !== (int) $userIdBefore,
+                'verlierer_user_id' => $loserUser?->id,
+                'email2_vorher' => $email2Vorher,
+                'sprache_vorher' => $langVorher,
+            ];
 
             // 5) Fehlende Stammdaten vom Duplikat ergaenzen (nie ueberschreiben).
             $this->fillMissingFields($primary, $duplicate);
             $primary->save();
 
-            // 6) Leere Duplikat-Huelle entfernen. Den unterlegenen User nur
-            //    dann, wenn KEINE Kundenakte mehr auf ihn zeigt -
-            //    customers.user_id kaskadiert, ein verfruehtes Loeschen wuerde
-            //    eine noch verknuepfte Akte mitreissen.
-            $duplicate->delete();
+            // 6) Die leere Duplikat-Akte wird ARCHIVIERT, nicht geloescht
+            //    (KI-064): ihre Kundennummer bleibt belegt und fuehrt ueber
+            //    die Suche zum Hauptkunden, und ein Irrtum laesst sich noch
+            //    rueckgaengig machen. Der globale Scope blendet sie ueberall
+            //    aus. Huellen, die schon in das Duplikat aufgegangen waren,
+            //    zeigen ab jetzt direkt auf den Hauptkunden (keine Ketten).
+            DB::table('customers')->where('merged_into_id', $duplicate->id)
+                ->update(['merged_into_id' => $primary->id]);
+            DB::table('customers')->where('id', $duplicate->id)->update([
+                'merged_into_id' => $primary->id,
+                'archived_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Der unterlegene Zugang wird NIE mehr geloescht, sondern
+            // stillgelegt (KI-064/KI-065) - aber nur, wenn keine andere
+            // (lebende) Akte ihn noch benutzt.
             $portalDeaktiviert = false;
             if ($loserUser
                 && (int) $loserUser->id !== (int) $primary->user_id
                 && ! Customer::where('user_id', $loserUser->id)->exists()) {
-                if ($this->hasActivePortalAccess($loserUser)) {
-                    // Nur bei ausdruecklich uebersteuertem Merge erreichbar:
-                    // ein benutzter Zugang wird NIE geloescht, sondern
-                    // stillgelegt - ein Irrtum laesst sich dann noch beheben.
-                    $loserUser->forceFill(['is_active' => false])->save();
-                    $portalDeaktiviert = true;
-                } else {
-                    $loserUser->delete();
-                }
+                $portalDeaktiviert = $this->hasActivePortalAccess($loserUser);
+                $loserUser->forceFill(['is_active' => false])->save();
             }
 
             $moved = array_filter($moved, fn ($n) => $n > 0);
@@ -211,7 +242,17 @@ class CustomerMergeService
                 ]);
             }
 
+            CustomerMerge::create([
+                'primary_customer_id' => $primary->id,
+                'duplicate_customer_id' => $duplicate->id,
+                'actor_id' => $actorId,
+                'duplicate_number' => $dupNumber,
+                'protokoll' => $this->protokoll,
+                'begruendung' => $sperren === [] ? null : $uebersteuertMit,
+            ]);
+
             $this->detection?->forgetCount();
+            app(DuplicateDetectionService::class)->forgetCount();
 
             return $moved;
         });
@@ -366,15 +407,14 @@ class CustomerMergeService
         $p = (string) $primary->id;
         $d = (string) $duplicate->id;
 
-        DB::table('customer_relationships')
+        $this->verwerfe('customer_relationships', DB::table('customer_relationships')
             ->where(function ($q) use ($p, $d) {
                 $q->where(function ($qq) use ($p, $d) {
                     $qq->where('customer_a_id', $p)->where('customer_b_id', $d);
                 })->orWhere(function ($qq) use ($p, $d) {
                     $qq->where('customer_a_id', $d)->where('customer_b_id', $p);
                 });
-            })
-            ->delete();
+            }));
 
         $moved = 0;
         $rows = DB::table('customer_relationships')
@@ -394,9 +434,10 @@ class CustomerMergeService
                 ->where('customer_a_id', $a)->where('customer_b_id', $b)
                 ->whereIn('type', $types)->exists();
             if ($exists) {
-                DB::table('customer_relationships')->where('id', $row->id)->delete();
+                $this->verwerfe('customer_relationships', DB::table('customer_relationships')->where('id', $row->id));
                 continue;
             }
+            $this->protokoll['umgehaengt']['customer_relationships'][] = (array) $row;
             // Die Richtung (Elternteil) zeigt auf die IDs - sie wandert mit,
             // sonst verweist sie auf die geloeschte Duplikat-Akte.
             $parent = $row->parent_customer_id ?? null;
@@ -428,19 +469,20 @@ class CustomerMergeService
         $d = (string) $duplicate->id;
         $t = self::FAMILY_TABLE;
 
-        DB::table($t)->where(function ($q) use ($p, $d) {
+        $this->verwerfe($t, DB::table($t)->where(function ($q) use ($p, $d) {
             $q->where(fn ($qq) => $qq->where('customer_id', $p)->where('related_customer_id', $d))
                 ->orWhere(fn ($qq) => $qq->where('customer_id', $d)->where('related_customer_id', $p));
-        })->delete();
+        }));
 
         $moved = 0;
         foreach (['customer_id' => 'related_customer_id', 'related_customer_id' => 'customer_id'] as $spalte => $gegenspalte) {
             foreach (DB::table($t)->where($spalte, $d)->get() as $row) {
                 $kollision = DB::table($t)->where($spalte, $p)->where($gegenspalte, $row->$gegenspalte)->exists();
                 if ($kollision) {
-                    DB::table($t)->where('id', $row->id)->delete();
+                    $this->verwerfe($t, DB::table($t)->where('id', $row->id));
                     continue;
                 }
+                $this->protokoll['umgehaengt'][$t][] = ['id' => $row->id, 'spalte' => $spalte];
                 DB::table($t)->where('id', $row->id)->update([$spalte => $p]);
                 $moved++;
             }
@@ -468,6 +510,13 @@ class CustomerMergeService
             $this->deleteCollidingDuplicateRows($table, $primary, $duplicate, $peers);
         }
 
+        if ($this->hatIdSpalte($table)) {
+            $ids = DB::table($table)->where('customer_id', $duplicate->id)->pluck('id')->all();
+            if ($ids !== []) {
+                $this->protokoll['umgehaengt'][$table] = $ids;
+            }
+        }
+
         return DB::table($table)
             ->where('customer_id', $duplicate->id)
             ->update(['customer_id' => $primary->id]);
@@ -493,11 +542,11 @@ class CustomerMergeService
         // existiert am Hauptkunden schon eine Zeile, ist jede Duplikat-Zeile
         // ein Konflikt und wird verworfen.
         if ($peers === []) {
-            DB::table($table)->where('customer_id', $duplicate->id)->delete();
+            $this->verwerfe($table, DB::table($table)->where('customer_id', $duplicate->id));
             return;
         }
 
-        DB::table($table)
+        $this->verwerfe($table, DB::table($table)
             ->where('customer_id', $duplicate->id)
             ->where(function ($q) use ($primaryRows, $peers) {
                 foreach ($primaryRows as $row) {
@@ -511,8 +560,7 @@ class CustomerMergeService
                         }
                     });
                 }
-            })
-            ->delete();
+            }));
     }
 
     /**
@@ -555,9 +603,10 @@ class CustomerMergeService
         foreach ($dupRows as $row) {
             if (in_array($row->user_id, $existing, false)) {
                 // Betreuer bereits am Hauptkunden - doppelte Zeile verwerfen.
-                DB::table(self::PIVOT_TABLE)->where('id', $row->id)->delete();
+                $this->verwerfe(self::PIVOT_TABLE, DB::table(self::PIVOT_TABLE)->where('id', $row->id));
                 continue;
             }
+            $this->protokoll['umgehaengt'][self::PIVOT_TABLE][] = $row->id;
             DB::table(self::PIVOT_TABLE)->where('id', $row->id)->update(['customer_id' => $primary->id]);
             $existing[] = $row->user_id;
             $moved++;
@@ -584,13 +633,33 @@ class CustomerMergeService
             ->where('referenceable_id', $duplicate->id)->get();
         foreach ($dupRefs as $ref) {
             if (in_array($ref->type.'|'.$ref->value, $primaryKeys, true)) {
-                DB::table('external_references')->where('id', $ref->id)->delete();
+                $this->verwerfe('external_references', DB::table('external_references')->where('id', $ref->id));
                 continue;
             }
+            $this->protokoll['umgehaengt']['external_references'][] = $ref->id;
             DB::table('external_references')->where('id', $ref->id)->update(['referenceable_id' => $primary->id]);
             $moved++;
         }
         return $moved;
+    }
+
+    /**
+     * Loescht die Zeilen der Abfrage - aber erst, nachdem sie VOLLSTAENDIG im
+     * Merge-Protokoll stehen. Verworfen werden nur Zeilen, die nach dem Merge
+     * doppelt waeren (Kollision) oder auf sich selbst zeigten; das Protokoll
+     * ist der Weg zurueck.
+     */
+    private function verwerfe(string $table, Builder $query): void
+    {
+        foreach ($query->get() as $row) {
+            $this->protokoll['verworfen'][$table][] = (array) $row;
+        }
+        $query->delete();
+    }
+
+    private function hatIdSpalte(string $table): bool
+    {
+        return self::$hatIdSpalte[$table] ??= Schema::hasColumn($table, 'id');
     }
 
     /** Leere Stammdatenfelder des Hauptkunden aus dem Duplikat ergaenzen. */
@@ -608,6 +677,8 @@ class CustomerMergeService
         ];
         foreach ($fields as $f) {
             if (empty($primary->$f) && ! empty($duplicate->$f)) {
+                // Nur der NAME: der Wert steht weiter in der archivierten Huelle.
+                $this->protokoll['ergaenzt'][] = $f;
                 $primary->$f = $duplicate->$f;
             }
         }
@@ -615,6 +686,8 @@ class CustomerMergeService
         // DSGVO: Eine Marketing-Abmeldung wirkt fort. Hat sich das Duplikat
         // abgemeldet, darf die vereinte Akte nicht wieder anschreibbar werden.
         if ($duplicate->unsubscribed_at && ! $primary->unsubscribed_at) {
+            $this->protokoll['ergaenzt'][] = 'unsubscribed_at';
+            $this->protokoll['marketing_consent_vorher'] = $primary->marketing_consent;
             $primary->unsubscribed_at = $duplicate->unsubscribed_at;
             $primary->marketing_consent = false;
         }
@@ -623,6 +696,7 @@ class CustomerMergeService
         // (sonst meldet die Wiedervorlage einen laengst kontaktierten Kunden).
         if ($duplicate->last_contact
             && (! $primary->last_contact || $duplicate->last_contact > $primary->last_contact)) {
+            $this->protokoll['last_contact_vorher'] = $primary->getAttributes()['last_contact'] ?? null;
             $primary->last_contact = $duplicate->last_contact;
         }
     }

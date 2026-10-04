@@ -29,10 +29,11 @@ class CustomerNumberGenerator
     {
         $prefix = now()->format('y'); // z. B. "26"
 
-        // Höchste bereits vergebene Sequenz dieses Jahres bestimmen.
+        // Höchste bereits vergebene Sequenz dieses Jahres bestimmen - auch die
+        // archivierter Huellen (KI-064): ihre Nummer bleibt als Alias belegt.
         // Nur exakt passende Nummern (JJ + 5 Ziffern) zählen – Alt-Nummern
         // (C-…) und Import-Nummern anderer Länge stören nicht.
-        $max = Customer::where('customer_number', 'like', $prefix.'%')
+        $max = Customer::mitArchiv()->where('customer_number', 'like', $prefix.'%')
             ->pluck('customer_number')
             ->filter(fn ($n) => preg_match('/^'.$prefix.'\d{5}$/', $n))
             ->map(fn ($n) => (int) substr($n, 2))
@@ -41,7 +42,7 @@ class CustomerNumberGenerator
         do {
             $max++;
             $number = $prefix.str_pad((string) $max, 5, '0', STR_PAD_LEFT);
-        } while (Customer::where('customer_number', $number)->exists());
+        } while (Customer::mitArchiv()->where('customer_number', $number)->exists());
 
         return $number;
     }
@@ -61,11 +62,11 @@ class CustomerNumberGenerator
 
         $number = self::IMPORT_PREFIX.$clean;
 
-        if (Customer::where('customer_number', $number)->exists()) {
+        if (Customer::mitArchiv()->where('customer_number', $number)->exists()) {
             // Gleiche Quellnummer doppelt (sollte der Duplikatsschutz vorher
             // fangen) – eindeutig machen statt fehlschlagen.
             $suffix = 2;
-            while (Customer::where('customer_number', $number.'-'.$suffix)->exists()) {
+            while (Customer::mitArchiv()->where('customer_number', $number.'-'.$suffix)->exists()) {
                 $suffix++;
             }
             return $number.'-'.$suffix;

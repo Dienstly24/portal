@@ -23,7 +23,8 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 ### Kunde
 | Tabelle | Zweck |
 |---|---|
-| `customers` | Kundenakte (Primaerschluessel UUID), Kundennummer, Stammdaten, `user_id`, `partner_id` (Portal-Zugriff!), `acquired_by`/`acquired_by_partner_id` (Werber), `created_by`, `commission_import_id`, verschluesselte Spalten (Test `CustomerEncryptedColumns`) |
+| `customers` | Kundenakte (Primaerschluessel UUID), Kundennummer, Stammdaten, `user_id`, `partner_id` (Portal-Zugriff!), `acquired_by`/`acquired_by_partner_id` (Werber), `created_by`, `commission_import_id`, verschluesselte Spalten (Test `CustomerEncryptedColumns`); `merged_into_id`/`archived_at` = archivierte Huelle einer zusammengefuehrten Akte (globaler Scope blendet sie aus, `Customer::mitArchiv()`), ihre Kundennummer bleibt als Alias belegt |
+| `customer_merges` | EIN Datensatz je Zusammenfuehrung: Haupt-/Duplikat-Akte, Bearbeiter, alte Nummer, Begruendung, `protokoll` (verschluesselt: umgehaengte Zeilen je Tabelle, verworfene Kollisionszeilen vollstaendig, ergaenzte Felder, Konto) - Grundlage fuers Rueckgaengigmachen |
 | `customer_addresses`, `customer_contacts`, `customer_vehicles`, `customer_notes`, `customer_timeline`, `customer_views` | Unterlagen der Akte |
 | `customer_family` | Familienmitglieder OHNE eigene Akte |
 | `customer_family_relations` | gerichtete Beziehung zwischen zwei AKTEN (Paar hin/rueck), `is_dependent` |

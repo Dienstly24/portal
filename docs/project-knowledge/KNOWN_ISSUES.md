@@ -38,7 +38,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-059 | MEDIUM | correctness | `PdfDocument`: "Klartext ist juenger als Objekt-Strom" gilt bei Fortschreibungen nicht (Verdacht) | OPEN |
 | KI-060 | LOW | correctness | `PdfStamper` schreibt Seitenobjekte immer mit Generation 0 (Verdacht) | OPEN |
 | KI-063 | CRITICAL | correctness | Dubletten: Vater/Sohn mit gleicher E-Mail als "✓ sicher" angezeigt; Sammel- und Einzel-Merge ohne Widerspruchspruefung, anderer Vorname kein Widerspruch | FIXED |
-| KI-064 | HIGH | correctness | Merge loescht die Duplikat-Akte HART: kein Archiv, kein Undo, alte Kundennummer nicht mehr suchbar | OPEN (PR-3) |
+| KI-064 | HIGH | correctness | Merge loescht die Duplikat-Akte HART: kein Archiv, kein Undo, alte Kundennummer nicht mehr suchbar | IN_PROGRESS (Archiv/Alias/Protokoll fertig, Undo PR-3b) |
 | KI-065 | HIGH | correctness | Merge loescht den Portal-Login des unterlegenen Kontos, wenn beide einen echten Zugang haben | FIXED |
 | KI-066 | HIGH | correctness | Merge: `customer_family_relations` mit `related_customer_id` = Duplikat fallen per Kaskade weg (Rueckrichtung der Familienrolle verloren) | FIXED |
 | KI-067 | MEDIUM | correctness | Merge: KI-Unterhaltung (`ai_conversations`, UNIQUE customer_id) des Duplikats wird still verworfen | WONT_FIX (Fehlbefund) |
@@ -134,9 +134,10 @@ und PHPStan) auf `main` gruen ist.
 - **Discovered** 03.10.2026
 
 ### KI-064 - Merge loescht die Duplikat-Akte hart
-- **Category** correctness · **Severity** HIGH · **Status** OPEN
+- **Category** correctness · **Severity** HIGH · **Status** IN_PROGRESS
 - **Location** `CustomerMergeService::merge`
 - **Description** `$duplicate->delete()` (kein SoftDeletes, kein Archiv): Undo unmoeglich, alte Kundennummer nur noch als Text im ActivityLog. Plan PR-3: `merged_into_id`/`archived_at`, Kundennummer-Alias, Undo 30 Tage.
+- **Teil-Fix (04.10.2026, PR-3a)**: das Duplikat wird ARCHIVIERT (`merged_into_id`/`archived_at`, globaler Scope `Customer::SCOPE_NICHT_ARCHIVIERT`), die Kundennummer bleibt belegt und findet ueber die Suche den Hauptkunden, alte Links leiten weiter, Ketten zeigen immer auf die lebende Akte. Der unterlegene Zugang wird stillgelegt statt geloescht. `customer_merges` protokolliert umgehaengte und VERWORFENE Zeilen (vollstaendig, verschluesselt) - Grundlage fuer PR-3b. Loeschen des Hauptkunden nimmt Huellen und stillgelegte Konten mit (Art. 17 DSGVO). Test `MergeArchivTest`. Offen: Rueckgaengig (30 Tage) und Feldwahl in der Vorschau (PR-3b).
 - **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
 
 ### KI-065 - Merge loescht den Portal-Login des unterlegenen Kontos

@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 04.10.2026 - Zusammenfuehren archiviert statt zu loeschen, alte Kundennummer bleibt auffindbar (KI-064, Teil 1)
+
+- **Task**: PR-3a des freigegebenen Dubletten-Plans (Schritt 3). Rueckgaengig und Feldwahl folgen als PR-3b.
+- **Files Changed**: Migration `2026_10_04_090000_kunden_archiv_statt_loeschen_beim_zusammenfuehren`; `Customer` (globaler Scope, `mitArchiv()`, `aufgegangenIn()`, Alias in `scopeSearch`); neu `CustomerMerge`; `CustomerMergeService` (archivieren statt loeschen, Protokoll, Ketten umhaengen, Verlierer-Konto stilllegen statt loeschen); `CustomerDeletionService` (Huellen + Konten mitloeschen); `CustomerNumberGenerator` (archivierte Nummern belegt); `AdminController::customerShow` (Weiterleitung); neu `tests/Feature/MergeArchivTest.php`; `CustomerMergeServiceTest`, `CustomerMergeDataPreservationTest` nachgezogen; `CLAUDE.md`, `KNOWN_ISSUES.md`, `FEATURE_MAP.md`, `DATABASE_MAP.md`.
+- **Components Affected**: Einzel-, Sammel- und Ein-Klick-Merge, Kundensuche, Kundenakte (alte Links), Kundennummernvergabe, Kundenloeschung/Purge.
+- **Database Changes**: `customers.merged_into_id` (FK auf customers, cascadeOnDelete), `customers.archived_at` (Index); neue Tabelle `customer_merges`. `down()` bricht ab, solange archivierte Akten existieren.
+- **API Changes**: `Customer`-Abfragen liefern archivierte Akten nicht mehr (globaler Scope); `Customer::mitArchiv()` schliesst sie ein.
+- **Potential Side Effects**: Der unterlegene Portalzugang bleibt (stillgelegt) bestehen und belegt seine Login-Adresse weiter. Huellen und das Protokoll tragen Kundendaten, bis der Hauptkunde geloescht wird - die Aufbewahrungsfrist regelt PR-3b.
+- **Tests Performed**: `MergeArchivTest` 8 Faelle. Volle Suite 3381, 3376 gruen, 5 uebersprungen (OCR, tesseract lokal nicht installiert). PHPStan 0 Fehler, Pint sauber.
+- **Result**: KI-064 IN_PROGRESS (Archiv, Alias, Protokoll fertig).
+
+---
+
 ## 03.10.2026 - Merge-Sperren: zwei Portalzugaenge, Familienrollen, Sammel-Merge nur "sicher" (KI-065/066/068)
 
 - **Task**: PR-2 des freigegebenen Dubletten-Plans (Schritt 3, erster Teil).
