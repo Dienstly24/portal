@@ -4,6 +4,7 @@ namespace App\Services\Signature;
 
 use App\Models\SignatureRequest;
 use App\Services\Pdf\PdfDocument;
+use App\Support\FeldGeometrie;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
@@ -64,7 +65,7 @@ class SignaturePageRenderer
             return null;
         }
 
-        $png = $this->render($pdf, $page);
+        $png = $this->render($pdf, $page, $request->nutztCropBox());
         if ($png === null) {
             return null;
         }
@@ -110,6 +111,9 @@ class SignaturePageRenderer
 
         $out = [];
         foreach ($doc->pages() as $page) {
+            // Dieselbe Bezugsflaeche wie Vorschau und Stempler - sonst
+            // stimmt das Seitenverhaeltnis im Editor nicht mit dem Bild.
+            $page = FeldGeometrie::bezugsseite($request, $page);
             $out[] = [
                 'page' => $page->index + 1,
                 'width' => round($page->displayWidth(), 2),
@@ -120,7 +124,7 @@ class SignaturePageRenderer
         return $out;
     }
 
-    private function render(string $pdf, int $page): ?string
+    private function render(string $pdf, int $page, bool $cropBox = false): ?string
     {
         if (! $this->available()) {
             return null;
@@ -132,10 +136,16 @@ class SignaturePageRenderer
         try {
             $source = $dir.'/quelle.pdf';
             file_put_contents($source, $pdf);
-            $process = new Process([
-                $this->binary(), '-png', '-scale-to-x', (string) self::WIDTH, '-scale-to-y', '-1',
-                '-f', (string) $page, '-l', (string) $page, '-singlefile', $source, $dir.'/seite',
-            ]);
+            // -cropbox fuer neue Anfragen (Feldbezug "cropbox"): die Vorschau
+            // zeigt genau die Flaeche, die auch der Kunde in seinem
+            // Betrachter sieht - ein Feld kann nicht mehr in einem Rand
+            // landen, der dort abgeschnitten ist.
+            $process = new Process(array_merge(
+                [$this->binary(), '-png'],
+                $cropBox ? ['-cropbox'] : [],
+                ['-scale-to-x', (string) self::WIDTH, '-scale-to-y', '-1',
+                    '-f', (string) $page, '-l', (string) $page, '-singlefile', $source, $dir.'/seite'],
+            ));
             $process->setTimeout(60);
             $process->run();
             if (! $process->isSuccessful()) {

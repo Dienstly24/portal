@@ -3331,7 +3331,9 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   die man nicht kleiner bekommt. Einladung, Erinnerung, Code und
   Abschluss-Mail sind bewusst NICHT queued (sie sind der einzige Weg zum
   Dokument); die Abschluss-Mail traegt das PDF im ANHANG, nicht als Link
-  - nach dem Abschluss ist der Zugang widerrufen.
+  - nach dem Abschluss liest der Link das fertige Dokument nur noch
+  7 Tage (`NACHLAUF_TAGE`), danach HTTP 410 (KI-083, 04.10.2026; bis dahin
+  stand hier faelschlich "widerrufen" - er blieb 30 Tage ein Lesezugang).
 - Tests: `SignatureModuleTest` (26 Faelle, beide Szenarien), `PdfStamperTest`.
 
 ### Nachbesserung 10.09.2026 (Betreiber-Meldung "HTTP 500 beim Unterschreiben")
@@ -3789,9 +3791,12 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   die neue Datei sagt im Protokoll "Neu erzeugt ... (Korrektur der
   Darstellung)", Ereignis `pdf_regenerated` mit altem und neuem SHA-256.
 - **Koordinaten** (Betreiber-Entscheidung 02.10.2026): Feldpositionen
-  bleiben ANTEILE der Anzeige-Seite (nach `/Rotate`, bezogen auf die
-  MediaBox - so rendert auch pdftoppm die Vorschau, auf der das Feld
-  gesetzt wird). Der Editor teilt durch die Groesse des gezoomten
+  bleiben ANTEILE der Anzeige-Seite (nach `/Rotate`). Bezugsflaeche je
+  Anfrage `signature_requests.feld_bezug` (seit 04.10.2026, KI-080):
+  `mediabox` fuer den Bestand, `cropbox` fuer alle neuen Anfragen - die
+  Flaeche, die jeder Betrachter zeigt; Vorschau (`pdftoppm -cropbox`),
+  Stempler, Selbsttest und Diagnose rechnen dann ueber
+  `PdfPage::alsSichtbereich()`. Der Bestand wird NICHT umgerechnet. Der Editor teilt durch die Groesse des gezoomten
   Seitenrahmens, damit ist jeder Zoom gleich. EINE Umrechnung in Punkte:
   `App\Support\FeldGeometrie` (Stempler, Selbsttest, Diagnose); Ursprung
   unten links und Drehung rechnet ausschliesslich der `PdfStamper`.
@@ -3808,6 +3813,51 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   90/180/270, Zeichnung mit Geraeteverhaeltnis 2 und 3, Kunde + Stempel
   ueber Formularlinie, nur Stempel, Selbsttest scheitert -> Erneut
   erzeugen, Reparaturbefehl, Vorschau), `tests/Unit/BildfreistellungTest.php`.
+
+### Qualitaetsgate: keine unsichtbare Unterschrift ohne Meldung (Audit Teil A, 04.10.2026)
+
+Vollstaendig in `docs/AUDIT_2026-10-04_SIGNATUR.md`, Befunde KI-080..091.
+
+- **EINE Pruefung, vier Anlaesse** (`SignatureQualityGate` ->
+  `SignedPdfVerifier`): Versand (bereits gesetzte Unternehmenssignatur im
+  Speicher stempeln - unsichtbar -> Versand abgelehnt), Abschluss (sonst
+  "Fehler bei Fertigstellung", keine Abschluss-Mail), Neu-Erzeugen, und
+  jede Nacht 04:25 `signaturen:qualitaet-pruefen` ueber alle offenen und
+  fertigen Vorgaenge. Geprueft wird JEDES ausgefuellte Feld am gerenderten
+  Bild, poppler darf beim Ergebnis nichts melden, was das Original nicht
+  meldet, und `qpdf --check` muss fehlerfrei sein. Ergebnis an der Anfrage
+  (`quality_status/_findings/_checked_at`, `render_ms`).
+- **Sichtbar statt Kommandozeile**: `/admin/signaturen/qualitaet` (NUR
+  admin, Route UND Controller) mit "Neu erzeugen" (altes PDF bleibt) und
+  "Jetzt pruefen"; Zeilen "PDF-Pruefung (qpdf)" und "Signatur-Qualitaet"
+  auf `/admin/systemzustand`. Ein NEUER Befund laeutet einmal bei den
+  Admins; die Mail-Zusammenfassung des Nachtlaufs kommt NUR, wenn etwas
+  betroffen ist. Der Nachtlauf aendert nie Dokument oder Status.
+- **Eingangspruefung** (`PdfEingangspruefung`): verschluesselt -> klare
+  Meldung (Trailer gelesen, nicht nur das Dateiende); beschaedigt -> qpdf
+  schreibt neu, die neue Fassung muss die Pruefung bestehen und dieselbe
+  Seitenzahl haben. Die HOCHGELADENE Datei bleibt mit Hash erhalten
+  (`upload_original_*`, Ereignis `document_repaired`, beide Hashes im
+  Protokoll); "Fortschreibung des Originals" bezieht sich dann auf die
+  reparierte Basis. Ohne qpdf entfaellt nur diese Pruefung.
+- **Zu helles Firmenbild** wird beim Hochladen abgelehnt
+  (`Bildfreistellung::sichtbarerAnteil` nach dem Freistellen < 0,5 %) -
+  sonst scheiterte es erst nach dem Unterschreiben.
+- **Protokollseite** umbricht nach Helvetica-Breiten und laeuft ueber
+  mehrere Seiten; Zustimmungstext und Hashes stehen VOLLSTAENDIG da, mit
+  echten Umlauten (KI-081/082). Die alte Zustimmungs-Vorgabe
+  ("Geraeteangaben") gilt weiter als Vorgabe und wird uebersetzt.
+- **Testmatrix** `SignaturQualitaetsmatrixTest` mit
+  `tests/Support/SignaturPdfFixtures.php` (13 Bauformen x 7 Feldarten,
+  6 Bildarten, DPR 1/2/3): je Feld sichtbar UND nicht einfarbig.
+  **qpdf gehoert zur Testumgebung** (CI installiert es) - ohne qpdf
+  scheitert der Test mit klarer Meldung, statt sich zu ueberspringen.
+- **Gemessen**: Abschluss 1 Seite 28 -> 108 ms, 12 Seiten 108 -> 1079 ms
+  (Median 3 Laeufe). Synchron im Request bleibt vorerst (KI-090).
+- **Betrieb**: `apt install qpdf`; nach dem Deploy einmal
+  `php artisan signaturen:qualitaet-pruefen --ohne-mail`.
+- Tests: `SignaturQualitaetsmatrixTest`, `SignaturQualitaetsgateTest`,
+  `tests/Unit/ProtokollUmbruchTest.php`.
 
 ## System-Audit 15.09.2026: Befunde und Behebung
 

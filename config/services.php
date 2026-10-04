@@ -305,6 +305,15 @@ return [
     ],
 
     /*
+    | PDF-Strukturpruefung (qpdf) fuer das Signatur-Modul: Eingangspruefung
+    | beim Hochladen und Qualitaetsgate nach dem Erzeugen. Ohne qpdf
+    | entfaellt nur diese Pruefung (siehe Systemzustand).
+    */
+    'pdf' => [
+        'qpdf_binary' => env('PDF_QPDF_BINARY', 'qpdf'),
+    ],
+
+    /*
     | Kostenlose OCR-Basisebene (Tesseract) fuer den Smart Document Upload.
     | Standardmaessig AUS: erst nach Installation von `tesseract-ocr`,
     | `tesseract-ocr-deu` und (fuer PDFs) `poppler-utils` auf dem Server

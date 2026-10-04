@@ -138,4 +138,37 @@ final class Bildfreistellung
 
         return $anzahl;
     }
+
+    /**
+     * Anteil der Pixel, die auf weissem Papier SICHTBAR waeren: deckend
+     * (Alpha hoechstens halb) und deutlich dunkler als Weiss. Dieselbe
+     * Schwelle wie der Bildvergleich des Qualitaetsgates (Summe der
+     * Kanalabstaende > 60) - ein Bild, das hier fast nichts liefert, wuerde
+     * dort als "unsichtbar" scheitern, und zwar erst NACH dem
+     * Unterschreiben. Gemessen wird nach dem Freistellen: was der Stempler
+     * spaeter entfernt, zaehlt nicht.
+     */
+    public static function sichtbarerAnteil(\GdImage $bild): float
+    {
+        $w = imagesx($bild);
+        $h = imagesy($bild);
+        $schritt = max(1, (int) floor(max($w, $h) / 300));
+        $gesamt = 0;
+        $sichtbar = 0;
+        for ($y = 0; $y < $h; $y += $schritt) {
+            for ($x = 0; $x < $w; $x += $schritt) {
+                $c = imagecolorat($bild, $x, $y);
+                $gesamt++;
+                if ((($c >> 24) & 0x7F) > 63) {
+                    continue;
+                }
+                $abstand = (255 - (($c >> 16) & 0xFF)) + (255 - (($c >> 8) & 0xFF)) + (255 - ($c & 0xFF));
+                if ($abstand > 60) {
+                    $sichtbar++;
+                }
+            }
+        }
+
+        return $sichtbar / $gesamt;
+    }
 }

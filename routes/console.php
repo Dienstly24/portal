@@ -33,6 +33,11 @@ Schedule::command('tickets:auto-close')->dailyAt('04:00')->withoutOverlapping();
 // meldet dem Ersteller, dass sein Dokument unterschrieben werden sollte.
 Schedule::command('signaturen:ablaufen')->dailyAt('04:05')->withoutOverlapping();
 
+// 04:25 — Signatur-Qualitaetsgate ueber den Bestand (A1/A5, 04.10.2026):
+// jedes Dokument am gerenderten Bild pruefen, Befund an der Anfrage
+// vermerken, bei Befund EINE Zusammenfassung an die Administratoren.
+Schedule::command('signaturen:qualitaet-pruefen')->dailyAt('04:25')->withoutOverlapping();
+
 // 04:10 — DSGVO: unkonvertierte Website-Anfragen nach 6 Monaten loeschen (P0-1)
 Schedule::command('tickets:purge-website-leads')->dailyAt('04:10');
 

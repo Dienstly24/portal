@@ -251,6 +251,11 @@ class SignatureSigningController extends Controller
         if (! $completed && $this->signing->blockReason($request, $signer) !== null) {
             abort(403);
         }
+        // Nach dem Abschluss liest der Link das fertige Dokument nur noch
+        // bis zum Ablauf seiner (beim Abschluss verkuerzten) Frist.
+        if ($completed && ! $signer->tokenIsLive()) {
+            abort(410, __('signing.blocked_link_dead'));
+        }
 
         $binary = $this->storage->read($completed ? $request->signed_path : $request->original_path);
         if ($binary === null) {

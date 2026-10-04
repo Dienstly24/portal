@@ -63,7 +63,7 @@ jobs:
       # Dokumenterkennung auch hier in den Lauf und nicht in die Kuer.
       # Siehe docs/TESTUMGEBUNG.md.
       - name: Dokumenterkennung bereitstellen (OCR-Tests laufen sonst nicht)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-deu poppler-utils
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-deu poppler-utils qpdf
 
       - name: Migrationen prüfen (frische DB, SQLite)
         run: php artisan migrate:fresh --force
@@ -142,7 +142,7 @@ jobs:
       # ausserdem die fuenf OCR-Faelle still. Zwei Jobs, zwei Umgebungen
       # waren genau die Luecke.
       - name: Dokumenterkennung bereitstellen (wie im SQLite-Job)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-deu poppler-utils
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-deu poppler-utils qpdf
 
       # Erst die Migrationen: laufen sie auf MySQL nicht durch, ist die
       # Ursache eine andere als ein fehlgeschlagener Test - und dann soll

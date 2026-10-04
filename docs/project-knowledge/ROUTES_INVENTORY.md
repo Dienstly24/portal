@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 03.10.2026 aus `php artisan route:list --json` (517 Routen).
+Generiert am 04.10.2026 aus `php artisan route:list --json` (520 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -327,6 +327,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/signaturen` | admin.signatures.store | auth role:staff throttle:60,10 |
 | GET | `admin/signaturen/kunden-suche` | admin.signatures.customer_search | auth role:staff |
 | GET | `admin/signaturen/neu` | admin.signatures.create | auth role:staff |
+| GET | `admin/signaturen/qualitaet` | admin.signatures.quality | auth role:staff role:admin |
 | GET | `admin/signaturen/{id}` | admin.signatures.show | auth role:staff |
 | DELETE | `admin/signaturen/{id}` | admin.signatures.destroy | auth role:staff |
 | POST | `admin/signaturen/{id}/abbrechen` | admin.signatures.cancel | auth role:staff |
@@ -334,6 +335,8 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/signaturen/{id}/erinnern` | admin.signatures.remind | auth role:staff throttle:60,10 |
 | POST | `admin/signaturen/{id}/neu-erzeugen` | admin.signatures.regenerate | auth role:staff throttle:20,10 |
 | GET | `admin/signaturen/{id}/protokoll` | admin.signatures.audit | auth role:staff |
+| POST | `admin/signaturen/{id}/qualitaet-neu-erzeugen` | admin.signatures.quality.regenerate | auth role:staff role:admin throttle:20,10 |
+| POST | `admin/signaturen/{id}/qualitaet-pruefen` | admin.signatures.quality.check | auth role:staff role:admin throttle:30,10 |
 | GET | `admin/signaturen/{id}/seite/{page}` | admin.signatures.page | auth role:staff throttle:600,1 |
 | POST | `admin/signaturen/{id}/senden` | admin.signatures.send | auth role:staff throttle:60,10 |
 | GET | `admin/signaturen/{id}/vorbereiten` | admin.signatures.prepare | auth role:staff |

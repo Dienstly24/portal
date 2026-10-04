@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 04.10.2026 - E-Signatur: Qualitaetsgate, Testmatrix, Eingangspruefung (Audit Teil A, KI-080..091)
+
+- **Task**: Betreiber-Auftrag 04.10.2026 Teil A - "keine Unterschrift darf je wieder erfasst, aber unsichtbar sein, ohne dass wir es wissen".
+- **Files Changed**: neu `SignatureQualityGate`, `PdfEingangspruefung`, `CheckSignatureQuality` (`signaturen:qualitaet-pruefen`), `Admin\SignatureQualityController` + `admin/signatures/quality.blade.php`, `SignaturQualitaetMail` + `emails/signatur_qualitaet.blade.php`, Migration `2026_10_04_120000_signatur_qualitaetspruefung`; geaendert `SignedPdfVerifier` (alle Feldarten, poppler, qpdf), `SignatureSigningService` (Gate, Dauer, Link-Frist nach Abschluss), `SignedPdfRegenerator`, `SignatureRequestService` (Eingangspruefung, Gate vor Versand, Feldbezug), `SignedPdfBuilder` (Umlaute, volle Texte, Upload-Hash), `PdfStamper` (Protokoll-Umbruch, Mehrseitigkeit, Sichtbereich), `PdfDocument`/`PdfPage` (CropBox), `FeldGeometrie`, `SignaturePageRenderer`/`PdfSichtbarkeit` (-cropbox), `SignatureDiagnostics` (offene Vorgaenge simulieren), `CompanySignatureAssetService` (zu helle Bilder), `SignatureSigningController` (410 nach Frist), `Admin\SignatureController` (Original-Download protokolliert), `SystemHealthService`, `routes/web.php`, `routes/console.php`, `config/services.php`, `lang/de/signing.php`, CI (`qpdf`), `docs/AUDIT_2026-10-04_SIGNATUR.md`, `docs/TESTUMGEBUNG.md`, `scripts/testumgebung-pruefen.sh`; Tests `SignaturQualitaetsmatrixTest`, `SignaturQualitaetsgateTest`, `ProtokollUmbruchTest`, `tests/Support/SignaturPdfFixtures.php`.
+- **Components Affected**: Signatur-Upload, Versand, Abschluss, Neu-Erzeugen, Unterzeichner-Link, Systemzustand, Planer.
+- **Database Changes**: `signature_requests` + `feld_bezug` (Default `mediabox` = Bestand), `upload_original_path`, `upload_original_hash`, `quality_status` (Index), `quality_checked_at`, `quality_findings`, `render_ms`. Rein additiv.
+- **API Changes**: neue Routen `admin.signatures.quality`, `.quality.check`, `.quality.regenerate` (nur admin).
+- **Potential Side Effects**: Versand wird abgelehnt, wenn eine bereits gesetzte Unternehmenssignatur im Bild nicht sichtbar waere. Beschaedigte Uploads werden von qpdf neu geschrieben (Basis-Hash != Upload-Hash, beide im Protokoll). Der Unterzeichner-Link liest das fertige Dokument nur noch 7 Tage. Ohne qpdf auf dem Server entfaellt nur die Strukturpruefung.
+- **Tests Performed**: neue Tests 21 Faelle; volle Suite gruen, 0 uebersprungen; PHPStan 0, Pint sauber. Messung (Median 3 Laeufe): Abschluss 1 Seite 28 -> 108 ms, 12 Seiten 108 -> 1079 ms.
+- **Result**: KI-080..088 FIXED; KI-089..091 OPEN (dokumentiert).
+
+---
+
 ## 04.10.2026 - Zusammenfuehren archiviert statt zu loeschen, alte Kundennummer bleibt auffindbar (KI-064, Teil 1)
 
 - **Task**: PR-3a des freigegebenen Dubletten-Plans (Schritt 3). Rueckgaengig und Feldwahl folgen als PR-3b.

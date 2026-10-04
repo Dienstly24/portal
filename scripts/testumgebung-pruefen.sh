@@ -61,6 +61,11 @@ for werkzeug in pdftoppm pdftotext; do
         warn "$werkzeug fehlt (poppler-utils)" "apt install poppler-utils"
     fi
 done
+if command -v qpdf >/dev/null 2>&1; then
+    ok "qpdf $(qpdf --version 2>&1 | head -1 | awk '{print $3}')"
+else
+    warn "qpdf fehlt - die Signatur-Testmatrix (SignaturQualitaetsmatrixTest) scheitert" "apt install qpdf"
+fi
 
 titel "Node / Frontend"
 if command -v node >/dev/null 2>&1; then

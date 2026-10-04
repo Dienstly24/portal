@@ -31,7 +31,7 @@ return [
     'preview_unavailable' => 'Die Seitenvorschau steht gerade nicht zur Verfügung. Bitte öffnen Sie das Original-PDF.',
 
     // Zustimmung
-    'consent_default' => 'Mit dem Klick auf "Unterschrift bestätigen" geben Sie eine elektronische Unterschrift ab. Datum, Uhrzeit, IP-Adresse und Geraeteangaben werden zum Nachweis gespeichert. Sie erhalten das unterschriebene Dokument per E-Mail.',
+    'consent_default' => 'Mit dem Klick auf "Unterschrift bestätigen" geben Sie eine elektronische Unterschrift ab. Datum, Uhrzeit, IP-Adresse und Geräteangaben werden zum Nachweis gespeichert. Sie erhalten das unterschriebene Dokument per E-Mail.',
     'consent_required' => 'Bitte bestätigen Sie den Hinweis zur elektronischen Unterschrift.',
 
     // Ablehnen

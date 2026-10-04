@@ -32,8 +32,10 @@ class SignatureRequest extends Model
 
     protected $fillable = [
         'title', 'status', 'customer_id', 'contract_id', 'completed_document_id', 'created_by',
-        'original_path', 'original_name', 'original_hash', 'original_size', 'page_count',
+        'original_path', 'original_name', 'original_hash', 'original_size', 'page_count', 'feld_bezug',
+        'upload_original_path', 'upload_original_hash',
         'signed_path', 'signed_hash', 'signed_size',
+        'quality_status', 'quality_checked_at', 'quality_findings', 'render_ms',
         'signing_order', 'identity_check', 'consent_text',
         'document_type', 'reference', 'note',
         'sent_at', 'completed_at', 'cancelled_at', 'cancel_reason', 'expires_at', 'last_activity_at',
@@ -48,7 +50,25 @@ class SignatureRequest extends Model
         'cancelled_at' => 'datetime',
         'expires_at' => 'datetime',
         'last_activity_at' => 'datetime',
+        'quality_checked_at' => 'datetime',
+        'quality_findings' => 'array',
+        'render_ms' => 'integer',
     ];
+
+    /** Feldanteile beziehen sich auf die MediaBox (Bestand vor 04.10.2026). */
+    public const BEZUG_MEDIABOX = 'mediabox';
+
+    /** Feldanteile beziehen sich auf die CropBox - die Flaeche, die jeder Betrachter zeigt. */
+    public const BEZUG_CROPBOX = 'cropbox';
+
+    public const QUALITAET_OK = 'ok';
+
+    public const QUALITAET_FEHLER = 'fehler';
+
+    public function nutztCropBox(): bool
+    {
+        return $this->feld_bezug === self::BEZUG_CROPBOX;
+    }
 
     protected static function boot()
     {
@@ -176,8 +196,13 @@ class SignatureRequest extends Model
     {
         $text = (string) $this->consent_text;
         $vorgabe = (string) __('signing.consent_default', [], 'de');
+        // Die Vorgabe vor dem 04.10.2026 schrieb "Geraeteangaben" - auch
+        // dieser gespeicherte Text ist die VORGABE und wird uebersetzt,
+        // sonst saehe ein arabischer Unterzeichner des Bestands ploetzlich
+        // den deutschen Satz.
+        $alteVorgabe = str_replace('Geräteangaben', 'Geraeteangaben', $vorgabe);
 
-        if ($signer === null || trim($text) !== trim($vorgabe)) {
+        if ($signer === null || ! in_array(trim($text), [trim($vorgabe), trim($alteVorgabe)], true)) {
             return $text;
         }
 

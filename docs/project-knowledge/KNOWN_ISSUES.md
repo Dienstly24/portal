@@ -30,6 +30,18 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-045 | MEDIUM | correctness | Entgeltabrechnung "Verdienstabrechnung": weder Kunde noch Arbeitgeber gelesen | FIXED |
 | KI-046 | MEDIUM | correctness | Erstwagen einer Zweitwagenregelung zweckentfremdet in der Vorversicherung, Vertraege nicht verknuepft | FIXED |
 | KI-047 | MEDIUM | correctness | `Contract`: der Provisions-Listener auf `deleting` beendete die Listener-Kette (jeder spaetere deleting-Listener lief nie) | FIXED |
+| KI-080 | MEDIUM | correctness | E-Signatur: Feldanteile auf die MediaBox bezogen - Feld im abgeschnittenen CropBox-Rand im Dokument unsichtbar | FIXED |
+| KI-081 | MEDIUM | correctness | Signaturprotokoll: Zeilen ueber den Rand, alles nach Seite 1 fiel weg, Zustimmungstext/Bild-Hash abgeschnitten | FIXED |
+| KI-082 | LOW | ux-i18n | Signaturprotokoll: "Geraet"/"bestaetigt" statt Umlauten | FIXED |
+| KI-083 | MEDIUM | security | E-Signatur: Unterzeichner-Link nach Abschluss bis zu 30 Tage Lesezugang zum fertigen Vertrag | FIXED |
+| KI-084 | MEDIUM | correctness | E-Signatur: keine Strukturpruefung beim Hochladen, Verschluesselung nur am Dateiende erkannt | FIXED |
+| KI-085 | MEDIUM | correctness | E-Signatur: Selbsttest nur fuer Bildfelder, ohne poppler-/Strukturpruefung, kein Nachtlauf, keine Anzeige | FIXED |
+| KI-086 | LOW | correctness | `signaturen:diagnose`: offene Vorgaenge mit deckendem Logo faelschlich "betroffen" | FIXED |
+| KI-087 | LOW | ops | E-Signatur: Mitarbeiter-Download des Originals nicht protokolliert | FIXED |
+| KI-088 | MEDIUM | correctness | E-Signatur: zu helles Firmenbild scheiterte erst nach dem Unterschreiben | FIXED |
+| KI-089 | MEDIUM | correctness | E-Signatur: keine formale Zustandsmaschine (Status an 9 Stellen direkt gesetzt) | OPEN (Teil C) |
+| KI-090 | LOW | performance | E-Signatur: Abschluss + Qualitaetsgate synchron im Unterschreiben-Request (12 Seiten 1,1 s) | OPEN |
+| KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
 | KI-062 | HIGH | correctness | E-Signatur: /Resources als Referenz -> Bilder in verschachteltes /Resources geschrieben, "XObject unknown" (8 von 11 Vorgaengen) | FIXED |
 | KI-055 | HIGH | correctness | E-Signatur: Firmenlogo/-stempel im fertigen PDF unsichtbar (Stempler setzt EINE Farbe -> weisse Flaeche) | FIXED |
 | KI-056 | HIGH | correctness | E-Signatur: indirektes `/Contents`-Array -> Seite fuer poppler kaputt, Unterschrift faellt weg | FIXED |
@@ -173,6 +185,90 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `Customer::fullAddress()`, `householdKey()`
 - **Description** Strasse + Hausnummer + Zusatz werden ungeprueft zusammengesetzt; steht die Nummer schon in `address_street`, erscheint sie doppelt, und der Haushalts-Schluessel derselben Anschrift weicht ab. Plan PR-4.
 - **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
+### KI-080 - E-Signatur: Felder auf die MediaBox bezogen
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (04.10.2026)
+- **Location** `FeldGeometrie`, `PdfPage::alsSichtbereich`, `SignaturePageRenderer`, `PdfSichtbarkeit`
+- **Description** Betrachter zeigen die CropBox, Vorschau und Stempler rechneten mit der MediaBox: ein Feld im abgeschnittenen Rand stand im Editor sichtbar, im Dokument nicht.
+- **Fix** Neue Anfragen `feld_bezug = cropbox` (Vorschau mit -cropbox, Stempler/Selbsttest/Diagnose ueber den Sichtbereich); Bestand bleibt `mediabox`, keine Umrechnung. Test `SignaturQualitaetsmatrixTest::test_cropbox_feld_am_sichtbaren_rand`.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-081 - Signaturprotokoll abgeschnitten
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (04.10.2026)
+- **Location** `PdfStamper::appendProtocolPage`, `SignedPdfBuilder::protocolSections`
+- **Description** Lange Zeilen liefen ueber den Rand, alles nach Seite 1 fiel still weg ("break 2"), Zustimmungstext nach 160 Zeichen und Bild-Hash nach 32 Zeichen abgeschnitten.
+- **Fix** Umbruch nach Helvetica-Breiten, weitere Protokollseiten mit "Protokoll n / m", volle Texte. Tests `ProtokollUmbruchTest`, `SignaturQualitaetsmatrixTest::test_zustimmungstext_wird_umbrochen_nicht_abgeschnitten`.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-082 - Signaturprotokoll ohne Umlaute
+- **Category** ux-i18n · **Severity** LOW · **Status** FIXED (04.10.2026)
+- **Location** `SignedPdfBuilder`, `lang/de/signing.php`
+- **Description** "Geraet", "bestaetigt" usw., obwohl die WinAnsi-Schrift Umlaute kann.
+- **Fix** Echte Umlaute; die alte Zustimmungs-Vorgabe wird in `consentTextFor()` weiter als Vorgabe erkannt. Test `test_umlaute_im_protokoll_und_in_feldern`.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-083 - Unterzeichner-Link nach Abschluss zu lange gueltig
+- **Category** security · **Severity** MEDIUM · **Status** FIXED (04.10.2026)
+- **Location** `SignatureSigningService::completeUnterSperre`, `SignatureSigningController::document`
+- **Description** Nach dem Abschluss blieb der Link bis zu 30 Tage ein Lesezugang zum unterschriebenen Vertrag; CLAUDE.md behauptete "widerrufen".
+- **Fix** Frist beim Abschluss auf 7 Tage (`NACHLAUF_TAGE`), danach HTTP 410. Test `SignaturQualitaetsgateTest::test_link_nach_dem_abschluss_nur_noch_kurz_lesend`.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-084 - Keine Strukturpruefung beim Hochladen
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (04.10.2026)
+- **Location** `PdfEingangspruefung`, `SignatureRequestService::createFromUpload`
+- **Description** Beschaedigte PDF fielen erst beim Stempeln/Anzeigen auf; Verschluesselung wurde nur an den letzten 3000 Bytes erkannt.
+- **Fix** qpdf --check, Reparatur per Neuschreiben mit erneuter Pruefung, hochgeladene Datei bleibt mit Hash (`upload_original_*`); Verschluesselung ueber den Trailer. Tests `test_beschaedigtes_pdf_wird_repariert_...`, `test_verschluesseltes_pdf_...`.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-085 - Selbsttest zu schmal, kein Nachtlauf
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (04.10.2026)
+- **Location** `SignedPdfVerifier`, `SignatureQualityGate`, `CheckSignatureQuality`
+- **Description** Nur Bildfelder wurden geprueft, poppler-Meldungen und Struktur nicht; es gab keinen Lauf ueber den Bestand und keine Anzeige in der Beraterwelt.
+- **Fix** Qualitaetsgate bei Versand, Abschluss, Neu-Erzeugen und nachts; Liste `/admin/signaturen/qualitaet`, Systemzustand, Glocke + Zusammenfassung. Tests `SignaturQualitaetsgateTest`, `SignaturQualitaetsmatrixTest`.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-086 - Diagnose: Fehlalarm bei offenen Vorgaengen
+- **Category** correctness · **Severity** LOW · **Status** FIXED (04.10.2026)
+- **Location** `SignatureDiagnostics`
+- **Description** Server-Lauf 04.10.2026: offene Vorgaenge mit deckendem Logo standen als "betroffen" da - die Bildanalyse beschrieb den ALTEN Stempler.
+- **Fix** Offene Vorgaenge werden im Speicher gestempelt und am Bild geprueft; deckendes Bild ist nur noch Risiko. Test `test_diagnose_offener_vorgang_mit_deckendem_logo_ist_nicht_betroffen`.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-087 - Original-Download nicht protokolliert
+- **Category** ops · **Severity** LOW · **Status** FIXED (04.10.2026)
+- **Location** `Admin\SignatureController::download`
+- **Description** Nur der Download des unterschriebenen PDF stand im Protokoll.
+- **Fix** Jeder Download wird protokolliert.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-088 - Zu helles Firmenbild
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (04.10.2026)
+- **Location** `CompanySignatureAssetService::render`, `Bildfreistellung::sichtbarerAnteil`
+- **Description** Ein sehr helles Stempelbild waere erst NACH dem Unterschreiben an der Pruefung gescheitert.
+- **Fix** Ablehnung beim Hochladen. Test `test_zu_helles_firmenbild_wird_beim_hochladen_abgelehnt`.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-089 - Keine formale Zustandsmaschine
+- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Location** `SignatureSigningService`, `SignatureRequestService`
+- **Description** Der Status wird an 9 Stellen direkt gesetzt, Uebergaenge werden nicht geprueft.
+- **Fix** Geplant in Teil C (Ablehnen/Reaktivieren).
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-090 - Abschluss synchron im Request
+- **Category** performance · **Severity** LOW · **Status** OPEN
+- **Location** `SignatureSigningService::complete`
+- **Description** Gemessen 108 ms (1 Seite) bzw. 1,1 s (12 Seiten); hochgerechnet ~18 s bei 200 Seiten mit je einer Unterschrift.
+- **Fix** Auslagerung in einen Job erst bei Bedarf; Dauer steht je Vorgang in `render_ms`.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-091 - Fertiges PDF nicht PDF/A, Schrift nur WinAnsi
+- **Category** correctness · **Severity** LOW · **Status** OPEN
+- **Location** `PdfStamper`
+- **Description** Transparenz der Unterschrift und nicht eingebettete Helvetica; Zeichen ausserhalb WinAnsi werden umschrieben (Bestand 0 von 1424 Namen).
+- **Fix** Eingebettete Unicode-Schrift erst bei Bedarf.
+- **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
 ### KI-062 - E-Signatur: /Resources als Referenz - Bilder unauffindbar ("XObject unknown")
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (03.10.2026)
 - **Location** `PdfStamper::registerResources`

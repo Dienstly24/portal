@@ -35,6 +35,12 @@ class SignatureStorage
         return $this->directory($request).'/original.pdf';
     }
 
+    /** Die hochgeladene Datei, wenn die Eingangspruefung sie reparieren musste. */
+    public function uploadOriginalPath(SignatureRequest $request): string
+    {
+        return $this->directory($request).'/hochgeladen.pdf';
+    }
+
     public function signedPath(SignatureRequest $request): string
     {
         return $this->directory($request).'/unterschrieben.pdf';
