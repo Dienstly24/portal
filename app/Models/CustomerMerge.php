@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Matching\CustomerMergeUndoService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,6 +20,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CustomerMerge extends Model
 {
+    /**
+     * So lange laesst sich eine Zusammenfuehrung zuruecknehmen. Danach
+     * leert `kunden:zusammenfuehrungen-abschliessen` das Protokoll und die
+     * Stammdaten der Huelle - die Kundennummer bleibt als Alias stehen.
+     */
+    public const RUECKGAENGIG_TAGE = 30;
+
+    public function kannRueckgaengig(): bool
+    {
+        return app(CustomerMergeUndoService::class)->hindernisse($this) === [];
+    }
+
     protected $guarded = ['id'];
 
     protected function casts(): array

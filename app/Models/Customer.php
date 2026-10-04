@@ -383,7 +383,11 @@ class Customer extends Model
         });
     }
 
-    /** Abfrage EINSCHLIESSLICH der archivierten Huellen. */
+    /**
+     * Abfrage EINSCHLIESSLICH der archivierten Huellen.
+     *
+     * @return Builder<Customer>
+     */
     public static function mitArchiv(): Builder
     {
         return static::withoutGlobalScope(self::SCOPE_NICHT_ARCHIVIERT);

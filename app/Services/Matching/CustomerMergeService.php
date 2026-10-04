@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Fuehrt zwei Kundenakten verlustfrei zusammen. Der Duplikat-Datensatz wird
- * geloescht, ABER erst nachdem ALLE abhaengigen Daten auf den Hauptkunden
+ * seit 04.10.2026 ARCHIVIERT statt geloescht (KI-064, Rueckgaengig:
+ * `CustomerMergeUndoService`) - ABER erst nachdem ALLE abhaengigen Daten auf den Hauptkunden
  * umgehaengt wurden - Vertraege, Dokumente, Tickets, Termine, Notizen,
  * Familie, Fahrzeuge, Nachrichten, Einwilligungen (DSGVO),
  * Dokumentanfragen, Aufgaben, E-Mail-Zuordnungen, externe Kennungen und
@@ -177,6 +178,9 @@ class CustomerMergeService
                 'user_vorher' => $userIdBefore,
                 'getauscht' => (int) $primary->user_id !== (int) $userIdBefore,
                 'verlierer_user_id' => $loserUser?->id,
+                // Damit ein Rueckgaengigmachen nur oeffnet, was der Merge
+                // geschlossen hat - nicht einen schon vorher gesperrten Zugang.
+                'verlierer_war_aktiv' => $loserUser === null || ! (isset($loserUser->is_active) && ! $loserUser->is_active),
                 'email2_vorher' => $email2Vorher,
                 'sprache_vorher' => $langVorher,
             ];

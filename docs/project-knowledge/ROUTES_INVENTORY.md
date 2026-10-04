@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 03.10.2026 aus `php artisan route:list --json` (517 Routen).
+Generiert am 04.10.2026 aus `php artisan route:list --json` (518 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -78,6 +78,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | DELETE | `admin/customers/relationships/{id}` | admin.customers.relationships.delete | auth role:staff |
 | POST | `admin/customers/relationships/{id}/bestaetigen` | admin.customers.relationships.confirm | auth role:staff |
 | POST | `admin/customers/relationships/{id}/type` | admin.customers.relationships.type | auth role:staff |
+| POST | `admin/customers/zusammenfuehrungen/{merge}/rueckgaengig` | admin.customer.merge.undo | auth role:staff role:admin |
 | POST | `admin/customers/{customerId}/document-requests` | admin.document_requests.store | auth role:staff |
 | GET | `admin/customers/{id}` | admin.customer | auth role:staff |
 | PUT | `admin/customers/{id}` | admin.customer.update | auth role:staff |

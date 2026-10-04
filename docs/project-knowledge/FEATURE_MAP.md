@@ -31,7 +31,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Klassifikation `DuplicateDetectionService::classify()` (sicher / moeglich / moegliche Familie) seit 03.10.2026 - EINE Quelle fuer Anzeige und alle Merge-Wege (KI-063)
 - Merge-Sperren `CustomerMergeService::mergeBlockers()` (Widerspruch, zwei aktive Portalzugaenge) - `merge()` verweigert sich ohne Begruendung; Sammel-Merge nur `sicher` (KI-065/068)
 - Zusammenfuehren ARCHIVIERT das Duplikat (`merged_into_id`/`archived_at`, Alias der alten Kundennummer, Weiterleitung alter Links) und schreibt ein Protokoll `customer_merges` (KI-064, PR-3a)
-- Tests `DublettenFamilieTest`, `MergeSperrenTest`, `MergeArchivTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
+- Rueckgaengig innerhalb von 30 Tagen (`CustomerMergeUndoService`, Route `admin.customer.merge.undo`, nur admin) und Abschluss nach Fristablauf (`kunden:zusammenfuehrungen-abschliessen`, 05:45) (KI-064, PR-3b)
+- Tests `DublettenFamilieTest`, `MergeSperrenTest`, `MergeArchivTest`, `MergeRueckgaengigTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
 - Status **ACTIVE**
 
 ### F-003 Familie und Kundenbeziehungen (inkl. Uebergang mit 15)

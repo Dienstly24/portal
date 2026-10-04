@@ -1417,6 +1417,32 @@ function openContractType(key) {
 document.addEventListener('DOMContentLoaded', filterContracts);
 </script>
 
+@if(isset($zusammenfuehrungen) && $zusammenfuehrungen->isNotEmpty())
+{{-- Zusammenfuehrungen in diese Akte (KI-064): innerhalb der Frist
+     zuruecknehmbar, sonst steht der Grund daneben. --}}
+<div class="card" style="margin-top:24px;">
+    <div style="font-weight:600;margin-bottom:8px;">🔀 In diese Akte zusammengeführt</div>
+    @foreach($zusammenfuehrungen as $zf)
+        @php($hindernisse = app(\App\Services\Matching\CustomerMergeUndoService::class)->hindernisse($zf))
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13px;">
+            <div>
+                Kundennummer <strong>{{ $zf->duplicate_number ?? '–' }}</strong>
+                · {{ $zf->created_at?->lokal()->format('d.m.Y H:i') }}
+                @if($zf->undone_at) · <span style="color:var(--ink-soft);">rückgängig gemacht am {{ $zf->undone_at->lokal()->format('d.m.Y') }}</span>@endif
+            </div>
+            @if($hindernisse === [])
+                <form method="POST" action="{{ route('admin.customer.merge.undo', $zf->id) }}" data-confirm="Zusammenführung mit {{ $zf->duplicate_number }} rückgängig machen? Die Akte wird wieder eigenständig; was seitdem neu an dieser Akte entstanden ist, bleibt hier." style="margin:0;">
+                    @csrf
+                    <button type="submit" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;">↩ Rückgängig machen</button>
+                </form>
+            @elseif(! $zf->undone_at)
+                <span style="color:var(--ink-soft);font-size:12px;">{{ implode(' ', $hindernisse) }}</span>
+            @endif
+        </div>
+    @endforeach
+</div>
+@endif
+
 <div style="display:flex;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);">
     <a href="{{ route('admin.customer.merge', $customer->id) }}" class="btn btn-ghost">🔀 Mit Duplikat zusammenführen</a>
     <form method="POST" action="{{ route('admin.customers.delete', $customer->id) }}" data-confirm="Kunde {{ $customer->user?->name }} wirklich ENDGÜLTIG löschen? Alle Verträge, Tickets und Dokumente gehen verloren!" data-confirm-2="Wirklich sicher? Diese Aktion kann NICHT rückgängig gemacht werden." style="margin:0;">

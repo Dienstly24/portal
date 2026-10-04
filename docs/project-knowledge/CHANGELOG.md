@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 04.10.2026 - Zusammenfuehrung rueckgaengig machen, Abschluss nach 30 Tagen (KI-064, Teil 2)
+
+- **Task**: PR-3b des freigegebenen Dubletten-Plans (Schritt 3). Die Feldwahl in der Vorschau folgt als PR-3c.
+- **Files Changed**: neu `CustomerMergeUndoService`, neu Befehl `CloseCustomerMerges` (`kunden:zusammenfuehrungen-abschliessen`, Planer 05:45); `CustomerMerge` (`RUECKGAENGIG_TAGE`); `CustomerMergeService` (Protokoll merkt `verlierer_war_aktiv`); `Customer::mitArchiv()` typisiert; `Admin\DuplicateController::undoMerge` + Route `admin.customer.merge.undo` (role:admin); `AdminController::customerShow` + `admin/customer_show.blade.php` (Karte "In diese Akte zusammengefuehrt"); neu `tests/Feature/MergeRueckgaengigTest.php`; `CLAUDE.md`, `KNOWN_ISSUES.md`, `FEATURE_MAP.md`, `ROUTES_INVENTORY.md` (per Skript).
+- **Components Affected**: Kundenakte (nur admin), Kunden-Zusammenfuehrung, Planer.
+- **Database Changes**: keine.
+- **API Changes**: neue Route `POST admin/customers/zusammenfuehrungen/{merge}/rueckgaengig`.
+- **Potential Side Effects**: Nach 30 Tagen werden Stammdaten und Protokoll archivierter Akten geleert - ab dann ist eine Zusammenfuehrung endgueltig. Was nach dem Merge am Hauptkunden neu entstand, bleibt dort auch nach dem Rueckgaengigmachen.
+- **Tests Performed**: `MergeRueckgaengigTest` 9 Faelle. Volle Suite 3390, 3385 gruen, 5 uebersprungen (OCR, tesseract lokal nicht installiert). PHPStan 0 Fehler, Pint sauber.
+- **Result**: KI-064 FIXED.
+
+---
+
 ## 04.10.2026 - Zusammenfuehren archiviert statt zu loeschen, alte Kundennummer bleibt auffindbar (KI-064, Teil 1)
 
 - **Task**: PR-3a des freigegebenen Dubletten-Plans (Schritt 3). Rueckgaengig und Feldwahl folgen als PR-3b.
