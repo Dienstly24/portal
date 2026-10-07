@@ -8,6 +8,7 @@ use App\Models\SignatureEvent;
 use App\Models\SignatureRequest;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\Pdf\PdfEingangspruefung;
 use App\Services\Signature\PdfSichtbarkeit;
 use App\Services\Signature\SignatureDiagnostics;
 use App\Services\Signature\SignaturePageRenderer;
@@ -336,8 +337,8 @@ class SignaturPdfSichtbarkeitTest extends TestCase
     public function test_scheitert_der_selbsttest_wird_nicht_abgeschlossen_und_laesst_sich_neu_erzeugen(): void
     {
         // KI-058: "Abgeschlossen" erst NACH bestandenem Selbsttest.
-        $this->app->bind(SignedPdfVerifier::class, fn () => new class(app(PdfSichtbarkeit::class)) extends SignedPdfVerifier {
-            public function pruefe(SignatureRequest $request, string $original, string $signiert, array $bilder): array
+        $this->app->bind(SignedPdfVerifier::class, fn () => new class(app(PdfSichtbarkeit::class), app(PdfEingangspruefung::class)) extends SignedPdfVerifier {
+            public function pruefe(SignatureRequest $request, string $original, string $signiert, array $bilder, ?array $nurFelder = null): array
             {
                 return ['Testfehler'];
             }

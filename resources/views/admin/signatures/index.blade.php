@@ -9,9 +9,20 @@
             <div class="page-sub">Dokumente zur Unterschrift versenden – mit oder ohne Kundenakte.</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
+            @if(auth()->user()->role === 'admin')
+            @php $qualitaetsBefunde = \App\Services\Signature\SignatureQualityGate::betroffene()->count(); @endphp
+            <a href="{{ route('admin.signatures.quality') }}" class="btn btn-ghost">Qualität
+                @if($qualitaetsBefunde > 0)
+                <span class="badge badge-danger">{{ $qualitaetsBefunde }}</span>
+                @endif
+            </a>
+            @endif
             @can('firmensignatur-verwalten')
             <a href="{{ route('admin.signatures.company.index') }}" class="btn btn-ghost">Unternehmenssignaturen</a>
             @endcan
+            @if(auth()->user()->darfFuerFirmaUnterschreiben())
+            <a href="{{ route('admin.meine_unterschrift') }}" class="btn btn-ghost">🖋 Meine Unterschrift</a>
+            @endif
             <a href="{{ route('admin.signatures.create') }}" class="btn btn-emerald">+ Neue Signaturanfrage</a>
         </div>
     </div>

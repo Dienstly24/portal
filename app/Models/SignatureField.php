@@ -23,7 +23,7 @@ class SignatureField extends Model
     protected $fillable = [
         'signature_request_id', 'signature_signer_id', 'type', 'page',
         'pos_x', 'pos_y', 'width', 'height', 'required', 'label', 'value', 'image_path', 'filled_at', 'sort',
-        'company_asset_id',
+        'company_asset_id', 'internal_user_id', 'user_signature_id', 'intern_beschriftung',
     ];
 
     protected $casts = [
@@ -35,6 +35,7 @@ class SignatureField extends Model
         'required' => 'boolean',
         'sort' => 'integer',
         'filled_at' => 'datetime',
+        'intern_beschriftung' => 'boolean',
     ];
 
     protected static function boot()
@@ -73,6 +74,18 @@ class SignatureField extends Model
         return $this->type === SignatureFieldType::COMPANY;
     }
 
+    /** "Meine Unterschrift" - gehoert einem MITARBEITER, nicht einem Unterzeichner. */
+    public function isInternal(): bool
+    {
+        return $this->type === SignatureFieldType::INTERNAL;
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function internalUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'internal_user_id');
+    }
+
     /** @return BelongsTo<CompanySignatureAsset, $this> */
     public function companyAsset(): BelongsTo
     {
@@ -86,6 +99,9 @@ class SignatureField extends Model
         // keiner "noch offen"-Liste auf.
         if ($this->isCompany()) {
             return $this->company_asset_id !== null;
+        }
+        if ($this->isInternal()) {
+            return $this->filled_at !== null && $this->image_path !== null;
         }
 
         return $this->filled_at !== null

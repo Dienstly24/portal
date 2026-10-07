@@ -251,12 +251,20 @@ class SignatureSigningController extends Controller
         if (! $completed && $this->signing->blockReason($request, $signer) !== null) {
             abort(403);
         }
+        // Nach dem Abschluss liest der Link das fertige Dokument nur noch
+        // bis zum Ablauf seiner (beim Abschluss verkuerzten) Frist.
+        if ($completed && ! $signer->tokenIsLive()) {
+            abort(410, __('signing.blocked_link_dead'));
+        }
 
-        $binary = $this->storage->read($completed ? $request->signed_path : $request->original_path);
+        // Vor dem Abschluss: die Fassung MIT den internen Unterschriften,
+        // sofern es eine gibt - dieselbe Datei wie in der Seitenansicht.
+        $binary = $this->storage->read($completed ? $request->signed_path : $request->basisPfad());
         if ($binary === null) {
             abort(404);
         }
-        $this->audit->record($request, 'downloaded', $signer, $completed ? 'Unterschriebenes PDF' : 'Original');
+        $this->audit->record($request, 'downloaded', $signer, $completed ? 'Unterschriebenes PDF'
+            : ($request->zwischenstand_path !== null ? 'Dokument mit interner Unterschrift' : 'Original'));
 
         return response($binary, 200, [
             'Content-Type' => 'application/pdf',

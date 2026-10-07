@@ -110,9 +110,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - S `Energy/*`; T `meter_readings`; Tests `MeterReadingTest` · Status **ACTIVE**
 
 ### F-024 E-Signatur
-- C `Admin\SignatureController`, `SignatureSigningController`, `Admin\CompanySignatureAssetController`; S `Signature/*`, `Pdf/*`; V `admin/signatures/*`, `signature/*`; T `signature_*`, `company_signature_assets`; Planer `signaturen:ablaufen`; Diagnose `signaturen:diagnose` (nur lesend), Reparatur `signaturen:neu-erzeugen`
-- R Policy `SignatureRequestPolicy`, Gates `firmensignatur-*`
-- Tests `SignatureModuleTest`, `SignatureSecurityTest`, `SignaturGruppeTest`, `SignaturWorkflowTest`, `SignaturBenachrichtigungTest`, `UnternehmenssignaturTest`, `FaultInjectionSignatureTest`, `SignerIdentityTest`, `SignatureLocalizationTest`, `SignatureCreateFlowTest`, `CompanySignatureAssetTest`, `PdfStamperTest`, `BildverarbeitungFehltTest`, `SignaturDiagnoseTest`, `SignaturPdfSichtbarkeitTest`, `BildfreistellungTest`
+- C `Admin\SignatureController`, `SignatureSigningController`, `Admin\CompanySignatureAssetController`; S `Signature/*`, `Pdf/*`; V `admin/signatures/*`, `signature/*`; T `signature_*`, `company_signature_assets`; Planer `signaturen:ablaufen`, `signaturen:qualitaet-pruefen` (04:25, Qualitaetsgate + Zusammenfassung an Admins); Diagnose `signaturen:diagnose` (nur lesend), Reparatur `signaturen:neu-erzeugen`; Qualitaetsliste `Admin\SignatureQualityController` (`/admin/signaturen/qualitaet`, nur admin); Eingangspruefung `Pdf\PdfEingangspruefung` (qpdf)
+- Interne Unterschrift (Teil B, 07.10.2026): `Admin\InternalSignatureController` (`/admin/meine-unterschrift`, `/admin/signaturen/{id}/intern-unterschreiben`), `SignatureHandoffController` (`/unterschrift-handy/{token}`), S `InternalSigningService`, `UserSignatureService`, `InterneFreigabe`, `SignatureHandoffService`; T `user_signatures`, `signature_handoffs`, `signature_internal_signings`; Recht `users.can_sign_for_company` (Admin vergibt)
+- R Policy `SignatureRequestPolicy` (+ `signInternal`, `resetInternal`), Gates `firmensignatur-*`
+- Tests `SignaturQualitaetsmatrixTest`, `SignaturQualitaetsgateTest`, `ProtokollUmbruchTest`, `SignatureModuleTest`, `SignatureSecurityTest`, `SignaturGruppeTest`, `SignaturWorkflowTest`, `SignaturBenachrichtigungTest`, `UnternehmenssignaturTest`, `FaultInjectionSignatureTest`, `SignerIdentityTest`, `SignatureLocalizationTest`, `SignatureCreateFlowTest`, `CompanySignatureAssetTest`, `PdfStamperTest`, `BildverarbeitungFehltTest`, `SignaturDiagnoseTest`, `SignaturPdfSichtbarkeitTest`, `BildfreistellungTest`, `InterneUnterschriftTest`
 - Status **ACTIVE** · rechtliche Einordnung je Geschaeftsfall offen (KI-009)
 
 ## C. Kommunikation

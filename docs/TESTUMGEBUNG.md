@@ -47,12 +47,18 @@ prueft das heute frueh; der Test dazu ist `BildverarbeitungFehltTest`.
 |---|---|---|
 | `tesseract-ocr`, `tesseract-ocr-deu` | Texterkennung auf Fotos/Scans | `apt install tesseract-ocr tesseract-ocr-deu` |
 | `poppler-utils` (`pdftoppm`, `pdftotext`) | PDF-Textebene und Seitenbilder | `apt install poppler-utils` |
+| `qpdf` | Signatur-Modul: Strukturpruefung/Reparatur hochgeladener PDF, Testmatrix (`SignaturQualitaetsmatrixTest`) | `apt install qpdf` |
 
 Fehlen sie, laeuft die Suite - aber **fuenf OCR-Faelle ueberspringen sich
 still**. Genau das war monatelang der Zustand: in der Ergebniszeile stand
 "bestanden", geprueft wurde ein Teil davon nie. Auf dem Produktionsserver
 sind beide Pakete installiert (`OCR_ENABLED=true`), die Tests gehoeren
 deshalb zur Normalausstattung und nicht in die Kuer.
+
+`qpdf` (seit 04.10.2026) ist fuer die Signatur-Testmatrix PFLICHT: sie
+scheitert ohne qpdf mit einer klaren Meldung, statt sich zu ueberspringen -
+ein uebersprungener Test sieht aus wie ein bestandener. Die CI installiert
+es in beiden Test-Jobs; auf dem Produktionsserver: `apt install qpdf`.
 
 ## 3. Datenbank
 

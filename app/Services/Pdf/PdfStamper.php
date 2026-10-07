@@ -55,7 +55,12 @@ final class PdfStamper
     /** @var list<array{page: int, name: string, object: int}> gesetzte Bilder - fuer den Selbsttest */
     private array $platziert = [];
 
-    public function __construct(private readonly PdfDocument $document)
+    /**
+     * @param  bool  $sichtbereich  Stempel-Koordinaten beziehen sich auf die
+     *                             CropBox (Feldbezug "cropbox") statt auf die
+     *                             MediaBox - siehe PdfPage::alsSichtbereich()
+     */
+    public function __construct(private readonly PdfDocument $document, private readonly bool $sichtbereich = false)
     {
         $this->nextObject = $this->document->maxObjectNumber() + 1;
     }
@@ -100,7 +105,8 @@ final class PdfStamper
             $byPage[$stamp->pageIndex][] = $stamp;
         }
         foreach ($byPage as $pageIndex => $stamps) {
-            $this->stampPage($this->document->page($pageIndex), $stamps);
+            $page = $this->document->page($pageIndex);
+            $this->stampPage($this->sichtbereich ? $page->alsSichtbereich() : $page, $stamps);
         }
         if ($this->protocolSections !== []) {
             $this->appendProtocolPage();
@@ -138,11 +144,18 @@ final class PdfStamper
             $y = $page->displayHeight() - $stamp->y - $stamp->height;
 
             if ($stamp->type === PdfStamp::TYPE_IMAGE && $stamp->png !== null) {
-                $name = 'D24Sig'.$page->objectNumber.'x'.$i;
                 $imageObject = $this->addImage($stamp->png, $stamp->width, $stamp->height, $stamp->freistellen);
                 if ($imageObject === null) {
                     continue;
                 }
+                // Der Name traegt die OBJEKTNUMMER des Bildes - sie ist im
+                // ganzen Dokument eindeutig, auch ueber mehrere
+                // Fortschreibungen hinweg. Mit "Seite x Zaehler" bekam die
+                // zweite Fortschreibung (interne Unterschrift, danach der
+                // Kunde) denselben Namen wie die erste: qpdf meldete
+                // "dictionary has duplicated key /D24Sig4x0", und ein
+                // Betrachter haette eines der beiden Bilder verworfen (Teil B).
+                $name = 'D24Sig'.$imageObject;
                 $xobjects[$name] = $imageObject;
                 $this->platziert[] = ['page' => $page->index, 'name' => $name, 'object' => $imageObject];
                 $ops[] = 'q '.PdfSyntax::num($stamp->width).' 0 0 '.PdfSyntax::num($stamp->height)
@@ -384,18 +397,38 @@ final class PdfStamper
 
     // --------------------------------------------------------- Protokollseite
 
+    /**
+     * Haengt das Protokoll als eine oder MEHRERE Seiten an.
+     *
+     * Bis 04.10.2026 brach eine zu lange Zeile ueber den rechten Rand hinaus
+     * und alles, was nicht auf EINE Seite passte, fiel still weg ("break 2")
+     * - bei mehreren Unterzeichnern fehlten genau die letzten Abschnitte,
+     * darunter der rechtliche Hinweis mit dem Zustimmungstext. Jetzt wird
+     * nach der echten Zeichenbreite von Helvetica umbrochen und bei Bedarf
+     * eine weitere Seite angelegt; NICHTS wird abgeschnitten.
+     */
     private function appendProtocolPage(): void
     {
         $width = 595.28;
         $height = 841.89;
         $margin = 56.0;
-        $y = $height - $margin;
+        $nutzbreite = $width - 2 * $margin;
 
+        $seiten = [];
         $ops = ['0 g'];
-        $write = function (string $text, float $size, float $gap) use (&$ops, &$y, $margin): void {
+        $y = $height - $margin;
+        $neueSeite = function () use (&$seiten, &$ops, &$y, $height, $margin): void {
+            $seiten[] = $ops;
+            $ops = ['0 g'];
+            $y = $height - $margin;
+        };
+        $write = function (string $text, float $size, float $gap, float $einzug = 0.0) use (&$ops, &$y, $margin, $neueSeite): void {
+            if ($y - $gap < $margin) {
+                $neueSeite();
+            }
             $y -= $gap;
             $ops[] = 'BT /D24Font '.PdfSyntax::num($size).' Tf '
-                .PdfSyntax::num($margin).' '.PdfSyntax::num($y).' Td '
+                .PdfSyntax::num($margin + $einzug).' '.PdfSyntax::num($y).' Td '
                 .PdfSyntax::escapeString($text).' Tj ET';
         };
 
@@ -405,38 +438,127 @@ final class PdfStamper
         $y -= 8;
 
         foreach ($this->protocolSections as $section) {
-            $write($section['title'], 11, 26);
+            // Eine Ueberschrift nie allein am Seitenende.
+            if ($y - 26 - 13 < $margin) {
+                $neueSeite();
+            }
+            foreach (self::umbrechen($section['title'], 11, $nutzbreite) as $i => $zeile) {
+                $write($zeile, 11, $i === 0 ? 26 : 14);
+            }
             foreach ($section['lines'] as $line) {
-                if ($y < $margin + 24) {
-                    break 2; // Eine zweite Protokollseite waere Zierde; das Vollprotokoll steht im Audit.
+                foreach (self::umbrechen($line, 9, $nutzbreite - 8) as $i => $zeile) {
+                    $write($zeile, 9, 13, $i === 0 ? 0.0 : 8.0);
                 }
-                $write($line, 9, 13);
             }
         }
+        $seiten[] = $ops;
 
-        $content = implode("\n", $ops)."\n";
-        $contentObject = $this->newObject('<< /Length '.strlen($content)." >>\nstream\n".$content.'endstream');
         $pagesRoot = $this->document->pagesRootNumber();
-        $pageObject = $this->newObject(
-            '<< /Type /Page /Parent '.$pagesRoot.' 0 R /MediaBox [0 0 '.PdfSyntax::num($width).' '.PdfSyntax::num($height).']'
-            .' /Resources << /Font << /D24Font '.$this->fontObject().' 0 R >> >>'
-            .' /Contents '.$contentObject.' 0 R >>'
-        );
+        $neueSeiten = [];
+        $anzahl = count($seiten);
+        foreach ($seiten as $nr => $seitenOps) {
+            if ($anzahl > 1) {
+                $seitenOps[] = 'BT /D24Font 8 Tf '.PdfSyntax::num($width - $margin - 60).' '.PdfSyntax::num($margin / 2).' Td '
+                    .PdfSyntax::escapeString('Protokoll '.($nr + 1).' / '.$anzahl).' Tj ET';
+            }
+            $content = implode("\n", $seitenOps)."\n";
+            $contentObject = $this->newObject('<< /Length '.strlen($content)." >>\nstream\n".$content.'endstream');
+            $neueSeiten[] = $this->newObject(
+                '<< /Type /Page /Parent '.$pagesRoot.' 0 R /MediaBox [0 0 '.PdfSyntax::num($width).' '.PdfSyntax::num($height).']'
+                .' /Resources << /Font << /D24Font '.$this->fontObject().' 0 R >> >>'
+                .' /Contents '.$contentObject.' 0 R >>'
+            );
+        }
 
         $rootBody = $this->bodyOf($pagesRoot);
         $entries = PdfSyntax::dictEntries($rootBody);
         $kids = $entries['Kids'] ?? '[]';
-        if (PdfSyntax::isReference($kids)) {
-            $ref = PdfSyntax::referenceNumber($kids);
-            if ($ref !== null) {
-                $this->rewrites[$ref] = PdfSyntax::appendToArray($this->bodyOf($ref), $pageObject.' 0 R');
+        foreach ($neueSeiten as $pageObject) {
+            if (PdfSyntax::isReference($kids)) {
+                $ref = PdfSyntax::referenceNumber($kids);
+                if ($ref !== null) {
+                    $this->rewrites[$ref] = PdfSyntax::appendToArray($this->bodyOf($ref), $pageObject.' 0 R');
+                }
+            } else {
+                $kids = PdfSyntax::appendToArray($kids, $pageObject.' 0 R');
             }
-        } else {
-            $rootBody = PdfSyntax::replaceEntry($rootBody, 'Kids', PdfSyntax::appendToArray($kids, $pageObject.' 0 R'));
+        }
+        if (! PdfSyntax::isReference($entries['Kids'] ?? '[]')) {
+            $rootBody = PdfSyntax::replaceEntry($rootBody, 'Kids', $kids);
         }
         $count = (int) trim($entries['Count'] ?? '0');
-        $rootBody = PdfSyntax::replaceEntry($rootBody, 'Count', (string) ($count + 1));
+        $rootBody = PdfSyntax::replaceEntry($rootBody, 'Count', (string) ($count + count($neueSeiten)));
         $this->rewrites[$pagesRoot] = $rootBody;
+    }
+
+    /**
+     * Zeichenbreiten von Helvetica (Tausendstel der Schriftgroesse) fuer
+     * ASCII 32-126 aus der Adobe-AFM. Umlaute haben die Breite ihres
+     * Grundbuchstabens; Unbekanntes zaehlt als 556 (Ziffernbreite).
+     */
+    private const HELVETICA = [278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278,
+        556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556,
+        1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778,
+        667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556,
+        333, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 556, 556,
+        556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584];
+
+    public static function textBreite(string $text, float $size): float
+    {
+        $basis = ['Ä' => 'A', 'Ö' => 'O', 'Ü' => 'U', 'ä' => 'a', 'ö' => 'o', 'ü' => 'u', 'ß' => 'B', 'é' => 'e', 'è' => 'e'];
+        $summe = 0;
+        foreach (mb_str_split($text) as $z) {
+            $z = $basis[$z] ?? $z;
+            $code = mb_ord($z);
+            $summe += ($code >= 32 && $code <= 126) ? self::HELVETICA[$code - 32] : 556;
+        }
+
+        return $summe * $size / 1000;
+    }
+
+    /**
+     * Bricht an Wortgrenzen um; ein einzelnes Wort, das allein zu breit ist
+     * (ein Hash), wird hart geteilt statt ueber den Rand zu laufen.
+     *
+     * @return list<string>
+     */
+    public static function umbrechen(string $text, float $size, float $breite): array
+    {
+        $text = trim((string) preg_replace('/\s+/u', ' ', $text));
+        if ($text === '' || self::textBreite($text, $size) <= $breite) {
+            return [$text];
+        }
+        $zeilen = [];
+        $aktuell = '';
+        foreach (explode(' ', $text) as $wort) {
+            while (self::textBreite($wort, $size) > $breite) {
+                $teil = '';
+                foreach (mb_str_split($wort) as $z) {
+                    if (self::textBreite($teil.$z, $size) > $breite) {
+                        break;
+                    }
+                    $teil .= $z;
+                }
+                if ($aktuell !== '') {
+                    $zeilen[] = $aktuell;
+                    $aktuell = '';
+                }
+                $zeilen[] = $teil;
+                $wort = mb_substr($wort, mb_strlen($teil));
+            }
+            $versuch = $aktuell === '' ? $wort : $aktuell.' '.$wort;
+            if (self::textBreite($versuch, $size) <= $breite) {
+                $aktuell = $versuch;
+            } else {
+                $zeilen[] = $aktuell;
+                $aktuell = $wort;
+            }
+        }
+        if ($aktuell !== '') {
+            $zeilen[] = $aktuell;
+        }
+
+        return $zeilen;
     }
 
     // ------------------------------------------------------------- Schreiben

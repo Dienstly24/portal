@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 04.10.2026 aus `php artisan route:list --json` (518 Routen).
+Generiert am 07.10.2026 aus `php artisan route:list --json` (532 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -261,6 +261,13 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | DELETE | `admin/medien/{asset}` | admin.media.delete | auth role:staff role:admin,manager |
 | POST | `admin/medien/{asset}/ersetzen` | admin.media.replace | auth role:staff |
 | POST | `admin/medien/{id}/wiederherstellen` | admin.media.restore | auth role:staff role:admin,manager |
+| GET | `admin/meine-unterschrift` | admin.meine_unterschrift | auth role:staff |
+| GET | `admin/meine-unterschrift/bild/{id}` | admin.meine_unterschrift.image | auth role:staff |
+| POST | `admin/meine-unterschrift/funktion` | admin.meine_unterschrift.function | auth role:staff role:admin |
+| POST | `admin/meine-unterschrift/handy` | admin.meine_unterschrift.handoff | auth role:staff throttle:20,10 |
+| GET | `admin/meine-unterschrift/handy/{id}` | admin.meine_unterschrift.handoff.status | auth role:staff throttle:240,10 |
+| POST | `admin/meine-unterschrift/hochladen` | admin.meine_unterschrift.upload | auth role:staff throttle:30,10 |
+| POST | `admin/meine-unterschrift/zeichnung` | admin.meine_unterschrift.draw | auth role:staff throttle:30,10 |
 | GET | `admin/messages/attachments/{id}/download` | admin.messages.attachment | auth role:staff |
 | GET | `admin/messages/attachments/{id}/view` | admin.messages.attachment.view | auth role:staff |
 | POST | `admin/mitteilungen/{id}` | admin.change_notifications.update | auth role:staff |
@@ -328,13 +335,18 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/signaturen` | admin.signatures.store | auth role:staff throttle:60,10 |
 | GET | `admin/signaturen/kunden-suche` | admin.signatures.customer_search | auth role:staff |
 | GET | `admin/signaturen/neu` | admin.signatures.create | auth role:staff |
+| GET | `admin/signaturen/qualitaet` | admin.signatures.quality | auth role:staff role:admin |
 | GET | `admin/signaturen/{id}` | admin.signatures.show | auth role:staff |
 | DELETE | `admin/signaturen/{id}` | admin.signatures.destroy | auth role:staff |
 | POST | `admin/signaturen/{id}/abbrechen` | admin.signatures.cancel | auth role:staff |
 | GET | `admin/signaturen/{id}/download/{which?}` | admin.signatures.download | auth role:staff |
 | POST | `admin/signaturen/{id}/erinnern` | admin.signatures.remind | auth role:staff throttle:60,10 |
+| POST | `admin/signaturen/{id}/intern-unterschreiben` | admin.signatures.internal.sign | auth role:staff throttle:30,10 |
+| POST | `admin/signaturen/{id}/intern-zuruecknehmen` | admin.signatures.internal.reset | auth role:staff |
 | POST | `admin/signaturen/{id}/neu-erzeugen` | admin.signatures.regenerate | auth role:staff throttle:20,10 |
 | GET | `admin/signaturen/{id}/protokoll` | admin.signatures.audit | auth role:staff |
+| POST | `admin/signaturen/{id}/qualitaet-neu-erzeugen` | admin.signatures.quality.regenerate | auth role:staff role:admin throttle:20,10 |
+| POST | `admin/signaturen/{id}/qualitaet-pruefen` | admin.signatures.quality.check | auth role:staff role:admin throttle:30,10 |
 | GET | `admin/signaturen/{id}/seite/{page}` | admin.signatures.page | auth role:staff throttle:600,1 |
 | POST | `admin/signaturen/{id}/senden` | admin.signatures.send | auth role:staff throttle:60,10 |
 | GET | `admin/signaturen/{id}/vorbereiten` | admin.signatures.prepare | auth role:staff |
@@ -515,6 +527,8 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `unterschreiben/{token}/identitaet` | signature.identity | throttle:signatur throttle:10,10 |
 | GET | `unterschreiben/{token}/seite/{page}` | signature.page | throttle:signatur |
 | POST | `unterschreiben/{token}/unterschreiben` | signature.sign | throttle:signatur |
+| GET | `unterschrift-handy/{token}` | signature.handoff.show | throttle:signatur |
+| POST | `unterschrift-handy/{token}` | signature.handoff.store | throttle:signatur throttle:10,10 |
 | GET | `up` |  |  |
 | GET | `versicherungsmakler-hamburg` | website.hamburg |  |
 | GET | `webhooks/whatsapp` | webhooks.whatsapp.verify | throttle:300,1 |

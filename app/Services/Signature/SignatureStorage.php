@@ -35,9 +35,31 @@ class SignatureStorage
         return $this->directory($request).'/original.pdf';
     }
 
+    /** Die hochgeladene Datei, wenn die Eingangspruefung sie reparieren musste. */
+    public function uploadOriginalPath(SignatureRequest $request): string
+    {
+        return $this->directory($request).'/hochgeladen.pdf';
+    }
+
     public function signedPath(SignatureRequest $request): string
     {
         return $this->directory($request).'/unterschrieben.pdf';
+    }
+
+    /**
+     * Ein Zwischenstand (Original + interne Unterschriften). Je Stand eine
+     * EIGENE Datei - ein spaeterer Stand ueberschreibt nie den vorigen, den
+     * das Protokoll mit seinem Hash nennt.
+     */
+    public function zwischenstandPath(SignatureRequest $request): string
+    {
+        return $this->directory($request).'/zwischenstand-'.now()->format('YmdHis').'-'.bin2hex(random_bytes(3)).'.pdf';
+    }
+
+    /** Das Bild einer internen Unterschrift, in die Anfrage KOPIERT (nie verlinkt). */
+    public function internalImagePath(SignatureRequest $request, int $userId): string
+    {
+        return $this->directory($request).'/intern/'.$userId.'-'.bin2hex(random_bytes(4)).'.png';
     }
 
     public function fieldImagePath(SignatureRequest $request, string $fieldId): string

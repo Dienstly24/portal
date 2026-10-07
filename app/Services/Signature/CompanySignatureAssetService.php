@@ -4,6 +4,7 @@ namespace App\Services\Signature;
 
 use App\Models\CompanySignatureAsset;
 use App\Models\User;
+use App\Support\Bildfreistellung;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -25,6 +26,9 @@ use Illuminate\Support\Str;
  */
 class CompanySignatureAssetService
 {
+    /** Mindestanteil sichtbarer Pixel nach dem Freistellen (siehe Bildfreistellung::sichtbarerAnteil). */
+    public const MIN_SICHTBAR = 0.005;
+
     /** Genug fuer den Druck, wenig fuers Netz - dieselbe Grenze wie bei der Handschrift. */
     private const MAX_PX = 1600;
 
@@ -136,6 +140,26 @@ class CompanySignatureAssetService
 
         imagealphablending($image, false);
         imagesavealpha($image, true);
+
+        // ZU HELL ODER LEER (A2, 04.10.2026): ein Stempel in sehr hellem
+        // Grau oder Gelb ist auf dem Papier kaum zu sehen - und wuerde erst
+        // NACH dem Unterschreiben an der Qualitaetspruefung scheitern. Hier,
+        // beim Hochladen, kann der Mitarbeiter noch ein anderes Bild nehmen.
+        // Gemessen an einer freigestellten Kopie: so, wie es spaeter im
+        // Dokument steht.
+        $probe = imagecreatetruecolor(imagesx($image), imagesy($image));
+        imagealphablending($probe, false);
+        imagesavealpha($probe, true);
+        imagecopy($probe, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+        Bildfreistellung::weissenRandFreistellen($probe);
+        $anteil = Bildfreistellung::sichtbarerAnteil($probe);
+        imagedestroy($probe);
+        if ($anteil < self::MIN_SICHTBAR) {
+            imagedestroy($image);
+            throw new \RuntimeException('Das Bild ist zu hell oder fast leer - auf dem Dokument wäre es kaum zu sehen. '
+                .'Bitte ein kräftigeres Bild verwenden (z. B. den Stempel dunkler einscannen).');
+        }
+
         ob_start();
         imagepng($image, null, 8);
         $png = (string) ob_get_clean();

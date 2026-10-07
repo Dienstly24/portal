@@ -29,15 +29,15 @@ use Illuminate\Support\Facades\Mail;
  */
 class SignatureSigningService
 {
-    /** Groesse des Unterschriftsbildes - genug fuer den Druck, wenig fuers Netz. */
-    private const MAX_SIGNATURE_PX = 1600;
+    /** So lange zeigt der Link nach dem Abschluss noch das fertige Dokument. */
+    public const NACHLAUF_TAGE = 7;
 
     public function __construct(
         private readonly SignatureStorage $storage,
         private readonly SignatureAuditService $audit,
         private readonly SignedPdfBuilder $pdf,
         private readonly SignatureRequestService $requests,
-        private readonly SignedPdfVerifier $verifier,
+        private readonly SignatureQualityGate $gate,
     ) {
     }
 
@@ -391,6 +391,7 @@ class SignatureSigningService
 
     private function completeUnterSperre(SignatureRequest $request): void
     {
+        $start = hrtime(true);
         try {
             $result = $this->pdf->build($request);
             // SELBSTTEST VOR "Abgeschlossen" (KI-058): ein Dokument, das
@@ -398,7 +399,8 @@ class SignatureSigningService
             // verschickt - der Vorgang steht dann sichtbar auf "Fehler bei
             // Fertigstellung" und laesst sich neu erzeugen.
             $original = (string) $this->storage->read($request->original_path);
-            $befunde = $this->verifier->pruefe($request, $original, $result['pdf'], $result['bilder']);
+            $befunde = $this->gate->pruefe($request, $original, $result['pdf'], $result['bilder']);
+            $this->gate->vermerke($request, $befunde, 'Abschluss', $this->ms($start));
             if ($befunde !== []) {
                 throw new \RuntimeException('Selbsttest nicht bestanden: '.implode(' ', $befunde));
             }
@@ -409,7 +411,13 @@ class SignatureSigningService
         } catch (\Throwable $e) {
             Log::error('Signatur: unterschriebenes PDF konnte nicht erzeugt werden: '.$e->getMessage(), [
                 'signature_request_id' => $request->id,
+                'dauer_ms' => $this->ms($start),
             ]);
+            if (! isset($befunde)) {
+                // Fehler VOR der Pruefung (Erzeugung selbst gescheitert) -
+                // auch das gehoert in die Qualitaetsliste.
+                $this->gate->vermerke($request, ['Erzeugung gescheitert: '.mb_substr($e->getMessage(), 0, 200)], 'Abschluss', $this->ms($start));
+            }
             $request->forceFill([
                 'status' => SignatureStatus::COMPLETION_FAILED,
                 'last_activity_at' => now(),
@@ -436,10 +444,25 @@ class SignatureSigningService
         $this->audit->record($request, 'pdf_generated', description: 'SHA-256 '.$result['hash'].' · Selbsttest bestanden', meta: [
             'sha256' => $result['hash'],
             'sha256_original' => $request->original_hash,
+            'sha256_hochgeladen' => $request->upload_original_hash,
             'bytes' => strlen($result['pdf']),
             'selbsttest' => 'bestanden',
+            'dauer_ms' => $request->render_ms,
         ]);
         $this->audit->record($request, 'completed');
+
+        // NACH DEM ABSCHLUSS (A4, 04.10.2026): der Link kann nichts mehr
+        // ausloesen - wer unterschrieben hat, wird nur noch auf die
+        // Abschlussseite gefuehrt. Lesen darf er das fertige Dokument noch
+        // NACHLAUF_TAGE lang (die Kopie liegt ohnehin als Anhang in seinem
+        // Postfach); danach ist der Link tot statt bis zu 30 Tage lang ein
+        // Zugang zu einem unterschriebenen Vertrag.
+        $grenze = now()->addDays(self::NACHLAUF_TAGE);
+        foreach ($request->signers as $signer) {
+            if ($signer->token_hash !== null && ($signer->token_expires_at === null || $signer->token_expires_at->gt($grenze))) {
+                $signer->forceFill(['token_expires_at' => $grenze])->save();
+            }
+        }
 
         foreach ($request->signers as $signer) {
             if (! $signer->hasSigned()) {
@@ -461,6 +484,11 @@ class SignatureSigningService
             '"'.$request->title.'" ist vollständig unterschrieben.');
     }
 
+    private function ms(int $start): int
+    {
+        return (int) round((hrtime(true) - $start) / 1_000_000);
+    }
+
     /**
      * Nimmt die gezeichnete Unterschrift entgegen.
      *
@@ -471,100 +499,9 @@ class SignatureSigningService
      */
     private function decodeSignature(string $dataUrl): ?string
     {
-        // Die Laenge wird VOR dem Ausdruck geprueft, nicht in ihm: ein
-        // {64,4000000} sprengt die Grenze des Regex-Motors (65535) und
-        // haette den ganzen Vorgang mit einem Fehler beendet.
-        if (strlen($dataUrl) > 6_000_000) {
-            return null;
-        }
-        if (! preg_match('#^data:image/png;base64,([A-Za-z0-9+/=\s]{64,})$#', $dataUrl, $m)) {
-            return null;
-        }
-        $binary = base64_decode(preg_replace('/\s+/', '', $m[1]), true);
-        if ($binary === false || strlen($binary) > 4_000_000) {
-            return null;
-        }
-        $info = @getimagesizefromstring($binary);
-        if ($info === false || $info['mime'] !== 'image/png') {
-            return null;
-        }
-        if ($info[0] < 8 || $info[1] < 8) {
-            return null;
-        }
-        $image = @imagecreatefromstring($binary);
-        if ($image === false) {
-            return null;
-        }
-        // ZU GROSS heisst VERKLEINERN, nicht verwerfen. Die Zeichenflaeche
-        // wird in Geraetepixeln aufgenommen: ein 820 CSS-Pixel breites Feld
-        // auf einem Geraet mit Verhaeltnis 2 liefert 1640 px. Frueher fiel
-        // genau diese Unterschrift durch die Obergrenze - und weil ein
-        // fehlendes Pflichtfeld wie "nicht unterschrieben" aussieht, sah der
-        // Unterzeichner auf einem grossen Bildschirm oder modernen Telefon
-        // nur die Aufforderung, doch bitte zu unterschreiben.
-        $image = $this->downscale($image);
-        // Leere Flaeche = nicht unterschrieben. Ohne diese Pruefung genuegte
-        // ein Klick auf "Bestaetigen", um ein leeres Feld als Unterschrift
-        // durchgehen zu lassen.
-        if (! $this->hasIink($image)) {
-            imagedestroy($image);
-
-            return null;
-        }
-        imagealphablending($image, false);
-        imagesavealpha($image, true);
-        ob_start();
-        imagepng($image, null, 8);
-        $png = ob_get_clean();
-        imagedestroy($image);
-
-        return $png === false ? null : $png;
-    }
-
-    /** Bringt ein zu grosses Bild auf die Hoechstkantenlaenge - Seitenverhaeltnis bleibt. */
-    private function downscale(\GdImage $image): \GdImage
-    {
-        $w = imagesx($image);
-        $h = imagesy($image);
-        $max = max($w, $h);
-        if ($max <= self::MAX_SIGNATURE_PX) {
-            return $image;
-        }
-        $factor = self::MAX_SIGNATURE_PX / $max;
-        // VOR dem Skalieren: ohne diese zwei Zeilen rechnet GD den
-        // Alphakanal weg, und aus der durchscheinenden Handschrift wird ein
-        // schwarzer Kasten ueber dem Vertragstext.
-        imagealphablending($image, false);
-        imagesavealpha($image, true);
-        $small = @imagescale($image, max(8, (int) round($w * $factor)), max(8, (int) round($h * $factor)));
-        if ($small === false) {
-            return $image;
-        }
-        imagedestroy($image);
-        imagealphablending($small, false);
-        imagesavealpha($small, true);
-
-        return $small;
-    }
-
-    /** Enthaelt das Bild ueberhaupt Striche? */
-    private function hasIink(\GdImage $image): bool
-    {
-        $width = imagesx($image);
-        $height = imagesy($image);
-        $step = max(1, (int) floor(min($width, $height) / 60));
-        $ink = 0;
-        for ($y = 0; $y < $height; $y += $step) {
-            for ($x = 0; $x < $width; $x += $step) {
-                if (((imagecolorat($image, $x, $y) >> 24) & 0x7F) < 60) {
-                    $ink++;
-                    if ($ink > 12) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
+        // EINE Stelle fuer das Annehmen einer Zeichnung - Unterzeichner-Seite,
+        // "Meine Unterschrift", Handy-QR und Einmal-Zeichnung im Editor
+        // durchlaufen dieselbe Pruefung.
+        return Unterschriftsbild::ausZeichnung($dataUrl);
     }
 }

@@ -7,9 +7,11 @@ use App\Http\Controllers\Admin\CompanySignatureAssetController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
+use App\Http\Controllers\Admin\InternalSignatureController;
 use App\Http\Controllers\Admin\KiTrainingController;
 use App\Http\Controllers\Admin\PostfachController;
 use App\Http\Controllers\Admin\SignatureController as AdminSignatureController;
+use App\Http\Controllers\Admin\SignatureQualityController;
 use App\Http\Controllers\Admin\WhatsAppOnboardingController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminCustomerChatController;
@@ -54,6 +56,7 @@ use App\Http\Controllers\SeoController;
 use App\Http\Controllers\ServicePageAdminController;
 use App\Http\Controllers\ServicePageController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SignatureHandoffController;
 use App\Http\Controllers\SignatureSigningController;
 use App\Http\Controllers\SmartDocumentUploadController;
 use App\Http\Controllers\SocialLinkController;
@@ -234,6 +237,11 @@ Route::middleware('throttle:signatur')->group(function () {
     Route::post('/unterschreiben/{token}/unterschreiben', [SignatureSigningController::class, 'sign'])->name('signature.sign');
     Route::post('/unterschreiben/{token}/ablehnen', [SignatureSigningController::class, 'decline'])->name('signature.decline');
     Route::get('/unterschreiben/{token}/fertig', [SignatureSigningController::class, 'done'])->name('signature.done');
+    // "Auf dem Handy unterschreiben" (Teil B): Zugang ist der kurzlebige,
+    // einmal nutzbare Link aus dem QR-Code - keine Anmeldung auf dem Handy.
+    Route::get('/unterschrift-handy/{token}', [SignatureHandoffController::class, 'show'])->name('signature.handoff.show');
+    Route::post('/unterschrift-handy/{token}', [SignatureHandoffController::class, 'store'])
+        ->middleware('throttle:10,10')->name('signature.handoff.store');
 });
 
 // Hilfe-/Kontaktformular: oeffentlich; der Button in der Willkommens-Mail
@@ -518,7 +526,31 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->name('signatures.company.destroy');
     Route::get('/firmensignaturen/{id}/bild', [CompanySignatureAssetController::class, 'image'])
         ->name('signatures.company.image');
+    // "Meine Unterschrift" (Teil B, 07.10.2026): nur mit dem Recht "Darf
+    // fuer das Unternehmen unterschreiben" (geprueft im Controller) und nur
+    // die EIGENE Unterschrift. VOR /signaturen/{id}.
+    Route::get('/meine-unterschrift', [InternalSignatureController::class, 'profile'])->name('meine_unterschrift');
+    Route::get('/meine-unterschrift/bild/{id}', [InternalSignatureController::class, 'image'])->name('meine_unterschrift.image');
+    Route::post('/meine-unterschrift/zeichnung', [InternalSignatureController::class, 'storeDrawing'])
+        ->middleware('throttle:30,10')->name('meine_unterschrift.draw');
+    Route::post('/meine-unterschrift/hochladen', [InternalSignatureController::class, 'upload'])
+        ->middleware('throttle:30,10')->name('meine_unterschrift.upload');
+    Route::post('/meine-unterschrift/funktion', [InternalSignatureController::class, 'storeFunction'])
+        ->middleware('role:admin')->name('meine_unterschrift.function');
+    Route::post('/meine-unterschrift/handy', [InternalSignatureController::class, 'handoffCreate'])
+        ->middleware('throttle:20,10')->name('meine_unterschrift.handoff');
+    Route::get('/meine-unterschrift/handy/{id}', [InternalSignatureController::class, 'handoffStatus'])
+        ->middleware('throttle:240,10')->name('meine_unterschrift.handoff.status');
     Route::get('/signaturen/neu', [AdminSignatureController::class, 'create'])->name('signatures.create');
+    // SIGNATUR-QUALITAET (A1, 04.10.2026): nur admin - an der Route UND im
+    // Controller. VOR /signaturen/{id}, sonst deutet die Routenreihenfolge
+    // "qualitaet" als Signatur-ID.
+    Route::get('/signaturen/qualitaet', [SignatureQualityController::class, 'index'])
+        ->middleware('role:admin')->name('signatures.quality');
+    Route::post('/signaturen/{id}/qualitaet-pruefen', [SignatureQualityController::class, 'check'])
+        ->middleware(['role:admin', 'throttle:30,10'])->name('signatures.quality.check');
+    Route::post('/signaturen/{id}/qualitaet-neu-erzeugen', [SignatureQualityController::class, 'regenerate'])
+        ->middleware(['role:admin', 'throttle:20,10'])->name('signatures.quality.regenerate');
     // Sofort-Suche fuer das Anlage-Formular. VOR /signaturen/{id}, sonst
     // deutet die Routenreihenfolge "kunden-suche" als Signatur-ID.
     Route::get('/signaturen/kunden-suche', [AdminSignatureController::class, 'customerSearch'])
@@ -533,6 +565,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->whereNumber('page')->middleware('throttle:600,1')->name('signatures.page');
     Route::post('/signaturen/{id}/senden', [AdminSignatureController::class, 'send'])
         ->middleware('throttle:60,10')->name('signatures.send');
+    Route::post('/signaturen/{id}/intern-unterschreiben', [InternalSignatureController::class, 'sign'])
+        ->middleware('throttle:30,10')->name('signatures.internal.sign');
+    Route::post('/signaturen/{id}/intern-zuruecknehmen', [InternalSignatureController::class, 'reset'])
+        ->name('signatures.internal.reset');
     Route::post('/signaturen/{id}/erinnern', [AdminSignatureController::class, 'remind'])
         ->middleware('throttle:60,10')->name('signatures.remind');
     Route::post('/signaturen/{id}/abbrechen', [AdminSignatureController::class, 'cancel'])->name('signatures.cancel');

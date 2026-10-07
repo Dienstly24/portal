@@ -18,6 +18,29 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Potential Side Effects**: Nach 30 Tagen werden Stammdaten und Protokoll archivierter Akten geleert - ab dann ist eine Zusammenfuehrung endgueltig. Was nach dem Merge am Hauptkunden neu entstand, bleibt dort auch nach dem Rueckgaengigmachen.
 - **Tests Performed**: `MergeRueckgaengigTest` 9 Faelle. Volle Suite 3390, 3385 gruen, 5 uebersprungen (OCR, tesseract lokal nicht installiert). PHPStan 0 Fehler, Pint sauber.
 - **Result**: KI-064 FIXED.
+## 07.10.2026 - E-Signatur Teil B: interne Unterschrift (Meine Unterschrift, Handy-QR, Zwischenstand)
+
+- **Task**: Betreiber-Auftrag 04./07.10.2026 Teil B - ein Mitarbeiter/Geschaeftsfuehrer unterschreibt selbst, bevor das Dokument an den Kunden geht; Entscheidungen 07.10.2026 (2FA Pflicht, 4-h-Fenster je Sitzung/Geraet, Bestaetigung je Dokument; Upload nur Personal mit 2FA und Admin-Glocke; Handy-QR 10 Min einmal).
+- **Files Changed**: Migration `2026_10_07_100000_interne_unterschrift`; neu `UserSignature`, `SignatureHandoff`, `SignatureInternalSigning`, `InternalSigningService`, `UserSignatureService`, `InterneFreigabe`, `SignatureHandoffService`, `Admin\InternalSignatureController`, `SignatureHandoffController`, `InterneUnterschriftException`, Views `admin/signatures/my_signature`, `admin/signatures/partials/intern_dialog`, `signature/handoff`, `public/js/unterschrift-pad.js`; geaendert `SignedPdfBuilder` (Basis = Zwischenstand, Protokoll "Interne Unterschriften"), `SignedPdfVerifier`/`SignatureQualityGate` (Feldauswahl, Warnung > 5 s), `PdfStamper` (eindeutige Bildnamen, KI-092), `SignatureRequestService` (Feld `intern`, Versand wartet/abgeschlossen), `SignaturePageRenderer`, `SignatureSigningController::document`, `SignatureRequestPolicy`, `Admin\SignatureController`, `EmployeeController` + `employee_edit`, `TwoFactorService::markVerified`, `Bildfreistellung::tinteFreistellen`, `Unterschriftsbild::ausZeichnung`, Editor/Detailseite/Liste, `routes/web.php`, `CLAUDE.md`.
+- **Components Affected**: Signatur-Editor, Versand, Unterzeichner-Ansicht (sieht die Fassung mit interner Unterschrift), Abschluss-PDF und Protokoll, Mitarbeiterverwaltung, Profil.
+- **Database Changes**: 3 neue Tabellen, Spalten an `users`, `signature_fields`, `signature_requests` - rein additiv.
+- **API Changes**: Routen `admin.meine_unterschrift*`, `admin.signatures.internal.sign`, `admin.signatures.internal.reset`, `signature.handoff.show/.store` (oeffentlich, Token).
+- **Potential Side Effects**: Bildnamen im PDF heissen jetzt `D24Sig<obj>` statt `D24Sig<Seite>x<n>` (Diagnose/Selbsttest lesen die Namen aus dem Stempler, nicht fest). Ein Versand mit offener interner Unterschrift eines Kollegen bleibt Entwurf und laeuft danach automatisch. Admins duerfen von sich aus intern unterschreiben.
+- **Tests Performed**: `InterneUnterschriftTest` (21 Faelle); volle Suite, PHPStan 0, Pint sauber; Headless-Chromium: Profil zeichnen + Code, Editor-Karte, Pruefdialog, Unterschreiben-und-senden, Zwischenstand-Vorschau, Touch-Zeichnen am iPhone-Viewport (kein seitlicher Bildlauf), Handy-Seite.
+- **Result**: Teil B fertig; KI-092 FIXED; KI-090 Warnung eingebaut (weiter OPEN).
+
+---
+
+## 04.10.2026 - E-Signatur: Qualitaetsgate, Testmatrix, Eingangspruefung (Audit Teil A, KI-080..091)
+
+- **Task**: Betreiber-Auftrag 04.10.2026 Teil A - "keine Unterschrift darf je wieder erfasst, aber unsichtbar sein, ohne dass wir es wissen".
+- **Files Changed**: neu `SignatureQualityGate`, `PdfEingangspruefung`, `CheckSignatureQuality` (`signaturen:qualitaet-pruefen`), `Admin\SignatureQualityController` + `admin/signatures/quality.blade.php`, `SignaturQualitaetMail` + `emails/signatur_qualitaet.blade.php`, Migration `2026_10_04_120000_signatur_qualitaetspruefung`; geaendert `SignedPdfVerifier` (alle Feldarten, poppler, qpdf), `SignatureSigningService` (Gate, Dauer, Link-Frist nach Abschluss), `SignedPdfRegenerator`, `SignatureRequestService` (Eingangspruefung, Gate vor Versand, Feldbezug), `SignedPdfBuilder` (Umlaute, volle Texte, Upload-Hash), `PdfStamper` (Protokoll-Umbruch, Mehrseitigkeit, Sichtbereich), `PdfDocument`/`PdfPage` (CropBox), `FeldGeometrie`, `SignaturePageRenderer`/`PdfSichtbarkeit` (-cropbox), `SignatureDiagnostics` (offene Vorgaenge simulieren), `CompanySignatureAssetService` (zu helle Bilder), `SignatureSigningController` (410 nach Frist), `Admin\SignatureController` (Original-Download protokolliert), `SystemHealthService`, `routes/web.php`, `routes/console.php`, `config/services.php`, `lang/de/signing.php`, CI (`qpdf`), `docs/AUDIT_2026-10-04_SIGNATUR.md`, `docs/TESTUMGEBUNG.md`, `scripts/testumgebung-pruefen.sh`; Tests `SignaturQualitaetsmatrixTest`, `SignaturQualitaetsgateTest`, `ProtokollUmbruchTest`, `tests/Support/SignaturPdfFixtures.php`.
+- **Components Affected**: Signatur-Upload, Versand, Abschluss, Neu-Erzeugen, Unterzeichner-Link, Systemzustand, Planer.
+- **Database Changes**: `signature_requests` + `feld_bezug` (Default `mediabox` = Bestand), `upload_original_path`, `upload_original_hash`, `quality_status` (Index), `quality_checked_at`, `quality_findings`, `render_ms`. Rein additiv.
+- **API Changes**: neue Routen `admin.signatures.quality`, `.quality.check`, `.quality.regenerate` (nur admin).
+- **Potential Side Effects**: Versand wird abgelehnt, wenn eine bereits gesetzte Unternehmenssignatur im Bild nicht sichtbar waere. Beschaedigte Uploads werden von qpdf neu geschrieben (Basis-Hash != Upload-Hash, beide im Protokoll). Der Unterzeichner-Link liest das fertige Dokument nur noch 7 Tage. Ohne qpdf auf dem Server entfaellt nur die Strukturpruefung.
+- **Tests Performed**: neue Tests 21 Faelle; volle Suite gruen, 0 uebersprungen; PHPStan 0, Pint sauber. Messung (Median 3 Laeufe): Abschluss 1 Seite 28 -> 108 ms, 12 Seiten 108 -> 1079 ms.
+- **Result**: KI-080..088 FIXED; KI-089..091 OPEN (dokumentiert).
 
 ---
 

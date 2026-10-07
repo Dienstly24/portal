@@ -3331,7 +3331,9 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   die man nicht kleiner bekommt. Einladung, Erinnerung, Code und
   Abschluss-Mail sind bewusst NICHT queued (sie sind der einzige Weg zum
   Dokument); die Abschluss-Mail traegt das PDF im ANHANG, nicht als Link
-  - nach dem Abschluss ist der Zugang widerrufen.
+  - nach dem Abschluss liest der Link das fertige Dokument nur noch
+  7 Tage (`NACHLAUF_TAGE`), danach HTTP 410 (KI-083, 04.10.2026; bis dahin
+  stand hier faelschlich "widerrufen" - er blieb 30 Tage ein Lesezugang).
 - Tests: `SignatureModuleTest` (26 Faelle, beide Szenarien), `PdfStamperTest`.
 
 ### Nachbesserung 10.09.2026 (Betreiber-Meldung "HTTP 500 beim Unterschreiben")
@@ -3789,9 +3791,12 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   die neue Datei sagt im Protokoll "Neu erzeugt ... (Korrektur der
   Darstellung)", Ereignis `pdf_regenerated` mit altem und neuem SHA-256.
 - **Koordinaten** (Betreiber-Entscheidung 02.10.2026): Feldpositionen
-  bleiben ANTEILE der Anzeige-Seite (nach `/Rotate`, bezogen auf die
-  MediaBox - so rendert auch pdftoppm die Vorschau, auf der das Feld
-  gesetzt wird). Der Editor teilt durch die Groesse des gezoomten
+  bleiben ANTEILE der Anzeige-Seite (nach `/Rotate`). Bezugsflaeche je
+  Anfrage `signature_requests.feld_bezug` (seit 04.10.2026, KI-080):
+  `mediabox` fuer den Bestand, `cropbox` fuer alle neuen Anfragen - die
+  Flaeche, die jeder Betrachter zeigt; Vorschau (`pdftoppm -cropbox`),
+  Stempler, Selbsttest und Diagnose rechnen dann ueber
+  `PdfPage::alsSichtbereich()`. Der Bestand wird NICHT umgerechnet. Der Editor teilt durch die Groesse des gezoomten
   Seitenrahmens, damit ist jeder Zoom gleich. EINE Umrechnung in Punkte:
   `App\Support\FeldGeometrie` (Stempler, Selbsttest, Diagnose); Ursprung
   unten links und Drehung rechnet ausschliesslich der `PdfStamper`.
@@ -3808,6 +3813,116 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   90/180/270, Zeichnung mit Geraeteverhaeltnis 2 und 3, Kunde + Stempel
   ueber Formularlinie, nur Stempel, Selbsttest scheitert -> Erneut
   erzeugen, Reparaturbefehl, Vorschau), `tests/Unit/BildfreistellungTest.php`.
+
+### Qualitaetsgate: keine unsichtbare Unterschrift ohne Meldung (Audit Teil A, 04.10.2026)
+
+Vollstaendig in `docs/AUDIT_2026-10-04_SIGNATUR.md`, Befunde KI-080..091.
+
+- **EINE Pruefung, vier Anlaesse** (`SignatureQualityGate` ->
+  `SignedPdfVerifier`): Versand (bereits gesetzte Unternehmenssignatur im
+  Speicher stempeln - unsichtbar -> Versand abgelehnt), Abschluss (sonst
+  "Fehler bei Fertigstellung", keine Abschluss-Mail), Neu-Erzeugen, und
+  jede Nacht 04:25 `signaturen:qualitaet-pruefen` ueber alle offenen und
+  fertigen Vorgaenge. Geprueft wird JEDES ausgefuellte Feld am gerenderten
+  Bild, poppler darf beim Ergebnis nichts melden, was das Original nicht
+  meldet, und `qpdf --check` muss fehlerfrei sein. Ergebnis an der Anfrage
+  (`quality_status/_findings/_checked_at`, `render_ms`).
+- **Sichtbar statt Kommandozeile**: `/admin/signaturen/qualitaet` (NUR
+  admin, Route UND Controller) mit "Neu erzeugen" (altes PDF bleibt) und
+  "Jetzt pruefen"; Zeilen "PDF-Pruefung (qpdf)" und "Signatur-Qualitaet"
+  auf `/admin/systemzustand`. Ein NEUER Befund laeutet einmal bei den
+  Admins; die Mail-Zusammenfassung des Nachtlaufs kommt NUR, wenn etwas
+  betroffen ist. Der Nachtlauf aendert nie Dokument oder Status.
+- **Eingangspruefung** (`PdfEingangspruefung`): verschluesselt -> klare
+  Meldung (Trailer gelesen, nicht nur das Dateiende); beschaedigt -> qpdf
+  schreibt neu, die neue Fassung muss die Pruefung bestehen und dieselbe
+  Seitenzahl haben. Die HOCHGELADENE Datei bleibt mit Hash erhalten
+  (`upload_original_*`, Ereignis `document_repaired`, beide Hashes im
+  Protokoll); "Fortschreibung des Originals" bezieht sich dann auf die
+  reparierte Basis. Ohne qpdf entfaellt nur diese Pruefung.
+- **Zu helles Firmenbild** wird beim Hochladen abgelehnt
+  (`Bildfreistellung::sichtbarerAnteil` nach dem Freistellen < 0,5 %) -
+  sonst scheiterte es erst nach dem Unterschreiben.
+- **Protokollseite** umbricht nach Helvetica-Breiten und laeuft ueber
+  mehrere Seiten; Zustimmungstext und Hashes stehen VOLLSTAENDIG da, mit
+  echten Umlauten (KI-081/082). Die alte Zustimmungs-Vorgabe
+  ("Geraeteangaben") gilt weiter als Vorgabe und wird uebersetzt.
+- **Testmatrix** `SignaturQualitaetsmatrixTest` mit
+  `tests/Support/SignaturPdfFixtures.php` (13 Bauformen x 7 Feldarten,
+  6 Bildarten, DPR 1/2/3): je Feld sichtbar UND nicht einfarbig.
+  **qpdf gehoert zur Testumgebung** (CI installiert es) - ohne qpdf
+  scheitert der Test mit klarer Meldung, statt sich zu ueberspringen.
+- **Gemessen**: Abschluss 1 Seite 28 -> 108 ms, 12 Seiten 108 -> 1079 ms
+  (Median 3 Laeufe). Synchron im Request bleibt vorerst (KI-090).
+- **Betrieb**: `apt install qpdf`; nach dem Deploy einmal
+  `php artisan signaturen:qualitaet-pruefen --ohne-mail`.
+- Tests: `SignaturQualitaetsmatrixTest`, `SignaturQualitaetsgateTest`,
+  `tests/Unit/ProtokollUmbruchTest.php`.
+
+### Interne Unterschrift: das Haus unterschreibt zuerst (Teil B, 07.10.2026)
+
+- **Wer**: Recht `users.can_sign_for_company` ("Darf fuer das Unternehmen
+  unterschreiben") + `signatur_funktion`, vergibt NUR der Admin
+  (Mitarbeiterakte); Administratoren haben es von sich aus
+  (`User::darfFuerFirmaUnterschreiben()`). Ohne Recht: kein Profil, kein
+  Feld (der Server verwirft ein internes Feld fuer jemanden ohne Recht).
+- **Meine Unterschrift** (`/admin/meine-unterschrift`,
+  `UserSignatureService`): zeichnen (Finger/Stift/Maus, Druck, Rueckgaengig,
+  `public/js/unterschrift-pad.js`), hochladen (nur Personal; PNG/JPG/HEIC,
+  Hintergrund per `Bildfreistellung::tinteFreistellen`, zu helles Bild
+  abgelehnt, Vorschau vor dem Speichern) oder "Auf dem Handy" (QR). Plus
+  optionale Paraphe. Ersetzen ARCHIVIERT, nie loeschen. Jede Aenderung:
+  Zwei-Faktor, Glocke an alle Admins, ActivityLog `user_signature_changed`.
+- **Zwei-Faktor PFLICHT, Passwort genuegt nie** (`InterneFreigabe`): eine
+  Bestaetigung (Anmeldung oder Code im Dialog) gilt 4 h
+  (`interne_signatur_2fa_stunden`) fuer DIESE Sitzung auf DIESEM Geraet;
+  erlischt bei Abmelden, IP-/Geraetewechsel, Passwortwechsel. Fehlversuche
+  im SELBEN Limiter wie die Anmeldung (`2fa:<id>|<ip>`, KI-042). Gilt
+  unabhaengig vom globalen 2FA-Schalter. Der Bestaetigungssatz "Ich
+  unterschreibe dieses Dokument als [Name], [Funktion]." steht vor JEDEM
+  Dokument und landet im Protokoll - das Fenster spart nur den Code.
+- **Handy-QR** (`SignatureHandoffService`, `/unterschrift-handy/{token}`):
+  10 Min, einmal, Token nur als sha256; das Ergebnis bekommt nur DIESES
+  Konto in DERSELBEN Sitzung (Zufallswert in der Sitzung, nicht die
+  Sitzungs-ID). Uebernommen wird es erst am Rechner nach Bestaetigung.
+- **Im Editor**: dritte Karte "Intern" (Ich oder eine berechtigte Person),
+  Seitenverhaeltnis beim Vergroessern fest, optional "Name, Funktion, Datum"
+  darunter. Dialog: "Gespeicherte Unterschrift verwenden" / "Jetzt neu
+  zeichnen" (nur dieses Dokument, ausser "Als Standard speichern") / Handy.
+  Fehlt die eigene Unterschrift, wird im Dialog gezeichnet - die Seite wird
+  nie verlassen. Pruefdialog listet interne Unterschriften GETRENNT vor
+  Kunden und Unternehmenssignatur.
+- **PDF-KETTE: Original -> Zwischenstand -> Endfassung**
+  (`InternalSigningService`): die interne Unterschrift wird auf die Basis
+  gestempelt (`SignedPdfBuilder::stempleInterneFelder`), mit DEMSELBEN
+  Qualitaetsgate geprueft (nur diese Felder, `nurFelder`) und erst dann
+  gespeichert; der Kunde sieht und laedt den Zwischenstand
+  (`SignatureRequest::basisPfad()`), die Endfassung schreibt ihn fort und
+  setzt die internen Felder nicht erneut. Drei Hashes im Protokoll; der
+  Abschnitt "Interne Unterschriften" (Name, Funktion, Benutzer-ID, Zeit, IP,
+  Geraet, 2FA-Weg, Erstellungsweg "gezeichnet am Geraet X"/"hochgeladen"/
+  "per Handy-QR gezeichnet", Bild- und Dokument-Hash davor/danach) steht
+  GETRENNT von der Unternehmenssignatur. `signature_internal_signings` ist
+  append-only; nach "Zuruecknehmen" (nur Entwurf) gilt nur noch die Kette
+  ab dem aktuellen Zwischenstand (`gueltigeInterneUnterschriften()`). Eine
+  gesetzte interne Unterschrift wird im Editor nicht mehr verschoben.
+- **Versand**: fehlt die EIGENE interne Unterschrift, fragt "Senden" sie
+  ab ("Unterschreiben und senden"); fehlt die eines Kollegen, bleibt der
+  Vorgang Entwurf (`send_after_internal`), der Kollege bekommt die Glocke
+  "Wartet auf Ihre Unterschrift", unterschreibt auf der Detailseite mit
+  einem Klick, danach geht das Dokument automatisch raus. Ohne Kunden-
+  Unterzeichner ist das Dokument mit der letzten internen Unterschrift
+  fertig (keine Mail). Wer intern unterschreiben soll, darf den Vorgang
+  SEHEN (Policy `view`), aber nicht bearbeiten.
+- **Falle (KI-092)**: Bildnamen im PDF tragen die Objektnummer
+  (`D24Sig<obj>`) - mit "Seite x Zaehler" vergab die zweite Fortschreibung
+  doppelte Namen und ein Bild fiel weg.
+- **KI-090**: `SignatureQualityGate::vermerke()` warnt im Log ab 5 s
+  (`LANGSAM_MS`) - Signal fuer die Auslagerung in einen Job.
+- **Noch offen**: Neu-Anwenden der internen Unterschrift bei
+  Dokumenttausch/Reaktivierung gehoert zu Teil C (Ablehnen/Reaktivieren);
+  PDF/A + Noto-Schrift (KI-091) als Folge-PR nach C.
+- Tests: `InterneUnterschriftTest`.
 
 ## System-Audit 15.09.2026: Befunde und Behebung
 

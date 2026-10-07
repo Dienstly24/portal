@@ -7,6 +7,7 @@ use App\Models\SignatureRequest;
 use App\Services\Pdf\PdfDocument;
 use App\Services\Pdf\PdfPage;
 use App\Services\Pdf\PdfSyntax;
+use App\Support\FeldGeometrie;
 use App\Support\SignatureStatus;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -138,8 +139,19 @@ class SignatureDiagnostics
         $simuliert = false;
         $allesUnterschrieben = $request->signers->isNotEmpty()
             && $request->signers->every(fn ($s) => $s->hasSigned());
-        if ($signiert === null && $original !== null && ($allesUnterschrieben || $request->status === SignatureStatus::COMPLETED)) {
-            $ursachen[] = self::KEIN_SIGNIERTES_PDF;
+        $request->loadMissing(['fields.companyAsset']);
+        $etwasGesetzt = $request->fields->contains(fn ($f) => $f->isFilled());
+        $sollteFertigSein = $allesUnterschrieben || $request->status === SignatureStatus::COMPLETED;
+        // Auch OFFENE Vorgaenge (04.10.2026): was schon gesetzt ist (meist
+        // die Unternehmenssignatur), wird im Speicher gestempelt und am
+        // Bild geprueft. Vorher stand dort nur die Bildanalyse - und die
+        // beschrieb das Verhalten des ALTEN Stemplers ("deckendes Bild ->
+        // Flaeche"), meldete also nach dem Fix vom 03.10.2026 Vorgaenge als
+        // betroffen, die es gar nicht sind.
+        if ($signiert === null && $original !== null && ($sollteFertigSein || $etwasGesetzt)) {
+            if ($sollteFertigSein) {
+                $ursachen[] = self::KEIN_SIGNIERTES_PDF;
+            }
             try {
                 $signiert = app(SignedPdfBuilder::class)->build($request)['pdf'];
                 $simuliert = true;
@@ -167,7 +179,7 @@ class SignatureDiagnostics
                     $ursachen[] = self::VORSPANN;
                 }
                 foreach ($doc->pages() as $page) {
-                    $seiten[$page->index + 1] = $this->seitenAufbau($doc, $page);
+                    $seiten[$page->index + 1] = $this->seitenAufbau($doc, $page, $request);
                 }
             } catch (\Throwable $e) {
                 $hinweise[] = 'Original nicht lesbar: '.mb_substr($e->getMessage(), 0, 200);
@@ -183,7 +195,7 @@ class SignatureDiagnostics
 
             if ($rendern && $signiert !== null && $original !== null && $eintrag['gefuellt']
                 && isset($seiten[$field->page])) {
-                $render[$field->page] ??= $this->sichtbarkeit->renderPaar($original, $signiert, (int) $field->page);
+                $render[$field->page] ??= $this->sichtbarkeit->renderPaar($original, $signiert, (int) $field->page, $request->nutztCropBox());
                 $eintrag['sichtbarkeit'] = $this->sichtbarkeit->vergleiche($render[$field->page], $this->sichtbarkeit->bildBereich($field, (float) $seiten[$field->page]['anzeige'][1]));
                 // Eine Meldung zaehlt NUR, wenn poppler wirklich gerendert
                 // hat. Fehlt das Programm, steht in stderr "nicht gefunden" -
@@ -206,6 +218,10 @@ class SignatureDiagnostics
             if (($eintrag['sichtbarkeit']['urteil'] ?? null) === 'sichtbar') {
                 $eintrag['risiken'] = array_values(array_unique(array_merge($eintrag['risiken'], $feldUrsachen)));
                 $feldUrsachen = [];
+            }
+            if (($eintrag['sichtbarkeit']['urteil'] ?? null) === 'unsichtbar' && in_array(self::FIRMENBILD_OPAK, $eintrag['risiken'], true)) {
+                $feldUrsachen[] = self::FIRMENBILD_OPAK;
+                $eintrag['risiken'] = array_values(array_diff($eintrag['risiken'], [self::FIRMENBILD_OPAK]));
             }
             if (($eintrag['sichtbarkeit']['urteil'] ?? null) === 'unsichtbar' && $feldUrsachen === []) {
                 $feldUrsachen[] = self::UNBEKANNT;
@@ -248,8 +264,9 @@ class SignatureDiagnostics
      *
      * @return array<string, mixed>
      */
-    private function seitenAufbau(PdfDocument $doc, PdfPage $page): array
+    private function seitenAufbau(PdfDocument $doc, PdfPage $page, SignatureRequest $request): array
     {
+        $bezug = FeldGeometrie::bezugsseite($request, $page);
         $dict = $doc->dict($page->objectNumber);
         $crop = isset($dict['CropBox']) ? PdfSyntax::numbers((string) $doc->resolve($dict['CropBox'])) : null;
         $versionen = $doc->objectVersions($page->objectNumber);
@@ -260,7 +277,8 @@ class SignatureDiagnostics
             'mediabox' => array_map(fn ($v) => round($v, 2), $page->mediaBox),
             'cropbox' => $crop === null || count($crop) !== 4 ? null : array_map(fn ($v) => round($v, 2), $crop),
             'rotate' => $page->rotate,
-            'anzeige' => [round($page->displayWidth(), 2), round($page->displayHeight(), 2)],
+            'feld_bezug' => $request->feld_bezug,
+            'anzeige' => [round($bezug->displayWidth(), 2), round($bezug->displayHeight(), 2)],
             'contents' => $this->contentsForm($doc, $dict['Contents'] ?? null),
             'versionen' => $versionen,
         ];
@@ -357,8 +375,12 @@ class SignatureDiagnostics
                     // Ursache nur, wenn daraus wirklich "unsichtbar" folgt:
                     // ein ueberwiegend deckendes Bild wird zur Flaeche, eine
                     // helle Stempelfarbe zur weissen Kontur.
+                    // Seit 03.10.2026 bettet der Stempler das Bild als Farbbild
+                    // mit Alphakanal ein - ein deckendes Bild ist damit nur
+                    // noch ein RISIKO. Zur Ursache wird es erst, wenn der
+                    // Bildvergleich das Feld wirklich als unsichtbar misst.
                     if ($analyse['deckend_anteil'] > 0.5 || $analyse['stempel_farbe_hell']) {
-                        $ursachen[] = self::FIRMENBILD_OPAK;
+                        $eintrag['risiken'][] = self::FIRMENBILD_OPAK;
                     }
                     // Mehrfarbig ist ein RISIKO (falsche Farbe), keine
                     // Erklaerung fuer ein fehlendes Bild.
