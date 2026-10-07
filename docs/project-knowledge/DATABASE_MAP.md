@@ -78,7 +78,14 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 `feld_bezug` mediabox|cropbox, `upload_original_path/_hash` bei reparierter
 Datei, `quality_status/_checked_at/_findings`, `render_ms`), `signature_signers`,
 `signature_fields`, `signature_events` (append-only, kein updated_at),
-`company_signature_assets`.
+`company_signature_assets`. Seit 07.10.2026 (Teil B, interne Unterschrift):
+`signature_requests.zwischenstand_path/_hash/send_after_internal`,
+`signature_fields.internal_user_id/user_signature_id/intern_beschriftung`,
+`user_signatures` (hinterlegte Unterschrift/Paraphe je Mitarbeiter, Ersetzen
+archiviert), `signature_handoffs` (Handy-QR, 10 Min, einmal, sha256-Token),
+`signature_internal_signings` (append-only Protokoll: Funktion, IP, Geraet,
+2FA-Weg, Bild-Hash, Dokument-Hash davor/danach), `users.can_sign_for_company`,
+`users.signatur_funktion`.
 
 ### Website / Marketing / Medien
 `service_pages`, `media_assets`, `banners`, `banner_daily_stats`, `banner_user_views`,

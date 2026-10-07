@@ -171,4 +171,88 @@ final class Bildfreistellung
 
         return $sichtbar / $gesamt;
     }
+
+    /**
+     * Stellt eine FOTOGRAFIERTE oder gescannte Unterschrift frei
+     * ("Meine Unterschrift" hochladen, Teil B 07.10.2026).
+     *
+     * Anders als bei einem Firmenlogo ist der Hintergrund hier kein reines
+     * Weiss: Papier auf einem Handyfoto ist grau, ungleichmaessig
+     * ausgeleuchtet und verrauscht - `weissenRandFreistellen` mit seiner
+     * festen Schwelle (235) liesse davon eine graue Flaeche stehen, die im
+     * Vertrag als Kasten erscheint. Hier wird die Papierhelligkeit GEMESSEN
+     * (90. Perzentil der Helligkeit) und alles, was nicht deutlich dunkler
+     * ist, durchsichtig. Die Tinte behaelt ihre Farbe; ihre Deckkraft folgt
+     * der Dunkelheit, damit Kanten weich bleiben.
+     *
+     * Ein Bild, das schon Transparenz benutzt, wird NICHT angefasst.
+     *
+     * @return array{bild: \GdImage, kontrast: int} Kontrast = Papier minus Tinte (0-255)
+     */
+    public static function tinteFreistellen(\GdImage $bild): array
+    {
+        imagealphablending($bild, false);
+        imagesavealpha($bild, true);
+        $w = imagesx($bild);
+        $h = imagesy($bild);
+        if (self::hatTransparenz($bild)) {
+            return ['bild' => $bild, 'kontrast' => 255];
+        }
+
+        $histogramm = array_fill(0, 256, 0);
+        $schritt = max(1, (int) floor(max($w, $h) / 400));
+        $anzahl = 0;
+        for ($y = 0; $y < $h; $y += $schritt) {
+            for ($x = 0; $x < $w; $x += $schritt) {
+                $histogramm[self::helligkeit(imagecolorat($bild, $x, $y))]++;
+                $anzahl++;
+            }
+        }
+        $papier = self::perzentil($histogramm, $anzahl, 0.90);
+        $tinte = self::perzentil($histogramm, $anzahl, 0.02);
+        $kontrast = max(0, $papier - $tinte);
+
+        // Ab hier gilt ein Pixel als Papier. Der Abstand ist relativ zum
+        // Kontrast: bei einem blassen Kugelschreiber muss die Schwelle naeher
+        // am Papier liegen als bei einem schwarzen Filzstift.
+        $schwelle = $papier - max(18, (int) round($kontrast * 0.35));
+        $breite = max(12, (int) round($kontrast * 0.45));
+        $durchsichtig = imagecolorallocatealpha($bild, 255, 255, 255, 127);
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $c = imagecolorat($bild, $x, $y);
+                $l = self::helligkeit($c);
+                if ($l >= $schwelle) {
+                    imagesetpixel($bild, $x, $y, $durchsichtig);
+
+                    continue;
+                }
+                $deckkraft = min(1.0, ($schwelle - $l) / $breite);
+                $alpha = (int) round(127 * (1 - $deckkraft));
+                imagesetpixel($bild, $x, $y, imagecolorallocatealpha($bild, ($c >> 16) & 0xFF, ($c >> 8) & 0xFF, $c & 0xFF, $alpha));
+            }
+        }
+
+        return ['bild' => $bild, 'kontrast' => $kontrast];
+    }
+
+    private static function helligkeit(int $c): int
+    {
+        return (int) round(((($c >> 16) & 0xFF) * 299 + (($c >> 8) & 0xFF) * 587 + ($c & 0xFF) * 114) / 1000);
+    }
+
+    /** @param  array<int, int>  $histogramm */
+    private static function perzentil(array $histogramm, int $anzahl, float $anteil): int
+    {
+        $ziel = $anzahl * $anteil;
+        $summe = 0;
+        foreach ($histogramm as $wert => $haeufigkeit) {
+            $summe += $haeufigkeit;
+            if ($summe >= $ziel) {
+                return $wert;
+            }
+        }
+
+        return 255;
+    }
 }

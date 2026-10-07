@@ -35,6 +35,18 @@ final class SignatureFieldType
      */
     public const COMPANY = 'firma';
 
+    /**
+     * "MEINE UNTERSCHRIFT" - die persoenliche Unterschrift eines MITARBEITERS
+     * (Teil B, 04./07.10.2026).
+     *
+     * Sie gehoert keinem Unterzeichner, sondern einem Benutzer
+     * (`signature_fields.internal_user_id`) und wird im Portal gesetzt -
+     * mit Zwei-Faktor-Nachweis und Bestaetigungssatz, ohne Einladung. Anders
+     * als das Firmenbild ist sie eine WILLENSERKLAERUNG eines Menschen und
+     * steht im Protokoll unter "Interne Unterschriften".
+     */
+    public const INTERNAL = 'intern';
+
     public const LABELS = [
         self::SIGNATURE => 'Unterschrift',
         self::INITIALS => 'Initialen',
@@ -43,6 +55,7 @@ final class SignatureFieldType
         self::TEXT => 'Textfeld',
         self::CHECKBOX => 'Kästchen',
         self::COMPANY => 'Firmenbild',
+        self::INTERNAL => 'Interne Unterschrift',
     ];
 
     /** Feldarten, die als HANDSCHRIFT gezeichnet werden (Finger/Maus). */
@@ -59,6 +72,7 @@ final class SignatureFieldType
     {
         return match ($type) {
             self::SIGNATURE, self::COMPANY => [0.28, 0.055],
+            self::INTERNAL => [0.28, 0.075],
             self::INITIALS => [0.10, 0.045],
             self::CHECKBOX => [0.025, 0.018],
             self::DATE => [0.16, 0.025],
@@ -69,7 +83,7 @@ final class SignatureFieldType
     /** Feldarten, die ein BILD tragen (Handschrift oder Firmenbild). */
     public static function isImage(string $type): bool
     {
-        return self::isDrawn($type) || $type === self::COMPANY;
+        return self::isDrawn($type) || $type === self::COMPANY || $type === self::INTERNAL;
     }
 
     public static function isDrawn(string $type): bool

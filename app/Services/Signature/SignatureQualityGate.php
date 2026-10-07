@@ -43,12 +43,21 @@ class SignatureQualityGate
 
     /**
      * @param  list<array{page: int, name: string, object: int}>  $bilder
+     * @param  list<string>|null  $nurFelder
      * @return list<string> Befunde; leer = bestanden
      */
-    public function pruefe(SignatureRequest $request, string $original, string $signiert, array $bilder = []): array
+    public function pruefe(SignatureRequest $request, string $original, string $signiert, array $bilder = [], ?array $nurFelder = null): array
     {
-        return $this->verifier->pruefe($request, $original, $signiert, $bilder);
+        return $this->verifier->pruefe($request, $original, $signiert, $bilder, $nurFelder);
     }
+
+    /**
+     * Ab dieser Dauer wird eine Fertigstellung im Log gemeldet (KI-090,
+     * Betreiber-Vorgabe 07.10.2026): der Abschluss laeuft synchron im
+     * Unterschreiben-Request. Die Warnung sagt, WANN er in einen Job gehoert -
+     * gemessen statt geschaetzt.
+     */
+    public const LANGSAM_MS = 5000;
 
     /**
      * Prueft den GESPEICHERTEN Stand einer Anfrage: das fertige PDF, wenn es
@@ -124,6 +133,15 @@ class SignatureQualityGate
                 'quality_findings' => $befunde === [] ? null : $befunde,
                 'render_ms' => $dauerMs,
             ], fn ($v, $k) => $v !== null || $k === 'quality_findings', ARRAY_FILTER_USE_BOTH))->save();
+
+            if ($dauerMs !== null && $dauerMs > self::LANGSAM_MS) {
+                Log::warning('Signatur: Fertigstellung dauerte '.$dauerMs.' ms (Grenze '.self::LANGSAM_MS.' ms) - Kandidat fuer einen Hintergrund-Job (KI-090).', [
+                    'signature_request_id' => $request->id,
+                    'anlass' => $anlass,
+                    'seiten' => $request->page_count,
+                    'dauer_ms' => $dauerMs,
+                ]);
+            }
 
             Log::info('Signatur-Qualitaet', [
                 'signature_request_id' => $request->id,

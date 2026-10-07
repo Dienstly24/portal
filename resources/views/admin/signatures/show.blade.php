@@ -129,6 +129,50 @@
     </div>
 </div>
 
+{{-- INTERNE UNTERSCHRIFTEN (Teil B). Wartet der Vorgang auf MICH, steht das
+     ganz oben - mit EINEM Klick zum Dialog (Bestaetigungssatz + ggf. Code). --}}
+@php($interne = $signature->interneFelder())
+@if($interne->isNotEmpty())
+<div class="card" style="padding:14px 18px;margin-bottom:16px;border-left:4px solid #1F4E79;">
+    <div style="font-weight:700;margin-bottom:6px;">🖋 Interne Unterschriften</div>
+    @foreach($interne->groupBy('internal_user_id') as $felder)
+        @php($person = $felder->first()->internalUser)
+        @php($fertig = $felder->every(fn ($f) => $f->isFilled()))
+        <div style="font-size:13.5px;margin-bottom:3px;">
+            {{ $fertig ? '✓' : '·' }} {{ $person?->name ?? 'unbekannt' }} ({{ $person?->signaturFunktion() }}) –
+            {{ $fertig ? 'unterschrieben' : 'offen' }}, {{ $felder->count() }} Stelle(n)
+        </div>
+    @endforeach
+    @if($signature->isDraft() && $signature->send_after_internal && $signature->offeneInterneFelder()->isNotEmpty())
+        <div class="muted-sm" style="margin-top:4px;">Der Versand ist angestoßen und läuft automatisch, sobald alle internen Unterschriften vorliegen.</div>
+    @endif
+    @if($meineInternen->isNotEmpty() && $intern['darf'] && $signature->isDraft())
+        <div style="background:var(--emerald-soft);padding:10px 12px;border-radius:8px;margin-top:8px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+            <strong>Wartet auf Ihre Unterschrift ({{ $meineInternen->count() }} Stelle(n), Seiten {{ $meineInternen->pluck('page')->unique()->sort()->implode(', ') }})</strong>
+            <button type="button" class="btn btn-emerald btn-sm" data-h-click="sigInternShow">Jetzt unterschreiben</button>
+        </div>
+    @endif
+    @can('resetInternal', $signature)
+        @if($interne->contains(fn ($f) => $f->isFilled()))
+        <form method="POST" action="{{ route('admin.signatures.internal.reset', $signature->id) }}" style="margin-top:8px;"
+              data-confirm="Interne Unterschriften zurücknehmen? Die Felder sind danach wieder offen; das Protokoll bleibt erhalten.">
+            @csrf
+            <button type="submit" class="btn btn-sm btn-ghost">Interne Unterschriften zurücknehmen</button>
+        </form>
+        @endif
+    @endcan
+</div>
+@include('admin.signatures.partials.intern_dialog', ['intern' => $intern])
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["sigInternShow"] = function () {
+    window.sigInternDialog.oeffnen({ undSenden: false, payload: null, ziel: @json(route('admin.signatures.internal.sign', $signature->id)) });
+};
+</script>
+@endPushOnce
+@endif
+
 @if($signature->isDraft() && $blockers)
 <div style="background:#FFF6E5;color:#8A5D00;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
     <strong>Noch nicht versandfertig:</strong>
@@ -354,6 +398,9 @@
     <div class="card" style="padding:16px 18px;display:grid;gap:7px;font-size:12px;">
         <div style="font-weight:600;font-size:13px;">Prüfsummen (SHA-256)</div>
         <div><span class="muted-sm">Original:</span><br><span style="word-break:break-all;">{{ $signature->original_hash }}</span></div>
+        @if($signature->zwischenstand_hash)
+        <div><span class="muted-sm">Nach den internen Unterschriften:</span><br><span style="word-break:break-all;">{{ $signature->zwischenstand_hash }}</span></div>
+        @endif
         @if($signature->signed_hash)
         <div><span class="muted-sm">Unterschrieben:</span><br><span style="word-break:break-all;">{{ $signature->signed_hash }}</span></div>
         @endif

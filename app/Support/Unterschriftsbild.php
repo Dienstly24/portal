@@ -180,4 +180,112 @@ final class Unterschriftsbild
 
         return $rechts < 0 ? null : [$links, $oben, $rechts, $unten];
     }
+
+    /** Groesse einer Zeichnung - genug fuer den Druck, wenig fuers Netz. */
+    public const MAX_ZEICHNUNG_PX = 1600;
+
+    /**
+     * Nimmt eine Zeichnung (PNG als data:-URL) an: Laenge, Typ, Mindestgroesse,
+     * verkleinert auf MAX_ZEICHNUNG_PX, verwirft leere Flaechen und schreibt
+     * das Bild NEU (GD liest und schreibt es) - eine vom Browser gelieferte
+     * Datei ist Fremdmaterial.
+     */
+    public static function ausZeichnung(string $dataUrl): ?string
+    {
+        // Die Laenge wird VOR dem Ausdruck geprueft, nicht in ihm: ein
+        // {64,4000000} sprengt die Grenze des Regex-Motors (65535) und
+        // haette den ganzen Vorgang mit einem Fehler beendet.
+        if (strlen($dataUrl) > 6_000_000) {
+            return null;
+        }
+        if (! preg_match('#^data:image/png;base64,([A-Za-z0-9+/=\s]{64,})$#', $dataUrl, $m)) {
+            return null;
+        }
+        $binary = base64_decode(preg_replace('/\s+/', '', $m[1]), true);
+        if ($binary === false || strlen($binary) > 4_000_000) {
+            return null;
+        }
+        $info = @getimagesizefromstring($binary);
+        if ($info === false || $info['mime'] !== 'image/png') {
+            return null;
+        }
+        if ($info[0] < 8 || $info[1] < 8) {
+            return null;
+        }
+        $image = @imagecreatefromstring($binary);
+        if ($image === false) {
+            return null;
+        }
+        // ZU GROSS heisst VERKLEINERN, nicht verwerfen. Die Zeichenflaeche
+        // wird in Geraetepixeln aufgenommen: ein 820 CSS-Pixel breites Feld
+        // auf einem Geraet mit Verhaeltnis 2 liefert 1640 px. Frueher fiel
+        // genau diese Unterschrift durch die Obergrenze - und weil ein
+        // fehlendes Pflichtfeld wie "nicht unterschrieben" aussieht, sah der
+        // Unterzeichner auf einem grossen Bildschirm oder modernen Telefon
+        // nur die Aufforderung, doch bitte zu unterschreiben.
+        $image = self::verkleinereZeichnung($image);
+        // Leere Flaeche = nicht unterschrieben. Ohne diese Pruefung genuegte
+        // ein Klick auf "Bestaetigen", um ein leeres Feld als Unterschrift
+        // durchgehen zu lassen.
+        if (! self::hatTinte($image)) {
+            imagedestroy($image);
+
+            return null;
+        }
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        ob_start();
+        imagepng($image, null, 8);
+        $png = ob_get_clean();
+        imagedestroy($image);
+
+        return $png === false ? null : $png;
+    }
+
+    /** Bringt ein zu grosses Bild auf die Hoechstkantenlaenge - Seitenverhaeltnis bleibt. */
+    public static function verkleinereZeichnung(\GdImage $image): \GdImage
+    {
+        $w = imagesx($image);
+        $h = imagesy($image);
+        $max = max($w, $h);
+        if ($max <= self::MAX_ZEICHNUNG_PX) {
+            return $image;
+        }
+        $factor = self::MAX_ZEICHNUNG_PX / $max;
+        // VOR dem Skalieren: ohne diese zwei Zeilen rechnet GD den
+        // Alphakanal weg, und aus der durchscheinenden Handschrift wird ein
+        // schwarzer Kasten ueber dem Vertragstext.
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        $small = @imagescale($image, max(8, (int) round($w * $factor)), max(8, (int) round($h * $factor)));
+        if ($small === false) {
+            return $image;
+        }
+        imagedestroy($image);
+        imagealphablending($small, false);
+        imagesavealpha($small, true);
+
+        return $small;
+    }
+
+    /** Enthaelt das Bild ueberhaupt Striche? */
+    public static function hatTinte(\GdImage $image): bool
+    {
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $step = max(1, (int) floor(min($width, $height) / 60));
+        $ink = 0;
+        for ($y = 0; $y < $height; $y += $step) {
+            for ($x = 0; $x < $width; $x += $step) {
+                if (((imagecolorat($image, $x, $y) >> 24) & 0x7F) < 60) {
+                    $ink++;
+                    if ($ink > 12) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
 }

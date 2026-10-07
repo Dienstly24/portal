@@ -338,7 +338,7 @@ class SignaturPdfSichtbarkeitTest extends TestCase
     {
         // KI-058: "Abgeschlossen" erst NACH bestandenem Selbsttest.
         $this->app->bind(SignedPdfVerifier::class, fn () => new class(app(PdfSichtbarkeit::class), app(PdfEingangspruefung::class)) extends SignedPdfVerifier {
-            public function pruefe(SignatureRequest $request, string $original, string $signiert, array $bilder): array
+            public function pruefe(SignatureRequest $request, string $original, string $signiert, array $bilder, ?array $nurFelder = null): array
             {
                 return ['Testfehler'];
             }

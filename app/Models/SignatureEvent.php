@@ -66,6 +66,12 @@ class SignatureEvent extends Model
         // abgebrochener Kunde aus.
         'signing_failed' => 'Unterschrift fehlgeschlagen',
         'declined' => 'Unterschrift abgelehnt',
+        // Teil B (07.10.2026): die Unterschrift eines MITARBEITERS im Haus.
+        'internal_requested' => 'Interne Unterschrift angefordert',
+        'internal_signed' => 'Intern unterschrieben',
+        'internal_failed' => 'Interne Unterschrift fehlgeschlagen',
+        'internal_reset' => 'Interne Unterschriften zurückgenommen',
+        'send_deferred' => 'Versand wartet auf interne Unterschrift',
         'completed' => 'Signaturvorgang abgeschlossen',
         'pdf_generated' => 'Unterschriebenes PDF erzeugt',
         'pdf_regenerated' => 'Unterschriebenes PDF neu erzeugt (Korrektur der Darstellung)',

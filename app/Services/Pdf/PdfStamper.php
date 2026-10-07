@@ -144,11 +144,18 @@ final class PdfStamper
             $y = $page->displayHeight() - $stamp->y - $stamp->height;
 
             if ($stamp->type === PdfStamp::TYPE_IMAGE && $stamp->png !== null) {
-                $name = 'D24Sig'.$page->objectNumber.'x'.$i;
                 $imageObject = $this->addImage($stamp->png, $stamp->width, $stamp->height, $stamp->freistellen);
                 if ($imageObject === null) {
                     continue;
                 }
+                // Der Name traegt die OBJEKTNUMMER des Bildes - sie ist im
+                // ganzen Dokument eindeutig, auch ueber mehrere
+                // Fortschreibungen hinweg. Mit "Seite x Zaehler" bekam die
+                // zweite Fortschreibung (interne Unterschrift, danach der
+                // Kunde) denselben Namen wie die erste: qpdf meldete
+                // "dictionary has duplicated key /D24Sig4x0", und ein
+                // Betrachter haette eines der beiden Bilder verworfen (Teil B).
+                $name = 'D24Sig'.$imageObject;
                 $xobjects[$name] = $imageObject;
                 $this->platziert[] = ['page' => $page->index, 'name' => $name, 'object' => $imageObject];
                 $ops[] = 'q '.PdfSyntax::num($stamp->width).' 0 0 '.PdfSyntax::num($stamp->height)

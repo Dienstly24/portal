@@ -8,6 +8,19 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 07.10.2026 - E-Signatur Teil B: interne Unterschrift (Meine Unterschrift, Handy-QR, Zwischenstand)
+
+- **Task**: Betreiber-Auftrag 04./07.10.2026 Teil B - ein Mitarbeiter/Geschaeftsfuehrer unterschreibt selbst, bevor das Dokument an den Kunden geht; Entscheidungen 07.10.2026 (2FA Pflicht, 4-h-Fenster je Sitzung/Geraet, Bestaetigung je Dokument; Upload nur Personal mit 2FA und Admin-Glocke; Handy-QR 10 Min einmal).
+- **Files Changed**: Migration `2026_10_07_100000_interne_unterschrift`; neu `UserSignature`, `SignatureHandoff`, `SignatureInternalSigning`, `InternalSigningService`, `UserSignatureService`, `InterneFreigabe`, `SignatureHandoffService`, `Admin\InternalSignatureController`, `SignatureHandoffController`, `InterneUnterschriftException`, Views `admin/signatures/my_signature`, `admin/signatures/partials/intern_dialog`, `signature/handoff`, `public/js/unterschrift-pad.js`; geaendert `SignedPdfBuilder` (Basis = Zwischenstand, Protokoll "Interne Unterschriften"), `SignedPdfVerifier`/`SignatureQualityGate` (Feldauswahl, Warnung > 5 s), `PdfStamper` (eindeutige Bildnamen, KI-092), `SignatureRequestService` (Feld `intern`, Versand wartet/abgeschlossen), `SignaturePageRenderer`, `SignatureSigningController::document`, `SignatureRequestPolicy`, `Admin\SignatureController`, `EmployeeController` + `employee_edit`, `TwoFactorService::markVerified`, `Bildfreistellung::tinteFreistellen`, `Unterschriftsbild::ausZeichnung`, Editor/Detailseite/Liste, `routes/web.php`, `CLAUDE.md`.
+- **Components Affected**: Signatur-Editor, Versand, Unterzeichner-Ansicht (sieht die Fassung mit interner Unterschrift), Abschluss-PDF und Protokoll, Mitarbeiterverwaltung, Profil.
+- **Database Changes**: 3 neue Tabellen, Spalten an `users`, `signature_fields`, `signature_requests` - rein additiv.
+- **API Changes**: Routen `admin.meine_unterschrift*`, `admin.signatures.internal.sign`, `admin.signatures.internal.reset`, `signature.handoff.show/.store` (oeffentlich, Token).
+- **Potential Side Effects**: Bildnamen im PDF heissen jetzt `D24Sig<obj>` statt `D24Sig<Seite>x<n>` (Diagnose/Selbsttest lesen die Namen aus dem Stempler, nicht fest). Ein Versand mit offener interner Unterschrift eines Kollegen bleibt Entwurf und laeuft danach automatisch. Admins duerfen von sich aus intern unterschreiben.
+- **Tests Performed**: `InterneUnterschriftTest` (21 Faelle); volle Suite, PHPStan 0, Pint sauber; Headless-Chromium: Profil zeichnen + Code, Editor-Karte, Pruefdialog, Unterschreiben-und-senden, Zwischenstand-Vorschau, Touch-Zeichnen am iPhone-Viewport (kein seitlicher Bildlauf), Handy-Seite.
+- **Result**: Teil B fertig; KI-092 FIXED; KI-090 Warnung eingebaut (weiter OPEN).
+
+---
+
 ## 04.10.2026 - E-Signatur: Qualitaetsgate, Testmatrix, Eingangspruefung (Audit Teil A, KI-080..091)
 
 - **Task**: Betreiber-Auftrag 04.10.2026 Teil A - "keine Unterschrift darf je wieder erfasst, aber unsichtbar sein, ohne dass wir es wissen".

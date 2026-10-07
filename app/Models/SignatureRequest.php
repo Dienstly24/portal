@@ -35,6 +35,7 @@ class SignatureRequest extends Model
         'original_path', 'original_name', 'original_hash', 'original_size', 'page_count', 'feld_bezug',
         'upload_original_path', 'upload_original_hash',
         'signed_path', 'signed_hash', 'signed_size',
+        'zwischenstand_path', 'zwischenstand_hash', 'send_after_internal',
         'quality_status', 'quality_checked_at', 'quality_findings', 'render_ms',
         'signing_order', 'identity_check', 'consent_text',
         'document_type', 'reference', 'note',
@@ -53,6 +54,7 @@ class SignatureRequest extends Model
         'quality_checked_at' => 'datetime',
         'quality_findings' => 'array',
         'render_ms' => 'integer',
+        'send_after_internal' => 'boolean',
     ];
 
     /** Feldanteile beziehen sich auf die MediaBox (Bestand vor 04.10.2026). */
@@ -68,6 +70,65 @@ class SignatureRequest extends Model
     public function nutztCropBox(): bool
     {
         return $this->feld_bezug === self::BEZUG_CROPBOX;
+    }
+
+    /**
+     * Die Datei, die der KUNDE sieht und auf der weitergestempelt wird: das
+     * Original MIT den internen Unterschriften (Teil B), sonst das Original.
+     * Das fertige PDF ist eine Fortschreibung genau dieser Datei - und damit
+     * auch des Originals (Original -> Zwischenstand -> Endfassung).
+     */
+    public function basisPfad(): string
+    {
+        return $this->zwischenstand_path ?? $this->original_path;
+    }
+
+    /** Interne Felder, die noch auf ihre Unterschrift warten. */
+    public function offeneInterneFelder(): \Illuminate\Support\Collection
+    {
+        $this->loadMissing('fields');
+
+        return $this->fields->filter(fn (SignatureField $f) => $f->isInternal() && ! $f->isFilled())->values();
+    }
+
+    /** @return \Illuminate\Support\Collection<int, SignatureField> */
+    public function interneFelder(): \Illuminate\Support\Collection
+    {
+        $this->loadMissing('fields');
+
+        return $this->fields->filter(fn (SignatureField $f) => $f->isInternal())->values();
+    }
+
+    /**
+     * Die internen Unterschriften, die in der AKTUELLEN Fassung stehen: die
+     * Kette vom Zwischenstand rueckwaerts (danach -> davor) bis zum Original.
+     * Nach einem Zuruecknehmen bleiben alte Eintraege im Protokoll der
+     * Datenbank (append-only), stehen aber nicht mehr im Dokument - und
+     * gehoeren deshalb auch nicht auf seine Protokollseite.
+     *
+     * @return \Illuminate\Support\Collection<int, SignatureInternalSigning>
+     */
+    public function gueltigeInterneUnterschriften(): \Illuminate\Support\Collection
+    {
+        if ($this->zwischenstand_hash === null) {
+            return collect();
+        }
+        $this->loadMissing('internalSignings.userSignature');
+        $nachHash = $this->internalSignings->keyBy('document_hash_after');
+        $kette = [];
+        $hash = $this->zwischenstand_hash;
+        while (isset($nachHash[$hash]) && count($kette) < 50) {
+            $kette[] = $nachHash[$hash];
+            $hash = $nachHash[$hash]->document_hash_before;
+        }
+
+        return collect(array_reverse($kette));
+    }
+
+    /** @return HasMany<SignatureInternalSigning, $this> */
+    public function internalSignings(): HasMany
+    {
+        return $this->hasMany(SignatureInternalSigning::class)->orderBy('created_at');
     }
 
     protected static function boot()

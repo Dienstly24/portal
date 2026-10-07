@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Mail;
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
-    protected $fillable = ['name', 'email', 'password', 'role', 'access_level', 'can_see_all_customers', 'can_manage_contracts', 'can_manage_tickets', 'can_approve_changes', 'can_send_emails', 'can_import_export', 'can_manage_commissions', 'provision_fixed', 'provision_percent'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'access_level', 'can_see_all_customers', 'can_manage_contracts', 'can_manage_tickets', 'can_approve_changes', 'can_send_emails', 'can_import_export', 'can_manage_commissions', 'can_sign_for_company', 'signatur_funktion', 'provision_fixed', 'provision_percent'];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -27,6 +27,7 @@ class User extends Authenticatable
         'portal_password_set_at' => 'datetime',
         'password_changed_at' => 'datetime',
         'must_change_password' => 'boolean',
+        'can_sign_for_company' => 'boolean',
         'zugangslink_version' => 'integer',
         // Das 2FA-Geheimnis ist gleichwertig zum Passwort: wer es hat,
         // erzeugt gueltige Codes. Deshalb verschluesselt at rest.
@@ -276,6 +277,36 @@ class User extends Authenticatable
     public function requiresTwoFactor(): bool
     {
         return $this->isStaff() || $this->role === 'partner';
+    }
+
+    /**
+     * "Darf fuer das Unternehmen unterschreiben" (Teil B, 07.10.2026). Das
+     * Recht vergibt der Admin einzeln; ein Administrator hat es von sich aus
+     * (wie beim Gate `provisionen-verwalten` - die eigene Maske kann niemand
+     * bearbeiten, die Geschaeftsleitung kaeme sonst nie an das Recht). Ohne
+     * Personalrolle oder bei einem deaktivierten Konto gilt es nie.
+     */
+    public function darfFuerFirmaUnterschreiben(): bool
+    {
+        return $this->isStaff() && ($this->is_active ?? true)
+            && ($this->role === 'admin' || (bool) $this->can_sign_for_company);
+    }
+
+    /** Die Funktion im Bestaetigungssatz ("... als Ahmad Albhre, Geschaeftsfuehrer"). */
+    public function signaturFunktion(): string
+    {
+        $funktion = trim((string) $this->signatur_funktion);
+        if ($funktion !== '') {
+            return $funktion;
+        }
+
+        return match ($this->role) {
+            'admin' => 'Administrator',
+            'manager' => 'Manager',
+            'support' => 'Support',
+            'employee' => 'Mitarbeiter',
+            default => (string) $this->role,
+        };
     }
 
     public function isAdmin() { return $this->role === 'admin'; }

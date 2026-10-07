@@ -52,15 +52,22 @@ class SignaturePageRenderer
         // verloren. Der Hash steht im Namen: ein neu erzeugtes Dokument
         // bekommt neue Bilder statt der alten aus dem Speicher.
         $signiert = $request->isCompleted() && $request->signed_path !== null && $request->signed_hash !== null;
-        $path = $signiert
-            ? substr($this->storage->pagePreviewPath($request, $page), 0, -4).'-signiert-'.substr((string) $request->signed_hash, 0, 12).'.png'
-            : $this->storage->pagePreviewPath($request, $page);
+        // VOR dem Abschluss: der ZWISCHENSTAND mit den internen Unterschriften
+        // (Teil B), wenn es einen gibt - der Kunde soll genau die Fassung
+        // sehen, die er unterschreibt.
+        $zwischen = ! $signiert && $request->zwischenstand_path !== null && $request->zwischenstand_hash !== null;
+        $basis = substr($this->storage->pagePreviewPath($request, $page), 0, -4);
+        $path = match (true) {
+            $signiert => $basis.'-signiert-'.substr((string) $request->signed_hash, 0, 12).'.png',
+            $zwischen => $basis.'-intern-'.substr((string) $request->zwischenstand_hash, 0, 12).'.png',
+            default => $this->storage->pagePreviewPath($request, $page),
+        };
         $cached = $this->storage->read($path);
         if ($cached !== null) {
             return $cached;
         }
 
-        $pdf = $this->storage->read($signiert ? $request->signed_path : $request->original_path);
+        $pdf = $this->storage->read($signiert ? $request->signed_path : $request->basisPfad());
         if ($pdf === null) {
             return null;
         }

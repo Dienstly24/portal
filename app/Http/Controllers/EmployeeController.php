@@ -307,6 +307,27 @@ class EmployeeController extends Controller
         ];
     }
 
+    /**
+     * "Darf fuer das Unternehmen unterschreiben" + Funktion (Teil B,
+     * 07.10.2026). Vergibt NUR der Administrator - wer fuer die Firma
+     * unterschreibt, entscheidet die Geschaeftsleitung, nicht die Rolle.
+     * Ohne Admin bleibt der Bestand unberuehrt (dieselbe Regel wie bei den
+     * Provisions-Saetzen: "nicht mitgeschickt" heisst nicht "entziehen").
+     *
+     * @return array<string, mixed>
+     */
+    private function unterschriftsRecht(Request $request): array
+    {
+        if (auth()->user()?->role !== 'admin' || ! $request->has('unterschriftsrecht_present')) {
+            return [];
+        }
+
+        return [
+            'can_sign_for_company' => $request->boolean('can_sign_for_company'),
+            'signatur_funktion' => mb_substr(trim((string) $request->input('signatur_funktion', '')), 0, 80) ?: null,
+        ];
+    }
+
     public function update(Request $request, $id) {
         $employee = $this->mitarbeiter($id);
         // Eigene Rechte aendert niemand ueber diese Maske. `destroy()` und
@@ -338,6 +359,7 @@ class EmployeeController extends Controller
                 'access_level' => $request->access_level ?? 'full',
                 ...$this->vergebbareRechte($request, $employee),
                 ...$this->provisionsSaetze($request),
+                ...$this->unterschriftsRecht($request),
             ]);
 
             // Zuweisungen NUR ändern, wenn das Formular sie explizit mitschickt.
@@ -356,6 +378,7 @@ class EmployeeController extends Controller
             'can_see_all_customers' => $employee->can_see_all_customers,
             'can_import_export' => $employee->can_import_export,
             'can_manage_commissions' => $employee->can_manage_commissions,
+            'can_sign_for_company' => $employee->can_sign_for_company,
         ]);
 
         return redirect()->route('admin.employees')->with('success', 'Mitarbeiter aktualisiert.');

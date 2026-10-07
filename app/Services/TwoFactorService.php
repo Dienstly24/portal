@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\ActivityLog;
+use App\Models\SignatureInternalSigning;
 use App\Models\User;
+use App\Services\Signature\InterneFreigabe;
 use App\Support\Totp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -141,6 +143,11 @@ class TwoFactorService
     public function markVerified(Request $request, User $user): void
     {
         $request->session()->put(self::sessionKey($user), true);
+        // Zugleich das Zeitfenster der internen Unterschrift (Teil B): eine
+        // Zwei-Faktor-Bestaetigung beim Anmelden gilt dort bis zu
+        // InterneFreigabe::stunden() - fuer diese Sitzung und dieses Geraet.
+        app(InterneFreigabe::class)
+            ->vermerke($request, $user, SignatureInternalSigning::REAUTH_LOGIN);
     }
 
     /** Wurde der zweite Faktor in DIESER Sitzung erbracht? */
