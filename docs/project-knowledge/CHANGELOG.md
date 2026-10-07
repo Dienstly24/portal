@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 07.10.2026 - NAFI-Kfz-Antrag: Vertrag wird wieder angelegt (KI-093)
+
+- **Task**: Betreiber-Meldung 07.10.2026 - beim Kfz-Antrag (andsafe, NAFI) erschienen im Eingang nur die Kundendaten, kein Vertrag.
+- **Files Changed**: `NafiKfzAntragParser` (Versicherer hinter der Tarifkennung, Leistung "(kw/ps/ccm)", TSN/Typ), `tests/Feature/Ai/NafiKfzAntragParserTest.php`, `CLAUDE.md`, `KNOWN_ISSUES.md`.
+- **Components Affected**: Dokumenten-Eingang (Kfz-Antraege aus NAFI).
+- **Database Changes**: keine.
+- **API Changes**: keine.
+- **Potential Side Effects**: Antraege, deren Versicherer vorher leer blieb, legen jetzt einen Vertrag (Stufe antrag) an. Bereits hochgeladene Dokumente aendern sich erst bei erneuter Analyse.
+- **Tests Performed**: `NafiKfzAntragParserTest` 8 Faelle (3 neu, rot ohne den Fix); volle Suite, PHPStan, Pint.
+- **Result**: KI-093 FIXED.
+
 ## 04.10.2026 - Zusammenfuehrung rueckgaengig machen, Abschluss nach 30 Tagen (KI-064, Teil 2)
 
 - **Task**: PR-3b des freigegebenen Dubletten-Plans (Schritt 3). Die Feldwahl in der Vorschau folgt als PR-3c.

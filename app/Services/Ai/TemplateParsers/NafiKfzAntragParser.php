@@ -190,6 +190,17 @@ class NafiKfzAntragParser implements DocumentTemplateParser
             && preg_match('/^([\d.]+)\s*kW/iu', trim($v), $m)) {
             $raw['power_kw'] = (int) str_replace('.', '', $m[1]);
         }
+        // Andere Bauform derselben Zeile: "(kw/ps/ccm):  285kW/387PS/5461ccm".
+        if (! isset($raw['power_kw']) && ($v = $this->labelValue('(kw/ps/ccm)')) !== null
+            && preg_match('/^([\d.]+)\s*kW/iu', trim($v), $m)) {
+            $raw['power_kw'] = (int) str_replace('.', '', $m[1]);
+        }
+        // "TSN / Fahrzeug:  AAE - 219 (CLS 500)" - TSN sind genau drei Zeichen.
+        if (($v = $this->labelValue('TSN / Fahrzeug')) !== null
+            && preg_match('/^([A-Z0-9]{3})\s*-\s*(\S.{0,78})$/u', trim($v), $m)) {
+            $raw['tsn'] = $m[1];
+            $raw['model'] = trim($m[2]);
+        }
         if (($v = $this->labelValue('Verwendeter Kraftstoff')) !== null) {
             $raw['fuel_type'] = trim($v);
         }
@@ -255,8 +266,8 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         ];
 
         $versicherer = $this->labelValue('Versicherer / Risikoträger') ?? $this->labelValue('Versicherer');
-        if ($versicherer !== null && preg_match('/^\p{L}[\p{L} .\-&+]{2,60}$/u', trim($versicherer))) {
-            $raw['insurer'] = trim($versicherer);
+        if ($versicherer !== null && ($name = $this->insurerName($versicherer)) !== null) {
+            $raw['insurer'] = $name;
         }
         if (($v = $this->labelValue('Tarif')) !== null && preg_match('/^[\p{L}\d][\p{L}\d .\-+]{2,60}$/u', trim($v))) {
             $raw['tariff'] = trim($v);
@@ -322,6 +333,41 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         }
 
         return $this->validatedBank($raw);
+    }
+
+    /**
+     * Name des Versicherers aus dem Feld "Versicherer / Risikotraeger".
+     *
+     * Das Feld traegt mal nur den Namen ("Itzehoer Versicherung"), mal die
+     * Tarifkennung der Gesellschaft VOR dem Risikotraeger ("HFK1676 / andsafe
+     * AG", Betreiber-Meldung 07.10.2026). Frueher wurde der ganze Wert gegen
+     * eine Namensregel geprueft - Ziffern und Schraegstrich fielen durch, der
+     * Versicherer blieb LEER, und ohne Versicherer und ohne Vertragsnummer
+     * entsteht kein Vertrag: der Eingang zeigte nur die Kundendaten.
+     * Genommen wird deshalb der LETZTE Teil, der ein Name ist (der
+     * Risikotraeger steht hinter dem Schraegstrich). Neben einem Namen ist
+     * eine reine Kennung (Buchstaben + Ziffern ohne Leerzeichen) nie der
+     * Versicherer; steht der Wert ALLEIN, gilt sie als Name - "HUK24" ist
+     * eine Gesellschaft.
+     */
+    private function insurerName(string $value): ?string
+    {
+        $istName = fn (string $t): bool => (bool) preg_match('/^\p{L}[\p{L}\d .\-&+]{1,60}$/u', $t);
+        $teile = array_values(array_filter(
+            array_map('trim', preg_split('/\s*\/\s*/u', trim($value)) ?: []),
+            fn (string $t) => $t !== ''
+        ));
+
+        if (count($teile) === 1) {
+            return $istName($teile[0]) ? $teile[0] : null;
+        }
+        foreach (array_reverse($teile) as $teil) {
+            if ($istName($teil) && ! preg_match('/^\p{L}{1,6}\d+$/u', $teil)) {
+                return $teil;
+            }
+        }
+
+        return null;
     }
 
     /** Zahlungsperiode aus dem eigenen Feld. */

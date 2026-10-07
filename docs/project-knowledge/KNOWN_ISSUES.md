@@ -278,6 +278,13 @@ und PHPStan) auf `main` gruen ist.
 - **Fix** Der Name traegt die im ganzen Dokument eindeutige OBJEKTNUMMER des Bildes (`D24Sig<obj>`). Test `InterneUnterschriftTest::test_intern_kunde_endfassung_drei_hashes_und_sichtbar` (ohne den Fix "Fehler bei Fertigstellung").
 - **Discovered** 07.10.2026 (eigener Test, Teil B)
 
+### KI-093 - NAFI-Kfz-Antrag: Versicherer mit Tarifkennung -> kein Vertrag
+- **Category** correctness · **Severity** HIGH · **Status** FIXED (07.10.2026)
+- **Location** `NafiKfzAntragParser::parseInsurance` (Feld "Versicherer / Risikotraeger")
+- **Description** Betreiber-Meldung 07.10.2026 ("manchmal erkennt das System den Vertrag nicht, nur die Kundendaten"), am echten andsafe-Antrag nachgestellt. Das Feld traegt je nach Gesellschaft nur den Namen ("Itzehoer Versicherung") oder die Tarifkennung VOR dem Risikotraeger ("HFK1676 / andsafe AG"). Der ganze Wert wurde gegen eine Namensregel ohne Ziffern und Schraegstrich geprueft -> Versicherer leer. Ein Antrag hat keine Vertragsnummer, also lieferte `createContractFromExtraction` mangels Versicherer `null`: der Eingang zeigte nur Personendaten. Still - kein Fehler, nur "kein Vertrag". Daher "manchmal": es trifft nur Gesellschaften, deren Feld eine Kennung traegt. Nebenbei nicht gelesen: Leistung unter "(kw/ps/ccm)", TSN/Typ unter "TSN / Fahrzeug".
+- **Fix** `insurerName()`: Wert am Schraegstrich teilen, der letzte NAME gewinnt; eine reine Kennung (Buchstaben + Ziffern) neben einem Namen ist nie der Versicherer, allein bleibt sie Name ("HUK24"). Dazu Leistung/TSN/Typ. Tests `NafiKfzAntragParserTest` (3 neue Faelle, rot ohne den Fix, einer durch die echte Kette bis zum angelegten Vertrag).
+- **Discovered** 07.10.2026 (Betreiber-Meldung)
+
 ### KI-062 - E-Signatur: /Resources als Referenz - Bilder unauffindbar ("XObject unknown")
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (03.10.2026)
 - **Location** `PdfStamper::registerResources`
