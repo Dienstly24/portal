@@ -10,11 +10,13 @@ use App\Models\PendingRegistration;
 use App\Models\User;
 use App\Services\CustomerNumberGenerator;
 use App\Services\Security\TurnstileVerifier;
+use App\Support\FamilienAlter;
 use App\Support\PasswordPolicy;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -90,7 +92,17 @@ class RegisteredUserController extends Controller
             // eine laufende Vormerkung blockieren die Adresse gleichermassen.
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255',
                 'unique:'.User::class],
-            'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'birth_date' => ['nullable', 'date', 'before_or_equal:today',
+                // KI-094: unter dem Selbststaendigkeitsalter gibt es kein
+                // eigenes Kundenkonto - Kinder laufen ueber die Akte eines
+                // Elternteils. Ohne diese Pruefung entstuende beim Bestaetigen
+                // ein Portal-Login ohne Kundennummer.
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $alter = FamilienAlter::selbststaendig();
+                    if ($value && Carbon::parse($value)->age < $alter) {
+                        $fail(__('Eine eigene Registrierung ist erst ab :alter Jahren möglich. Kinder betreuen wir über das Konto eines Elternteils – bitte sprechen Sie uns an.', ['alter' => $alter]));
+                    }
+                }],
             'password' => ['required', 'confirmed', PasswordPolicy::customer()],
             'agb' => ['accepted'],
             // Freiwillige, getrennte Einwilligung zur E-Mail-Archivierung

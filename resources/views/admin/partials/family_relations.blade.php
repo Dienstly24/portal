@@ -99,7 +99,7 @@
                     <div style="width:38px;height:38px;border-radius:10px;background:#EDEAE0;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;">{{ \App\Models\CustomerFamilyRelation::roleEmoji($rel->relationship_type) }}</div>
                     <div style="min-width:0;flex:1;">
                         <a href="{{ route('admin.customer', $mitglied->id) }}" style="font-size:14px;font-weight:700;color:var(--ink);text-decoration:none;">{{ $mitglied->user?->name ?? 'Kunde' }}</a>
-                        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px;">{{ $mitglied->customer_number }}</div>
+                        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px;">{{ $mitglied->customer_number ?: 'ohne eigene Kundennummer' }}</div>
                         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;">
                             <span style="font-size:11px;background:#EAF2FB;color:#185FA5;border-radius:999px;padding:2px 9px;">{{ \App\Models\CustomerFamilyRelation::roleLabel($rel->relationship_type) }}</span>
                             @if($alter !== null)<span style="font-size:11px;background:var(--surface-soft,#F1EEE5);border:1px solid var(--line);border-radius:999px;padding:2px 9px;">{{ $alter }} Jahre</span>@endif
@@ -111,13 +111,16 @@
                         </div>
                         @if($abhaengig && $stichtag)
                         @php $restTage = \Illuminate\Support\Carbon::today()->diffInDays($stichtag, false); @endphp
-                        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">15. Geburtstag: {{ $stichtag->format('d.m.Y') }}</div>
+                        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">Eigenständig ab {{ $stichtag->format('d.m.Y') }} ({{ \App\Support\FamilienAlter::selbststaendig() }}. Geburtstag) – dann eigene Kundennummer und Portal.</div>
+                        @if($mitglied->portal_vorbereitung_erinnert_at)
+                        <div style="font-size:11.5px;color:#92400E;margin-top:4px;">⏰ Erinnerung „Portal vorbereiten" am {{ $mitglied->portal_vorbereitung_erinnert_at->lokal()->format('d.m.Y') }} angelegt (Aufgabe in dieser Akte).</div>
+                        @endif
                         @if($restTage >= 0 && $restTage <= $famVorlaufTage)
                         {{-- Automatischer Hinweis: die Verselbststaendigung steht
                              an. Es wird NICHTS automatisch geaendert - der
                              Knopf legt nur eine Wiedervorlage an. --}}
                         <div style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:11.5px;">
-                            ⚠ Wird in {{ $restTage > 60 ? (int) floor($restTage / 30) . ' Monaten' : $restTage . ' Tagen' }} 15.
+                            ⚠ Wird in {{ $restTage > 60 ? (int) floor($restTage / 30) . ' Monaten' : $restTage . ' Tagen' }} {{ \App\Support\FamilienAlter::selbststaendig() }}.
                             Empfehlung: eigenständige Verträge / Kundenvorgänge prüfen.
                             @if($rel->transition_prepared_at)
                             <div style="margin-top:6px;">✓ Übergang vorbereitet am {{ $rel->transition_prepared_at->lokal()->format('d.m.Y') }}</div>
@@ -132,6 +135,13 @@
                         @endif
                         @elseif($rel->independent_since)
                         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">Eigenständig seit {{ $rel->independent_since->lokal()->format('d.m.Y') }} – Beziehung bleibt bestehen.</div>
+                        @endif
+                        @if(! $abhaengig && blank($mitglied->customer_number) && $alter !== null && $alter >= \App\Support\FamilienAlter::selbststaendig())
+                        <form method="POST" action="{{ route('admin.customer.kundennummer_vergeben', $mitglied->id) }}" style="margin-top:6px;"
+                              data-confirm="Eigene Kundennummer für „{{ $mitglied->user?->name ?? 'Kunde' }}“ vergeben? Die Familienbeziehung bleibt bestehen.">
+                            @csrf
+                            <button type="submit" class="btn btn-emerald" style="padding:4px 10px;font-size:11.5px;">Kundennummer vergeben</button>
+                        </form>
                         @endif
                     </div>
                 </div>

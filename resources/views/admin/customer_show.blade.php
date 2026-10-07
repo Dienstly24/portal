@@ -57,8 +57,29 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 @endif
             </h1>
             <div style="font-size:14px;color:var(--ink-soft);">
+                @if(filled($customer->customer_number))
                 {{ $customer->customer_number }}@if($customer->user?->email) · {{ $customer->user?->email }}@endif
+                @else
+                {{-- KI-094: abhaengiges Kind - keine eigene Kundennummer. --}}
+                <span>Keine eigene Kundennummer (abhängiges Familienmitglied)</span>
+                @endif
             </div>
+            @php $kinderSperre = $customer->eigenstaendigkeitsSperre(); @endphp
+            @if($kinderSperre)
+            <div style="margin-top:8px;background:#FEF3C7;border:1px solid #F0E0B0;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#92400E;max-width:640px;">
+                🧒 {{ $kinderSperre }}
+                @if($customer->familyGuardians()->isEmpty())
+                <strong>Noch kein Elternteil verknüpft</strong> – bitte unter „Familie" den Vater (sonst die Mutter) als Bezugsperson verknüpfen.
+                @endif
+                @if(blank($customer->customer_number) && $customer->age() !== null && $customer->age() >= \App\Support\FamilienAlter::selbststaendig())
+                <form method="POST" action="{{ route('admin.customer.kundennummer_vergeben', $customer->id) }}" style="margin-top:6px;"
+                      data-confirm="Eigene Kundennummer vergeben? Die Familienbeziehung bleibt bestehen.">
+                    @csrf
+                    <button type="submit" class="btn btn-emerald btn-sm">Kundennummer vergeben</button>
+                </form>
+                @endif
+            </div>
+            @endif
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button type="button" class="btn btn-ghost" data-h-click="2e6547eb33">📨 Nachricht senden</button>
@@ -67,7 +88,9 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             @endif
             <a href="{{ route('admin.tasks', ['customer_id' => $customer->id, 'neu' => 1]) }}" class="btn btn-ghost">✅ Aufgabe / Wiedervorlage</a>
             <a href="{{ route('admin.customer.edit', $customer->id) }}" class="btn btn-ghost">✏️ Bearbeiten</a>
+            @if(! $kinderSperre)
             <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-emerald">+ Vertrag hinzufügen</a>
+            @endif
         </div>
     </div>
 </div>

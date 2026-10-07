@@ -25,6 +25,7 @@ use App\Services\Family\FamilyRelationService;
 use App\Services\Matching\DuplicateDetectionService;
 use App\Services\Portal\PortalAccessService;
 use App\Services\Relationships\CustomerRelationshipService;
+use App\Support\FamilienAlter;
 use App\Support\GermanPhone;
 use App\Support\PasswordPolicy;
 use Illuminate\Http\Request;
@@ -517,6 +518,14 @@ class AdminController extends Controller
         // Portal-Einladung: manuelles Passwort > Geburtsdatum-Startpasswort
         // > Passwort-Setzen-Link. KEINE Login-Mail ohne echte Adresse.
         $customer->setRelation('user', $user);
+        // KI-094: juenger als das Selbststaendigkeitsalter -> ohne eigene
+        // Kundennummer angelegt (Modell-Hook), KEIN Portal, KEINE Einladung.
+        if ($customer->unterSelbststaendigkeitsalter()) {
+            return redirect()->route('admin.customer', $customer->id)->with('warning',
+                'Als abhängiges Familienmitglied angelegt: jünger als '.FamilienAlter::selbststaendig().' Jahre – '
+                .'deshalb OHNE eigene Kundennummer, ohne Portal und ohne Verträge. '
+                .'Bitte jetzt unter „Familie" mit dem Elternteil (Vater, sonst Mutter) verknüpfen.');
+        }
         if ($user->hasRealEmail()) {
             try {
                 if ($request->filled('password')) {

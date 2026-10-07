@@ -1141,6 +1141,12 @@ class DocumentIntakeService
             return null;
         }
 
+        // KI-094: an die Akte eines abhaengigen Kindes kommt kein Vertrag -
+        // das Dokument bleibt zugeordnet, der Vertrag gehoert zum Elternteil.
+        if ($customer->eigenstaendigkeitsSperre() !== null) {
+            return null;
+        }
+
         // Stufe des Dokuments: Auftrag/Antrag oder Vertragsbestaetigung/Police.
         $stage = Document::contractStageFor($document->ai_type, $data);
 

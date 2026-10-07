@@ -44,6 +44,19 @@ class CustomerFamilyRelationTest extends TestCase
         ], $extra));
     }
 
+    /**
+     * Vertrag an einer Kinderakte - seit KI-094 nicht mehr neu anlegbar, nur
+     * noch ALTBESTAND (am Modell-Hook vorbei). Genau darum geht es in diesen
+     * Faellen: vorhandene Vertraege bleiben unangetastet.
+     */
+    private function altvertrag(Customer $kunde): Contract
+    {
+        return Contract::withoutEvents(fn () => Contract::forceCreate([
+            'id' => (string) Str::uuid(), 'customer_id' => $kunde->id,
+            'type' => 'krankenversicherung', 'insurer' => 'BIG direkt gesund', 'status' => 'active',
+        ]));
+    }
+
     private function service(): FamilyRelationService
     {
         return app(FamilyRelationService::class);
@@ -82,7 +95,8 @@ class CustomerFamilyRelationTest extends TestCase
             ])->assertRedirect();
 
         $this->assertSame($vorher, Customer::count(), 'Die Verknuepfung darf nie einen Kunden anlegen');
-        $this->assertDatabaseHas('customers', ['id' => $kind->id, 'customer_number' => '2600610']);
+        // Kind unter 16: Akte ohne eigene Kundennummer (KI-094).
+        $this->assertDatabaseHas('customers', ['id' => $kind->id, 'customer_number' => null]);
     }
 
     /** Fall 3: Verträge, Dokumente und die Kundennummer bleiben unangetastet. */
@@ -91,10 +105,7 @@ class CustomerFamilyRelationTest extends TestCase
         $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
         $kind = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(12)->toDateString(), 'female');
 
-        $vertrag = Contract::create([
-            'id' => (string) Str::uuid(), 'customer_id' => $kind->id,
-            'type' => 'krankenversicherung', 'insurer' => 'BIG direkt gesund', 'status' => 'active',
-        ]);
+        $vertrag = $this->altvertrag($kind);
         $dokument = Document::create([
             'id' => (string) Str::uuid(), 'customer_id' => $kind->id,
             'file_name' => 'gesundheitskarte.jpg', 'file_path' => 'documents/test.jpg', 'category' => 'sonstiges',
@@ -103,7 +114,7 @@ class CustomerFamilyRelationTest extends TestCase
         $relation = $this->service()->link($vater, $kind, 'tochter');
         $this->service()->unlink($relation);
 
-        $this->assertDatabaseHas('customers', ['id' => $kind->id, 'customer_number' => '2600611']);
+        $this->assertDatabaseHas('customers', ['id' => $kind->id]);
         $this->assertDatabaseHas('contracts', ['id' => $vertrag->id, 'customer_id' => $kind->id]);
         $this->assertDatabaseHas('documents', ['id' => $dokument->id, 'customer_id' => $kind->id]);
         $this->assertSame(0, CustomerFamilyRelation::count(), 'Beide Richtungen werden gemeinsam entfernt');
@@ -123,7 +134,7 @@ class CustomerFamilyRelationTest extends TestCase
         ]);
     }
 
-    /** Fall 5: Kind unter 15 gilt als abhaengiges Familienmitglied - mit eigener Akte. */
+    /** Fall 5: Kind unter 16 (seit KI-094, vorher 15) gilt als abhaengiges Familienmitglied - mit eigener Akte. */
     public function test_kind_unter_15_ist_abhaengiges_familienmitglied(): void
     {
         $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
@@ -182,20 +193,18 @@ class CustomerFamilyRelationTest extends TestCase
         $this->assertFalse($eigen['inherited']);
     }
 
-    /** Fall 8: Mit 15 wird nur der STATUS getauscht - Beziehung und Vertraege bleiben. */
-    public function test_uebergang_mit_15_aendert_nur_den_status(): void
+    /** Fall 8: Mit 16 wird nur der STATUS getauscht - Beziehung und Vertraege bleiben. */
+    public function test_uebergang_mit_16_aendert_nur_den_status(): void
     {
+        $this->admin(); // Zustaendiger fuer die Aufgabe "Kundennummer vergeben"
         $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(14)->subMonths(11)->toDateString(), 'female');
-        $vertrag = Contract::create([
-            'id' => (string) Str::uuid(), 'customer_id' => $kind->id,
-            'type' => 'krankenversicherung', 'insurer' => 'BIG direkt gesund', 'status' => 'active',
-        ]);
+        $kind = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(15)->subMonths(11)->toDateString(), 'female');
+        $vertrag = $this->altvertrag($kind);
 
         $relation = $this->service()->link($vater, $kind, 'tochter');
         $this->assertTrue($relation->is_dependent);
 
-        // Ein Monat spaeter: der 15. Geburtstag ist erreicht.
+        // Ein Monat spaeter: der 16. Geburtstag ist erreicht.
         Carbon::setTestNow(now()->addMonths(2));
         $this->artisan('familie:uebergaenge-anwenden')->assertExitCode(0);
 
@@ -204,7 +213,9 @@ class CustomerFamilyRelationTest extends TestCase
         $this->assertSame('tochter', $relation->relationship_type, 'Die Familienrolle bleibt Tochter');
         $this->assertNotNull($relation->independent_since);
 
-        $this->assertDatabaseHas('customers', ['id' => $kind->id, 'customer_number' => '2600611']);
+        // Die Kundennummer vergibt das TEAM (Aufgabe), nie der Tageslauf (KI-094).
+        $this->assertDatabaseHas('customers', ['id' => $kind->id, 'customer_number' => null]);
+        $this->assertDatabaseHas('tasks', ['customer_id' => $kind->id, 'type' => 'reminder']);
         $this->assertDatabaseHas('contracts', ['id' => $vertrag->id, 'status' => 'active']);
         $this->assertSame('eigenstaendig', $kind->fresh()->familyStatus()['key']);
 
@@ -216,7 +227,7 @@ class CustomerFamilyRelationTest extends TestCase
         Carbon::setTestNow();
     }
 
-    /** Fall 9: Anzeige haengt nie am Cron - ein 15-Jaehriger gilt sofort als eigenstaendig. */
+    /** Fall 9: Anzeige haengt nie am Cron - ein 16-Jaehriger gilt sofort als eigenstaendig. */
     public function test_anzeige_folgt_dem_alter_auch_ohne_tageslauf(): void
     {
         $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
@@ -230,13 +241,13 @@ class CustomerFamilyRelationTest extends TestCase
         Carbon::setTestNow();
     }
 
-    /** Fall 10: "Kinder werden 15" listet nur den gewaehlten Vorlauf, sortiert nach Restzeit. */
-    public function test_uebergangsliste_zeigt_kinder_vor_dem_15_geburtstag(): void
+    /** Fall 10: "Kinder werden 16" listet nur den gewaehlten Vorlauf, sortiert nach Restzeit. */
+    public function test_uebergangsliste_zeigt_kinder_vor_dem_16_geburtstag(): void
     {
         $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        // 15. Geburtstag in ~2 Monaten.
-        $bald = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(15)->addMonths(2)->toDateString(), 'female');
-        // 15. Geburtstag in ~5 Jahren - weit weg.
+        // 16. Geburtstag in ~2 Monaten.
+        $bald = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(16)->addMonths(2)->toDateString(), 'female');
+        // 16. Geburtstag in ~6 Jahren - weit weg.
         $spaeter = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(10)->toDateString(), 'female');
 
         $this->service()->link($vater, $bald, 'tochter');
@@ -254,11 +265,8 @@ class CustomerFamilyRelationTest extends TestCase
     public function test_uebergang_vorbereiten_aendert_keine_vertraege(): void
     {
         $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(15)->addMonths(3)->toDateString(), 'female');
-        $vertrag = Contract::create([
-            'id' => (string) Str::uuid(), 'customer_id' => $kind->id,
-            'type' => 'krankenversicherung', 'insurer' => 'BIG direkt gesund', 'status' => 'active',
-        ]);
+        $kind = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(16)->addMonths(3)->toDateString(), 'female');
+        $vertrag = $this->altvertrag($kind);
         $relation = $this->service()->link($vater, $kind, 'tochter');
 
         $this->actingAs($this->admin())
@@ -275,14 +283,15 @@ class CustomerFamilyRelationTest extends TestCase
     public function test_suche_findet_bestehende_kunden(): void
     {
         $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Zania Ebraheem', '2600610', '2012-03-12', 'female');
+        // 17 Jahre: traegt eine eigene Nummer (unter 16 gaebe es keine, KI-094).
+        $kind = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(17)->format('Y').'-03-12', 'female');
 
         $admin = $this->admin();
 
         $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=2600610')
             ->assertOk()->assertJsonPath('customers.0.number', '2600610');
 
-        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=12.03.2012')
+        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=12.03.'.now()->subYears(17)->format('Y'))
             ->assertOk()->assertJsonPath('customers.0.id', (string) $kind->id);
 
         // Bereits verknuepfte Kunden und der Kunde selbst tauchen nicht auf.

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\SafeEncrypted;
 use App\Services\CustomerNumberGenerator;
 use App\Services\Matching\DuplicateDetectionService;
+use App\Support\FamilienAlter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -59,6 +60,7 @@ class Customer extends Model
             'marketing_consent' => 'boolean',
             'unsubscribed_at' => 'datetime',
             'archived_at' => 'datetime',
+            'portal_vorbereitung_erinnert_at' => 'datetime',
             // SafeEncrypted: verschluesselt at rest (DSGVO), aber robust gegen
             // Alt-Klartext-Bestaende (sonst HTTP 500 beim Oeffnen/Speichern).
             'health_insurance_number' => SafeEncrypted::class,
@@ -275,6 +277,10 @@ class Customer extends Model
                   // Bewusst als Unterabfrage am globalen Scope vorbei.
                     ->orWhereIn('customers.id', fn ($s) => $s->select('merged_into_id')->from('customers')
                         ->whereNotNull('archived_at')->where('customer_number', 'like', $like))
+                  // Archivierte Nummer (KI-094): die einem Kind zu Unrecht
+                  // vergebene Nummer findet weiterhin das Kind.
+                    ->orWhereIn('customers.id', fn ($s) => $s->select('customer_id')->from('archivierte_kundennummern')
+                        ->whereNotNull('customer_id')->where('customer_number', 'like', $like))
                     ->orWhere('phone', 'like', $like)
                     ->orWhere('mobile', 'like', $like)
                     ->orWhere('email2', 'like', $like)
@@ -427,6 +433,16 @@ class Customer extends Model
             // Nur Mitarbeiter-Konten - Selbstregistrierung/CLI bleibt null (=System).
             if ($m->created_by === null && auth()->check() && auth()->user()->isStaff()) {
                 $m->created_by = auth()->id();
+            }
+            // KI-094 (07.10.2026): ein Kind unter dem Selbststaendigkeitsalter
+            // bekommt KEINE eigene Kundennummer - egal ueber welchen Weg es
+            // entsteht (Formular, Dokumenten-Eingang, Gesundheitskarten einer
+            // Familie, Import). Die Aufrufer ziehen die Nummer vorab; hier ist
+            // die EINE Stelle, an der sie fuer ein Kind wieder wegfaellt. Die
+            // gezogene Nummer ist dabei nicht verbraucht (der Generator zaehlt
+            // nur gespeicherte Nummern).
+            if ($m->customer_number !== null && $m->unterSelbststaendigkeitsalter()) {
+                $m->customer_number = null;
             }
         });
 
@@ -598,10 +614,51 @@ class Customer extends Model
     }
 
     /**
-     * Ab diesem Alter gilt ein Familienmitglied nicht mehr als abhaengig,
-     * sondern als eigenstaendiger Kunde (Betreiber-Vorgabe 28.08.2026).
+     * Ab welchem Alter ein Familienmitglied nicht mehr abhaengig ist, steht
+     * seit 07.10.2026 als EINSTELLUNG in App\Support\FamilienAlter
+     * (Standard 16, Erinnerung 15) - nicht mehr als Konstante hier.
      */
-    public const DEPENDENT_AGE = 15;
+
+    /**
+     * Juenger als das Selbststaendigkeitsalter (Standard 16)? Ohne
+     * Geburtsdatum: nein - ein Alter wird nie geraten (KI-094).
+     */
+    public function unterSelbststaendigkeitsalter(): bool
+    {
+        $age = $this->age();
+
+        return $age !== null && $age < FamilienAlter::selbststaendig();
+    }
+
+    /**
+     * Warum fuer diese Akte KEIN Vertrag, keine Rechnung und kein Portal
+     * angelegt werden darf - oder null, wenn nichts dagegen spricht.
+     *
+     * Zwei Gruende, beide fachlich dieselbe Aussage "das ist (noch) kein
+     * eigenstaendiger Kunde": das Kind ist juenger als das
+     * Selbststaendigkeitsalter, ODER die Akte traegt keine Kundennummer
+     * (abhaengiges Kind, dessen Geburtsdatum evtl. fehlt). Alles laeuft
+     * dann ueber die Akte des Elternteils.
+     */
+    public function eigenstaendigkeitsSperre(): ?string
+    {
+        if ($this->unterSelbststaendigkeitsalter()) {
+            return 'Kunde ist jünger als '.FamilienAlter::selbststaendig().' Jahre und wird als abhängiges Familienmitglied geführt – '
+                .'Verträge und Vorgänge laufen über die Akte des Elternteils.';
+        }
+        if ($this->exists && blank($this->customer_number)) {
+            return 'Kunde hat (noch) keine eigene Kundennummer (abhängiges Familienmitglied) – '
+                .'Verträge und Vorgänge laufen über die Akte des Elternteils.';
+        }
+
+        return null;
+    }
+
+    /** Darf an diese Akte ein eigener Vertrag / ein eigenes Portal? */
+    public function istEigenstaendig(): bool
+    {
+        return $this->eigenstaendigkeitsSperre() === null;
+    }
 
     /** Stammdaten, die ein abhaengiges Kind von der Bezugsperson erben kann. */
     public const INHERITABLE_FIELDS = ['address', 'email', 'phone', 'mobile'];
@@ -634,13 +691,37 @@ class Customer extends Model
      */
     public function familyGuardians(): Collection
     {
+        // Reihenfolge (Betreiber-Vorgabe 07.10.2026): der VATER fuehrt die
+        // Akte, ist keiner erfasst die MUTTER, danach jede weitere
+        // Bezugsperson - jeweils in Anlage-Reihenfolge. Erkannt wird der
+        // Elternteil an der ROLLE der Gegenrichtung ("vater"/"mutter"),
+        // ersatzweise am Geschlecht; geraten wird nichts.
         return $this->dependencyRelations()
             ->with(['customer.user'])
             ->orderBy('created_at')
             ->get()
+            // Das abhaengige Familienmitglied ist DIESE Akte - nicht neu laden.
+            ->each(fn (CustomerFamilyRelation $r) => $r->setRelation('relatedCustomer', $this))
             ->filter(fn (CustomerFamilyRelation $r) => $r->dependentNow() && $r->customer !== null)
             ->map(fn (CustomerFamilyRelation $r) => $r->customer)
+            ->values()
+            ->sortBy(fn (Customer $g) => $this->elternRang($g))
             ->values();
+    }
+
+    /** 0 = Vater, 1 = Mutter, 2 = sonstige Bezugsperson. */
+    private function elternRang(Customer $guardian): int
+    {
+        $rolle = CustomerFamilyRelation::where('customer_id', $this->id)
+            ->where('related_customer_id', $guardian->id)->value('relationship_type');
+
+        return match (true) {
+            $rolle === 'vater' => 0,
+            $rolle === 'mutter' => 1,
+            $guardian->gender === 'male' => 0,
+            $guardian->gender === 'female' => 1,
+            default => 2,
+        };
     }
 
     /** Haupt-Bezugsperson eines abhaengigen Familienmitglieds (oder null). */
@@ -650,7 +731,8 @@ class Customer extends Model
     }
 
     /**
-     * Ist dieser Kunde heute ein abhaengiges Familienmitglied (Kind < 15 mit
+     * Ist dieser Kunde heute ein abhaengiges Familienmitglied (Kind unter
+     * FamilienAlter::selbststaendig() mit
      * hinterlegter Bezugsperson)? Wird IMMER aus Alter + Beziehung abgeleitet,
      * nie aus einer eigenen Statusspalte - eine solche koennte aus dem Takt
      * laufen, und der Uebergang mit 15 wuerde davon abhaengen, dass der

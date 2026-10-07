@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FamilienAlter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -38,7 +39,7 @@ class CustomerFamilyRelation extends Model
 
     /**
      * Familienrollen. Bewusst getrennt vom KUNDENSTATUS (siehe
-     * Customer::familyStatus): eine 16-jaehrige Tochter ist eigenstaendige
+     * Customer::familyStatus): eine 17-jaehrige Tochter ist eigenstaendige
      * Kundin UND bleibt Tochter.
      */
     public const ROLES = [
@@ -157,10 +158,13 @@ class CustomerFamilyRelation extends Model
         }
         $age = $this->relatedCustomer?->age();
 
-        return $age !== null && $age < Customer::DEPENDENT_AGE;
+        return $age !== null && $age < FamilienAlter::selbststaendig();
     }
 
-    /** Tag des 15. Geburtstags des verknuepften Kindes (oder null). */
+    /**
+     * Tag, an dem das verknuepfte Kind eigenstaendig wird (Geburtstag im
+     * Selbststaendigkeitsalter, Standard 16) - oder null ohne Geburtsdatum.
+     */
     public function independenceDate(): ?Carbon
     {
         $birth = $this->relatedCustomer?->birth_date;
@@ -168,7 +172,18 @@ class CustomerFamilyRelation extends Model
             return null;
         }
 
-        return Carbon::parse($birth)->addYears(Customer::DEPENDENT_AGE)->startOfDay();
+        return Carbon::parse($birth)->addYears(FamilienAlter::selbststaendig())->startOfDay();
+    }
+
+    /** Tag der Erinnerung "Zugang vorbereiten" (Standard: 15. Geburtstag). */
+    public function reminderDate(): ?Carbon
+    {
+        $birth = $this->relatedCustomer?->birth_date;
+        if (empty($birth)) {
+            return null;
+        }
+
+        return Carbon::parse($birth)->addYears(FamilienAlter::erinnerung())->startOfDay();
     }
 
     protected static function boot()

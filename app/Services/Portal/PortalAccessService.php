@@ -54,6 +54,11 @@ class PortalAccessService
      */
     public function sendInvitation(Customer $customer, ?int $actorId = null): string
     {
+        // KI-094: ein abhaengiges Kind hat kein eigenes Portal - erst ab dem
+        // Selbststaendigkeitsalter und mit eigener Kundennummer.
+        if (($grund = $customer->eigenstaendigkeitsSperre()) !== null) {
+            throw new \RuntimeException('Kein Portal-Zugang: '.$grund);
+        }
         $user = $customer->user;
         if ($user === null || ! $user->hasRealEmail()) {
             throw new \RuntimeException('Kunde hat keine echte E-Mail-Adresse – bitte zuerst eine Login-E-Mail hinterlegen.');
@@ -137,6 +142,9 @@ class PortalAccessService
      */
     public function autoInvite(Customer $customer, ?int $actorId = null): bool
     {
+        if ($customer->eigenstaendigkeitsSperre() !== null) {
+            return false; // abhaengiges Kind: kein eigenes Portal (KI-094)
+        }
         $user = $customer->user;
         if ($user === null || ! $user->hasRealEmail()) {
             return false; // keine erreichbare Adresse -> stiller Ueberspring
@@ -189,6 +197,9 @@ class PortalAccessService
      */
     public function resetPortal(Customer $customer, ?int $actorId = null): string
     {
+        if (($grund = $customer->eigenstaendigkeitsSperre()) !== null) {
+            throw new \RuntimeException('Kein Portal-Zugang: '.$grund);
+        }
         $user = $customer->user;
         if ($user === null || ! $user->hasRealEmail()) {
             throw new \RuntimeException('Kunde hat keine echte E-Mail-Adresse – Zurücksetzen nicht möglich.');

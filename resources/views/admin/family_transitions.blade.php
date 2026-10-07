@@ -1,16 +1,17 @@
 @extends('layouts.admin')
 @section('content')
+@php $famAlter = \App\Support\FamilienAlter::selbststaendig(); @endphp
 
 <div class="page-header">
     <div class="breadcrumb">
         <a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span>
         <a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span>
-        <span>Kinder werden 15</span>
+        <span>Kinder werden {{ $famAlter }}</span>
     </div>
-    <h1 class="page-title">👧 Kinder werden 15</h1>
+    <h1 class="page-title">👧 Kinder werden {{ $famAlter }}</h1>
     <div class="page-sub">
         Familienmitglieder mit bevorstehender Verselbstständigung – sortiert nach verbleibender Zeit.
-        Mit dem 15. Geburtstag wird aus dem abhängigen Familienmitglied automatisch ein eigenständiger Kunde.
+        Mit dem {{ $famAlter }}. Geburtstag wird aus dem abhängigen Familienmitglied ein eigenständiger Kunde – die eigene Kundennummer vergibt das Team in der Akte. Mit {{ \App\Support\FamilienAlter::erinnerung() }} erinnert das System automatisch, den Zugang vorzubereiten (Einstellungen → Familie).
         Dabei wird <strong>nichts gelöscht und nichts neu angelegt</strong>, und es wird
         <strong>kein Vertrag verändert</strong> – die Familienbeziehung bleibt bestehen.
     </div>
@@ -26,7 +27,7 @@
             <label style="font-size:12px;">Vorlaufzeit</label>
             <select name="vorlauf" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Vorlaufzeit">
                 @foreach(\App\Services\Family\FamilyRelationService::LEAD_MONTH_CHOICES as $monate)
-                <option value="{{ $monate }}" {{ $leadMonths === $monate ? 'selected' : '' }}>{{ $monate }} Monate vor dem 15. Geburtstag</option>
+                <option value="{{ $monate }}" {{ $leadMonths === $monate ? 'selected' : '' }}>{{ $monate }} Monate vor dem {{ $famAlter }}. Geburtstag</option>
                 @endforeach
             </select>
         </div>
@@ -42,11 +43,11 @@
 <div class="card" style="text-align:center;padding:40px 16px;color:var(--ink-soft);">
     <div style="font-size:40px;margin-bottom:8px;">👧</div>
     <div style="font-size:14.5px;font-weight:600;margin-bottom:4px;">Kein Familienmitglied in der Übergangsphase</div>
-    <div style="font-size:12.5px;">Im gewählten Zeitraum von {{ $leadMonths }} Monaten wird kein verknüpftes Kind 15 Jahre alt.</div>
+    <div style="font-size:12.5px;">Im gewählten Zeitraum von {{ $leadMonths }} Monaten wird kein verknüpftes Kind {{ $famAlter }} Jahre alt.</div>
 </div>
 @else
 <div class="card">
-    <div class="card-title" style="margin-bottom:14px;">{{ $relations->count() }} Familienmitglied(er) vor dem 15. Geburtstag</div>
+    <div class="card-title" style="margin-bottom:14px;">{{ $relations->count() }} Familienmitglied(er) vor dem {{ $famAlter }}. Geburtstag</div>
     @foreach($relations as $rel)
     @php
         $kind = $rel->relatedCustomer;
@@ -64,7 +65,7 @@
                 <a href="{{ route('admin.customer', $rel->customer_id) }}" class="muted">{{ $rel->customer?->user?->name ?? '—' }}</a>
             </div>
             <div style="font-size:12.5px;margin-top:5px;">
-                <strong>15. Geburtstag: {{ $stichtag?->format('d.m.Y') ?? '—' }}</strong>
+                <strong>{{ $famAlter }}. Geburtstag: {{ $stichtag?->format('d.m.Y') ?? '—' }}</strong>
                 @if($restTage !== null)
                 <span class="muted"> · noch {{ $restMonate > 0 ? $restMonate . ' Monate' : $restTage . ' Tage' }}</span>
                 @endif

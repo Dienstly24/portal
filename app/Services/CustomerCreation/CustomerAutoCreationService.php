@@ -30,6 +30,7 @@ class CustomerAutoCreationService
      *     full_name?: ?string, first_name?: ?string, last_name?: ?string,
      *     email?: ?string, birth_date?: ?string, phone?: ?string,
      *     street?: ?string, zip?: ?string, city?: ?string, address?: ?string,
+     *     als_kind?: bool,
      * } $data
      *
      * @throws DuplicateCustomerException wenn trotz vermeintlich fehlendem
@@ -98,9 +99,15 @@ class CustomerAutoCreationService
 
             // Importierte Kunden behalten ihre Quellnummer mit Jahrespräfix
             // ("25" + Originalnummer); Neuanlagen bekommen JJ+laufende Nummer.
-            $number = ! empty($data['import_number'])
-                ? $this->numberGenerator->generateForImport((string) $data['import_number'])
-                : $this->numberGenerator->generate();
+            // KI-094: ein KIND bekommt keine eigene Kundennummer. Als Kind
+            // gilt, wer ausdruecklich so gekennzeichnet ist (z.B. "Kind" im
+            // Antrag auf Familienversicherung) - das Geburtsdatum prueft
+            // zusaetzlich der creating-Hook des Modells fuer JEDEN Weg.
+            $number = match (true) {
+                ! empty($data['als_kind']) => null,
+                ! empty($data['import_number']) => $this->numberGenerator->generateForImport((string) $data['import_number']),
+                default => $this->numberGenerator->generate(),
+            };
 
             $customer = Customer::create(array_merge([
                 'user_id' => $user->id,

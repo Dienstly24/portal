@@ -1436,12 +1436,6 @@ parameters:
 			path: app/Services/Matching/CustomerMatchingService.php
 
 		-
-			message: '#^Variable \$dupNumber on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.variable
-			count: 1
-			path: app/Services/Matching/CustomerMergeService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1

@@ -2224,12 +2224,15 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   an der Beziehung (Vater/Mutter/Ehepartner/Sohn/Tochter/...), der
   KUNDENSTATUS wird ABGELEITET (`Customer::familyStatus()`:
   familienmitglied / hauptkunde / eigenstaendig). Abgeleitet, weil eine
-  eigene Statusspalte aus dem Takt laufen wuerde: mit 15 wechselt der Status
-  dann auch ohne Cron-Lauf (`dependentNow()` prueft IMMER das Alter). Eine
-  16-jaehrige Tochter ist eigenstaendige Kundin UND bleibt Tochter.
+  eigene Statusspalte aus dem Takt laufen wuerde: mit 16 (Einstellung, seit
+  07.10.2026 - vorher 15) wechselt der Status dann auch ohne Cron-Lauf
+  (`dependentNow()` prueft IMMER das Alter). Eine 17-jaehrige Tochter ist
+  eigenstaendige Kundin UND bleibt Tochter.
   **ABHAENGIG NUR MIT BELEG**: `is_dependent` wird gesetzt, wenn die Rolle
-  ein KIND beschreibt UND das Geburtsdatum ein Alter unter 15 belegt. OHNE
-  Geburtsdatum entsteht keine Abhaengigkeit - ein Alter wird nie geraten.
+  ein KIND beschreibt UND das Geburtsdatum ein Alter unter dem
+  Selbststaendigkeitsalter (16) belegt - oder die Akte als Kind OHNE
+  Kundennummer angelegt wurde (KI-094). Sonst entsteht ohne Geburtsdatum
+  keine Abhaengigkeit - ein Alter wird nie geraten.
   Das Flag steht immer nur an der Zeile der Bezugsperson (ein Elternteil ist
   nie vom Kind abhaengig).
   **STAMMDATEN WERDEN GELESEN, NICHT KOPIERT** (`effectiveContact()`,
@@ -2238,14 +2241,17 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   "vom Elternteil übernommen"). Eine physische Kopie in die Kindakte waere
   ab dem ersten Umzug still falsch. Geerbt wird nur, solange die
   Abhaengigkeit besteht.
-  **UEBERGANG MIT 15** (`familie:uebergaenge-anwenden`, taeglich 05:40): es
+  **UEBERGANG MIT 16** (`familie:uebergaenge-anwenden`, taeglich 05:40;
+  Alter seit 07.10.2026 Einstellung, siehe "Kinder unter 16"): es
   wird NICHTS geloescht, NICHTS neu angelegt und KEIN Vertrag angefasst -
   nur `is_dependent` faellt weg (`independent_since` haelt den Tag fest).
   Die Familienbeziehung BLEIBT (Betreiber-Vorgabe 8): aus "Kind, abhaengig"
   wird "eigenstaendige Kundin, Tochter von Jehad". Timeline-Eintrag + Glocke
   an die Betreuer sagen ausdruecklich, dass Vertraege zu pruefen sind.
+  Fehlt die Kundennummer, entsteht zusaetzlich die Aufgabe "Kundennummer
+  vergeben und Portal aktivieren" - vergeben wird sie nie automatisch.
   **VORSCHAU + VORBEREITUNG**: `/admin/familie/uebergaenge` ("Kinder werden
-  15") listet nach verbleibender Zeit sortiert; Vorlaufzeit 3/6/12 Monate
+  16") listet nach verbleibender Zeit sortiert; Vorlaufzeit 3/6/12 Monate
   (`SystemSetting family_transition_lead_months`, Standard 6, aenderbar nur
   admin/manager). "Übergang vorbereiten" legt eine WIEDERVORLAGE an und
   vermerkt `transition_prepared_at` - mehr nicht (Betreiber-Vorgabe 15:
@@ -4703,10 +4709,66 @@ Merge von PR #358, Teil E/F).
   Haushalt + weitere Beziehungsarten + Uebernahme des Bestands; PR-6
   Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
   Person, Kinderzugang ab 16, Elternzugriff Standard AUS, endet mit 18;
-  PR-8 Lebensereignisse. Altersgrenzen getrennt und einstellbar:
-  "abhaengig" bleibt 15 (`Customer::DEPENDENT_AGE`), eigener
-  Portalzugang 16.
+  PR-8 Lebensereignisse. Altersgrenzen getrennt und einstellbar - seit
+  07.10.2026 GEBAUT als `App\Support\FamilienAlter` (Erinnerung 15,
+  Selbststaendigkeit = eigene Nummer/Vertrag/Portal 16; die Konstante
+  `Customer::DEPENDENT_AGE` gibt es nicht mehr), siehe "Kinder unter 16".
 - Tests: `DublettenFamilieTest`; nachgezogen `DuplicateBulkMergeTest`.
+
+## Kinder unter 16: keine eigene Kundennummer (Betreiber-Auftrag 07.10.2026, KI-094)
+
+- **Anlass**: die Tochter "Tala Alhamoud" war als Kind verknuepft und trug
+  trotzdem eine eigene Kundennummer (2600810). Ursache: KEIN Anlageweg
+  fragte das Alter. Die Nummer wurde in jedem Aufrufer vorab gezogen
+  (`CustomerAutoCreationService`, Admin-Formular, Registrierung, Lexoffice);
+  der wahrscheinlichste Weg ist "👪 N Kunden anlegen" im Dokumenten-Eingang
+  (Gesundheitskarten / Antrag auf Familienversicherung) - er legt JE PERSON
+  eine Akte an, Kinder eingeschlossen. Welcher Weg es bei Tala war, zeigt
+  `kunden:kinder-pruefen` (Herkunft aus dem ActivityLog).
+- **Regel** (beide Alter sind EINSTELLUNGEN, `App\Support\FamilienAlter`,
+  Einstellungen -> "Familie / Kinder", Standard 15/16, die Erinnerung liegt
+  immer VOR der Selbststaendigkeit): unter 16 keine Kundennummer, kein
+  Vertrag, kein Portal; das Kind ist abhaengiges Familienmitglied unter dem
+  VATER, ist keiner verknuepft der MUTTER (`familyGuardians()` sortiert
+  danach). Mit 15 Erinnerung an das Team, ab 16 vergibt das TEAM die Nummer
+  ("Kundennummer vergeben", `AbhaengigesKindService::kundennummerVergeben`)
+  - die Familienbeziehung bleibt.
+- **DIE AKTE BLEIBT, NUR DIE NUMMER FEHLT**: `customers.customer_number` ist
+  nullbar. Name, Geburtsdatum, Krankenkasse, Dokumente des Kindes haengen
+  weiter an SEINER Akte (eine Kopie in die Vaterakte wuerde Gesundheits-
+  und Ausweisdaten zweier Menschen vermischen); sichtbar ist sie in der
+  Registerkarte "Familie" des Vaters. Bewusst NICHT `customer_family`
+  (Personen ohne Akte): dort haetten Dokumente und Krankenkassendaten
+  keinen Platz, und mit 16 waere ein Umzug in eine neue Akte noetig.
+- **EINE Stelle fuer jeden Anlageweg**: der `creating`-Hook am `Customer`
+  leert die Nummer, wenn das Geburtsdatum unter 16 liegt. Ohne Geburtsdatum
+  zaehlt das ausdrueckliche Merkmal `als_kind` (Antrag auf
+  Familienversicherung, Rolle "Kind"). Die Selbstregistrierung lehnt Kinder
+  ab (sonst entstuende beim Bestaetigen ein Login ohne Nummer).
+- **Sperre fuer Geschaeft**: `Customer::eigenstaendigkeitsSperre()` (unter
+  16 ODER keine Nummer). Der `saving`-Hook am `Contract` wirft
+  `AbhaengigerKundeException` - jeder Anlageweg, auch der Umzug eines
+  Vertrags per `customer_id`; Vertragsformular und Dokumenten-Eingang
+  pruefen vorher selbst (Meldung bzw. kein Vertrag, Dokument bleibt
+  zugeordnet). `PortalAccessService` laedt nicht ein. Rechnungen laufen
+  ueber Lexoffice und haengen an keiner Akte. Bestehende Vertraege an
+  einer Kinderakte werden NICHT angefasst (bearbeitbar, aber kein neuer).
+- **Erinnerung** `familie:portal-vorbereitung-erinnern` (taeglich 05:35):
+  Aufgabe "Das abhaengige Familienmitglied X ist 15 - Portal und eigenes
+  Konto vorbereiten" an der Akte des VATERS (dort in der Kundenakte und in
+  der Aufgabenliste des Betreuers), Glocke, Vermerk in beiden Akten; genau
+  einmal je Kind (`customers.portal_vorbereitung_erinnert_at`).
+- **Zu Unrecht vergebene Nummern** wandern nach `archivierte_kundennummern`
+  (nie geloescht, nie neu vergeben - der Generator zaehlt sie mit; die
+  Suche nach der alten Nummer findet das Kind). Bestand: ERST
+  `php artisan kunden:kinder-pruefen [--csv=datei]` (STRENG LESEND, nennt
+  Herkunft, Eltern, verknuepfte Daten, Portal und "BLOCKIERT"), dann je
+  Kind `kunden:kind-umstellen <nummer> [--elternteil=<nummer>]` - ohne
+  `--ausfuehren` ein Probelauf. Haengen Vertraege, Provisionen oder
+  Signaturen an der Akte, verweigert der Befehl IMMER: das entscheidet der
+  Betreiber. Der Portalzugang des Kindes wird stillgelegt, nicht geloescht.
+- Tests: `AbhaengigeKinderTest` (23 Faelle); nachgezogen
+  `CustomerFamilyRelationTest`.
 
 ## Offene Themen / wartet auf den Betreiber
 

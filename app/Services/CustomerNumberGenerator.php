@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ArchivierteKundennummer;
 use App\Models\Customer;
 
 /**
@@ -35,14 +36,17 @@ class CustomerNumberGenerator
         // (C-…) und Import-Nummern anderer Länge stören nicht.
         $max = Customer::mitArchiv()->where('customer_number', 'like', $prefix.'%')
             ->pluck('customer_number')
-            ->filter(fn ($n) => preg_match('/^'.$prefix.'\d{5}$/', $n))
+            // Archivierte Nummern (KI-094: einem Kind zu Unrecht vergeben)
+            // bleiben ebenfalls belegt - sie standen evtl. schon auf Post.
+            ->merge(ArchivierteKundennummer::where('customer_number', 'like', $prefix.'%')->pluck('customer_number'))
+            ->filter(fn ($n) => preg_match('/^'.$prefix.'\d{5}$/', (string) $n))
             ->map(fn ($n) => (int) substr($n, 2))
             ->max() ?? 0;
 
         do {
             $max++;
             $number = $prefix.str_pad((string) $max, 5, '0', STR_PAD_LEFT);
-        } while (Customer::mitArchiv()->where('customer_number', $number)->exists());
+        } while ($this->belegt($number));
 
         return $number;
     }
@@ -62,16 +66,23 @@ class CustomerNumberGenerator
 
         $number = self::IMPORT_PREFIX.$clean;
 
-        if (Customer::mitArchiv()->where('customer_number', $number)->exists()) {
+        if ($this->belegt($number)) {
             // Gleiche Quellnummer doppelt (sollte der Duplikatsschutz vorher
             // fangen) – eindeutig machen statt fehlschlagen.
             $suffix = 2;
-            while (Customer::mitArchiv()->where('customer_number', $number.'-'.$suffix)->exists()) {
+            while ($this->belegt($number.'-'.$suffix)) {
                 $suffix++;
             }
             return $number.'-'.$suffix;
         }
 
         return $number;
+    }
+
+    /** Nummer bereits vergeben - an einer Akte (auch archiviert) oder im Nummern-Archiv. */
+    private function belegt(string $number): bool
+    {
+        return Customer::mitArchiv()->where('customer_number', $number)->exists()
+            || ArchivierteKundennummer::where('customer_number', $number)->exists();
     }
 }
