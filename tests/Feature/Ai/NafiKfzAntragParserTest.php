@@ -2,7 +2,14 @@
 
 namespace Tests\Feature\Ai;
 
+use App\Models\Customer;
+use App\Models\Document;
+use App\Models\User;
+use App\Services\Ai\Contracts\DocumentTemplateParser;
 use App\Services\Ai\TemplateParsers\NafiKfzAntragParser;
+use App\Services\DocumentIntake\DocumentIntakeService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -13,6 +20,8 @@ use Tests\TestCase;
  */
 class NafiKfzAntragParserTest extends TestCase
 {
+    use RefreshDatabase;
+
     /** Zeile "Beschriftung:" links, Wert rechtsbuendig. */
     private function row(string $label, string $value): string
     {
@@ -190,5 +199,81 @@ class NafiKfzAntragParserTest extends TestCase
         $this->assertNull($parser->parse(
             "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\nAntrag Kraftfahrtversicherung"
         ));
+    }
+
+    /**
+     * Bauform des andsafe-Antrags (Betreiber-Meldung 07.10.2026): das Feld
+     * "Versicherer / Risikotraeger" traegt die Tarifkennung VOR dem
+     * Risikotraeger, und die Leistung steht unter "(kw/ps/ccm)".
+     */
+    private function andsafeText(string $versicherer = 'HFK1676 / andsafe AG'): string
+    {
+        return implode("\n", [
+            'andsafe Aktiengesellschaft',
+            'Provinzial-Allee 1',
+            '48159 Münster',
+            'Antrag Kraftfahrtversicherung',
+            ' Versicherungsnehmer',
+            $this->row('Anrede, Titel, Vorname, Nachname', 'Herr Max Mustermann'),
+            $this->row('Straße', 'Musterweg 8'),
+            $this->row('Plz, Ort', '24768 Rendsburg'),
+            ' Antragsdaten',
+            $this->row('Tarif', 'HFK1676 Premium'),
+            $this->row('Versicherer / Risikoträger', $versicherer),
+            $this->row('Gewünschter Versicherungsbeginn', '08.10.2026'),
+            $this->row('Amtliches Kennzeichen', 'RD - AA 1234'),
+            $this->row('Fahrgestellnummer', 'WDDDJ7C838A170286'),
+            $this->row('Zu zahlender Gesamtbeitrag (monatlich)', '81,18 EUR'),
+            ' Fahrzeugdaten',
+            $this->row('HSN / Hersteller', '1313 - MERCEDES-BENZ'),
+            $this->row('TSN / Fahrzeug', 'AAE - 219 (CLS 500)'),
+            $this->row('(kw/ps/ccm)', '285kW/387PS/5461ccm'),
+            'Kfz-Antrag vom 07.10.2026 / Seite 1 / ID 26077471 / Erzeugt durch NAFI-Software',
+        ]);
+    }
+
+    public function test_versicherer_hinter_der_tarifkennung_wird_gelesen(): void
+    {
+        $r = (new NafiKfzAntragParser)->parse($this->andsafeText());
+
+        // Vorher blieb der Versicherer leer (Ziffern + Schraegstrich fielen
+        // durch die Namensregel) - und damit entstand kein Vertrag.
+        $this->assertSame('andsafe AG', $r['data']['versicherung']['insurer']);
+        $this->assertSame('HFK1676 Premium', $r['data']['versicherung']['tariff']);
+        $this->assertSame(285, $r['data']['kfz']['power_kw']);
+        $this->assertSame('AAE', $r['data']['kfz']['tsn']);
+        $this->assertSame('219 (CLS 500)', $r['data']['kfz']['model']);
+    }
+
+    public function test_kennung_allein_neben_einem_namen_ist_kein_versicherer(): void
+    {
+        // Ein Name mit Ziffern, der ALLEIN steht, bleibt ein Name.
+        $huk = (new NafiKfzAntragParser)->parse($this->andsafeText('HUK24'));
+        $this->assertSame('HUK24', $huk['data']['versicherung']['insurer']);
+
+        // Nur Kennungen -> lieber leer als eine Kennung als Gesellschaft.
+        $code = (new NafiKfzAntragParser)->parse($this->andsafeText('HFK1676 / VHV123'));
+        $this->assertArrayNotHasKey('insurer', $code['data']['versicherung']);
+    }
+
+    public function test_echte_kette_legt_aus_dem_andsafe_antrag_einen_vertrag_an(): void
+    {
+        $r = app(DocumentTemplateParser::class)->parse($this->andsafeText());
+        $this->assertSame('kfz_vertrag', $r['type']);
+
+        $user = User::factory()->create(['role' => 'customer']);
+        $customer = Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(Str::random(6))]);
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'contract', 'file_name' => 'antrag.pdf',
+            'file_path' => 'documents/eingang/antrag.pdf', 'disk' => 'local', 'ai_status' => 'done',
+            'ai_type' => $r['type'], 'ai_extracted' => $r['data'],
+        ]);
+
+        $contract = app(DocumentIntakeService::class)->createContractFromExtraction($doc, $customer, null);
+
+        $this->assertNotNull($contract, 'Aus dem Antrag muss ein Vertrag entstehen.');
+        $this->assertSame('andsafe AG', $contract->insurer);
+        $this->assertSame('antrag', $contract->stage);
+        $this->assertNull($contract->contract_number);
     }
 }

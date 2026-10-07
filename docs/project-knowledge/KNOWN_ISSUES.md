@@ -41,6 +41,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-088 | MEDIUM | correctness | E-Signatur: zu helles Firmenbild scheiterte erst nach dem Unterschreiben | FIXED |
 | KI-089 | MEDIUM | correctness | E-Signatur: keine formale Zustandsmaschine (Status an 9 Stellen direkt gesetzt) | OPEN (Teil C) |
 | KI-090 | LOW | performance | E-Signatur: Abschluss + Qualitaetsgate synchron im Unterschreiben-Request (12 Seiten 1,1 s) | OPEN (Warnung ab 5 s im Log, 07.10.2026) |
+| KI-093 | HIGH | correctness | Dokumenten-Eingang: NAFI-Kfz-Antrag mit "Tarifkennung / Versicherer" - Versicherer leer, kein Vertrag angelegt | FIXED |
 | KI-092 | HIGH | correctness | E-Signatur: zweite Fortschreibung vergibt dieselben Bildnamen (`/D24Sig4x0` doppelt) - ein Bild faellt weg | FIXED |
 | KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
 | KI-062 | HIGH | correctness | E-Signatur: /Resources als Referenz -> Bilder in verschachteltes /Resources geschrieben, "XObject unknown" (8 von 11 Vorgaengen) | FIXED |
@@ -277,6 +278,13 @@ und PHPStan) auf `main` gruen ist.
 - **Description** Bildnamen hiessen `D24Sig<Seite>x<Zaehler>`. Wird ein bereits fortgeschriebenes PDF ein ZWEITES Mal gestempelt (interne Unterschrift, danach der Kunde - Teil B), vergab der zweite Lauf dieselben Namen: qpdf meldete "dictionary has duplicated key /D24Sig4x0", ein Betrachter verwirft dann eines der beiden Bilder. Vor Teil B gab es nur einen Stempellauf je Dokument, deshalb fiel es nie auf.
 - **Fix** Der Name traegt die im ganzen Dokument eindeutige OBJEKTNUMMER des Bildes (`D24Sig<obj>`). Test `InterneUnterschriftTest::test_intern_kunde_endfassung_drei_hashes_und_sichtbar` (ohne den Fix "Fehler bei Fertigstellung").
 - **Discovered** 07.10.2026 (eigener Test, Teil B)
+
+### KI-093 - NAFI-Kfz-Antrag: Versicherer mit Tarifkennung -> kein Vertrag
+- **Category** correctness · **Severity** HIGH · **Status** FIXED (07.10.2026)
+- **Location** `NafiKfzAntragParser::parseInsurance` (Feld "Versicherer / Risikotraeger")
+- **Description** Betreiber-Meldung 07.10.2026 ("manchmal erkennt das System den Vertrag nicht, nur die Kundendaten"), am echten andsafe-Antrag nachgestellt. Das Feld traegt je nach Gesellschaft nur den Namen ("Itzehoer Versicherung") oder die Tarifkennung VOR dem Risikotraeger ("HFK1676 / andsafe AG"). Der ganze Wert wurde gegen eine Namensregel ohne Ziffern und Schraegstrich geprueft -> Versicherer leer. Ein Antrag hat keine Vertragsnummer, also lieferte `createContractFromExtraction` mangels Versicherer `null`: der Eingang zeigte nur Personendaten. Still - kein Fehler, nur "kein Vertrag". Daher "manchmal": es trifft nur Gesellschaften, deren Feld eine Kennung traegt. Nebenbei nicht gelesen: Leistung unter "(kw/ps/ccm)", TSN/Typ unter "TSN / Fahrzeug".
+- **Fix** `insurerName()`: Wert am Schraegstrich teilen, der letzte NAME gewinnt; eine reine Kennung (Buchstaben + Ziffern) neben einem Namen ist nie der Versicherer, allein bleibt sie Name ("HUK24"). Dazu Leistung/TSN/Typ. Tests `NafiKfzAntragParserTest` (3 neue Faelle, rot ohne den Fix, einer durch die echte Kette bis zum angelegten Vertrag).
+- **Discovered** 07.10.2026 (Betreiber-Meldung)
 
 ### KI-062 - E-Signatur: /Resources als Referenz - Bilder unauffindbar ("XObject unknown")
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (03.10.2026)

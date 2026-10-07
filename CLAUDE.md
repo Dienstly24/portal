@@ -908,6 +908,13 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Stichwoertern. IBAN/BIC nur, wenn „Zahlungspflichtige Person" der
   Versicherungsnehmer ist. Stufe `antrag`: NAFI-Vorgangs-ID und eVB-Nummer
   sind KEINE Vertragsnummern (stehen nur in der Zusammenfassung).
+  **Versicherer hinter der Tarifkennung** (KI-093, 07.10.2026): das Feld
+  "Versicherer / Risikotraeger" traegt je nach Gesellschaft nur den Namen
+  oder "HFK1676 / andsafe AG". Vorher fiel der Wert durch die Namensregel,
+  der Versicherer blieb leer - und ohne Versicherer UND ohne Vertragsnummer
+  legt `createContractFromExtraction` keinen Vertrag an: der Eingang zeigte
+  nur Kundendaten. Jetzt gewinnt der letzte NAME hinter dem Schraegstrich;
+  eine reine Kennung neben einem Namen ist nie der Versicherer.
 - **Kfz-Versicherungsschein der WGV** (`WgvKfzPoliceParser`, 05.08.2026):
   kommt als HANDYFOTO - die Feldsuche laesst Doppelpunkt, Spaltenabstand UND
   einfaches Leerzeichen zu und schaut notfalls in die Folgezeile (gleiche
