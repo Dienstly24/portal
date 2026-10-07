@@ -41,8 +41,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-088 | MEDIUM | correctness | E-Signatur: zu helles Firmenbild scheiterte erst nach dem Unterschreiben | FIXED |
 | KI-089 | MEDIUM | correctness | E-Signatur: keine formale Zustandsmaschine (Status an 9 Stellen direkt gesetzt) | OPEN (Teil C) |
 | KI-090 | LOW | performance | E-Signatur: Abschluss + Qualitaetsgate synchron im Unterschreiben-Request (12 Seiten 1,1 s) | OPEN (Warnung ab 5 s im Log, 07.10.2026) |
-| KI-093 | MEDIUM | correctness | Merge ergaenzte leere Teilfelder der Anschrift aus der ANDEREN Anschrift (Strasse der einen + Zusatz der anderen); abweichende Stammdaten waren nicht waehlbar | FIXED |
 | KI-093 | HIGH | correctness | Dokumenten-Eingang: NAFI-Kfz-Antrag mit "Tarifkennung / Versicherer" - Versicherer leer, kein Vertrag angelegt | FIXED |
+| KI-094 | MEDIUM | correctness | Merge ergaenzte leere Teilfelder der Anschrift aus der ANDEREN Anschrift (Strasse der einen + Zusatz der anderen); abweichende Stammdaten waren nicht waehlbar | FIXED |
 | KI-092 | HIGH | correctness | E-Signatur: zweite Fortschreibung vergibt dieselben Bildnamen (`/D24Sig4x0` doppelt) - ein Bild faellt weg | FIXED |
 | KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
 | KI-062 | HIGH | correctness | E-Signatur: /Resources als Referenz -> Bilder in verschachteltes /Resources geschrieben, "XObject unknown" (8 von 11 Vorgaengen) | FIXED |
@@ -273,7 +273,7 @@ und PHPStan) auf `main` gruen ist.
 - **Fix** Eingebettete Unicode-Schrift erst bei Bedarf.
 - **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
 
-### KI-093 - Merge mischte zwei Anschriften, abweichende Angaben nicht waehlbar
+### KI-094 - Merge mischte zwei Anschriften, abweichende Angaben nicht waehlbar
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED (07.10.2026)
 - **Location** `CustomerMergeService::fillMissingFields`
 - **Description** Beim Zusammenfuehren gewann bei abweichenden Stammdaten immer der Hauptkunde, und jedes LEERE Feld wurde einzeln vom Duplikat ergaenzt. Hatten beide Akten verschiedene Anschriften und fehlte beim Hauptkunden z. B. der Hausnummer-Zusatz, entstand "Hauptstr. 5 b" - die Strasse der einen, der Zusatz der anderen Anschrift, eine Adresse, die es nicht gibt. Und war die neuere Angabe (Telefon, IBAN, Anschrift) beim Duplikat, gab es keinen Weg, sie zu uebernehmen.

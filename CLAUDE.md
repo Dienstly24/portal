@@ -4695,7 +4695,7 @@ Merge von PR #358, Teil E/F).
   Stammdaten der Huelle (Datenminimierung) und anonymisiert Konten, die
   keine lebende Akte mehr benutzt - die Kundennummer bleibt als Alias.
   Tests: `MergeRueckgaengigTest`.
-- **Feldwahl in der Merge-Vorschau (PR-3c, 07.10.2026, KI-093)**:
+- **Feldwahl in der Merge-Vorschau (PR-3c, 07.10.2026, KI-094)**:
   `CustomerMergeService::abweichendeFelder()` nennt die Gruppen, in denen
   BEIDE Akten verschiedene Werte fuehren - Anschrift, Krankenkasse und
   Arbeitgeber nur als GANZES (`FELDGRUPPEN`; Strasse der einen + PLZ der
