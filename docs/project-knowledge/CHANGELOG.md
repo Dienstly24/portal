@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 07.10.2026 - Merge-Vorschau: abweichende Angaben waehlen (PR-3c, KI-093)
+
+- **Task**: PR-3c des freigegebenen Dubletten-Plans (Schritt 3, letzter Teil).
+- **Files Changed**: `CustomerMergeService` (`STAMMDATEN`, `FELDGRUPPEN`, `abweichendeFelder()`, `applyFeldwahl()`, `merge(..., $feldwahl)`, keine Teil-Ergaenzung behaltener Gruppen); `CustomerMergeUndoService` (uebernommene Werte zurueck); `Admin\DuplicateController::mergeForm/mergeCustomers`; `admin/customer_merge.blade.php` (Abschnitt "Abweichende Angaben", Auswahl per Suche laedt die Vorschau fuer genau dieses Paar, veraltete Texte "geloescht"/"nicht rueckgaengig" korrigiert); neu `tests/Feature/MergeFeldwahlTest.php`; `CLAUDE.md`, `KNOWN_ISSUES.md`, `FEATURE_MAP.md`.
+- **Components Affected**: Kunden-Zusammenfuehrung (Einzel-Merge; Sammel-Merge behaelt den Hauptkunden, mischt aber keine Anschriften mehr).
+- **Database Changes**: keine (Protokoll bekommt den Schluessel `uebernommen`).
+- **API Changes**: `POST admin/customers/{id}/merge` nimmt `feldwahl[<gruppe>]=haupt|duplikat`.
+- **Potential Side Effects**: Weicht die Anschrift ab und bleibt der Hauptkunde, wird sie nicht mehr aus der anderen ergaenzt - einzelne Teilfelder koennen deshalb leer bleiben, wo frueher ein falscher Wert stand.
+- **Tests Performed**: `MergeFeldwahlTest` 10 Faelle (9 rot ohne den Fix). Volle Suite 3442, 3437 gruen, 5 uebersprungen (OCR, tesseract lokal nicht installiert). PHPStan 0 Fehler, Pint sauber. Nicht im Browser angesehen.
+- **Result**: KI-093 FIXED; Schritt 3 des Plans abgeschlossen.
+
 ## 04.10.2026 - Zusammenfuehrung rueckgaengig machen, Abschluss nach 30 Tagen (KI-064, Teil 2)
 
 - **Task**: PR-3b des freigegebenen Dubletten-Plans (Schritt 3). Die Feldwahl in der Vorschau folgt als PR-3c.

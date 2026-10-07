@@ -130,6 +130,16 @@ class CustomerMergeUndoService
                     $haupt->$feld = null;
                 }
             }
+            // 3b) Auf Wahl des Admins vom Duplikat UEBERNOMMENE Werte (PR-3c):
+            //     der alte Wert des Hauptkunden kommt zurueck - aber nur, wenn
+            //     seither niemand das Feld gepflegt hat.
+            foreach ($protokoll['uebernommen'] ?? [] as $feld => $alt) {
+                if ($haupt->$feld == $huelle->$feld) {
+                    $haupt->$feld = $alt;
+                } else {
+                    $bilanz['nicht_zurueck']++;
+                }
+            }
             if (array_key_exists('last_contact_vorher', $protokoll)
                 && (string) $haupt->last_contact === (string) $huelle->last_contact) {
                 $haupt->last_contact = $protokoll['last_contact_vorher'];
