@@ -400,6 +400,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Mitarbeiter/Manager/Support duerfen nicht loeschen).
     Route::get('/customers/{id}/merge', [AdminDuplicateController::class, 'mergeForm'])->name('customer.merge')->middleware('role:admin');
     Route::post('/customers/{id}/merge', [AdminDuplicateController::class, 'mergeCustomers'])->name('customer.merge.do')->middleware('role:admin');
+    Route::post('/customers/zusammenfuehrungen/{merge}/rueckgaengig', [AdminDuplicateController::class, 'undoMerge'])->name('customer.merge.undo')->middleware('role:admin');
     Route::get('/attachments/{id}/download', [AdminCustomerDocumentController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/customers/{id}/timeline', [AdminController::class, 'customerTimeline'])->name('customer.timeline');
     Route::post('/customers/{id}/notes', [AdminController::class, 'storeNote'])->name('customer.note.store');

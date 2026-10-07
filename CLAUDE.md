@@ -4672,9 +4672,26 @@ Merge von PR #358, Teil E/F).
   Protokoll verschluesselt) - die Grundlage fuers Rueckgaengigmachen.
   Wird der Hauptkunde geloescht, gehen Huellen und stillgelegte Konten mit
   (Art. 17 DSGVO). Tests: `MergeArchivTest`.
-- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-3b
-  Rueckgaengig 30 Tage + Feldwahl in der Vorschau + Aufbewahrungsfrist
-  der Huellen (Rest von KI-064);
+- **Rueckgaengig + Abschluss (PR-3b, 04.10.2026, KI-064)**:
+  `CustomerMergeUndoService` nimmt eine Zusammenfuehrung innerhalb von
+  `CustomerMerge::RUECKGAENGIG_TAGE` (30) zurueck - nur admin, Knopf in der
+  Karte "In diese Akte zusammengefuehrt" der Kundenakte. Zurueck geht NUR,
+  was seither unveraendert am Hauptkunden liegt (Zeile noch dort, Feld noch
+  gleich dem der Huelle); was woanders haengt oder neu entstand, bleibt
+  und wird als "nicht zurueckgeholt" gezaehlt - nie geraten. Verworfene
+  Kollisionszeilen kommen mit ihrer alten Kennung zurueck, ein
+  Konto-Tausch wird zurueckgenommen, der stillgelegte Zugang nur dann
+  wieder geoeffnet, wenn ER VORHER AKTIV war (`verlierer_war_aktiv`).
+  Gesperrt, solange die Hauptakte selbst schon weiter zusammengefuehrt
+  ist (erst den spaeteren Merge zuruecknehmen). Nach der Frist leert
+  `kunden:zusammenfuehrungen-abschliessen` (taeglich 05:45) Protokoll und
+  Stammdaten der Huelle (Datenminimierung) und anonymisiert Konten, die
+  keine lebende Akte mehr benutzt - die Kundennummer bleibt als Alias.
+  Tests: `MergeRueckgaengigTest`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-3c
+  Feldwahl in der Merge-Vorschau (bei abweichenden Werten waehlt der
+  Admin je Feld; heute gewinnt immer der Hauptkunde, leere Felder werden
+  ergaenzt);
   PR-4 geteilte Kontaktdaten + Adressnormalisierung (KI-069); PR-5
   Haushalt + weitere Beziehungsarten + Uebernahme des Bestands; PR-6
   Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je

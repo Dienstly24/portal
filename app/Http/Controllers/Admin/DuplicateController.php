@@ -6,9 +6,11 @@ use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Customer;
+use App\Models\CustomerMerge;
 use App\Models\CustomerRelationship;
 use App\Services\Matching\CustomerMatchingService;
 use App\Services\Matching\CustomerMergeService;
+use App\Services\Matching\CustomerMergeUndoService;
 use App\Services\Matching\DuplicateDetectionService;
 use App\Services\Relationships\CustomerRelationshipService;
 use Illuminate\Http\Request;
@@ -482,6 +484,32 @@ class DuplicateController extends Controller
         $summary = collect($moved)->sum();
         return redirect()->route('admin.customer', $primary->id)
             ->with('success', "Kunden erfolgreich zusammengeführt. {$summary} verknüpfte Datensätze wurden übertragen, nichts wurde gelöscht.");
+    }
+
+    /**
+     * Zusammenfuehrung zuruecknehmen (KI-064). Nur admin (Route), nur mit
+     * Zugriff auf die Hauptakte, nur innerhalb der Frist - die Gruende stehen
+     * im Klartext da, wenn es nicht geht.
+     */
+    public function undoMerge(int $merge, CustomerMergeUndoService $undo) {
+        $eintrag = CustomerMerge::findOrFail($merge);
+        $this->authorizeCustomerAccess($eintrag->primary_customer_id);
+
+        $gruende = $undo->hindernisse($eintrag);
+        if ($gruende !== []) {
+            return redirect()->route('admin.customer', $eintrag->primary_customer_id)
+                ->with('error', 'Rückgängig nicht möglich: '.implode(' ', $gruende));
+        }
+
+        $bilanz = $undo->rueckgaengig($eintrag, auth()->id());
+
+        $text = 'Zusammenführung rückgängig gemacht: die Akte '.($eintrag->duplicate_number ?? '').' ist wieder eigenständig. '
+            .$bilanz['zurueck'].' Datensätze zurückgehängt, '.$bilanz['wiederhergestellt'].' wiederhergestellt.';
+        if ($bilanz['nicht_zurueck'] > 0) {
+            $text .= ' '.$bilanz['nicht_zurueck'].' Datensätze wurden seitdem verändert und bleiben bei dieser Akte - bitte prüfen.';
+        }
+
+        return redirect()->route('admin.customer', $eintrag->primary_customer_id)->with('success', $text);
     }
 
     /**

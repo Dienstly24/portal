@@ -61,6 +61,8 @@ Schedule::command('tasks:remind')->dailyAt('07:45');
 // umstellen. Reiner Statuswechsel: die Familienbeziehung bleibt bestehen, kein
 // Vertrag wird angefasst (Betreiber-Vorgabe 28.08.2026).
 Schedule::command('familie:uebergaenge-anwenden')->dailyAt('05:40');
+// Zusammenfuehrungen nach Ablauf der Rueckgaengig-Frist abschliessen (KI-064).
+Schedule::command('kunden:zusammenfuehrungen-abschliessen')->dailyAt('05:45')->withoutOverlapping();
 
 // Stuendlich tagsueber — geplante Aufgaben-E-Mails ("in 14 Tagen nachfassen")
 // am Stichtag an den Kunden versenden; erledigte Aufgaben versenden nie.

@@ -8,6 +8,7 @@ use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\CustomerChangeRequest;
 use App\Models\CustomerFamily;
+use App\Models\CustomerMerge;
 use App\Models\CustomerMessage;
 use App\Models\CustomerNote;
 use App\Models\CustomerRelationship;
@@ -334,7 +335,12 @@ class AdminController extends Controller
         // Nur Paare, deren andere Seite im Portfolio liegt.
         $verknuepft = $this->linkedCustomers($customer);
 
-        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie', 'verknuepft'));
+        // Zusammenfuehrungen in diese Akte (KI-064) - nur fuer den Admin, der
+        // sie zuruecknehmen darf; die Liste zeigt auch, warum es nicht mehr geht.
+        $zusammenfuehrungen = auth()->user()?->role === 'admin'
+            ? CustomerMerge::where('primary_customer_id', $customer->id)->latest()->limit(10)->get()
+            : collect();
+        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie', 'verknuepft', 'zusammenfuehrungen'));
     }
 
 
