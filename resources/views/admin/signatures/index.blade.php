@@ -20,6 +20,9 @@
             @can('firmensignatur-verwalten')
             <a href="{{ route('admin.signatures.company.index') }}" class="btn btn-ghost">Unternehmenssignaturen</a>
             @endcan
+            @if(auth()->user()->darfFuerFirmaUnterschreiben())
+            <a href="{{ route('admin.meine_unterschrift') }}" class="btn btn-ghost">🖋 Meine Unterschrift</a>
+            @endif
             <a href="{{ route('admin.signatures.create') }}" class="btn btn-emerald">+ Neue Signaturanfrage</a>
         </div>
     </div>

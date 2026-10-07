@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\SignatureField;
 use App\Models\SignatureRequest;
 use App\Models\User;
 use App\Support\SignatureStatus;
@@ -41,6 +42,14 @@ class SignatureRequestPolicy
     {
         if (! $user->isStaff()) {
             return false;
+        }
+        // Wer INTERN unterschreiben soll, muss das Dokument sehen koennen -
+        // auch ausserhalb seines Portfolios (der Geschaeftsfuehrer zeichnet
+        // den Vertrag, den ein Mitarbeiter vorbereitet hat). Ausgewaehlt hat
+        // ihn jemand, der den Vorgang bearbeiten darf; mehr als SEHEN und
+        // SEINE Unterschrift setzen erlaubt das nicht.
+        if ($this->istInternZugeordnet($user, $request)) {
+            return true;
         }
         if ($request->customer_id !== null) {
             return $user->canAccessCustomer($request->customer_id);
@@ -105,6 +114,31 @@ class SignatureRequestPolicy
         // Nachweis fuer eine Unterschrift, die jemand geleistet hat.
         return ! $request->isCompleted() && $this->isOwnerOrManagement($user, $request)
             && in_array($user->role, ['admin', 'manager'], true);
+    }
+
+    /**
+     * Die EIGENE interne Unterschrift setzen (Teil B). Nur wer ein Feld in
+     * diesem Vorgang hat und das Recht "Darf fuer das Unternehmen
+     * unterschreiben" besitzt - das Bild kommt dabei immer aus SEINER Ablage.
+     */
+    public function signInternal(User $user, SignatureRequest $request): bool
+    {
+        return $user->darfFuerFirmaUnterschreiben() && $request->isDraft()
+            && $this->istInternZugeordnet($user, $request);
+    }
+
+    /** Interne Unterschriften zuruecknehmen - wie Bearbeiten, nur im Entwurf. */
+    public function resetInternal(User $user, SignatureRequest $request): bool
+    {
+        return $request->isDraft() && $this->update($user, $request);
+    }
+
+    private function istInternZugeordnet(User $user, SignatureRequest $request): bool
+    {
+        return SignatureField::query()
+            ->where('signature_request_id', $request->id)
+            ->where('internal_user_id', $user->id)
+            ->exists();
     }
 
     private function isOwnerOrManagement(User $user, SignatureRequest $request): bool

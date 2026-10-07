@@ -11,6 +11,9 @@
         'x' => (float) $f->pos_x, 'y' => (float) $f->pos_y, 'width' => (float) $f->width, 'height' => (float) $f->height,
         'required' => (bool) $f->required, 'label' => $f->label,
         'company_asset_id' => $f->company_asset_id,
+        'internal_user_id' => $f->internal_user_id,
+        'intern_beschriftung' => (bool) $f->intern_beschriftung,
+        'filled' => $f->isInternal() && $f->isFilled(),
     ])->values();
 @endphp
 
@@ -226,6 +229,55 @@
                     <span class="sig-karte-wer">{{ $firmaName }}</span>
                 </button>
                 @endif
+                {{-- INTERNE UNTERSCHRIFT (Teil B): ein Mensch aus dem Haus
+                     unterschreibt VOR dem Versand - mit seiner hinterlegten
+                     Unterschrift, nach Bestaetigung je Dokument. --}}
+                <button type="button" class="sig-karte" id="karte-intern" data-h-click="sigWaehleIntern"
+                        @disabled(!$signature->isDraft())>
+                    <span class="sig-karte-kopf"><span class="sig-karte-symbol">🖋</span> Intern</span>
+                    <span class="sig-karte-text">{{ $intern['darf'] ? 'Meine Unterschrift' : 'Interne Unterschrift' }}</span>
+                    <span class="sig-karte-wer">{{ $intern['darf'] ? $intern['name'] : 'Kollegin / Kollege' }}</span>
+                </button>
+            </div>
+
+            <div id="bereich-intern" hidden style="margin-top:12px;">
+                @if($internePersonen->isEmpty())
+                    <div style="background:#FFF6E5;color:#8A5D00;padding:9px 11px;border-radius:8px;font-size:12.5px;">
+                        Niemand im Haus hat das Recht „Darf für das Unternehmen unterschreiben". Der Admin vergibt es in der Mitarbeiterverwaltung.
+                    </div>
+                @else
+                <label for="intern-person" class="muted-sm" style="font-weight:600;display:block;margin-bottom:5px;">Wer unterschreibt?</label>
+                <select id="intern-person" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
+                    @foreach($internePersonen as $person)
+                    <option value="{{ $person['id'] }}" @selected($person['id'] === auth()->id())>{{ $person['id'] === auth()->id() ? 'Ich - ' : '' }}{{ $person['name'] }} ({{ $person['funktion'] }})</option>
+                    @endforeach
+                </select>
+                <div class="sig-firma-vorschau" id="intern-vorschau">
+                    @if($intern['darf'] && $intern['bild'])
+                        <img id="intern-bild" src="{{ $intern['bild'] }}" alt="Ihre hinterlegte Unterschrift">
+                    @else
+                        <div id="intern-ohne" class="muted-sm" style="padding:10px 0;">
+                            {{ $intern['darf'] ? 'Noch keine Unterschrift hinterlegt - Sie zeichnen sie beim Unterschreiben direkt hier.' : 'Die Person unterschreibt selbst, nachdem Sie auf „Senden" geklickt haben.' }}
+                        </div>
+                    @endif
+                    <div class="sig-firma-linie"></div>
+                    <div class="sig-firma-name" id="intern-name">{{ $intern['name'] }}, {{ $intern['funktion'] }} · {{ now()->lokal()->format('d.m.Y') }}</div>
+                    <div class="sig-firma-fuss">✓ Interne Unterschrift</div>
+                </div>
+                <label style="display:flex;gap:7px;align-items:center;font-size:12.5px;margin-top:8px;">
+                    <input type="checkbox" id="intern-beschriftung" checked> Name, Funktion und Datum darunter
+                </label>
+                <button type="button" class="btn btn-sm btn-emerald" data-h-click="sigPickType" data-type="intern"
+                        style="width:100%;margin-top:9px;" @disabled(!$signature->isDraft())>Auf die Seite setzen</button>
+                @if($intern['darf'])
+                <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigInternJetzt"
+                        style="width:100%;margin-top:6px;" @disabled(!$signature->isDraft())>Jetzt intern unterschreiben</button>
+                @endif
+                <div class="muted-sm" style="margin-top:7px;">
+                    Gesetzt wird beim Senden (oder sofort mit „Jetzt intern unterschreiben") - immer erst nach Ihrer Bestätigung.
+                    Unterschreibt eine andere Person, bekommt sie eine Glocke „Wartet auf Ihre Unterschrift"; der Versand folgt danach automatisch.
+                </div>
+                @endif
             </div>
 
             {{-- PERSON --}}
@@ -338,6 +390,8 @@
     </div>
 </div>
 
+@include('admin.signatures.partials.intern_dialog', ['intern' => $intern])
+
 {{-- SEC-4: kein onclick-Attribut, alles ueber data-h-* und diesen
      nonce-tragenden Block. Er steht VOR dem @stack des Layouts. --}}
 @pushOnce('cspScripts')
@@ -371,7 +425,8 @@ window.__h = window.__h || {};
         page: @json(route('admin.signatures.page', [$signature->id, 0])),
         save: @json(route('admin.signatures.prepare.save', $signature->id)),
         send: @json(route('admin.signatures.send', $signature->id)),
-        show: @json(route('admin.signatures.show', $signature->id))
+        show: @json(route('admin.signatures.show', $signature->id)),
+        internSign: @json(route('admin.signatures.internal.sign', $signature->id))
     };
     var typeLabels = @json($fieldTypes);
     // Farbe je Unterzeichner: die Zuordnung muss auf einen Blick sichtbar
@@ -383,6 +438,19 @@ window.__h = window.__h || {};
         '#8E44AD', '#7A5C2E'
     ];
     var GEZEICHNET = ['unterschrift', 'initialen'];
+    // Interne Unterschrift (Teil B): wer darf, wer bin ich.
+    var intern = @json($intern);
+    var internePersonen = @json($internePersonen);
+    var ichId = @json(auth()->id());
+    function internPerson(id) {
+        return internePersonen.find(function (p) { return p.id === id; }) || null;
+    }
+    function interneFelder() {
+        return state.fields.filter(function (f) { return f.type === 'intern'; });
+    }
+    function eigeneOffeneInterne() {
+        return interneFelder().filter(function (f) { return f.internal_user_id === ichId && !f.filled; });
+    }
 
     function uid() { return 'neu-' + Math.random().toString(36).slice(2, 10); }
     /**
@@ -394,6 +462,7 @@ window.__h = window.__h || {};
      */
     function colorFor(field) {
         if (field && field.type === 'firma') { return brandColor('gold'); }
+        if (field && field.type === 'intern') { return '#1F4E79'; }
         var id = field && field.signer_id;
         var index = state.signers.findIndex(function (s) { return s.id === id; });
         return index < 0 ? 'var(--ink-soft)' : palette[index % palette.length];
@@ -409,6 +478,7 @@ window.__h = window.__h || {};
         if (type === 'initialen') { return [0.10, 0.045]; }
         if (type === 'kreuz') { return [0.025, 0.018]; }
         if (type === 'datum') { return [0.16, 0.025]; }
+        if (type === 'intern') { return [0.28, 0.075]; }
         return [0.22, 0.028];
     }
     function pageUrl(page) { return urls.page.replace(/\/0$/, '/' + page); }
@@ -578,11 +648,14 @@ window.__h = window.__h || {};
             // "logo-2024.png" sagt keinem Leser, wer unterschreibt).
             var owner = state.signers.find(function (s) { return s.id === field.signer_id; });
             var istFirma = field.type === 'firma';
-            var wer = istFirma ? firmaName : (owner ? owner.name : 'ohne Unterzeichner');
-            var art = istFirma ? 'Unternehmen' : 'Person';
+            var istIntern = field.type === 'intern';
+            var person = istIntern ? internPerson(field.internal_user_id) : null;
+            var wer = istFirma ? firmaName : (istIntern ? (person ? person.name : 'Interne Unterschrift') : (owner ? owner.name : 'ohne Unterzeichner'));
+            var art = istFirma ? 'Unternehmen' : (istIntern ? 'Intern' : 'Person');
             var zustand = istFirma
                 ? 'Gesetzt'
-                : (field.type === 'unterschrift' || field.type === 'initialen' ? 'Offen' : typeLabels[field.type] || field.type);
+                : (istIntern ? (field.filled ? 'Unterschrieben' : 'Offen')
+                : (field.type === 'unterschrift' || field.type === 'initialen' ? 'Offen' : typeLabels[field.type] || field.type));
 
             var caption = document.createElement('div');
             // Links Platz fuer den Stift, rechts fuer den Griff - sonst
@@ -590,7 +663,7 @@ window.__h = window.__h || {};
             caption.style.cssText = 'font-size:11px;line-height:1.2;padding:1px 18px 1px '
                 + (editable ? '22px' : '4px') + ';color:' + color + ';'
                 + 'font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-            caption.textContent = (istFirma ? '🏢 ' : '✍ ') + wer;
+            caption.textContent = (istFirma ? '🏢 ' : (istIntern ? '🖋 ' : '✍ ')) + wer;
             box.appendChild(caption);
 
             // Die zweite Zeile nur, wenn der Kasten hoch genug ist - sonst
@@ -604,7 +677,9 @@ window.__h = window.__h || {};
                 box.appendChild(unten);
             }
 
-            if (editable) {
+            // Eine GESETZTE interne Unterschrift steht schon im Dokument, das
+            // der Kunde sehen wird - sie wird nicht mehr verschoben.
+            if (editable && !(istIntern && field.filled)) {
                 box.setAttribute('data-h-pointerdown', 'sigDragStart');
                 box.setAttribute('data-h-dblclick', 'sigOpenMenu');
 
@@ -676,9 +751,10 @@ window.__h = window.__h || {};
         if (!el) { return; }
         var stellen = unterschriftsFelder().length;
         var firmen = firmenFelder().length;
+        var interne = interneFelder().length;
         var menschen = state.signers.length;
 
-        if (stellen === 0 && firmen === 0) {
+        if (stellen === 0 && firmen === 0 && interne === 0) {
             el.textContent = 'Noch keine Signatur gesetzt';
             if (detail) { detail.textContent = 'Person oder Unternehmen wählen, dann auf die Seite tippen.'; }
             leerzustand(true);
@@ -687,6 +763,7 @@ window.__h = window.__h || {};
         leerzustand(false);
 
         var teile = [];
+        if (interne > 0) { teile.push(interne + '× Intern'); }
         if (firmen > 0) { teile.push(firmen + '× Unternehmen'); }
         if (stellen > 0) {
             teile.push(stellen + ' Unterschriftsstelle' + (stellen === 1 ? '' : 'n')
@@ -881,7 +958,7 @@ window.__h = window.__h || {};
 
     /** Umschalten zwischen den zwei Wegen - Person oder Unternehmen. */
     function karteWaehlen(welche) {
-        ['person', 'firma'].forEach(function (name) {
+        ['person', 'firma', 'intern'].forEach(function (name) {
             var karte = document.getElementById('karte-' + name);
             var bereich = document.getElementById('bereich-' + name);
             if (karte) { karte.classList.toggle('aktiv', name === welche); }
@@ -894,6 +971,20 @@ window.__h = window.__h || {};
         karteWaehlen('person');
         state.type = 'unterschrift';
         markiereFeldart();
+    };
+
+    window.__h["sigWaehleIntern"] = function () {
+        karteWaehlen('intern');
+        state.type = 'intern';
+        markiereFeldart();
+    };
+    window.__h["sigInternJetzt"] = function () {
+        if (eigeneOffeneInterne().length === 0) {
+            zeigeDialog('Keine eigene Unterschriftsstelle', ['Setzen Sie zuerst Ihre interne Unterschrift auf eine Seite (Person „Ich").'],
+                [{ text: 'Verstanden', klasse: 'btn-ghost' }]);
+            return;
+        }
+        window.sigInternDialog.oeffnen({ undSenden: false, payload: payload(), ziel: urls.internSign });
     };
 
     window.__h["sigWaehleFirma"] = function () {
@@ -914,7 +1005,18 @@ window.__h = window.__h || {};
     }
     document.addEventListener('change', function (event) {
         if (event.target && event.target.id === 'company-asset') { firmaVorschau(); }
+        if (event.target && event.target.id === 'intern-person') { internVorschau(); }
     });
+
+    /** Name/Funktion unter der Vorschau folgen der gewaehlten Person. */
+    function internVorschau() {
+        var wahl = document.getElementById('intern-person');
+        var p = wahl ? internPerson(parseInt(wahl.value, 10)) : null;
+        var name = document.getElementById('intern-name');
+        if (p && name) { name.textContent = p.name + ', ' + p.funktion + ' · ' + new Date().toLocaleDateString('de-DE'); }
+        var bild = document.getElementById('intern-bild');
+        if (bild) { bild.hidden = !p || p.id !== ichId; }
+    }
 
     function markiereFeldart() {
         Object.keys(typeLabels).forEach(function (key) {
@@ -927,12 +1029,13 @@ window.__h = window.__h || {};
         state.type = this.getAttribute('data-type');
         markiereFeldart();
         if (state.type === 'firma') { karteWaehlen('firma'); }
+        if (state.type === 'intern') { karteWaehlen('intern'); }
     };
 
     window.__h["sigPlace"] = function (event) {
         if (!editable) { return; }
         if (event.target.closest('[data-field-box]')) { return; }
-        if (!state.signers.length && state.type !== 'firma') {
+        if (!state.signers.length && state.type !== 'firma' && state.type !== 'intern') {
             zeigeDialog('Kein Unterzeichner', ['Bitte zuerst einen Unterzeichner anlegen.'],
                 [{ text: 'Verstanden', klasse: 'btn-ghost' }]);
             return;
@@ -943,6 +1046,13 @@ window.__h = window.__h || {};
         var x = (event.clientX - rect.left) / rect.width - size[0] / 2;
         var y = (event.clientY - rect.top) / rect.height - size[1] / 2;
         var istFirma = state.type === 'firma';
+        var istIntern = state.type === 'intern';
+        var internWahl = document.getElementById('intern-person');
+        if (istIntern && (!internWahl || !internWahl.value)) {
+            zeigeDialog('Niemand ausgewählt', ['Niemand im Haus darf für das Unternehmen unterschreiben.'],
+                [{ text: 'Verstanden', klasse: 'btn-ghost' }]);
+            return;
+        }
         var assetFeld = document.getElementById('company-asset');
         if (istFirma && (!assetFeld || !assetFeld.value)) {
             // KEINE technische Meldung: was zu tun ist, steht im Satz.
@@ -955,8 +1065,11 @@ window.__h = window.__h || {};
         state.fields.push({
             id: uid(),
             // ENTWEDER Unterzeichner ODER Firmenbild - nie beides.
-            signer_id: istFirma ? null : (document.getElementById('active-signer').value || state.signers[0].id),
+            signer_id: (istFirma || istIntern) ? null : (document.getElementById('active-signer').value || state.signers[0].id),
             company_asset_id: istFirma ? assetFeld.value : null,
+            internal_user_id: istIntern ? parseInt(internWahl.value, 10) : null,
+            intern_beschriftung: istIntern ? document.getElementById('intern-beschriftung').checked : true,
+            filled: false,
             type: state.type,
             page: parseInt(sheet.getAttribute('data-page'), 10),
             x: Math.min(1 - size[0], Math.max(0, x)),
@@ -990,7 +1103,13 @@ window.__h = window.__h || {};
         if (!drag) { return; }
         var dx = (event.clientX - drag.startX) / drag.rect.width;
         var dy = (event.clientY - drag.startY) / drag.rect.height;
-        if (drag.resize) {
+        if (drag.resize && drag.field.type === 'intern') {
+            // Seitenverhaeltnis FEST: eine gestauchte Unterschrift ist keine.
+            var verh = drag.originH / Math.max(0.0001, drag.originW);
+            var neuW = Math.min(1 - drag.field.x, (1 - drag.field.y) / verh, Math.max(0.05, drag.originW + dx));
+            drag.field.width = neuW;
+            drag.field.height = neuW * verh;
+        } else if (drag.resize) {
             drag.field.width = Math.min(1 - drag.field.x, Math.max(0.01, drag.originW + dx));
             drag.field.height = Math.min(1 - drag.field.y, Math.max(0.006, drag.originH + dy));
         } else {
@@ -1020,11 +1139,14 @@ window.__h = window.__h || {};
         menu.hidden = false;
 
         // Kopfzeile sagt, WAS man gerade bearbeitet.
-        var istFirma = field.type === 'firma';
+        var istFirma = field.type === 'firma' || field.type === 'intern';
         var besitzer = state.signers.find(function (sg) { return sg.id === field.signer_id; });
         var kopf = document.getElementById('menu-kopf');
         if (kopf) {
-            kopf.textContent = istFirma
+            var ip = internPerson(field.internal_user_id);
+            kopf.textContent = field.type === 'intern'
+                ? '🖋 ' + (ip ? ip.name : 'Interne Unterschrift') + ' · Intern'
+                : istFirma
                 ? '🏢 ' + firmaName + ' · Unternehmen'
                 : '✍ ' + (besitzer ? (besitzer.name || besitzer.email) : 'ohne Unterzeichner')
                   + ' · ' + (typeLabels[field.type] || field.type);
@@ -1064,6 +1186,7 @@ window.__h = window.__h || {};
         if (!field) { return; }
         var copy = JSON.parse(JSON.stringify(field));
         copy.id = uid();
+        copy.filled = false;
         copy.y = Math.min(1 - copy.height, copy.y + copy.height + 0.01);
         state.fields.push(copy);
         state.selected = copy.id;
@@ -1137,6 +1260,9 @@ window.__h = window.__h || {};
         state.dirty = true;
         document.getElementById('save-state').textContent = 'Nicht gespeicherte Änderungen.';
     }
+    // Der Dialog "Intern unterschreiben" speichert den Stand selbst mit -
+    // danach darf der Seitenwechsel nicht nach verlorenen Aenderungen fragen.
+    window.sigEditorSauber = function () { state.dirty = false; };
 
     // ------------------------------------------------------------- Dialog
     function zeigeDialog(titel, zeilen, knoepfe) {
@@ -1178,7 +1304,7 @@ window.__h = window.__h || {};
             return unterschriftsFelder().filter(function (f) { return f.signer_id === s.id; }).length === 0;
         });
 
-        if (state.signers.length === 0) {
+        if (state.signers.length === 0 && interneFelder().length === 0) {
             zeigeDialog('Noch nicht versandfertig', ['Es ist kein Unterzeichner erfasst.'],
                 [{ text: 'Weiter bearbeiten', klasse: 'btn-ghost' }]);
             return;
@@ -1191,15 +1317,33 @@ window.__h = window.__h || {};
         }
 
         var firmen = firmenFelder().length;
-        zeigeDialog('Dokument bereit zum Senden', [
+        // INTERNE UNTERSCHRIFTEN zuerst und GETRENNT (Vorgabe B5): sie sind
+        // keine Unterzeichner mit Link, und keine Grafik des Betriebs.
+        var internZeilen = [];
+        var gesehen = {};
+        interneFelder().forEach(function (f) {
+            if (gesehen[f.internal_user_id]) { return; }
+            gesehen[f.internal_user_id] = true;
+            var p = internPerson(f.internal_user_id);
+            var name = p ? p.name + ' (' + p.funktion + ')' : 'Interne Unterschrift';
+            var alle = interneFelder().filter(function (g) { return g.internal_user_id === f.internal_user_id; });
+            var fertig = alle.every(function (g) { return g.filled; });
+            internZeilen.push('✓ Interne Unterschrift: ' + name + ' – ' + (fertig
+                ? 'bereits unterschrieben'
+                : (f.internal_user_id === ichId ? 'wird beim Senden gesetzt' : 'wartet auf ihre/seine Unterschrift, Versand danach automatisch')));
+        });
+        var eigene = eigeneOffeneInterne().length > 0;
+        zeigeDialog('Dokument bereit zum Senden', internZeilen.concat([
             '✓ Dokument mit ' + state.pageCount + ' Seite' + (state.pageCount === 1 ? '' : 'n'),
-            '✓ ' + state.signers.length + ' Unterzeichner mit E-Mail-Adresse',
-            '✓ ' + stellen + ' von ' + stellen + ' Unterschriftspositionen konfiguriert',
+            state.signers.length > 0 ? '✓ ' + state.signers.length + ' Unterzeichner mit E-Mail-Adresse' : 'Kein Kunde unterschreibt - das Dokument ist nach den internen Unterschriften fertig.',
+            stellen > 0 ? '✓ ' + stellen + ' von ' + stellen + ' Unterschriftspositionen konfiguriert' : '',
             firmen > 0 ? '✓ Unternehmenssignatur: ' + firmaName + ' (' + firmen + '× im Dokument)' : '',
             state.dirty ? 'Ihre Änderungen werden beim Senden gespeichert.' : ''
-        ].filter(Boolean), [
+        ]).filter(Boolean), [
             { text: 'Zurück bearbeiten', klasse: 'btn-ghost' },
-            { text: 'Senden', klasse: 'btn-emerald', tun: absenden }
+            { text: eigene ? 'Unterschreiben und senden' : 'Senden', klasse: 'btn-emerald', tun: eigene
+                ? function () { window.sigInternDialog.oeffnen({ undSenden: true, payload: payload(), ziel: urls.internSign }); }
+                : absenden }
         ]);
     };
 
@@ -1220,6 +1364,8 @@ window.__h = window.__h || {};
                     signer_id: String(f.signer_id || '').indexOf('neu-') === 0 ? null : f.signer_id,
                     signer_key: f.signer_id ? String(f.signer_id) : null,
                     company_asset_id: f.company_asset_id || null,
+                    internal_user_id: f.internal_user_id || null,
+                    intern_beschriftung: f.type === 'intern' ? (f.intern_beschriftung ? 1 : 0) : null,
                     type: f.type, page: f.page, x: f.x, y: f.y, width: f.width, height: f.height,
                     required: f.required ? 1 : 0, label: f.label
                 };

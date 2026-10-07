@@ -48,6 +48,7 @@ class SignedPdfVerifier
 
         return match ($typ) {
             SignatureFieldType::SIGNATURE => 'Unterschrift',
+            SignatureFieldType::INTERNAL => 'Interne Unterschrift',
             SignatureFieldType::INITIALS => 'Initialen',
             SignatureFieldType::CHECKBOX => 'Ankreuzfeld',
             SignatureFieldType::DATE => 'Datum',
@@ -57,9 +58,13 @@ class SignedPdfVerifier
 
     /**
      * @param  list<array{page: int, name: string, object: int}>  $bilder
+     * @param  list<string>|null  $nurFelder  nur diese Felder auf Sichtbarkeit pruefen
+     *                                        (Zwischenstand der internen Unterschrift:
+     *                                        die uebrigen Felder sind dort noch nicht
+     *                                        gestempelt und duerfen nicht "fehlen")
      * @return list<string> Befunde in Klartext; leer = bestanden
      */
-    public function pruefe(SignatureRequest $request, string $original, string $signiert, array $bilder): array
+    public function pruefe(SignatureRequest $request, string $original, string $signiert, array $bilder, ?array $nurFelder = null): array
     {
         $befunde = [];
         if ($signiert === $original) {
@@ -96,7 +101,7 @@ class SignedPdfVerifier
         $request->loadMissing('fields');
         $render = [];
         foreach ($request->fields as $field) {
-            if (! $field->isFilled()) {
+            if ($nurFelder !== null ? ! in_array($field->id, $nurFelder, true) : ! $field->isFilled()) {
                 continue;
             }
             $seite = (int) $field->page;

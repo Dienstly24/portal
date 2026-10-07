@@ -234,7 +234,7 @@ class SignatureRequestService
      * unter einem Unterzeichner, der es schon geoeffnet hat.
      *
      * @param  array<string, string>  $signerKeys  Behelfs-Kennung des Editors => echte Kennung
-     * @param  list<array{id?: string|null, signer_id?: string|null, signer_key?: string|null, company_asset_id?: string|null, type: string, page: int, x: float, y: float, width: float, height: float, required?: bool, label?: string|null}>  $fields
+     * @param  list<array{id?: string|null, signer_id?: string|null, signer_key?: string|null, company_asset_id?: string|null, internal_user_id?: int|null, intern_beschriftung?: bool|null, type: string, page: int, x: float, y: float, width: float, height: float, required?: bool, label?: string|null}>  $fields
      */
     public function syncFields(SignatureRequest $request, array $fields, array $signerKeys = []): void
     {
@@ -254,6 +254,19 @@ class SignatureRequestService
                 // ENTWEDER Unterzeichner ODER Firmenbild - nie beides. Ein
                 // Feld, das einem Menschen gehoert UND einen Stempel traegt,
                 // waere im Protokoll nicht mehr aufzuloesen.
+                // INTERNE UNTERSCHRIFT (Teil B): das Feld gehoert einem
+                // MITARBEITER mit dem Recht "Darf fuer das Unternehmen
+                // unterschreiben" - nie einem Unterzeichner, nie einem Kunden.
+                $internalUserId = null;
+                if ($type === SignatureFieldType::INTERNAL) {
+                    $signerId = null;
+                    $kandidat = User::find((int) ($data['internal_user_id'] ?? 0));
+                    if ($kandidat === null || ! $kandidat->darfFuerFirmaUnterschreiben()) {
+                        continue;
+                    }
+                    $internalUserId = $kandidat->id;
+                }
+
                 $assetId = null;
                 if ($type === SignatureFieldType::COMPANY) {
                     $signerId = null;
@@ -272,11 +285,22 @@ class SignatureRequestService
                 if (! empty($data['id'])) {
                     $field = $request->fields()->whereKey($data['id'])->first();
                 }
+                // Eine bereits GESETZTE interne Unterschrift steht im
+                // Zwischenstand, den der Kunde sieht. Sie wird nicht mehr
+                // verschoben - sonst stimmten Feld und Dokument nicht mehr
+                // ueberein. Aendern heisst: zuruecknehmen, dann neu setzen.
+                if ($field !== null && $field->isInternal() && $field->isFilled()) {
+                    $keep[] = $field->id;
+
+                    continue;
+                }
                 $field ??= new SignatureField;
                 $field->fill([
                     'signature_request_id' => $request->id,
                     'signature_signer_id' => $signerId,
                     'company_asset_id' => $assetId,
+                    'internal_user_id' => $internalUserId,
+                    'intern_beschriftung' => $type === SignatureFieldType::INTERNAL ? (bool) ($data['intern_beschriftung'] ?? true) : true,
                     'type' => $type,
                     'page' => max(1, min((int) $data['page'], (int) $request->page_count)),
                     'pos_x' => $this->clamp((float) $data['x']),
@@ -310,10 +334,19 @@ class SignatureRequestService
      */
     public function blockersForSending(SignatureRequest $request): array
     {
-        $request->loadMissing(['signers', 'fields']);
+        $request->loadMissing(['signers', 'fields.internalUser']);
         $blockers = [];
-        if ($request->signers->isEmpty()) {
+        $intern = $request->interneFelder();
+        // Ohne Unterzeichner geht es nur, wenn INTERN unterschrieben wird
+        // (z.B. ein Dokument, das nur der Geschaeftsfuehrer zeichnet).
+        if ($request->signers->isEmpty() && $intern->isEmpty()) {
             $blockers[] = 'Es ist noch kein Unterzeichner erfasst.';
+        }
+        foreach ($intern->groupBy('internal_user_id') as $felder) {
+            $person = $felder->first()->internalUser;
+            if ($person === null || ! $person->darfFuerFirmaUnterschreiben()) {
+                $blockers[] = 'Die interne Unterschrift ist einer Person zugeordnet, die nicht (mehr) für das Unternehmen unterschreiben darf.';
+            }
         }
         foreach ($request->signers as $signer) {
             // Firmenbilder zaehlen hier NIE mit: sie gehoeren keinem
@@ -342,11 +375,38 @@ class SignatureRequestService
      * bekommt nur der Erste die Einladung, der Naechste erst nach der
      * Unterschrift des Vorgaengers. Bei "gleichzeitig" alle sofort.
      */
-    public function send(SignatureRequest $request): void
+    /** Ergebnis von send(): versendet, wartet auf interne Unterschrift, ohne Kunden abgeschlossen. */
+    public const VERSENDET = 'versendet';
+
+    public const WARTET_INTERN = 'wartet_intern';
+
+    public const ABGESCHLOSSEN = 'abgeschlossen';
+
+    public function send(SignatureRequest $request, ?User $durch = null): string
     {
         $blockers = $this->blockersForSending($request);
         if ($blockers !== []) {
             throw new \RuntimeException(implode(' ', $blockers));
+        }
+
+        // INTERNE UNTERSCHRIFTEN ZUERST (Teil B): der Kunde bekommt das
+        // Dokument erst, wenn alle internen Unterschriften darauf stehen -
+        // er soll die Fassung sehen, die er unterschreibt. Fehlt die EIGENE
+        // Unterschrift des Versendenden, ist das ein Bedienfehler (der
+        // Editor fragt sie vor dem Senden ab); fehlt die eines Kollegen,
+        // wartet der Versand auf ihn und laeuft danach von selbst.
+        $offen = $request->offeneInterneFelder();
+        if ($offen->isNotEmpty()) {
+            if ($durch !== null && $offen->contains(fn (SignatureField $f) => (int) $f->internal_user_id === (int) $durch->id)) {
+                throw new \RuntimeException('Ihre eigene interne Unterschrift fehlt noch - bitte zuerst unterschreiben.');
+            }
+            $request->forceFill(['send_after_internal' => true, 'last_activity_at' => now()])->save();
+            $request->loadMissing('fields.internalUser');
+            $namen = $offen->map(fn (SignatureField $f) => $f->internalUser?->name)->filter()->unique()->values();
+            $this->audit->record($request, 'send_deferred', description: 'Wartet auf: '.$namen->implode(', '));
+            $this->benachrichtigeInterne($request);
+
+            return self::WARTET_INTERN;
         }
 
         // QUALITAETSGATE VOR DEM VERSAND (A1, 04.10.2026): was der Betrieb
@@ -365,9 +425,24 @@ class SignatureRequestService
             }
         }
 
+        // NUR INTERN: ohne Unterzeichner gibt es niemanden einzuladen - das
+        // Dokument ist mit der letzten internen Unterschrift fertig und wird
+        // sofort abgeschlossen (eigenes PDF mit Protokoll, keine Mail).
+        if ($request->signers->isEmpty()) {
+            $request->forceFill([
+                'sent_at' => $request->sent_at ?? now(),
+                'send_after_internal' => false,
+                'last_activity_at' => now(),
+            ])->save();
+            app(SignatureSigningService::class)->complete($request);
+
+            return $request->fresh()?->isCompleted() ? self::ABGESCHLOSSEN : self::VERSENDET;
+        }
+
         $request->forceFill([
             'status' => SignatureStatus::SENT,
             'sent_at' => $request->sent_at ?? now(),
+            'send_after_internal' => false,
             'last_activity_at' => now(),
         ])->save();
 
@@ -384,6 +459,28 @@ class SignatureRequestService
         // haelt es bei EINEM Eintrag, auch wenn erneut versendet wird.
         $this->notifyCreator($request, 'Signatur angefordert',
             '"'.$request->title.'" wurde an '.$request->signers->count().' Unterzeichner versendet.');
+
+        return self::VERSENDET;
+    }
+
+    /**
+     * "Wartet auf Ihre Unterschrift" an jeden Mitarbeiter mit offenem
+     * internem Feld - EINE Glocke je Person und Vorgang (dedup_key), auch
+     * wenn er an mehreren Stellen unterschreiben soll.
+     */
+    public function benachrichtigeInterne(SignatureRequest $request): void
+    {
+        $request->loadMissing('fields.internalUser');
+        foreach ($request->offeneInterneFelder()->groupBy('internal_user_id') as $userId => $felder) {
+            $this->audit->record($request, 'internal_requested', description: (string) ($felder->first()->internalUser->name ?? $userId));
+            $this->notifications->push((int) $userId, [
+                'type' => 'signature',
+                'title' => 'Wartet auf Ihre Unterschrift',
+                'body' => '"'.$request->title.'": Ihre interne Unterschrift ('.$felder->count().' Stelle(n)) fehlt noch, danach geht das Dokument raus.',
+                'link' => route('admin.signatures.show', $request->id),
+                'dedup_key' => 'signatur-intern:'.$request->id.':'.$userId,
+            ]);
+        }
     }
 
     /** @return iterable<SignatureSigner> */

@@ -40,7 +40,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-087 | LOW | ops | E-Signatur: Mitarbeiter-Download des Originals nicht protokolliert | FIXED |
 | KI-088 | MEDIUM | correctness | E-Signatur: zu helles Firmenbild scheiterte erst nach dem Unterschreiben | FIXED |
 | KI-089 | MEDIUM | correctness | E-Signatur: keine formale Zustandsmaschine (Status an 9 Stellen direkt gesetzt) | OPEN (Teil C) |
-| KI-090 | LOW | performance | E-Signatur: Abschluss + Qualitaetsgate synchron im Unterschreiben-Request (12 Seiten 1,1 s) | OPEN |
+| KI-090 | LOW | performance | E-Signatur: Abschluss + Qualitaetsgate synchron im Unterschreiben-Request (12 Seiten 1,1 s) | OPEN (Warnung ab 5 s im Log, 07.10.2026) |
+| KI-092 | HIGH | correctness | E-Signatur: zweite Fortschreibung vergibt dieselben Bildnamen (`/D24Sig4x0` doppelt) - ein Bild faellt weg | FIXED |
 | KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
 | KI-062 | HIGH | correctness | E-Signatur: /Resources als Referenz -> Bilder in verschachteltes /Resources geschrieben, "XObject unknown" (8 von 11 Vorgaengen) | FIXED |
 | KI-055 | HIGH | correctness | E-Signatur: Firmenlogo/-stempel im fertigen PDF unsichtbar (Stempler setzt EINE Farbe -> weisse Flaeche) | FIXED |
@@ -259,7 +260,7 @@ und PHPStan) auf `main` gruen ist.
 - **Category** performance · **Severity** LOW · **Status** OPEN
 - **Location** `SignatureSigningService::complete`
 - **Description** Gemessen 108 ms (1 Seite) bzw. 1,1 s (12 Seiten); hochgerechnet ~18 s bei 200 Seiten mit je einer Unterschrift.
-- **Fix** Auslagerung in einen Job erst bei Bedarf; Dauer steht je Vorgang in `render_ms`.
+- **Fix** Auslagerung in einen Job erst bei Bedarf; Dauer steht je Vorgang in `render_ms`. Seit 07.10.2026 (Betreiber-Vorgabe) schreibt `SignatureQualityGate::vermerke()` ab `LANGSAM_MS` (5000 ms) eine Warnung ins Log - das Signal, wann der Job noetig wird. Test `InterneUnterschriftTest::test_langsame_fertigstellung_wird_gemeldet`.
 - **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
 
 ### KI-091 - Fertiges PDF nicht PDF/A, Schrift nur WinAnsi
@@ -268,6 +269,13 @@ und PHPStan) auf `main` gruen ist.
 - **Description** Transparenz der Unterschrift und nicht eingebettete Helvetica; Zeichen ausserhalb WinAnsi werden umschrieben (Bestand 0 von 1424 Namen).
 - **Fix** Eingebettete Unicode-Schrift erst bei Bedarf.
 - **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
+
+### KI-092 - Zweite Fortschreibung: doppelte Bildnamen
+- **Category** correctness · **Severity** HIGH · **Status** FIXED (07.10.2026)
+- **Location** `PdfStamper::stampPage` (Bildname)
+- **Description** Bildnamen hiessen `D24Sig<Seite>x<Zaehler>`. Wird ein bereits fortgeschriebenes PDF ein ZWEITES Mal gestempelt (interne Unterschrift, danach der Kunde - Teil B), vergab der zweite Lauf dieselben Namen: qpdf meldete "dictionary has duplicated key /D24Sig4x0", ein Betrachter verwirft dann eines der beiden Bilder. Vor Teil B gab es nur einen Stempellauf je Dokument, deshalb fiel es nie auf.
+- **Fix** Der Name traegt die im ganzen Dokument eindeutige OBJEKTNUMMER des Bildes (`D24Sig<obj>`). Test `InterneUnterschriftTest::test_intern_kunde_endfassung_drei_hashes_und_sichtbar` (ohne den Fix "Fehler bei Fertigstellung").
+- **Discovered** 07.10.2026 (eigener Test, Teil B)
 
 ### KI-062 - E-Signatur: /Resources als Referenz - Bilder unauffindbar ("XObject unknown")
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (03.10.2026)

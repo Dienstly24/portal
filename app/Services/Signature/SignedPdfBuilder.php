@@ -2,6 +2,7 @@
 
 namespace App\Services\Signature;
 
+use App\Models\SignatureField;
 use App\Models\SignatureRequest;
 use App\Services\Pdf\PdfDocument;
 use App\Services\Pdf\PdfException;
@@ -45,7 +46,12 @@ class SignedPdfBuilder
      */
     public function build(SignatureRequest $request, ?\DateTimeInterface $neuErzeugt = null): array
     {
-        $original = $this->storage->read($request->original_path);
+        // Gestempelt wird auf der BASIS: dem Original, oder - wenn intern
+        // unterschrieben wurde - dem Zwischenstand, der die internen
+        // Unterschriften bereits traegt (Teil B). Die internen Felder werden
+        // deshalb hier NICHT erneut gesetzt: sie stehen schon in der Datei,
+        // die der Kunde gesehen und unterschrieben hat.
+        $original = $this->storage->read($request->basisPfad());
         if ($original === null) {
             throw new \RuntimeException('Das Original-PDF der Signaturanfrage fehlt im Speicher.');
         }
@@ -57,6 +63,9 @@ class SignedPdfBuilder
 
         foreach ($request->fields as $field) {
             if (! $field->isFilled()) {
+                continue;
+            }
+            if ($field->isInternal() && $request->zwischenstand_path !== null) {
                 continue;
             }
             $pageIndex = max(0, $field->page - 1);
@@ -78,6 +87,16 @@ class SignedPdfBuilder
                     // verzerrte Unterschrift ist keine Unterschrift mehr.
                     [$bx, $by, $bw, $bh] = Unterschriftsbild::einpassen($png, $x, $y, $width, $height);
                     $stamper->add(PdfStamp::image($pageIndex, $png, $bx, $by, $bw, $bh));
+                }
+
+                continue;
+            }
+
+            if ($field->isInternal()) {
+                $png = $this->storage->read($field->image_path);
+                if ($png !== null) {
+                    $this->stempleIntern($stamper, $pageIndex, $png, $x, $y, $width, $height,
+                        $field->intern_beschriftung ? $this->internBeschriftung($request, $field) : null);
                 }
 
                 continue;
@@ -122,6 +141,79 @@ class SignedPdfBuilder
         $pdf = $stamper->build();
 
         return ['pdf' => $pdf, 'hash' => hash('sha256', $pdf), 'bilder' => $stamper->platzierteBilder()];
+    }
+
+    /**
+     * Stempelt INTERNE Unterschriften auf die aktuelle Basis und liefert den
+     * neuen Zwischenstand (Teil B). Ohne Protokollseite - die gehoert nur an
+     * das fertige Dokument. Das Ergebnis ist eine Fortschreibung der Basis
+     * und damit auch des Originals.
+     *
+     * @param  iterable<SignatureField>  $felder
+     * @return array{pdf: string, hash: string, bilder: list<array{page: int, name: string, object: int}>}
+     *
+     * @throws PdfException
+     */
+    public function stempleInterneFelder(SignatureRequest $request, string $basis, iterable $felder, string $png, ?string $beschriftung): array
+    {
+        $document = PdfDocument::open($basis);
+        $stamper = new PdfStamper($document, $request->nutztCropBox());
+        foreach ($felder as $field) {
+            $pageIndex = max(0, $field->page - 1);
+            if ($pageIndex >= $document->pageCount()) {
+                continue;
+            }
+            $page = FeldGeometrie::bezugsseite($request, $document->page($pageIndex));
+            [$x, $y, $width, $height] = FeldGeometrie::punkte($field, $page);
+            $this->stempleIntern($stamper, $pageIndex, $png, $x, $y, $width, $height,
+                $field->intern_beschriftung ? $beschriftung : null);
+        }
+        $pdf = $stamper->build();
+
+        return ['pdf' => $pdf, 'hash' => hash('sha256', $pdf), 'bilder' => $stamper->platzierteBilder()];
+    }
+
+    /** "Name, Funktion · Datum" unter einer internen Unterschrift. */
+    private function internBeschriftung(SignatureRequest $request, SignatureField $field): ?string
+    {
+        $eintrag = $request->gueltigeInterneUnterschriften()->last(fn ($s) => in_array($field->id, (array) $s->felder, true));
+        if ($eintrag === null) {
+            return null;
+        }
+
+        return self::beschriftung($eintrag->name, $eintrag->funktion, $eintrag->created_at);
+    }
+
+    public static function beschriftung(string $name, string $funktion, mixed $zeit): string
+    {
+        $datum = LocalTime::for($zeit);
+
+        return trim($name.', '.$funktion.($datum !== null ? ' · '.$datum->format('d.m.Y') : ''));
+    }
+
+    /**
+     * Die interne Unterschrift als BLOCK - Handschrift oben, Linie, darunter
+     * "Name, Funktion · Datum" (abschaltbar je Feld). Dieselbe Bauform wie
+     * die Unternehmenssignatur, aber mit dem Namen eines MENSCHEN.
+     */
+    private function stempleIntern(PdfStamper $stamper, int $pageIndex, string $png, float $x, float $y, float $width, float $height, ?string $text): void
+    {
+        $zeile = $text === null || $text === '' ? 0.0 : min(10.0, max(6.5, $height * 0.2));
+        $platz = $zeile > 0.0 && $height >= 26.0;
+        $bildHoehe = $platz ? $height - $zeile * 1.45 : $height;
+        [$bx, $by, $bw, $bh] = Unterschriftsbild::einpassen($png, $x, $y, $width, $bildHoehe);
+        $stamper->add(PdfStamp::image($pageIndex, $png, $bx, $by, $bw, $bh));
+        if (! $platz) {
+            return;
+        }
+        $stamper->add(PdfStamp::box($pageIndex, $x, $y + $height - $zeile * 1.32, $width, 0.0));
+        // Die Zeile muss in die Feldbreite passen - sonst liefe das Datum
+        // ueber die Unterschriftslinie hinaus in den Vertragstext.
+        $groesse = $zeile;
+        while ($groesse > 5.0 && PdfStamper::textBreite((string) $text, $groesse) > $width) {
+            $groesse -= 0.25;
+        }
+        $stamper->add(PdfStamp::text($pageIndex, (string) $text, $x, $y + $height - $zeile, $width, $zeile, $groesse));
     }
 
     /**
@@ -210,6 +302,9 @@ class SignedPdfBuilder
                 $request->upload_original_hash !== null
                     ? 'SHA-256 der hochgeladenen Datei (vor der Reparatur): '.$request->upload_original_hash
                     : null,
+                $request->zwischenstand_hash !== null
+                    ? 'SHA-256 nach den internen Unterschriften (Fassung, die der Kunde erhielt): '.$request->zwischenstand_hash
+                    : null,
                 'Signaturanfrage: '.$request->id,
                 $request->reference !== null ? 'Referenz: '.$request->reference : null,
                 'Erstellt: '.$this->zeit($request->created_at),
@@ -237,6 +332,30 @@ class SignedPdfBuilder
                     $signer->user_agent ? 'Gerät: '.$signer->user_agent : null,
                 ])),
             ];
+        }
+
+        // INTERNE UNTERSCHRIFTEN (Teil B) in einem EIGENEN Abschnitt - getrennt
+        // von den Unterzeichnern (sie kamen nicht ueber einen Link) und
+        // getrennt von der Unternehmenssignatur (sie ist die Erklaerung
+        // eines MENSCHEN, keine Grafik des Betriebs).
+        $intern = $request->gueltigeInterneUnterschriften();
+        if ($intern->isNotEmpty()) {
+            $zeilen = [];
+            foreach ($intern as $eintrag) {
+                $zeilen[] = $eintrag->name.' ('.$eintrag->funktion.'), Benutzer-ID '.($eintrag->user_id ?? '-');
+                $zeilen[] = '  Unterschrieben: '.$this->zeit($eintrag->created_at)
+                    .($eintrag->ip ? '; IP-Adresse: '.$eintrag->ip : '');
+                if ($eintrag->user_agent) {
+                    $zeilen[] = '  Gerät: '.$eintrag->user_agent;
+                }
+                $zeilen[] = '  Erneute Anmeldung: '.$eintrag->reauthLabel()
+                    .($eintrag->reauth_at ? ' ('.$this->zeit($eintrag->reauth_at).')' : '');
+                $zeilen[] = '  Bestätigt: '.$eintrag->bestaetigung;
+                $zeilen[] = '  Unterschriftsbild: '.$eintrag->imageMethodLabel().'; SHA-256 '.$eintrag->image_hash;
+                $zeilen[] = '  SHA-256 des Dokuments davor: '.$eintrag->document_hash_before;
+                $zeilen[] = '  SHA-256 nach der internen Unterschrift: '.$eintrag->document_hash_after;
+            }
+            $sections[] = ['title' => 'Interne Unterschriften', 'lines' => $zeilen];
         }
 
         // FIRMENBILDER stehen in einem EIGENEN Abschnitt - nicht bei den

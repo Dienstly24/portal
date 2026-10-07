@@ -170,6 +170,24 @@
     </div>
 </div>
 
+@if(auth()->user()->role === 'admin')
+{{-- Interne Unterschrift (Teil B): wer fuer das Unternehmen unterschreiben
+     darf, vergibt ausschliesslich der Administrator. --}}
+<div class="card" style="padding:18px;margin-bottom:16px;">
+    <input type="hidden" name="unterschriftsrecht_present" value="1">
+    <label style="display:flex;gap:9px;align-items:flex-start;font-size:14px;font-weight:600;">
+        <input type="checkbox" name="can_sign_for_company" value="1" @checked($employee->can_sign_for_company) style="margin-top:3px;">
+        <span>🖋 Darf für das Unternehmen unterschreiben
+            <span style="display:block;font-weight:400;font-size:12px;color:var(--ink-soft);">Eigene Unterschrift hinterlegen und Dokumente intern unterschreiben - immer mit Bestätigung je Dokument und Zwei-Faktor.</span>
+        </span>
+    </label>
+    <div class="field" style="margin-top:10px;">
+        <label for="signatur_funktion" style="font-size:12px;">Funktion im Dokument (z.B. Geschäftsführer, Prokurist)</label>
+        <input id="signatur_funktion" name="signatur_funktion" maxlength="80" value="{{ $employee->signatur_funktion }}">
+    </div>
+</div>
+@endif
+
 @can('provisionen-verwalten')
 {{-- Provisions-Saetze fuer den Neukunden-Bericht: Vorschlag = fix je
      Neuvertrag + Prozent vom Jahresbeitrag. Beide optional. --}}

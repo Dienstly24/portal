@@ -3859,6 +3859,71 @@ Vollstaendig in `docs/AUDIT_2026-10-04_SIGNATUR.md`, Befunde KI-080..091.
 - Tests: `SignaturQualitaetsmatrixTest`, `SignaturQualitaetsgateTest`,
   `tests/Unit/ProtokollUmbruchTest.php`.
 
+### Interne Unterschrift: das Haus unterschreibt zuerst (Teil B, 07.10.2026)
+
+- **Wer**: Recht `users.can_sign_for_company` ("Darf fuer das Unternehmen
+  unterschreiben") + `signatur_funktion`, vergibt NUR der Admin
+  (Mitarbeiterakte); Administratoren haben es von sich aus
+  (`User::darfFuerFirmaUnterschreiben()`). Ohne Recht: kein Profil, kein
+  Feld (der Server verwirft ein internes Feld fuer jemanden ohne Recht).
+- **Meine Unterschrift** (`/admin/meine-unterschrift`,
+  `UserSignatureService`): zeichnen (Finger/Stift/Maus, Druck, Rueckgaengig,
+  `public/js/unterschrift-pad.js`), hochladen (nur Personal; PNG/JPG/HEIC,
+  Hintergrund per `Bildfreistellung::tinteFreistellen`, zu helles Bild
+  abgelehnt, Vorschau vor dem Speichern) oder "Auf dem Handy" (QR). Plus
+  optionale Paraphe. Ersetzen ARCHIVIERT, nie loeschen. Jede Aenderung:
+  Zwei-Faktor, Glocke an alle Admins, ActivityLog `user_signature_changed`.
+- **Zwei-Faktor PFLICHT, Passwort genuegt nie** (`InterneFreigabe`): eine
+  Bestaetigung (Anmeldung oder Code im Dialog) gilt 4 h
+  (`interne_signatur_2fa_stunden`) fuer DIESE Sitzung auf DIESEM Geraet;
+  erlischt bei Abmelden, IP-/Geraetewechsel, Passwortwechsel. Fehlversuche
+  im SELBEN Limiter wie die Anmeldung (`2fa:<id>|<ip>`, KI-042). Gilt
+  unabhaengig vom globalen 2FA-Schalter. Der Bestaetigungssatz "Ich
+  unterschreibe dieses Dokument als [Name], [Funktion]." steht vor JEDEM
+  Dokument und landet im Protokoll - das Fenster spart nur den Code.
+- **Handy-QR** (`SignatureHandoffService`, `/unterschrift-handy/{token}`):
+  10 Min, einmal, Token nur als sha256; das Ergebnis bekommt nur DIESES
+  Konto in DERSELBEN Sitzung (Zufallswert in der Sitzung, nicht die
+  Sitzungs-ID). Uebernommen wird es erst am Rechner nach Bestaetigung.
+- **Im Editor**: dritte Karte "Intern" (Ich oder eine berechtigte Person),
+  Seitenverhaeltnis beim Vergroessern fest, optional "Name, Funktion, Datum"
+  darunter. Dialog: "Gespeicherte Unterschrift verwenden" / "Jetzt neu
+  zeichnen" (nur dieses Dokument, ausser "Als Standard speichern") / Handy.
+  Fehlt die eigene Unterschrift, wird im Dialog gezeichnet - die Seite wird
+  nie verlassen. Pruefdialog listet interne Unterschriften GETRENNT vor
+  Kunden und Unternehmenssignatur.
+- **PDF-KETTE: Original -> Zwischenstand -> Endfassung**
+  (`InternalSigningService`): die interne Unterschrift wird auf die Basis
+  gestempelt (`SignedPdfBuilder::stempleInterneFelder`), mit DEMSELBEN
+  Qualitaetsgate geprueft (nur diese Felder, `nurFelder`) und erst dann
+  gespeichert; der Kunde sieht und laedt den Zwischenstand
+  (`SignatureRequest::basisPfad()`), die Endfassung schreibt ihn fort und
+  setzt die internen Felder nicht erneut. Drei Hashes im Protokoll; der
+  Abschnitt "Interne Unterschriften" (Name, Funktion, Benutzer-ID, Zeit, IP,
+  Geraet, 2FA-Weg, Erstellungsweg "gezeichnet am Geraet X"/"hochgeladen"/
+  "per Handy-QR gezeichnet", Bild- und Dokument-Hash davor/danach) steht
+  GETRENNT von der Unternehmenssignatur. `signature_internal_signings` ist
+  append-only; nach "Zuruecknehmen" (nur Entwurf) gilt nur noch die Kette
+  ab dem aktuellen Zwischenstand (`gueltigeInterneUnterschriften()`). Eine
+  gesetzte interne Unterschrift wird im Editor nicht mehr verschoben.
+- **Versand**: fehlt die EIGENE interne Unterschrift, fragt "Senden" sie
+  ab ("Unterschreiben und senden"); fehlt die eines Kollegen, bleibt der
+  Vorgang Entwurf (`send_after_internal`), der Kollege bekommt die Glocke
+  "Wartet auf Ihre Unterschrift", unterschreibt auf der Detailseite mit
+  einem Klick, danach geht das Dokument automatisch raus. Ohne Kunden-
+  Unterzeichner ist das Dokument mit der letzten internen Unterschrift
+  fertig (keine Mail). Wer intern unterschreiben soll, darf den Vorgang
+  SEHEN (Policy `view`), aber nicht bearbeiten.
+- **Falle (KI-092)**: Bildnamen im PDF tragen die Objektnummer
+  (`D24Sig<obj>`) - mit "Seite x Zaehler" vergab die zweite Fortschreibung
+  doppelte Namen und ein Bild fiel weg.
+- **KI-090**: `SignatureQualityGate::vermerke()` warnt im Log ab 5 s
+  (`LANGSAM_MS`) - Signal fuer die Auslagerung in einen Job.
+- **Noch offen**: Neu-Anwenden der internen Unterschrift bei
+  Dokumenttausch/Reaktivierung gehoert zu Teil C (Ablehnen/Reaktivieren);
+  PDF/A + Noto-Schrift (KI-091) als Folge-PR nach C.
+- Tests: `InterneUnterschriftTest`.
+
 ## System-Audit 15.09.2026: Befunde und Behebung
 
 Vollstaendiger Bericht: `docs/AUDIT_2026-09-15_BEHEBUNG.md`. Was man im

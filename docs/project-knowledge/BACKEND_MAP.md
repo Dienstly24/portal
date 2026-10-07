@@ -45,7 +45,7 @@ EmployeeController 576 · Admin\PostfachController 516.
 | `Commission/` | `CommissionReadService` (Leseschicht ueber 3 Straenge), `CommissionWorkflowService` (Gutschriften), Quellen/Parser |
 | `Provision/` | `ContractProvisionService` (Ausgang, Hook am Contract), `ProvisionRateResolver` |
 | `Vermittler/` | TARIFCHECK24-Abrechnung + Vorgangsliste |
-| `Signature/`, `Pdf/` | Anfrage, Token, Identitaet, Seitenbilder, PDF-Stempeln (incremental update), Firmenbilder, Audit, Qualitaetsgate (`SignatureQualityGate`), Eingangspruefung (`PdfEingangspruefung`, qpdf) |
+| `Signature/`, `Pdf/` | Anfrage, Token, Identitaet, Seitenbilder, PDF-Stempeln (incremental update), Firmenbilder, Audit, Qualitaetsgate (`SignatureQualityGate`), Eingangspruefung (`PdfEingangspruefung`, qpdf), interne Unterschrift (`InternalSigningService`, `UserSignatureService`, `InterneFreigabe`, `SignatureHandoffService`) |
 | `ChangeRequest/` | Nachweispolitik, Beleg-Pruefung, Mitteilungen an Gesellschaften |
 | `Energy/` | Zaehlerfoto lesen, Ablesungen/Verbrauch |
 | `Family/`, `Health/` | Familienbeziehungen, Krankenkassen-Wechsel |

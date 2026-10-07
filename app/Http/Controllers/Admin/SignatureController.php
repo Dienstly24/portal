@@ -13,6 +13,7 @@ use App\Models\SignatureRequest;
 use App\Models\SignatureSigner;
 use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\Pdf\PdfException;
+use App\Services\Signature\InternalSigningService;
 use App\Services\Signature\SignatureAuditService;
 use App\Services\Signature\SignatureDocumentService;
 use App\Services\Signature\SignaturePageRenderer;
@@ -232,7 +233,9 @@ class SignatureController extends Controller
         Gate::authorize('view', $signature);
 
         return view('admin.signatures.show', [
-            'signature' => $signature->load(['signers', 'fields.signer', 'customer.user', 'contract', 'creator', 'completedDocument']),
+            'signature' => $signature->load(['signers', 'fields.signer', 'fields.internalUser', 'internalSignings', 'customer.user', 'contract', 'creator', 'completedDocument']),
+            'meineInternen' => app(InternalSigningService::class)->offeneFelder($signature, auth()->user()),
+            'intern' => InternalSignatureController::editorDaten(auth()->user()),
             'events' => $signature->events()->with('user')->limit(200)->get(),
             'blockers' => $signature->isDraft() ? $this->requests->blockersForSending($signature) : [],
             'suggestions' => $signature->isCompleted() && $signature->customer_id === null
@@ -313,6 +316,9 @@ class SignatureController extends Controller
         if (! $darfFirma) {
             unset($typen[SignatureFieldType::COMPANY]);
         }
+        // Die interne Unterschrift hat ihre EIGENE Karte - sie ist keine
+        // Feldart eines Unterzeichners.
+        unset($typen[SignatureFieldType::INTERNAL]);
 
         return view('admin.signatures.prepare', [
             'signature' => $signature->load(['signers', 'fields']),
@@ -331,6 +337,11 @@ class SignatureController extends Controller
             'firmaName' => Firmensignatur::name(),
             'firmaVollstaendig' => $darfFirma && Firmensignatur::vollstaendig(),
             'firmaFehlt' => $darfFirma ? Firmensignatur::fehlendes() : [],
+            // INTERNE UNTERSCHRIFT (Teil B): wer im Haus unterschreiben darf,
+            // und ob der Bearbeiter selbst darf/schon eine Unterschrift hat.
+            'intern' => InternalSignatureController::editorDaten(auth()->user()),
+            'internePersonen' => InternalSignatureController::berechtigtePersonen()
+                ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'funktion' => $u->signaturFunktion()])->values(),
         ]);
     }
 
@@ -389,6 +400,8 @@ class SignatureController extends Controller
             'fields.*.signer_id' => ['nullable', 'string', 'max:64'],
             'fields.*.signer_key' => ['nullable', 'string', 'max:64'],
             'fields.*.company_asset_id' => ['nullable', 'string', 'max:64'],
+            'fields.*.internal_user_id' => ['nullable', 'integer'],
+            'fields.*.intern_beschriftung' => ['nullable', 'boolean'],
             'fields.*.type' => ['required', 'string', 'in:'.implode(',', SignatureFieldType::keys())],
             'fields.*.page' => ['required', 'integer', 'min:1', 'max:200'],
             'fields.*.x' => ['required', 'numeric', 'min:0', 'max:1'],
@@ -400,7 +413,11 @@ class SignatureController extends Controller
         ]);
     }
 
-    private function savePayload(Request $request, SignatureRequest $signature): void
+    /**
+     * Auch vom Weg "intern unterschreiben" benutzt: das Feld kann im Editor
+     * gerade erst gesetzt worden sein.
+     */
+    public function speichereEditorStand(Request $request, SignatureRequest $signature): void
     {
         $data = $this->validatePayload($request);
 
@@ -454,25 +471,31 @@ class SignatureController extends Controller
         Gate::authorize('send', $signature);
 
         if ($signature->isDraft() && $request->has('fields')) {
-            $this->savePayload($request, $signature);
+            $this->speichereEditorStand($request, $signature);
             $signature = $this->find($id);
         }
 
         try {
-            $this->requests->send($signature->load(['signers', 'fields']));
+            $ergebnis = $this->requests->send($signature->load(['signers', 'fields']), $request->user());
         } catch (\RuntimeException $e) {
             return $this->respond($request, false, $e->getMessage());
         }
+        $meldung = match ($ergebnis) {
+            SignatureRequestService::WARTET_INTERN => 'Der Versand wartet auf die interne Unterschrift - die Kollegen wurden benachrichtigt.',
+            SignatureRequestService::ABGESCHLOSSEN => 'Das Dokument ist fertig unterschrieben.',
+            default => 'Die Einladung wurde versendet.',
+        };
 
         if ($request->expectsJson()) {
             return response()->json([
                 'ok' => true,
+                'message' => $meldung,
                 'redirect' => route('admin.signatures.show', $signature->id),
             ]);
         }
 
         return redirect()->route('admin.signatures.show', $signature->id)
-            ->with('success', 'Die Einladung wurde versendet.');
+            ->with('success', $meldung);
     }
 
     /**
