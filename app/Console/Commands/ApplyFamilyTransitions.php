@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 
 /**
  * Automatischer Uebergang im Selbststaendigkeitsalter (Betreiber-Vorgabe
- * 28.08.2026; seit 07.10.2026 Einstellung, Standard 16 - KI-095).
+ * 28.08.2026; seit 07.10.2026 Einstellung, Standard 16 - KI-096).
  *
  * Erreicht ein abhaengiges Familienmitglied dieses Alter, wird es zum
  * eigenstaendigen Kunden. Eine eigene Kundennummer vergibt das Team. Das ist AUSDRUECKLICH nur ein Statuswechsel:
@@ -47,7 +47,7 @@ class ApplyFamilyTransitions extends Command
             $faellig,
             function (CustomerFamilyRelation $relation) use ($service, $kinder) {
                 $service->applyTransition($relation);
-                // Ohne eigene Kundennummer (KI-095): Aufgabe an das Team -
+                // Ohne eigene Kundennummer (KI-096): Aufgabe an das Team -
                 // vergeben wird sie bewusst von einem Menschen.
                 $kinder->aufgabeBeiSelbststaendigkeit($relation);
                 $this->line('  '.($relation->relatedCustomer?->user?->name ?? '—').' ist jetzt eigenstaendiger Kunde (Beziehung bleibt bestehen).');

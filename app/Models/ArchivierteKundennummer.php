@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Eine Kundennummer, die nicht mehr gilt, aber belegt bleibt
- * (KI-095, 07.10.2026). Typischer Fall: einem Kind unter dem
+ * (KI-096, 07.10.2026). Typischer Fall: einem Kind unter dem
  * Selbststaendigkeitsalter wurde eine eigene Nummer vergeben. Die Nummer
  * wird nie geloescht und nie neu vergeben - sie kann auf Schreiben stehen.
  */

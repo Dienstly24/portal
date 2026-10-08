@@ -573,7 +573,7 @@ class SmartDocumentUploadController extends Controller
 
             try {
                 $customer = app(CustomerAutoCreationService::class)->createFromUnmatched(
-                    // KI-095: im Antrag als "Kind" benannt -> keine eigene
+                    // KI-096: im Antrag als "Kind" benannt -> keine eigene
                     // Kundennummer, auch wenn das Geburtsdatum fehlt. Nur fuer
                     // die ANLAGE - die Dublettenpruefung sieht das Merkmal nicht.
                     $criteria + (($person['relation'] ?? null) === 'kind' ? ['als_kind' => true] : []),

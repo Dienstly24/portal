@@ -8,7 +8,7 @@ use App\Services\Family\AbhaengigesKindService;
 use Illuminate\Console\Command;
 
 /**
- * Erinnerung "Kind wird 15 - eigenes Portal vorbereiten" (KI-095,
+ * Erinnerung "Kind wird 15 - eigenes Portal vorbereiten" (KI-096,
  * 07.10.2026). Je Kind genau EINE Aufgabe an der Akte des Elternteils plus
  * Glocke an dessen Betreuer. Aendert keine Kundennummer, keinen Vertrag,
  * kein Portal - es ist eine Erinnerung, keine Umstellung.

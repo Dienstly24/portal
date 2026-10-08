@@ -374,6 +374,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->name('customers.duplicates.dismiss');
     Route::post('/customers/duplicates/dismiss-bulk', [AdminDuplicateController::class, 'dismissBulk'])
         ->name('customers.duplicates.dismiss_bulk');
+    // Gemeinsam genutzte Kontaktdaten (Familien-E-Mail, Festnetz ...): kein
+    // Dubletten-Signal mehr. Wirkt systemweit -> nur admin/manager.
+    Route::post('/customers/duplicates/geteilt', [AdminDuplicateController::class, 'geteiltMarkieren'])
+        ->name('customers.duplicates.geteilt')->middleware('role:admin,manager');
+    Route::delete('/customers/duplicates/geteilt/{id}', [AdminDuplicateController::class, 'geteiltAufheben'])
+        ->whereNumber('id')->name('customers.duplicates.geteilt.aufheben')->middleware('role:admin,manager');
     // Verwandte Kunden (Beziehungen). GET vor /customers/{id} registrieren.
     Route::get('/customers/relationships', [AdminDuplicateController::class, 'relationships'])->name('customers.relationships');
     Route::post('/customers/relationships/{id}/type', [AdminDuplicateController::class, 'relationshipSetType'])->name('customers.relationships.type');
@@ -426,7 +432,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Verselbststaendigung. Bewusst NICHT unter /customers/... - dort wuerde
     // die Route-Reihenfolge sie als Kunden-ID missdeuten.
     Route::get('/familie/uebergaenge', [CustomerFamilyRelationController::class, 'transitions'])->name('family.transitions');
-    // KI-095: eigene Kundennummer fuer ein Kind erst ab dem Selbststaendigkeitsalter.
+    // KI-096: eigene Kundennummer fuer ein Kind erst ab dem Selbststaendigkeitsalter.
     Route::post('/customers/{id}/kundennummer-vergeben', [CustomerFamilyRelationController::class, 'kundennummerVergeben'])->name('customer.kundennummer_vergeben');
     Route::post('/familie/uebergaenge/{relation}/vorbereiten', [CustomerFamilyRelationController::class, 'prepareTransition'])->name('family.prepare_transition');
 

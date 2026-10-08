@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
 /**
- * Bestandsaufnahme KI-095 - STRENG LESEND, aendert nichts.
+ * Bestandsaufnahme KI-096 - STRENG LESEND, aendert nichts.
  *
  * Listet jedes Kind unter dem Selbststaendigkeitsalter, das eine eigene
  * Kundennummer traegt, mit allem, was an seiner Akte haengt, und dem

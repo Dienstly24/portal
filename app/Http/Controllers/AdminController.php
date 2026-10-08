@@ -518,7 +518,7 @@ class AdminController extends Controller
         // Portal-Einladung: manuelles Passwort > Geburtsdatum-Startpasswort
         // > Passwort-Setzen-Link. KEINE Login-Mail ohne echte Adresse.
         $customer->setRelation('user', $user);
-        // KI-095: juenger als das Selbststaendigkeitsalter -> ohne eigene
+        // KI-096: juenger als das Selbststaendigkeitsalter -> ohne eigene
         // Kundennummer angelegt (Modell-Hook), KEIN Portal, KEINE Einladung.
         if ($customer->unterSelbststaendigkeitsalter()) {
             return redirect()->route('admin.customer', $customer->id)->with('warning',

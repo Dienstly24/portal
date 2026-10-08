@@ -99,7 +99,7 @@ class CustomerAutoCreationService
 
             // Importierte Kunden behalten ihre Quellnummer mit Jahrespräfix
             // ("25" + Originalnummer); Neuanlagen bekommen JJ+laufende Nummer.
-            // KI-095: ein KIND bekommt keine eigene Kundennummer. Als Kind
+            // KI-096: ein KIND bekommt keine eigene Kundennummer. Als Kind
             // gilt, wer ausdruecklich so gekennzeichnet ist (z.B. "Kind" im
             // Antrag auf Familienversicherung) - das Geburtsdatum prueft
             // zusaetzlich der creating-Hook des Modells fuer JEDEN Weg.

@@ -1141,7 +1141,7 @@ class DocumentIntakeService
             return null;
         }
 
-        // KI-095: an die Akte eines abhaengigen Kindes kommt kein Vertrag -
+        // KI-096: an die Akte eines abhaengigen Kindes kommt kein Vertrag -
         // das Dokument bleibt zugeordnet, der Vertrag gehoert zum Elternteil.
         if ($customer->eigenstaendigkeitsSperre() !== null) {
             return null;

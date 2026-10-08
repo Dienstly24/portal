@@ -2231,7 +2231,7 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   **ABHAENGIG NUR MIT BELEG**: `is_dependent` wird gesetzt, wenn die Rolle
   ein KIND beschreibt UND das Geburtsdatum ein Alter unter dem
   Selbststaendigkeitsalter (16) belegt - oder die Akte als Kind OHNE
-  Kundennummer angelegt wurde (KI-095). Sonst entsteht ohne Geburtsdatum
+  Kundennummer angelegt wurde (KI-096). Sonst entsteht ohne Geburtsdatum
   keine Abhaengigkeit - ein Alter wird nie geraten.
   Das Flag steht immer nur an der Zeile der Bezugsperson (ein Elternteil ist
   nie vom Kind abhaengig).
@@ -4716,9 +4716,43 @@ Merge von PR #358, Teil E/F).
   ihn zurueck, wenn das Feld seither unveraendert ist. Die Auswahl eines
   Duplikats per Suche laedt die Vorschau fuer genau dieses Paar.
   Tests: `MergeFeldwahlTest`.
-- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR):
-  PR-4 geteilte Kontaktdaten + Adressnormalisierung (KI-069); PR-5
-  Haushalt + weitere Beziehungsarten + Uebernahme des Bestands; PR-6
+- **Gemeinsam genutzte Kontaktdaten + Hausnummer einmal (PR-4,
+  08.10.2026, KI-069/KI-095)**: eine Familien-E-Mail, ein Festnetz, das
+  Konto der Eltern oder ein Mehrfamilienhaus laesst sich auf der
+  Dubletten-Seite als "gemeinsam genutzt" markieren (nur admin/manager,
+  wirkt systemweit) - der Wert bildet danach weder Block noch Signal
+  (`DuplicateDetectionService`), ein Paar bleibt nur, wenn es ein ANDERES
+  Merkmal teilt. Tabelle `geteilte_kontaktdaten` speichert NIE den Wert:
+  HMAC mit dem APP_KEY (eine Telefonnummer waere als einfacher Hash in
+  Sekunden erraten) plus maskierte Anzeige ("…3000", "r***@domain",
+  "PLZ Ort"). Der Wert kommt aus den Akten, das Formular nennt nur Paar
+  und Art. Wird der APP_KEY gewechselt, greifen die Markierungen nicht
+  mehr - die Paare erscheinen wieder, verloren geht nichts. Liste mit
+  "Aufheben" unten auf der Dubletten-Seite; ActivityLog
+  `shared_contact_marked/_unmarked`. `App\Support\Anschrift` ist die
+  EINE Regel fuer Strasse + Hausnummer: dieselbe Nummer in Strasse und
+  Feld erscheint einmal, zwei VERSCHIEDENE ("Nagelshof 20" + "51")
+  bleiben wie erfasst - nie raten; der Haushalts-Schluessel gleicht
+  "Straße"/"Strasse"/"Str." und Umlaute an. Widersprueche listet
+  `php artisan kunden:anschriften-pruefen [--alle] [--csv=datei]`
+  (STRENG LESEND, Kundennummer statt Namen). Tests:
+  `GeteilteKontaktdatenTest`, `tests/Unit/AnschriftTest.php`.
+- **Weitere Beziehungsarten (PR-5a, 08.10.2026)**: "Eingetragene
+  Lebenspartnerschaft" (`lebenspartnerschaft`, Rolle `lebenspartner`),
+  "Lebensgefaehrten (nicht verheiratet)" (`lebensgefaehrten`, Rolle
+  `partner`) und "Grosselternteil – Enkel" (`grosseltern_enkel`). Die
+  gerichteten Arten stehen in `CustomerRelationship::DIRECTED_TYPES`;
+  `parent_customer_id` nennt bei beiden die AELTERE Generation (die Spalte
+  heisst historisch so). Rollen nach Geschlecht, unbekannt -> neutral
+  (`enkelkind`/`grosselternteil`), wie bei Elternteil-Kind. Ein Enkel ist
+  NIE abhaengig (`GRANDCHILD_ROLES` bewusst nicht in `CHILD_ROLES`) - die
+  Abhaengigkeit bis 15 haengt an den Eltern. Familienkarte mit eigenen
+  Gruppen Enkel/Grosseltern; "Weitere" faengt jetzt alles Uebrige, damit
+  keine Rolle in keiner Gruppe steht. Der Rueckbau der Migration vom
+  02.10.2026 bricht bei JEDER Art ab, die er nicht abbilden kann.
+  Tests: `WeitereBeziehungsartenTest`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-5b
+  Haushalt + Uebernahme des Bestands; PR-6
   Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
   Person, Kinderzugang ab 16, Elternzugriff Standard AUS, endet mit 18;
   PR-8 Lebensereignisse. Altersgrenzen getrennt und einstellbar - seit
@@ -4727,7 +4761,7 @@ Merge von PR #358, Teil E/F).
   `Customer::DEPENDENT_AGE` gibt es nicht mehr), siehe "Kinder unter 16".
 - Tests: `DublettenFamilieTest`; nachgezogen `DuplicateBulkMergeTest`.
 
-## Kinder unter 16: keine eigene Kundennummer (Betreiber-Auftrag 07.10.2026, KI-095)
+## Kinder unter 16: keine eigene Kundennummer (Betreiber-Auftrag 07.10.2026, KI-096)
 
 - **Anlass**: die Tochter "Tala Alhamoud" war als Kind verknuepft und trug
   trotzdem eine eigene Kundennummer (2600810). Ursache: KEIN Anlageweg

@@ -206,7 +206,7 @@ class ContractController extends Controller
     public function contractCreate($customerId) {
         $this->authorizeCustomerAccess($customerId);
         $customer = Customer::with('user')->findOrFail($customerId);
-        // KI-095: kein Vertrag an der Akte eines abhaengigen Kindes - gar
+        // KI-096: kein Vertrag an der Akte eines abhaengigen Kindes - gar
         // nicht erst ein Formular zeigen, das am Ende scheitert.
         if (($grund = $customer->eigenstaendigkeitsSperre()) !== null) {
             return redirect()->route('admin.customer', $customerId)->with('error', $grund);

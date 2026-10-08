@@ -36,7 +36,7 @@ class CustomerNumberGenerator
         // (C-…) und Import-Nummern anderer Länge stören nicht.
         $max = Customer::mitArchiv()->where('customer_number', 'like', $prefix.'%')
             ->pluck('customer_number')
-            // Archivierte Nummern (KI-095: einem Kind zu Unrecht vergeben)
+            // Archivierte Nummern (KI-096: einem Kind zu Unrecht vergeben)
             // bleiben ebenfalls belegt - sie standen evtl. schon auf Post.
             ->merge(ArchivierteKundennummer::where('customer_number', 'like', $prefix.'%')->pluck('customer_number'))
             ->filter(fn ($n) => preg_match('/^'.$prefix.'\d{5}$/', (string) $n))

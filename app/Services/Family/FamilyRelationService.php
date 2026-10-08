@@ -168,6 +168,7 @@ class FamilyRelationService
      *
      * @return array{
      *   spouses: Collection, children: Collection, parents: Collection,
+     *   grandparents: Collection, grandchildren: Collection,
      *   others: Collection, all: Collection, guardians: Collection
      * }
      */
@@ -186,10 +187,16 @@ class FamilyRelationService
         return [
             'all' => $relations,
             'suggestions' => $this->linkSuggestions($customer),
-            'spouses' => $relations->where('relationship_type', 'ehepartner')->values(),
+            'spouses' => $relations->whereIn('relationship_type', CustomerFamilyRelation::PARTNER_ROLES)->values(),
             'children' => $relations->whereIn('relationship_type', CustomerFamilyRelation::CHILD_ROLES)->values(),
             'parents' => $relations->whereIn('relationship_type', CustomerFamilyRelation::PARENT_ROLES)->values(),
-            'others' => $relations->whereIn('relationship_type', ['geschwister', 'sonstiges'])->values(),
+            'grandchildren' => $relations->whereIn('relationship_type', CustomerFamilyRelation::GRANDCHILD_ROLES)->values(),
+            'grandparents' => $relations->whereIn('relationship_type', CustomerFamilyRelation::GRANDPARENT_ROLES)->values(),
+            // Alles Uebrige - nie eine Rolle, die in keiner Gruppe auftaucht.
+            'others' => $relations->reject(fn (CustomerFamilyRelation $r) => in_array($r->relationship_type, array_merge(
+                CustomerFamilyRelation::PARTNER_ROLES, CustomerFamilyRelation::CHILD_ROLES, CustomerFamilyRelation::PARENT_ROLES,
+                CustomerFamilyRelation::GRANDCHILD_ROLES, CustomerFamilyRelation::GRANDPARENT_ROLES,
+            ), true))->values(),
             'guardians' => $customer->familyGuardians(),
         ];
     }
@@ -339,7 +346,7 @@ class FamilyRelationService
     /**
      * Abhaengig ist ein Familienmitglied nur, wenn es als KIND verknuepft ist
      * UND sein Geburtsdatum ein Alter unter dem Selbststaendigkeitsalter
-     * belegt - ODER es (noch) keine eigene Kundennummer traegt (KI-095: als
+     * belegt - ODER es (noch) keine eigene Kundennummer traegt (KI-096: als
      * Kind angelegt, Geburtsdatum fehlt). Ohne Geburtsdatum wird
      * nichts angenommen - ein Alter zu raten waere schlimmer als es offen zu
      * lassen.
@@ -401,11 +408,13 @@ class FamilyRelationService
     private function roleOrder(?string $role): int
     {
         return match (true) {
-            $role === 'ehepartner' => 0,
+            in_array($role, CustomerFamilyRelation::PARTNER_ROLES, true) => 0,
             in_array($role, CustomerFamilyRelation::CHILD_ROLES, true) => 1,
             in_array($role, CustomerFamilyRelation::PARENT_ROLES, true) => 2,
-            $role === 'geschwister' => 3,
-            default => 4,
+            in_array($role, CustomerFamilyRelation::GRANDCHILD_ROLES, true) => 3,
+            in_array($role, CustomerFamilyRelation::GRANDPARENT_ROLES, true) => 4,
+            $role === 'geschwister' => 5,
+            default => 6,
         };
     }
 }

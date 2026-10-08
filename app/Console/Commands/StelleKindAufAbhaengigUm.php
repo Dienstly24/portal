@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 
 /**
  * Ein Kind mit eigener Kundennummer zum abhaengigen Familienmitglied
- * umstellen (KI-095). OHNE --ausfuehren ist es ein PROBELAUF: er zeigt
+ * umstellen (KI-096). OHNE --ausfuehren ist es ein PROBELAUF: er zeigt
  * Befund und Plan und aendert nichts. Haengen Vertraege, Provisionen oder
  * Signaturen an der Akte, verweigert der Befehl auch mit --ausfuehren -
  * das entscheidet der Betreiber.

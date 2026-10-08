@@ -60,7 +60,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 @if(filled($customer->customer_number))
                 {{ $customer->customer_number }}@if($customer->user?->email) · {{ $customer->user?->email }}@endif
                 @else
-                {{-- KI-095: abhaengiges Kind - keine eigene Kundennummer. --}}
+                {{-- KI-096: abhaengiges Kind - keine eigene Kundennummer. --}}
                 <span>Keine eigene Kundennummer (abhängiges Familienmitglied)</span>
                 @endif
             </div>

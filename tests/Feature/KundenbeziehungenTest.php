@@ -99,7 +99,7 @@ class KundenbeziehungenTest extends TestCase
                 'customer_a' => (string) $a->id,
                 'customer_b' => (string) $b->id,
                 'type' => $type,
-                'parent_customer_id' => $type === 'elternteil_kind' ? (string) $a->id : null,
+                'parent_customer_id' => CustomerRelationship::isDirected($type) ? (string) $a->id : null,
                 'note' => $type === 'sonstiges' ? 'Arbeitskollegen' : null,
             ]))->assertRedirect()->assertSessionHasNoErrors();
 

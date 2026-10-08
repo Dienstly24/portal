@@ -42,7 +42,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-089 | MEDIUM | correctness | E-Signatur: keine formale Zustandsmaschine (Status an 9 Stellen direkt gesetzt) | OPEN (Teil C) |
 | KI-090 | LOW | performance | E-Signatur: Abschluss + Qualitaetsgate synchron im Unterschreiben-Request (12 Seiten 1,1 s) | OPEN (Warnung ab 5 s im Log, 07.10.2026) |
 | KI-093 | HIGH | correctness | Dokumenten-Eingang: NAFI-Kfz-Antrag mit "Tarifkennung / Versicherer" - Versicherer leer, kein Vertrag angelegt | FIXED |
-| KI-095 | HIGH | correctness | Kinder unter 16 bekamen eine eigene Kundennummer (und damit Vertrag/Portal moeglich) - kein Anlageweg fragte das Alter | FIXED (Bestand: Umstellung wartet auf Betreiber) |
+| KI-096 | HIGH | correctness | Kinder unter 16 bekamen eine eigene Kundennummer (und damit Vertrag/Portal moeglich) - kein Anlageweg fragte das Alter | FIXED (Bestand: Umstellung wartet auf Betreiber) |
 | KI-094 | MEDIUM | correctness | Merge ergaenzte leere Teilfelder der Anschrift aus der ANDEREN Anschrift (Strasse der einen + Zusatz der anderen); abweichende Stammdaten waren nicht waehlbar | FIXED |
 | KI-092 | HIGH | correctness | E-Signatur: zweite Fortschreibung vergibt dieselben Bildnamen (`/D24Sig4x0` doppelt) - ein Bild faellt weg | FIXED |
 | KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
@@ -59,7 +59,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-066 | HIGH | correctness | Merge: `customer_family_relations` mit `related_customer_id` = Duplikat fallen per Kaskade weg (Rueckrichtung der Familienrolle verloren) | FIXED |
 | KI-067 | MEDIUM | correctness | Merge: KI-Unterhaltung (`ai_conversations`, UNIQUE customer_id) des Duplikats wird still verworfen | WONT_FIX (Fehlbefund) |
 | KI-068 | MEDIUM | correctness | Sammel-Merge auch fuer nur "moegliche" Dubletten (z. B. nur gleicher Name); Vorgabe: Massen-Merge nur fuer sichere | FIXED |
-| KI-069 | MEDIUM | correctness | Anschrift doppelt nummeriert ("Nagelshof 20 51"): Hausnummer in `address_street` UND Feld; Haushalts-Schluessel weicht ab | OPEN (PR-4) |
+| KI-069 | MEDIUM | correctness | Anschrift doppelt nummeriert ("Nagelshof 20 51"): Hausnummer in `address_street` UND Feld; Haushalts-Schluessel weicht ab | FIXED |
+| KI-095 | MEDIUM | correctness | Gemeinsam genutzte Kontaktdaten (Familien-E-Mail, Festnetz, Konto der Eltern) erzeugten immer wieder dieselben Verdachtspaare | FIXED |
 | KI-061 | MEDIUM | testing | Signatur-Tests pruefen nur `/Subtype /Image` im Text, nie die SICHTBARKEIT - KI-055/056 blieben deshalb unentdeckt | FIXED |
 | KI-048 | LOW | testing | `ReportsDashboardTest::test_verlaengerung_ist_ablauf_im_zeitraum_ohne_kuendigung` scheitert am 1. eines Monats (datumsabhaengig) | FIXED |
 | KI-050 | MEDIUM | correctness | Krankenkassen-Bestaetigung an den Arbeitgeber: nicht erkannt, Service-Adresse der Kasse als Kunden-E-Mail | FIXED |
@@ -186,9 +187,10 @@ und PHPStan) auf `main` gruen ist.
 - **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
 
 ### KI-069 - Anschrift doppelt nummeriert ("Nagelshof 20 51")
-- **Category** correctness · **Severity** MEDIUM · **Status** OPEN
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (08.10.2026)
 - **Location** `Customer::fullAddress()`, `householdKey()`
 - **Description** Strasse + Hausnummer + Zusatz werden ungeprueft zusammengesetzt; steht die Nummer schon in `address_street`, erscheint sie doppelt, und der Haushalts-Schluessel derselben Anschrift weicht ab. Plan PR-4.
+- **Fix** PR-4: `App\Support\Anschrift` ist die EINE Regel. Dieselbe Nummer in Strasse und Feld wird einmal gezeigt; zwei VERSCHIEDENE Nummern ("Nagelshof 20" + "51") bleiben wie erfasst - geraten wird nie, welche stimmt. Der Haushalts-Schluessel gleicht "Straße"/"Strasse"/"Str." und Umlaute an. `php artisan kunden:anschriften-pruefen [--alle] [--csv=]` listet Widersprueche (nur lesend). Tests `GeteilteKontaktdatenTest`, `tests/Unit/AnschriftTest.php` (2 Faelle rot ohne den Fix).
 - **Discovered** 03.10.2026 (Bestandsaufnahme Dubletten/Merge)
 ### KI-080 - E-Signatur: Felder auf die MediaBox bezogen
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED (04.10.2026)
@@ -274,6 +276,13 @@ und PHPStan) auf `main` gruen ist.
 - **Fix** Eingebettete Unicode-Schrift erst bei Bedarf.
 - **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
 
+### KI-095 - Gemeinsam genutzte Kontaktdaten als Dauer-Verdacht
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (08.10.2026)
+- **Location** `DuplicateDetectionService` (Blocking + Signale)
+- **Description** M2 des Berichts vom 03.10.2026: eine Familien-E-Mail, ein Festnetzanschluss, das Konto der Eltern oder ein Mehrfamilienhaus liessen sich nicht als "gemeinsam genutzt" kennzeichnen. Jedes Paar, das nur daran hing, stand dauerhaft in der Dubletten-Liste - und eine Liste, die immer dieselben falschen Treffer zeigt, wird nicht mehr gelesen.
+- **Fix** PR-4: Tabelle `geteilte_kontaktdaten` (Art, HMAC des normalisierten Werts, maskierte Anzeige, Notiz, Ersteller). Ein markierter Wert bildet systemweit keinen Block und kein Signal mehr; der Wert wird aus den Akten ermittelt, nie aus dem Formular. Markieren/Aufheben nur admin/manager, ActivityLog `shared_contact_marked/_unmarked`. Test `GeteilteKontaktdatenTest` (7 Faelle rot ohne den Fix).
+- **Discovered** 03.10.2026 (Bericht Schritt 1, M2)
+
 ### KI-094 - Merge mischte zwei Anschriften, abweichende Angaben nicht waehlbar
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED (07.10.2026)
 - **Location** `CustomerMergeService::fillMissingFields`
@@ -288,7 +297,7 @@ und PHPStan) auf `main` gruen ist.
 - **Fix** Der Name traegt die im ganzen Dokument eindeutige OBJEKTNUMMER des Bildes (`D24Sig<obj>`). Test `InterneUnterschriftTest::test_intern_kunde_endfassung_drei_hashes_und_sichtbar` (ohne den Fix "Fehler bei Fertigstellung").
 - **Discovered** 07.10.2026 (eigener Test, Teil B)
 
-### KI-095 - Kinder unter 16 mit eigener Kundennummer
+### KI-096 - Kinder unter 16 mit eigener Kundennummer
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (07.10.2026) - der BESTAND ist noch nicht umgestellt (Betreiber entscheidet nach `kunden:kinder-pruefen`)
 - **Location** `Customer` (creating-Hook), `CustomerAutoCreationService`, `AdminController::storeCustomer`, `RegisteredUserController`, `SmartDocumentUploadController::createCustomersFromPersons`, `Contract` (saving-Hook), `PortalAccessService`
 - **Description** Betreiber-Meldung 07.10.2026: "Tala Alhamoud" ist als Kind mit den Eltern verknuepft und traegt trotzdem die Kundennummer 2600810. Jeder Anlageweg zog die Nummer vorab beim `CustomerNumberGenerator`, keiner fragte Geburtsdatum oder Rolle. Besonders "👪 N Kunden anlegen" (Gesundheitskarten / Antrag auf Familienversicherung) legt je Person eine Akte an - Kinder eingeschlossen. Folge: Kinder konnten Vertraege, Portal-Einladungen und eigene Vorgaenge bekommen.

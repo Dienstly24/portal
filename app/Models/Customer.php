@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\SafeEncrypted;
 use App\Services\CustomerNumberGenerator;
 use App\Services\Matching\DuplicateDetectionService;
+use App\Support\Anschrift;
 use App\Support\FamilienAlter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -81,10 +82,11 @@ class Customer extends Model
      */
     public function fullAddress(): string
     {
-        $street = trim(
-            ($this->address_street ?? '').' '.($this->address_house_number ?? '')
-            .($this->address_house_suffix ? ' '.$this->address_house_suffix : '')
-        );
+        // Hausnummer nur einmal, auch wenn sie zusaetzlich in der Strasse
+        // steht (KI-069) - die Regel steht in App\Support\Anschrift.
+        $street = Anschrift::strassenzeile(
+            $this->address_street, $this->address_house_number, $this->address_house_suffix
+        )['zeile'];
         $city = trim(($this->address_zip ?? '').' '.($this->address_city ?? ''));
         $parts = array_values(array_filter([$street, $city], fn ($p) => $p !== ''));
 
@@ -98,8 +100,9 @@ class Customer extends Model
      */
     public function householdKey(): string
     {
-        return Str::of($this->fullAddress())
-            ->lower()->replaceMatches('/[^a-z0-9]+/', '')->value();
+        // "Straße"/"Str.", Umlaute und doppelte Hausnummern ergeben denselben
+        // Schluessel - sonst gilt dieselbe Anschrift als zwei Haushalte.
+        return Anschrift::schluessel($this->fullAddress());
     }
 
     /**
@@ -277,7 +280,7 @@ class Customer extends Model
                   // Bewusst als Unterabfrage am globalen Scope vorbei.
                     ->orWhereIn('customers.id', fn ($s) => $s->select('merged_into_id')->from('customers')
                         ->whereNotNull('archived_at')->where('customer_number', 'like', $like))
-                  // Archivierte Nummer (KI-095): die einem Kind zu Unrecht
+                  // Archivierte Nummer (KI-096): die einem Kind zu Unrecht
                   // vergebene Nummer findet weiterhin das Kind.
                     ->orWhereIn('customers.id', fn ($s) => $s->select('customer_id')->from('archivierte_kundennummern')
                         ->whereNotNull('customer_id')->where('customer_number', 'like', $like))
@@ -434,7 +437,7 @@ class Customer extends Model
             if ($m->created_by === null && auth()->check() && auth()->user()->isStaff()) {
                 $m->created_by = auth()->id();
             }
-            // KI-095 (07.10.2026): ein Kind unter dem Selbststaendigkeitsalter
+            // KI-096 (07.10.2026): ein Kind unter dem Selbststaendigkeitsalter
             // bekommt KEINE eigene Kundennummer - egal ueber welchen Weg es
             // entsteht (Formular, Dokumenten-Eingang, Gesundheitskarten einer
             // Familie, Import). Die Aufrufer ziehen die Nummer vorab; hier ist
@@ -621,7 +624,7 @@ class Customer extends Model
 
     /**
      * Juenger als das Selbststaendigkeitsalter (Standard 16)? Ohne
-     * Geburtsdatum: nein - ein Alter wird nie geraten (KI-095).
+     * Geburtsdatum: nein - ein Alter wird nie geraten (KI-096).
      */
     public function unterSelbststaendigkeitsalter(): bool
     {

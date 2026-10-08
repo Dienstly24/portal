@@ -8,7 +8,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
-## 07.10.2026 - Kinder unter 16: keine eigene Kundennummer, Erinnerung mit 15 (KI-095)
+## 07.10.2026 - Kinder unter 16: keine eigene Kundennummer, Erinnerung mit 15 (KI-096)
 
 - **Task**: Betreiber-Auftrag 07.10.2026 - "Tala Alhamoud" (Kind) trug die Kundennummer 2600810. Regel: unter 16 keine Nummer, kein Vertrag, kein Portal; Kind unter dem Vater (sonst Mutter); Erinnerung mit 15; Nummer ab 16; beide Alter als Einstellung. Bestand ZUERST pruefen, dann auf Freigabe umstellen.
 - **Files Changed**: Migration `2026_10_07_120000_abhaengige_kinder_ohne_kundennummer`; neu `App\Support\FamilienAlter`, `ArchivierteKundennummer`, `Family/AbhaengigesKindService`, `AbhaengigerKundeException`, Befehle `ErinnereKinderPortalVorbereitung`, `PruefeKinderMitKundennummer`, `StelleKindAufAbhaengigUm`; geaendert `Customer`, `CustomerFamilyRelation`, `Contract`, `CustomerNumberGenerator`, `CustomerAutoCreationService`, `FamilyRelationService`, `ApplyFamilyTransitions`, `PortalAccessService`, `DocumentIntakeService`, `AdminController`, `Admin\ContractController`, `CustomerFamilyRelationController`, `SmartDocumentUploadController`, `RegisteredUserController`, `SettingsController` + `UpdateSettingsRequest`, Views `customer_show`, `partials/family_relations`, `family_transitions`, `customers`, `settings`, `routes/web.php`, `routes/console.php`, `lang/ar.json`; Tests `AbhaengigeKinderTest` (neu), `CustomerFamilyRelationTest` (nachgezogen); `CLAUDE.md`.
@@ -17,7 +17,29 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **API Changes**: Route `POST admin/customers/{id}/kundennummer-vergeben` (`admin.customer.kundennummer_vergeben`).
 - **Potential Side Effects**: Das Selbststaendigkeitsalter steigt von 15 auf 16 - Kinder, die 15 sind, gelten wieder als abhaengig (Anzeige, Vererbung der Kontaktdaten). Neue Kinderakten erscheinen in Listen ohne Kundennummer. Ein Vertrag kann nicht mehr an einer Kinderakte angelegt werden.
 - **Tests Performed**: `AbhaengigeKinderTest` 23 Faelle (20 davon rot auf dem alten Stand); volle Suite, PHPStan 0, Pint sauber.
-- **Result**: KI-095 FIXED im Code; Bestand wartet auf `kunden:kinder-pruefen` + Freigabe.
+- **Result**: KI-096 FIXED im Code; Bestand wartet auf `kunden:kinder-pruefen` + Freigabe.
+## 08.10.2026 - Weitere Beziehungsarten: Lebenspartnerschaft, Lebensgefaehrten, Grosselternteil - Enkel (PR-5a)
+
+- **Task**: PR-5 des freigegebenen Dubletten-/Familien-Plans, erster Teil (Beziehungsarten). Der Haushalt folgt als PR-5b.
+- **Files Changed**: `CustomerRelationship` (neue Arten, `DIRECTED_TYPES`, `isDirected()`, Richtungstexte), `CustomerFamilyRelation` (Rollen `lebenspartner`, `partner`, `grossvater/grossmutter/grosselternteil`, `enkel/enkelin/enkelkind`, `GRANDCHILD_ROLES`, `GRANDPARENT_ROLES`, `PARTNER_ROLES`, `inverseRole`), `CustomerRelationshipService` (Abbildung Art <-> Rolle, Bestaetigt-Pruefung), `FamilyRelationService::overview` (Gruppen Enkel/Grosseltern, "Weitere" = Rest), `Admin\DuplicateController` (Richtung Pflicht bei beiden gerichteten Arten), Views `beziehung_festlegen`, `beziehung_festlegen_script`, `linked_customers`, `family_relations`; Rueckbau-Pruefung der Migration `2026_10_02_090000`; Tests `WeitereBeziehungsartenTest`, `KundenbeziehungenTest`; `CLAUDE.md`, Wissensbasis.
+- **Components Affected**: "Beziehung festlegen" (Dubletten-Pruefung, Verwandte Kunden, Kundenakte), Registerkarte "Familie".
+- **Database Changes**: keine Migration (`type`/`relationship_type` sind Zeichenketten). Der `down()` der Migration vom 02.10.2026 bricht jetzt bei jeder Art ab, die er nicht abbilden kann.
+- **API Changes**: die Beziehungs-Endpunkte nehmen die drei neuen Arten an; `grosseltern_enkel` verlangt die Richtung wie `elternteil_kind`. Die Sammel-Aktion kennt keine gerichtete Art.
+- **Potential Side Effects**: Familienkarte heisst "Partner/in" statt "Ehepartner/in" (umfasst jetzt alle Partnerrollen). Bestehende Daten werden nicht veraendert.
+- **Tests Performed**: `WeitereBeziehungsartenTest` 9 Faelle (alle rot ohne den Fix); volle Suite 3472, 3467 gruen, 5 uebersprungen (OCR, lokal kein tesseract); PHPStan 0 Fehler, Pint sauber. Nicht im Browser angesehen.
+- **Result**: gebaut.
+
+## 08.10.2026 - Gemeinsam genutzte Kontaktdaten + Hausnummer einmal (PR-4, KI-069, KI-095)
+
+- **Task**: PR-4 des freigegebenen Dubletten-Plans.
+- **Files Changed**: neu `App\Support\Anschrift`, `App\Models\GeteilterKontaktwert`, Migration `2026_10_08_090000_geteilte_kontaktdaten`, Befehl `kunden:anschriften-pruefen` (`PruefeKundenAnschriften`); `Customer::fullAddress/householdKey`; `DuplicateDetectionService` (Blocking/Signale ohne markierte Werte, `gemeinsameWerte()`, `SIGNAL_ART`); `Admin\DuplicateController::geteiltMarkieren/geteiltAufheben`; `routes/web.php`; `admin/customer_duplicates.blade.php`; Tests `GeteilteKontaktdatenTest`, `tests/Unit/AnschriftTest.php`; `CLAUDE.md`, Wissensbasis.
+- **Components Affected**: Dubletten-Pruefung, Anzeige der Anschrift ueberall, Haushalts-Schluessel.
+- **Database Changes**: neue Tabelle `geteilte_kontaktdaten` (reversibel). Kein bestehender Datensatz wird geaendert.
+- **API Changes**: `POST admin/customers/duplicates/geteilt` (customer_a, customer_b, art, notiz), `DELETE admin/customers/duplicates/geteilt/{id}` - beide nur admin/manager.
+- **Potential Side Effects**: Anschriften mit doppelter Hausnummer erscheinen ueberall korrekt; "Straße"/"Str." gilt jetzt als dieselbe Anschrift, dadurch koennen in der Dubletten-Liste wenige NEUE Adress-Treffer auftauchen. Wird der APP_KEY gewechselt, greifen die Markierungen nicht mehr (Paare erscheinen wieder, nichts geht verloren).
+- **Tests Performed**: `GeteilteKontaktdatenTest` 12 Faelle (9 rot ohne den Fix), `AnschriftTest` 6 Faelle; volle Suite, PHPStan, Pint (Ergebnis im PR).
+- **Result**: KI-069 und KI-095 FIXED.
+
 ## 07.10.2026 - Merge-Vorschau: abweichende Angaben waehlen (PR-3c, KI-094)
 
 - **Task**: PR-3c des freigegebenen Dubletten-Plans (Schritt 3, letzter Teil).

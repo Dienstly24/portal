@@ -826,7 +826,7 @@ class Contract extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
 
-        // KI-095 (07.10.2026): KEIN Vertrag an der Akte eines abhaengigen
+        // KI-096 (07.10.2026): KEIN Vertrag an der Akte eines abhaengigen
         // Kindes (juenger als das Selbststaendigkeitsalter oder ohne eigene
         // Kundennummer) - der Vertrag gehoert an die Akte des Elternteils.
         // Zentral am Modell, damit JEDER Anlageweg greift (Formular,

@@ -45,7 +45,7 @@ class CustomerFamilyRelationTest extends TestCase
     }
 
     /**
-     * Vertrag an einer Kinderakte - seit KI-095 nicht mehr neu anlegbar, nur
+     * Vertrag an einer Kinderakte - seit KI-096 nicht mehr neu anlegbar, nur
      * noch ALTBESTAND (am Modell-Hook vorbei). Genau darum geht es in diesen
      * Faellen: vorhandene Vertraege bleiben unangetastet.
      */
@@ -95,7 +95,7 @@ class CustomerFamilyRelationTest extends TestCase
             ])->assertRedirect();
 
         $this->assertSame($vorher, Customer::count(), 'Die Verknuepfung darf nie einen Kunden anlegen');
-        // Kind unter 16: Akte ohne eigene Kundennummer (KI-095).
+        // Kind unter 16: Akte ohne eigene Kundennummer (KI-096).
         $this->assertDatabaseHas('customers', ['id' => $kind->id, 'customer_number' => null]);
     }
 
@@ -134,7 +134,7 @@ class CustomerFamilyRelationTest extends TestCase
         ]);
     }
 
-    /** Fall 5: Kind unter 16 (seit KI-095, vorher 15) gilt als abhaengiges Familienmitglied - mit eigener Akte. */
+    /** Fall 5: Kind unter 16 (seit KI-096, vorher 15) gilt als abhaengiges Familienmitglied - mit eigener Akte. */
     public function test_kind_unter_15_ist_abhaengiges_familienmitglied(): void
     {
         $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
@@ -213,7 +213,7 @@ class CustomerFamilyRelationTest extends TestCase
         $this->assertSame('tochter', $relation->relationship_type, 'Die Familienrolle bleibt Tochter');
         $this->assertNotNull($relation->independent_since);
 
-        // Die Kundennummer vergibt das TEAM (Aufgabe), nie der Tageslauf (KI-095).
+        // Die Kundennummer vergibt das TEAM (Aufgabe), nie der Tageslauf (KI-096).
         $this->assertDatabaseHas('customers', ['id' => $kind->id, 'customer_number' => null]);
         $this->assertDatabaseHas('tasks', ['customer_id' => $kind->id, 'type' => 'reminder']);
         $this->assertDatabaseHas('contracts', ['id' => $vertrag->id, 'status' => 'active']);
@@ -283,7 +283,7 @@ class CustomerFamilyRelationTest extends TestCase
     public function test_suche_findet_bestehende_kunden(): void
     {
         $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        // 17 Jahre: traegt eine eigene Nummer (unter 16 gaebe es keine, KI-095).
+        // 17 Jahre: traegt eine eigene Nummer (unter 16 gaebe es keine, KI-096).
         $kind = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(17)->format('Y').'-03-12', 'female');
 
         $admin = $this->admin();

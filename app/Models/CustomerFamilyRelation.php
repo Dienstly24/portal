@@ -44,24 +44,47 @@ class CustomerFamilyRelation extends Model
      */
     public const ROLES = [
         'ehepartner' => 'Ehepartner/in',
+        'lebenspartner' => 'Eingetragene/r Lebenspartner/in',
+        'partner' => 'Lebensgefährte/in',
         'vater' => 'Vater',
         'mutter' => 'Mutter',
         'elternteil' => 'Elternteil',
         'sohn' => 'Sohn',
         'tochter' => 'Tochter',
         'kind' => 'Kind',
+        'grossvater' => 'Großvater',
+        'grossmutter' => 'Großmutter',
+        'grosselternteil' => 'Großelternteil',
+        'enkel' => 'Enkel',
+        'enkelin' => 'Enkelin',
+        'enkelkind' => 'Enkelkind',
         'geschwister' => 'Geschwister',
         'sonstiges' => 'Sonstiges Familienmitglied',
     ];
 
     /** Rollen, die im Formular direkt waehlbar sind (Betreiber-Vorgabe). */
-    public const SELECTABLE_ROLES = ['ehepartner', 'vater', 'mutter', 'sohn', 'tochter', 'kind', 'geschwister', 'sonstiges'];
+    public const SELECTABLE_ROLES = [
+        'ehepartner', 'lebenspartner', 'partner', 'vater', 'mutter', 'sohn', 'tochter', 'kind',
+        'grossvater', 'grossmutter', 'enkel', 'enkelin', 'enkelkind', 'geschwister', 'sonstiges',
+    ];
 
     /** Rollen, die ein KIND der Bezugsperson beschreiben (Abhaengigkeit moeglich). */
     public const CHILD_ROLES = ['sohn', 'tochter', 'kind'];
 
     /** Rollen, die einen ELTERNTEIL der Bezugsperson beschreiben. */
     public const PARENT_ROLES = ['vater', 'mutter', 'elternteil'];
+
+    /**
+     * Rollen fuer ein ENKELKIND bzw. einen GROSSELTERNTEIL der Bezugsperson.
+     * Bewusst NICHT in CHILD_ROLES: ein Enkel ist nie "abhaengig" von den
+     * Grosseltern - die Abhaengigkeit (bis 15) haengt an den Eltern.
+     */
+    public const GRANDCHILD_ROLES = ['enkel', 'enkelin', 'enkelkind'];
+
+    public const GRANDPARENT_ROLES = ['grossvater', 'grossmutter', 'grosselternteil'];
+
+    /** Partnerrollen (Ehe, eingetragene Lebenspartnerschaft, Lebensgefaehrten). */
+    public const PARTNER_ROLES = ['ehepartner', 'lebenspartner', 'partner'];
 
     public static function roleLabel(?string $role): string
     {
@@ -71,8 +94,11 @@ class CustomerFamilyRelation extends Model
     public static function roleEmoji(?string $role): string
     {
         return match ($role) {
-            'ehepartner' => '💍',
+            'ehepartner', 'lebenspartner' => '💍',
+            'partner' => '❤',
             'vater', 'mutter', 'elternteil' => '🧑‍🦱',
+            'grossvater', 'grossmutter', 'grosselternteil' => '👵',
+            'enkel', 'enkelin', 'enkelkind' => '🧒',
             'sohn' => '👦',
             'tochter' => '👧',
             'kind' => '🧒',
@@ -111,9 +137,29 @@ class CustomerFamilyRelation extends Model
             };
         }
 
+        if (in_array($role, self::GRANDCHILD_ROLES, true)) {
+            // B ist Enkel von A -> A ist Grosselternteil von B.
+            return match ($gender) {
+                'male' => 'grossvater',
+                'female' => 'grossmutter',
+                default => 'grosselternteil',
+            };
+        }
+
+        if (in_array($role, self::GRANDPARENT_ROLES, true)) {
+            // B ist Grosselternteil von A -> A ist Enkel von B.
+            return match ($gender) {
+                'male' => 'enkel',
+                'female' => 'enkelin',
+                default => 'enkelkind',
+            };
+        }
+
         // Symmetrische Rollen.
         return match ($role) {
             'ehepartner' => 'ehepartner',
+            'lebenspartner' => 'lebenspartner',
+            'partner' => 'partner',
             'geschwister' => 'geschwister',
             default => 'sonstiges',
         };

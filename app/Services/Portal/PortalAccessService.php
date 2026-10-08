@@ -54,7 +54,7 @@ class PortalAccessService
      */
     public function sendInvitation(Customer $customer, ?int $actorId = null): string
     {
-        // KI-095: ein abhaengiges Kind hat kein eigenes Portal - erst ab dem
+        // KI-096: ein abhaengiges Kind hat kein eigenes Portal - erst ab dem
         // Selbststaendigkeitsalter und mit eigener Kundennummer.
         if (($grund = $customer->eigenstaendigkeitsSperre()) !== null) {
             throw new \RuntimeException('Kein Portal-Zugang: '.$grund);
@@ -143,7 +143,7 @@ class PortalAccessService
     public function autoInvite(Customer $customer, ?int $actorId = null): bool
     {
         if ($customer->eigenstaendigkeitsSperre() !== null) {
-            return false; // abhaengiges Kind: kein eigenes Portal (KI-095)
+            return false; // abhaengiges Kind: kein eigenes Portal (KI-096)
         }
         $user = $customer->user;
         if ($user === null || ! $user->hasRealEmail()) {

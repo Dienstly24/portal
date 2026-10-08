@@ -23,7 +23,12 @@ use Illuminate\Support\Facades\DB;
  * Schreiber.
  *
  * Abbildung Art -> Rolle (nie geraten):
- *  - ehepartner         -> ehepartner / ehepartner
+ *  - ehepartner          -> ehepartner / ehepartner
+ *  - lebenspartnerschaft -> lebenspartner / lebenspartner
+ *  - lebensgefaehrten    -> partner / partner
+ *  - grosseltern_enkel   -> Enkel: enkel/enkelin nach dem Geschlecht des
+ *                           ENKELS, sonst "enkelkind"; Grosselternteil:
+ *                           grossvater/grossmutter, sonst "grosselternteil".
  *  - geschwister        -> geschwister / geschwister
  *  - sonstige_verwandte -> sonstiges / sonstiges
  *  - elternteil_kind    -> Kind: sohn/tochter nach dem Geschlecht des KINDES,
@@ -78,7 +83,7 @@ class CustomerRelationshipService
                 $rel = $reuse ?? new CustomerRelationship(['customer_a_id' => $x, 'customer_b_id' => $y]);
             }
             $rel->type = $type;
-            $rel->parent_customer_id = $type === 'elternteil_kind' ? $parentId : null;
+            $rel->parent_customer_id = CustomerRelationship::isDirected($type) ? $parentId : null;
             $rel->note = $this->clean($note);
             if (! $rel->exists) {
                 $rel->created_by = $by;
@@ -253,9 +258,23 @@ class CustomerRelationshipService
         return match (true) {
             in_array($role, CustomerFamilyRelation::CHILD_ROLES, true) => ['type' => 'elternteil_kind', 'parent' => $customerId],
             in_array($role, CustomerFamilyRelation::PARENT_ROLES, true) => ['type' => 'elternteil_kind', 'parent' => $relatedId],
+            in_array($role, CustomerFamilyRelation::GRANDCHILD_ROLES, true) => ['type' => 'grosseltern_enkel', 'parent' => $customerId],
+            in_array($role, CustomerFamilyRelation::GRANDPARENT_ROLES, true) => ['type' => 'grosseltern_enkel', 'parent' => $relatedId],
             $role === 'ehepartner' => ['type' => 'ehepartner', 'parent' => null],
+            $role === 'lebenspartner' => ['type' => 'lebenspartnerschaft', 'parent' => null],
+            $role === 'partner' => ['type' => 'lebensgefaehrten', 'parent' => null],
             $role === 'geschwister' => ['type' => 'geschwister', 'parent' => null],
             default => ['type' => 'sonstige_verwandte', 'parent' => null],
+        };
+    }
+
+    /** Rolle des ENKELS nach seinem Geschlecht; unbekannt/divers -> "enkelkind". */
+    public static function grandchildRole(Customer $enkel): string
+    {
+        return match ($enkel->gender) {
+            'male' => 'enkel',
+            'female' => 'enkelin',
+            default => 'enkelkind',
         };
     }
 
@@ -279,8 +298,10 @@ class CustomerRelationshipService
         if (! in_array($type, CustomerRelationship::RELATION_TYPES, true)) {
             throw new \InvalidArgumentException('Unbekannte Beziehungsart: '.$type);
         }
-        if ($type === 'elternteil_kind' && ! in_array((string) $parentId, [(string) $a->id, (string) $b->id], true)) {
-            throw new \InvalidArgumentException('Bitte wählen Sie, wer der Elternteil ist.');
+        if (CustomerRelationship::isDirected($type) && ! in_array((string) $parentId, [(string) $a->id, (string) $b->id], true)) {
+            throw new \InvalidArgumentException($type === 'grosseltern_enkel'
+                ? 'Bitte wählen Sie, wer der Großelternteil ist.'
+                : 'Bitte wählen Sie, wer der Elternteil ist.');
         }
         if ($type === 'sonstiges' && $this->clean($note) === null) {
             throw new \InvalidArgumentException('Bei „Sonstiges" ist eine Beschreibung erforderlich.');
@@ -296,6 +317,12 @@ class CustomerRelationshipService
 
         match ($rel->type) {
             'ehepartner' => $this->family->link($a, $b, 'ehepartner', $by, $note, false),
+            'lebenspartnerschaft' => $this->family->link($a, $b, 'lebenspartner', $by, $note, false),
+            'lebensgefaehrten' => $this->family->link($a, $b, 'partner', $by, $note, false),
+            'grosseltern_enkel' => (function () use ($rel, $a, $b, $by, $note) {
+                [$gross, $enkel] = (string) $rel->parent_customer_id === (string) $a->id ? [$a, $b] : [$b, $a];
+                $this->family->link($gross, $enkel, self::grandchildRole($enkel), $by, $note, false);
+            })(),
             'geschwister' => $this->family->link($a, $b, 'geschwister', $by, $note, false),
             'sonstige_verwandte' => $this->family->link($a, $b, 'sonstiges', $by, $note, false),
             'elternteil_kind' => (function () use ($rel, $a, $b, $by, $note) {
@@ -322,7 +349,8 @@ class CustomerRelationshipService
     private function whereConfirmed(Builder $query, bool $confirmed): Builder
     {
         $kind = "'".implode("','", array_merge(CustomerFamilyRelation::CHILD_ROLES, CustomerFamilyRelation::PARENT_ROLES))."'";
-        $sub = function ($q) use ($kind) {
+        $enkel = "'".implode("','", array_merge(CustomerFamilyRelation::GRANDCHILD_ROLES, CustomerFamilyRelation::GRANDPARENT_ROLES))."'";
+        $sub = function ($q) use ($kind, $enkel) {
             $q->select(DB::raw(1))->from('customer_family_relations as cfr')
                 ->whereColumn('cfr.customer_id', 'customer_relationships.customer_a_id')
                 ->whereColumn('cfr.related_customer_id', 'customer_relationships.customer_b_id')
@@ -330,7 +358,10 @@ class CustomerRelationshipService
                     (customer_relationships.type = 'ehepartner' AND cfr.relationship_type = 'ehepartner')
                     OR (customer_relationships.type = 'geschwister' AND cfr.relationship_type = 'geschwister')
                     OR (customer_relationships.type = 'sonstige_verwandte' AND cfr.relationship_type = 'sonstiges')
+                    OR (customer_relationships.type = 'lebenspartnerschaft' AND cfr.relationship_type = 'lebenspartner')
+                    OR (customer_relationships.type = 'lebensgefaehrten' AND cfr.relationship_type = 'partner')
                     OR (customer_relationships.type = 'elternteil_kind' AND cfr.relationship_type IN ($kind))
+                    OR (customer_relationships.type = 'grosseltern_enkel' AND cfr.relationship_type IN ($enkel))
                 )");
         };
 

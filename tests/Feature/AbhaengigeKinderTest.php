@@ -25,7 +25,7 @@ use Tests\TestCase;
 
 /**
  * Kinder unter dem Selbststaendigkeitsalter (Betreiber-Auftrag 07.10.2026,
- * KI-095). Gemeldet: die Tochter "Tala" (Kind) trug eine eigene
+ * KI-096). Gemeldet: die Tochter "Tala" (Kind) trug eine eigene
  * Kundennummer. Regel: unter 16 keine Kundennummer, kein Vertrag, kein
  * Portal - das Kind steht als abhaengiges Familienmitglied unter dem Vater
  * (sonst der Mutter); mit 15 erinnert das System das Team; ab 16 vergibt

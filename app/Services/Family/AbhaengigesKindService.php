@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Kinder unter dem Selbststaendigkeitsalter (Betreiber-Auftrag 07.10.2026,
- * KI-095) - die EINE Stelle fuer alles, was ueber das blosse Verknuepfen
+ * KI-096) - die EINE Stelle fuer alles, was ueber das blosse Verknuepfen
  * hinausgeht:
  *
  *  - BEFUND: welche Kinder tragen eine eigene Kundennummer, und was haengt
@@ -234,7 +234,7 @@ class AbhaengigesKindService
                     'female' => 'tochter',
                     default => 'kind',
                 };
-            $relation = app(FamilyRelationService::class)->link($elternteil, $kind, $rolle, $byUserId, 'Abhängiges Familienmitglied (KI-095)');
+            $relation = app(FamilyRelationService::class)->link($elternteil, $kind, $rolle, $byUserId, 'Abhängiges Familienmitglied (KI-096)');
             if (! $relation->is_dependent) {
                 $relation->forceFill(['is_dependent' => true, 'independent_since' => null])->save();
             }

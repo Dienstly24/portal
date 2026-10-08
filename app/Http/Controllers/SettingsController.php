@@ -59,7 +59,7 @@ class SettingsController extends Controller
             // KFZ (01.10.2026): Bezugsfahrzeug bei Zweit-/Drittwagen nur auf
             // Wunsch verpflichtend - Voreinstellung AUS (nur Warnung).
             SfReferenceValidator::SETTING_REQUIRED => SystemSetting::get(SfReferenceValidator::SETTING_REQUIRED, '0'),
-            // Kinder (KI-095): Altersgrenzen als Einstellung, nicht im Code.
+            // Kinder (KI-096): Altersgrenzen als Einstellung, nicht im Code.
             FamilienAlter::SETTING_ERINNERUNG => FamilienAlter::erinnerung(),
             FamilienAlter::SETTING_SELBSTSTAENDIG => FamilienAlter::selbststaendig(),
         ];
