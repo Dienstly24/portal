@@ -13,9 +13,10 @@ use Illuminate\Support\Str;
  * Dubletten-Pruefung aus.
  *
  * Das Paar wird immer in fester Reihenfolge gespeichert (a < b); eine
- * symmetrische Art existiert dadurch genau einmal. Die einzige GERICHTETE Art
- * ist `elternteil_kind`: die Richtung steht ausdruecklich in
- * `parent_customer_id` (gleich a ODER b). Je Paar und Art hoechstens eine
+ * symmetrische Art existiert dadurch genau einmal. GERICHTET sind
+ * `elternteil_kind` und `grosseltern_enkel` (DIRECTED_TYPES): die Richtung
+ * steht ausdruecklich in `parent_customer_id` (gleich a ODER b) und nennt
+ * die AELTERE Generation - Elternteil bzw. Grosselternteil. Je Paar und Art hoechstens eine
  * Zeile (UNIQUE a, b, type) - ein Paar kann z. B. Geschwister UND gleicher
  * Haushalt sein.
  *
@@ -45,7 +46,10 @@ class CustomerRelationship extends Model
     /** Klartext-Labels aller Arten (Reihenfolge = Reihenfolge in der Auswahl). */
     public const LABELS = [
         'ehepartner' => 'Ehepaar',
+        'lebenspartnerschaft' => 'Eingetragene Lebenspartnerschaft',
+        'lebensgefaehrten' => 'Lebensgefährten (nicht verheiratet)',
         'elternteil_kind' => 'Elternteil – Kind',
+        'grosseltern_enkel' => 'Großelternteil – Enkel',
         'geschwister' => 'Geschwister',
         'sonstige_verwandte' => 'Sonstige Verwandte',
         'gleicher_haushalt' => 'Gleicher Haushalt',
@@ -56,26 +60,37 @@ class CustomerRelationship extends Model
 
     /** Erlaubte Arten (Validierung). */
     public const TYPES = [
-        'not_duplicate', 'ehepartner', 'elternteil_kind', 'geschwister',
+        'not_duplicate', 'ehepartner', 'lebenspartnerschaft', 'lebensgefaehrten',
+        'elternteil_kind', 'grosseltern_enkel', 'geschwister',
         'sonstige_verwandte', 'gleicher_haushalt', 'nachbar', 'sonstiges',
     ];
 
     /** Arten, die im Dialog "Beziehung festlegen" waehlbar sind. */
     public const RELATION_TYPES = [
-        'ehepartner', 'elternteil_kind', 'geschwister', 'sonstige_verwandte',
+        'ehepartner', 'lebenspartnerschaft', 'lebensgefaehrten',
+        'elternteil_kind', 'grosseltern_enkel', 'geschwister', 'sonstige_verwandte',
         'gleicher_haushalt', 'nachbar', 'sonstiges',
     ];
+
+    /**
+     * Gerichtete Arten: `parent_customer_id` nennt die AELTERE Generation
+     * (Elternteil bzw. Grosselternteil). Alle anderen sind symmetrisch.
+     */
+    public const DIRECTED_TYPES = ['elternteil_kind', 'grosseltern_enkel'];
 
     /**
      * Arten mit einer Familienrolle (customer_family_relations). Je Paar gibt
      * es hoechstens EINE davon - die Familientabelle fuehrt eine Rolle je Paar.
      */
-    public const FAMILY_TYPES = ['ehepartner', 'elternteil_kind', 'geschwister', 'sonstige_verwandte'];
+    public const FAMILY_TYPES = [
+        'ehepartner', 'lebenspartnerschaft', 'lebensgefaehrten',
+        'elternteil_kind', 'grosseltern_enkel', 'geschwister', 'sonstige_verwandte',
+    ];
 
-    /** Sammel-Aktion: ohne Elternteil-Kind (die Richtung ist je Paar zu waehlen). */
+    /** Sammel-Aktion: ohne gerichtete Arten (die Richtung ist je Paar zu waehlen). */
     public const BULK_TYPES = [
-        'not_duplicate', 'ehepartner', 'geschwister', 'sonstige_verwandte',
-        'gleicher_haushalt', 'nachbar', 'sonstiges',
+        'not_duplicate', 'ehepartner', 'lebenspartnerschaft', 'lebensgefaehrten',
+        'geschwister', 'sonstige_verwandte', 'gleicher_haushalt', 'nachbar', 'sonstiges',
     ];
 
     /** Mindest-Altersabstand fuer den Elternteil-Vorschlag (Jahre). */
@@ -89,8 +104,10 @@ class CustomerRelationship extends Model
     public static function typeEmoji(?string $type): string
     {
         return match ($type) {
-            'ehepartner' => '💍',
+            'ehepartner', 'lebenspartnerschaft' => '💍',
+            'lebensgefaehrten' => '❤',
             'elternteil_kind' => '👨‍👧',
+            'grosseltern_enkel' => '👵',
             'geschwister' => '🧑‍🤝‍🧑',
             'sonstige_verwandte' => '👪',
             'gleicher_haushalt' => '🏠',
@@ -103,6 +120,11 @@ class CustomerRelationship extends Model
     public static function isFamilyType(?string $type): bool
     {
         return in_array($type, self::FAMILY_TYPES, true);
+    }
+
+    public static function isDirected(?string $type): bool
+    {
+        return in_array($type, self::DIRECTED_TYPES, true);
     }
 
     protected static function boot()
@@ -122,12 +144,12 @@ class CustomerRelationship extends Model
                 throw new \InvalidArgumentException('Unbekannte Beziehungsart: '.$m->type);
             }
             $parent = $m->parent_customer_id === null ? null : (string) $m->parent_customer_id;
-            if ($m->type === 'elternteil_kind') {
+            if (self::isDirected($m->type)) {
                 if ($parent !== $a && $parent !== $b) {
-                    throw new \InvalidArgumentException('Elternteil – Kind: der Elternteil muss einer der beiden Kunden sein.');
+                    throw new \InvalidArgumentException(self::typeLabel($m->type).': die ältere Generation muss einer der beiden Kunden sein.');
                 }
             } elseif ($parent !== null) {
-                throw new \InvalidArgumentException('Ein Elternteil ist nur bei „Elternteil – Kind" erlaubt.');
+                throw new \InvalidArgumentException('Eine Richtung ist nur bei „Elternteil – Kind" und „Großelternteil – Enkel" erlaubt.');
             }
         });
     }
@@ -153,33 +175,39 @@ class CustomerRelationship extends Model
     }
 
     /**
-     * Was die ANDERE Seite aus Sicht von $customerId ist - bei Elternteil-Kind
-     * "Elternteil" bzw. "Kind", sonst das Label der Art.
+     * Was die ANDERE Seite aus Sicht von $customerId ist - bei gerichteten
+     * Arten "Elternteil"/"Kind" bzw. "Großelternteil"/"Enkel", sonst das
+     * Label der Art.
      */
     public function labelFor(string $customerId): string
     {
-        if ($this->type !== 'elternteil_kind') {
+        if (! self::isDirected($this->type)) {
             return self::typeLabel($this->type);
         }
+        $ichBinAelter = (string) $this->parent_customer_id === $customerId;
 
-        return (string) $this->parent_customer_id === $customerId ? 'Kind' : 'Elternteil';
+        return $this->type === 'grosseltern_enkel'
+            ? ($ichBinAelter ? 'Enkel' : 'Großelternteil')
+            : ($ichBinAelter ? 'Kind' : 'Elternteil');
     }
 
     /** Text der Richtung fuer Listen mit beiden Seiten ("X ist Elternteil von Y"). */
     public function directionText(): ?string
     {
-        if ($this->type !== 'elternteil_kind') {
+        if (! self::isDirected($this->type)) {
             return null;
         }
         $parent = (string) $this->parent_customer_id === (string) $this->customer_a_id ? $this->customerA : $this->customerB;
         $child = (string) $this->parent_customer_id === (string) $this->customer_a_id ? $this->customerB : $this->customerA;
+        $rolle = $this->type === 'grosseltern_enkel' ? 'Großelternteil' : 'Elternteil';
 
-        return ($parent?->user?->name ?: 'Kunde').' ist Elternteil von '.($child?->user?->name ?: 'Kunde');
+        return ($parent?->user?->name ?: 'Kunde').' ist '.$rolle.' von '.($child?->user?->name ?: 'Kunde');
     }
 
     /**
-     * Vorschlag fuer den Elternteil: der AELTERE, wenn beide Geburtsdaten
-     * bekannt sind und mindestens PARENT_MIN_AGE_GAP Jahre dazwischen liegen.
+     * Vorschlag fuer die aeltere Generation (Elternteil bzw. Grosselternteil):
+     * der AELTERE, wenn beide Geburtsdaten bekannt sind und mindestens
+     * PARENT_MIN_AGE_GAP Jahre dazwischen liegen.
      * Sonst null - ein Alter wird nie geraten.
      */
     public static function suggestParent(Customer $a, Customer $b): ?string

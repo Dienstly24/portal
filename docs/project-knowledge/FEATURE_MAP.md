@@ -35,12 +35,12 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Merge-Vorschau mit Feldwahl: abweichende Stammdaten je Gruppe waehlbar, Anschrift nur als Ganzes (`CustomerMergeService::abweichendeFelder`) (KI-094, PR-3c)
 - Gemeinsam genutzte Kontaktdaten: Familien-E-Mail/Festnetz/Konto/Mehrfamilienhaus als "kein Dubletten-Signal" markierbar (`geteilte_kontaktdaten`, nur HMAC) (KI-095, PR-4)
 - Hausnummer einmal, Widerspruch nie geraten; `kunden:anschriften-pruefen` (`App\Support\Anschrift`) (KI-069, PR-4)
-- Tests `DublettenFamilieTest`, `MergeSperrenTest`, `MergeArchivTest`, `MergeRueckgaengigTest`, `MergeFeldwahlTest`, `GeteilteKontaktdatenTest`, `AnschriftTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
+- Tests `DublettenFamilieTest`, `MergeSperrenTest`, `MergeArchivTest`, `MergeRueckgaengigTest`, `MergeFeldwahlTest`, `GeteilteKontaktdatenTest`, `AnschriftTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`, `WeitereBeziehungsartenTest`
 - Status **ACTIVE**
 
 ### F-003 Familie und Kundenbeziehungen (inkl. Uebergang mit 15)
 - S `Family/FamilyRelationService`; C `CustomerFamilyRelationController`; V `admin/partials/family_relations`, `admin/family_transitions`; T `customer_family_relations`, `customer_family`; Planer `familie:uebergaenge-anwenden`
-- Tests `CustomerFamilyRelationTest`, `AdminFamilyDisplayTest`
+- Tests `CustomerFamilyRelationTest`, `AdminFamilyDisplayTest`, `WeitereBeziehungsartenTest`
 - Status **ACTIVE**
 
 ### F-004 Vertraege (alle Sparten) + Status-Logik

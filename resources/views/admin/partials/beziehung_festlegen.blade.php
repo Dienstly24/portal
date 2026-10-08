@@ -7,7 +7,8 @@
       $action      Ziel-URL (POST)
       $hidden      [name => wert] zusaetzliche versteckte Felder
       $current     aktuelle Art (oder null)
-      $parent      aktueller bzw. VORGESCHLAGENER Elternteil (Kunden-ID oder null)
+      $parent      aktuelle bzw. VORGESCHLAGENE aeltere Generation (Elternteil/
+                   Grosselternteil, Kunden-ID oder null)
       $note        aktuelle Notiz (oder null)
       $label       Beschriftung des Knopfes
       $suggested   true, wenn $parent nur ein Vorschlag aus den Geburtsdaten ist
@@ -55,8 +56,8 @@
             </label>
             @endforeach
 
-            <fieldset data-beziehung-eltern @if($current !== 'elternteil_kind') hidden @endif>
-                <legend>Wer ist der Elternteil?</legend>
+            <fieldset data-beziehung-eltern @if(! \App\Models\CustomerRelationship::isDirected($current)) hidden @endif>
+                <legend>Wer ist die ältere Generation (Elternteil bzw. Großelternteil)?</legend>
                 <label class="bz-typ"><input type="radio" name="parent_customer_id" value="{{ $a->id }}" @checked((string) $parent === (string) $a->id)> {{ $nameA }}</label>
                 <label class="bz-typ"><input type="radio" name="parent_customer_id" value="{{ $b->id }}" @checked((string) $parent === (string) $b->id)> {{ $nameB }}</label>
                 @if($suggested && $parent)

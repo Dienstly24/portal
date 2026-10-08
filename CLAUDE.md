@@ -4731,8 +4731,22 @@ Merge von PR #358, Teil E/F).
   `php artisan kunden:anschriften-pruefen [--alle] [--csv=datei]`
   (STRENG LESEND, Kundennummer statt Namen). Tests:
   `GeteilteKontaktdatenTest`, `tests/Unit/AnschriftTest.php`.
-- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-5
-  Haushalt + weitere Beziehungsarten + Uebernahme des Bestands; PR-6
+- **Weitere Beziehungsarten (PR-5a, 08.10.2026)**: "Eingetragene
+  Lebenspartnerschaft" (`lebenspartnerschaft`, Rolle `lebenspartner`),
+  "Lebensgefaehrten (nicht verheiratet)" (`lebensgefaehrten`, Rolle
+  `partner`) und "Grosselternteil – Enkel" (`grosseltern_enkel`). Die
+  gerichteten Arten stehen in `CustomerRelationship::DIRECTED_TYPES`;
+  `parent_customer_id` nennt bei beiden die AELTERE Generation (die Spalte
+  heisst historisch so). Rollen nach Geschlecht, unbekannt -> neutral
+  (`enkelkind`/`grosselternteil`), wie bei Elternteil-Kind. Ein Enkel ist
+  NIE abhaengig (`GRANDCHILD_ROLES` bewusst nicht in `CHILD_ROLES`) - die
+  Abhaengigkeit bis 15 haengt an den Eltern. Familienkarte mit eigenen
+  Gruppen Enkel/Grosseltern; "Weitere" faengt jetzt alles Uebrige, damit
+  keine Rolle in keiner Gruppe steht. Der Rueckbau der Migration vom
+  02.10.2026 bricht bei JEDER Art ab, die er nicht abbilden kann.
+  Tests: `WeitereBeziehungsartenTest`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-5b
+  Haushalt + Uebernahme des Bestands; PR-6
   Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
   Person, Kinderzugang ab 16, Elternzugriff Standard AUS, endet mit 18;
   PR-8 Lebensereignisse. Altersgrenzen getrennt und einstellbar:

@@ -230,9 +230,14 @@ return new class extends Migration {
         if ($mehrfach > 0) {
             $fehler[] = $mehrfach.' Paar(e) mit mehreren Beziehungsarten';
         }
-        $neu = DB::table('customer_relationships')->whereIn('type', ['nachbar', 'sonstiges'])->count();
+        // Jede Art, die der Rueckbau nicht abbilden kann - Nachbar/Sonstiges
+        // und alle spaeter hinzugekommenen (Lebenspartnerschaft,
+        // Lebensgefaehrten, Grosselternteil - Enkel, 08.10.2026).
+        $neu = DB::table('customer_relationships')->whereNotIn('type', [
+            'not_duplicate', 'ehepartner', 'gleicher_haushalt', 'sonstige_verwandte', 'elternteil_kind', 'geschwister',
+        ])->count();
         if ($neu > 0) {
-            $fehler[] = $neu.' Beziehung(en) der Art Nachbar/Sonstiges';
+            $fehler[] = $neu.' Beziehung(en) einer Art, die es vorher nicht gab (z. B. Nachbar/Sonstiges)';
         }
         $ohneRolle = DB::table('customer_relationships')
             ->whereIn('type', ['elternteil_kind', 'geschwister'])->get()

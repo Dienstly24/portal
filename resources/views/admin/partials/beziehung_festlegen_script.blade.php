@@ -1,6 +1,7 @@
 {{-- Verhalten aller [data-beziehung-form]-Formulare (Dubletten-Pruefung,
-     Verwandte Kunden, Kundenakte): Elternteil-Auswahl nur bei
-     "Elternteil – Kind", Notiz Pflicht bei "Sonstiges". Ereignis-
+     Verwandte Kunden, Kundenakte): Richtungs-Auswahl nur bei den
+     gerichteten Arten (Elternteil – Kind, Grosselternteil – Enkel),
+     Notiz Pflicht bei "Sonstiges". Ereignis-
      Delegation am Dokument - einmal registriert, gilt fuer jedes Formular. --}}
 @pushOnce('cspScripts')
 <script @cspNonce>
@@ -11,9 +12,10 @@
         var gewaehlt = form.querySelector('[name="type"]:checked') || form.querySelector('select[name="type"]');
         var typ = gewaehlt ? gewaehlt.value : '';
         var eltern = form.querySelector('[data-beziehung-eltern]');
+        var gerichtet = @js(\App\Models\CustomerRelationship::DIRECTED_TYPES).indexOf(typ) !== -1;
         if (eltern) {
-            eltern.hidden = typ !== 'elternteil_kind';
-            eltern.querySelectorAll('input,select').forEach(function (i) { i.required = typ === 'elternteil_kind'; });
+            eltern.hidden = ! gerichtet;
+            eltern.querySelectorAll('input,select').forEach(function (i) { i.required = gerichtet; });
         }
         var notiz = form.querySelector('[data-beziehung-notiz] input');
         if (notiz) notiz.required = typ === 'sonstiges';

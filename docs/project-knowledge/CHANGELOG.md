@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 08.10.2026 - Weitere Beziehungsarten: Lebenspartnerschaft, Lebensgefaehrten, Grosselternteil - Enkel (PR-5a)
+
+- **Task**: PR-5 des freigegebenen Dubletten-/Familien-Plans, erster Teil (Beziehungsarten). Der Haushalt folgt als PR-5b.
+- **Files Changed**: `CustomerRelationship` (neue Arten, `DIRECTED_TYPES`, `isDirected()`, Richtungstexte), `CustomerFamilyRelation` (Rollen `lebenspartner`, `partner`, `grossvater/grossmutter/grosselternteil`, `enkel/enkelin/enkelkind`, `GRANDCHILD_ROLES`, `GRANDPARENT_ROLES`, `PARTNER_ROLES`, `inverseRole`), `CustomerRelationshipService` (Abbildung Art <-> Rolle, Bestaetigt-Pruefung), `FamilyRelationService::overview` (Gruppen Enkel/Grosseltern, "Weitere" = Rest), `Admin\DuplicateController` (Richtung Pflicht bei beiden gerichteten Arten), Views `beziehung_festlegen`, `beziehung_festlegen_script`, `linked_customers`, `family_relations`; Rueckbau-Pruefung der Migration `2026_10_02_090000`; Tests `WeitereBeziehungsartenTest`, `KundenbeziehungenTest`; `CLAUDE.md`, Wissensbasis.
+- **Components Affected**: "Beziehung festlegen" (Dubletten-Pruefung, Verwandte Kunden, Kundenakte), Registerkarte "Familie".
+- **Database Changes**: keine Migration (`type`/`relationship_type` sind Zeichenketten). Der `down()` der Migration vom 02.10.2026 bricht jetzt bei jeder Art ab, die er nicht abbilden kann.
+- **API Changes**: die Beziehungs-Endpunkte nehmen die drei neuen Arten an; `grosseltern_enkel` verlangt die Richtung wie `elternteil_kind`. Die Sammel-Aktion kennt keine gerichtete Art.
+- **Potential Side Effects**: Familienkarte heisst "Partner/in" statt "Ehepartner/in" (umfasst jetzt alle Partnerrollen). Bestehende Daten werden nicht veraendert.
+- **Tests Performed**: `WeitereBeziehungsartenTest` 9 Faelle (alle rot ohne den Fix); volle Suite 3472, 3467 gruen, 5 uebersprungen (OCR, lokal kein tesseract); PHPStan 0 Fehler, Pint sauber. Nicht im Browser angesehen.
+- **Result**: gebaut.
+
 ## 08.10.2026 - Gemeinsam genutzte Kontaktdaten + Hausnummer einmal (PR-4, KI-069, KI-095)
 
 - **Task**: PR-4 des freigegebenen Dubletten-Plans.

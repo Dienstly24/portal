@@ -74,7 +74,7 @@
                 @endforeach
             </select>
             <fieldset data-beziehung-eltern hidden style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:8px 0 0;">
-                <legend style="font-size:11.5px;color:var(--ink-soft);padding:0 4px;">Wer ist der Elternteil?</legend>
+                <legend style="font-size:11.5px;color:var(--ink-soft);padding:0 4px;">Wer ist die ältere Generation (Elternteil bzw. Großelternteil)?</legend>
                 <label style="display:block;font-size:13px;"><input type="radio" name="parent" value="self" @checked(old('parent') === 'self')> {{ $customer->user?->name ?? 'Dieser Kunde' }} (diese Akte)</label>
                 <label style="display:block;font-size:13px;"><input type="radio" name="parent" value="other" @checked(old('parent') === 'other')> der ausgewählte Kunde</label>
             </fieldset>
