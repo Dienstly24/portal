@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 08.10.2026 - Gemeinsam genutzte Kontaktdaten + Hausnummer einmal (PR-4, KI-069, KI-095)
+
+- **Task**: PR-4 des freigegebenen Dubletten-Plans.
+- **Files Changed**: neu `App\Support\Anschrift`, `App\Models\GeteilterKontaktwert`, Migration `2026_10_08_090000_geteilte_kontaktdaten`, Befehl `kunden:anschriften-pruefen` (`PruefeKundenAnschriften`); `Customer::fullAddress/householdKey`; `DuplicateDetectionService` (Blocking/Signale ohne markierte Werte, `gemeinsameWerte()`, `SIGNAL_ART`); `Admin\DuplicateController::geteiltMarkieren/geteiltAufheben`; `routes/web.php`; `admin/customer_duplicates.blade.php`; Tests `GeteilteKontaktdatenTest`, `tests/Unit/AnschriftTest.php`; `CLAUDE.md`, Wissensbasis.
+- **Components Affected**: Dubletten-Pruefung, Anzeige der Anschrift ueberall, Haushalts-Schluessel.
+- **Database Changes**: neue Tabelle `geteilte_kontaktdaten` (reversibel). Kein bestehender Datensatz wird geaendert.
+- **API Changes**: `POST admin/customers/duplicates/geteilt` (customer_a, customer_b, art, notiz), `DELETE admin/customers/duplicates/geteilt/{id}` - beide nur admin/manager.
+- **Potential Side Effects**: Anschriften mit doppelter Hausnummer erscheinen ueberall korrekt; "Straße"/"Str." gilt jetzt als dieselbe Anschrift, dadurch koennen in der Dubletten-Liste wenige NEUE Adress-Treffer auftauchen. Wird der APP_KEY gewechselt, greifen die Markierungen nicht mehr (Paare erscheinen wieder, nichts geht verloren).
+- **Tests Performed**: `GeteilteKontaktdatenTest` 12 Faelle (9 rot ohne den Fix), `AnschriftTest` 6 Faelle; volle Suite, PHPStan, Pint (Ergebnis im PR).
+- **Result**: KI-069 und KI-095 FIXED.
+
 ## 07.10.2026 - Merge-Vorschau: abweichende Angaben waehlen (PR-3c, KI-094)
 
 - **Task**: PR-3c des freigegebenen Dubletten-Plans (Schritt 3, letzter Teil).

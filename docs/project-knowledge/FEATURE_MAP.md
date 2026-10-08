@@ -33,7 +33,9 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Zusammenfuehren ARCHIVIERT das Duplikat (`merged_into_id`/`archived_at`, Alias der alten Kundennummer, Weiterleitung alter Links) und schreibt ein Protokoll `customer_merges` (KI-064, PR-3a)
 - Rueckgaengig innerhalb von 30 Tagen (`CustomerMergeUndoService`, Route `admin.customer.merge.undo`, nur admin) und Abschluss nach Fristablauf (`kunden:zusammenfuehrungen-abschliessen`, 05:45) (KI-064, PR-3b)
 - Merge-Vorschau mit Feldwahl: abweichende Stammdaten je Gruppe waehlbar, Anschrift nur als Ganzes (`CustomerMergeService::abweichendeFelder`) (KI-094, PR-3c)
-- Tests `DublettenFamilieTest`, `MergeSperrenTest`, `MergeArchivTest`, `MergeRueckgaengigTest`, `MergeFeldwahlTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
+- Gemeinsam genutzte Kontaktdaten: Familien-E-Mail/Festnetz/Konto/Mehrfamilienhaus als "kein Dubletten-Signal" markierbar (`geteilte_kontaktdaten`, nur HMAC) (KI-095, PR-4)
+- Hausnummer einmal, Widerspruch nie geraten; `kunden:anschriften-pruefen` (`App\Support\Anschrift`) (KI-069, PR-4)
+- Tests `DublettenFamilieTest`, `MergeSperrenTest`, `MergeArchivTest`, `MergeRueckgaengigTest`, `MergeFeldwahlTest`, `GeteilteKontaktdatenTest`, `AnschriftTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
 - Status **ACTIVE**
 
 ### F-003 Familie und Kundenbeziehungen (inkl. Uebergang mit 15)

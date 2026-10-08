@@ -188,6 +188,31 @@ $chipDefs = [
             <span style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--ink);">✓ {{ $signal }}</span>
             @endforeach
         </div>
+        @php
+            $teilbar = array_values(array_unique(array_filter(array_map(
+                fn ($sig) => \App\Services\Matching\DuplicateDetectionService::SIGNAL_ART[$sig] ?? null, $pair['signals']))));
+        @endphp
+        @if($canBulk && $teilbar !== [])
+        {{-- Gemeinsam genutzte Angabe (PR-4): Familien-E-Mail, Festnetz,
+             Konto der Eltern. Gespeichert wird nur ein Hash, gesendet werden
+             nur Paar und Art - den Wert ermittelt der Server aus den Akten. --}}
+        <details class="dup-geteilt" style="margin-top:10px;">
+            <summary style="cursor:pointer;font-size:12.5px;color:var(--ink-soft);">Gemeinsam genutzte Angabe markieren …</summary>
+            <form method="POST" action="{{ route('admin.customers.duplicates.geteilt') }}" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                @csrf
+                <input type="hidden" name="customer_a" value="{{ $primary->id }}">
+                <input type="hidden" name="customer_b" value="{{ $duplicate->id }}">
+                <select name="art" aria-label="Art der gemeinsam genutzten Angabe" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;">
+                    @foreach($teilbar as $art)
+                    <option value="{{ $art }}">{{ \App\Models\GeteilterKontaktwert::ARTEN[$art] }}</option>
+                    @endforeach
+                </select>
+                <input type="text" name="notiz" maxlength="255" placeholder="Notiz, z. B. Familien-E-Mail" aria-label="Notiz" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;">
+                <button type="submit" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;">Als gemeinsam genutzt markieren</button>
+            </form>
+            <div style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">Gilt für alle Kunden: dieser Wert ist danach kein Hinweis mehr auf eine Dublette. Keine Akte wird verändert.</div>
+        </details>
+        @endif
     </div>
     @endif
 </div>
@@ -280,6 +305,34 @@ function submitBulkDismiss(type) {
 }
 @endif
 </script>
+@endif
+
+@if(in_array(auth()->user()->role, ['admin','manager']) && $geteilteWerte->isNotEmpty())
+<div class="card" id="geteilte-kontaktdaten" style="margin-top:24px;">
+    <h3 style="margin:0 0 6px;font-size:15px;">Gemeinsam genutzte Angaben ({{ $geteilteWerte->count() }})</h3>
+    <p style="margin:0 0 12px;font-size:12.5px;color:var(--ink-soft);">Diese Werte zählen nicht als Hinweis auf eine Dublette. Gespeichert ist nur eine verschlüsselte Prüfsumme – der Wert selbst steht hier gekürzt.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="text-align:left;color:var(--ink-soft);font-size:11.5px;text-transform:uppercase;">
+            <th style="padding:6px 8px;">Art</th><th style="padding:6px 8px;">Wert</th><th style="padding:6px 8px;">Notiz</th><th style="padding:6px 8px;">Markiert</th><th></th>
+        </tr></thead>
+        <tbody>
+        @foreach($geteilteWerte as $g)
+        <tr style="border-top:1px solid var(--line);">
+            <td style="padding:6px 8px;">{{ \App\Models\GeteilterKontaktwert::ARTEN[$g->art] ?? $g->art }}</td>
+            <td style="padding:6px 8px;">{{ $g->anzeige }}</td>
+            <td style="padding:6px 8px;">{{ $g->notiz }}</td>
+            <td style="padding:6px 8px;">{{ $g->ersteller?->name ?? '–' }}, {{ $g->created_at?->lokal()->format('d.m.Y') }}</td>
+            <td style="padding:6px 8px;text-align:right;">
+                <form method="POST" action="{{ route('admin.customers.duplicates.geteilt.aufheben', $g->id) }}" style="margin:0;" data-confirm="Markierung aufheben? Der Wert zählt danach wieder als Hinweis auf eine Dublette.">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;">Aufheben</button>
+                </form>
+            </td>
+        </tr>
+        @endforeach
+        </tbody>
+    </table>
+</div>
 @endif
 @endsection
 

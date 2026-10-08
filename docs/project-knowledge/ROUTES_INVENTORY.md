@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 07.10.2026 aus `php artisan route:list --json` (532 Routen).
+Generiert am 08.10.2026 aus `php artisan route:list --json` (534 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -70,6 +70,8 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | GET | `admin/customers/duplicates` | admin.customers.duplicates | auth role:staff |
 | POST | `admin/customers/duplicates/dismiss` | admin.customers.duplicates.dismiss | auth role:staff |
 | POST | `admin/customers/duplicates/dismiss-bulk` | admin.customers.duplicates.dismiss_bulk | auth role:staff |
+| POST | `admin/customers/duplicates/geteilt` | admin.customers.duplicates.geteilt | auth role:staff role:admin,manager |
+| DELETE | `admin/customers/duplicates/geteilt/{id}` | admin.customers.duplicates.geteilt.aufheben | auth role:staff role:admin,manager |
 | POST | `admin/customers/duplicates/merge` | admin.customers.duplicates.merge | auth role:staff role:admin,manager |
 | POST | `admin/customers/duplicates/merge-all` | admin.customers.duplicates.merge_all | auth role:staff role:admin,manager |
 | DELETE | `admin/customers/family/{id}` | admin.customer.family.delete | auth role:staff |
