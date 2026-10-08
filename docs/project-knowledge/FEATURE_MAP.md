@@ -40,7 +40,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 
 ### F-003 Familie und Kundenbeziehungen (inkl. Uebergang mit 15)
 - S `Family/FamilyRelationService`; C `CustomerFamilyRelationController`; V `admin/partials/family_relations`, `admin/family_transitions`; T `customer_family_relations`, `customer_family`; Planer `familie:uebergaenge-anwenden`
-- Tests `CustomerFamilyRelationTest`, `AdminFamilyDisplayTest`, `WeitereBeziehungsartenTest`
+- Haushalt (PR-5b): S `Haushalt/HaushaltService`; C `Admin/HaushaltController`; V `admin/partials/haushalt`; T `haushalte`, `haushalt_mitglieder`; Befehl `haushalte:aus-beziehungen-bilden`
+- Tests `CustomerFamilyRelationTest`, `AdminFamilyDisplayTest`, `WeitereBeziehungsartenTest`, `HaushaltTest`
 - Status **ACTIVE**
 
 ### F-004 Vertraege (alle Sparten) + Status-Logik

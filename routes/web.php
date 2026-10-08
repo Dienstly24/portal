@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CompanySignatureAssetController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
+use App\Http\Controllers\Admin\HaushaltController;
 use App\Http\Controllers\Admin\InternalSignatureController;
 use App\Http\Controllers\Admin\KiTrainingController;
 use App\Http\Controllers\Admin\PostfachController;
@@ -386,6 +387,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::delete('/customers/relationships/{id}', [AdminDuplicateController::class, 'relationshipDelete'])->name('customers.relationships.delete');
     Route::post('/customers/relationships/{id}/bestaetigen', [AdminDuplicateController::class, 'relationshipConfirm'])->name('customers.relationships.confirm');
     Route::post('/customers/{id}/verknuepfte-kunden', [AdminDuplicateController::class, 'relationshipStore'])->name('customer.relationships.store');
+    // Haushalt (PR-5b): gruenden, aufnehmen, austragen - nie loeschen.
+    Route::post('/customers/{id}/haushalt', [HaushaltController::class, 'gruenden'])->name('customer.haushalt.gruenden');
+    Route::post('/haushalte/{haushaltId}/mitglieder', [HaushaltController::class, 'aufnehmen'])->name('haushalt.aufnehmen');
+    Route::post('/haushalt-mitglieder/{id}/austragen', [HaushaltController::class, 'austragen'])->whereNumber('id')->name('haushalt.austragen');
+    Route::post('/haushalt-mitglieder/{id}/hauptansprechpartner', [HaushaltController::class, 'hauptansprechpartner'])->whereNumber('id')->name('haushalt.hauptansprechpartner');
+    Route::post('/haushalt-mitglieder/{id}/beitragszahler', [HaushaltController::class, 'beitragszahler'])->whereNumber('id')->name('haushalt.beitragszahler');
     Route::put('/customers/notes/{id}/done', [AdminController::class, 'noteMarkDone'])->name('customer.note.done');
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');
