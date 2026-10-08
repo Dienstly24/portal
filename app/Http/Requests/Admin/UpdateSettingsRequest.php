@@ -8,6 +8,7 @@ use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\Kfz\SfReferenceValidator;
 use App\Services\Messaging\ChannelRoutingService;
+use App\Support\FamilienAlter;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -135,6 +136,12 @@ class UpdateSettingsRequest extends FormRequest
             SfReferenceValidator::SETTING_REQUIRED => ['sometimes'],
             'messaging_form' => ['sometimes'],
             ChannelRoutingService::SETTING_AUTO_JOIN => ['sometimes'],
+            // Kinder (KI-096): Erinnerung liegt immer VOR der
+            // Selbststaendigkeit - dieselbe Regel prueft FamilienAlter::setze().
+            'familie_form' => ['sometimes'],
+            FamilienAlter::SETTING_SELBSTSTAENDIG => ['sometimes', 'integer', 'between:'.FamilienAlter::MIN.','.FamilienAlter::MAX],
+            FamilienAlter::SETTING_ERINNERUNG => ['sometimes', 'integer', 'between:'.FamilienAlter::MIN.','.FamilienAlter::MAX,
+                'lt:'.FamilienAlter::SETTING_SELBSTSTAENDIG],
         ];
 
         // KI-Assistent: Schalter sind Checkboxen (an = "1"/"on", aus =

@@ -11,6 +11,7 @@ use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
 use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\Kfz\SfReferenceValidator;
 use App\Services\Messaging\ChannelRoutingService;
+use App\Support\FamilienAlter;
 
 class SettingsController extends Controller
 {
@@ -58,6 +59,9 @@ class SettingsController extends Controller
             // KFZ (01.10.2026): Bezugsfahrzeug bei Zweit-/Drittwagen nur auf
             // Wunsch verpflichtend - Voreinstellung AUS (nur Warnung).
             SfReferenceValidator::SETTING_REQUIRED => SystemSetting::get(SfReferenceValidator::SETTING_REQUIRED, '0'),
+            // Kinder (KI-096): Altersgrenzen als Einstellung, nicht im Code.
+            FamilienAlter::SETTING_ERINNERUNG => FamilienAlter::erinnerung(),
+            FamilienAlter::SETTING_SELBSTSTAENDIG => FamilienAlter::selbststaendig(),
         ];
 
         // KI-Kundenassistent (Spezifikation Abschnitt 30): Betriebsschalter
@@ -115,6 +119,20 @@ class SettingsController extends Controller
                 SfReferenceValidator::SETTING_REQUIRED,
                 $request->boolean(SfReferenceValidator::SETTING_REQUIRED) ? '1' : '0'
             );
+        }
+
+        // Kinder: eigener Marker - ein anderes Formular darf die
+        // Altersgrenzen nicht still zuruecksetzen.
+        if ($request->has('familie_form')
+            && array_key_exists(FamilienAlter::SETTING_ERINNERUNG, $validated)
+            && array_key_exists(FamilienAlter::SETTING_SELBSTSTAENDIG, $validated)) {
+            $fehler = FamilienAlter::setze(
+                (int) $validated[FamilienAlter::SETTING_ERINNERUNG],
+                (int) $validated[FamilienAlter::SETTING_SELBSTSTAENDIG]
+            );
+            if ($fehler !== null) {
+                return back()->withErrors([FamilienAlter::SETTING_ERINNERUNG => $fehler]);
+            }
         }
 
         // Postfach: eigener Marker aus demselben Grund - ein anderes

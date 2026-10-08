@@ -57,9 +57,13 @@ Schedule::command('document-requests:remind')->dailyAt('08:15');
 // ueber heute faellige + ueberfaellige Aufgaben (Aufgaben-Ausbau 26.07.2026)
 Schedule::command('tasks:remind')->dailyAt('07:45');
 
-// 05:40 — Familienmitglieder, die 15 geworden sind, auf "eigenstaendiger Kunde"
-// umstellen. Reiner Statuswechsel: die Familienbeziehung bleibt bestehen, kein
-// Vertrag wird angefasst (Betreiber-Vorgabe 28.08.2026).
+// 05:35 — Abhaengige Kinder im Erinnerungsalter (Einstellung, Standard 15):
+// Aufgabe + Glocke "eigenes Portal vorbereiten", einmal je Kind (KI-096).
+Schedule::command('familie:portal-vorbereitung-erinnern')->dailyAt('05:35');
+// 05:40 — Familienmitglieder im Selbststaendigkeitsalter (Einstellung,
+// Standard 16) auf "eigenstaendiger Kunde" umstellen. Reiner Statuswechsel:
+// die Familienbeziehung bleibt, kein Vertrag wird angefasst, die eigene
+// Kundennummer vergibt das Team (Aufgabe) - Betreiber-Vorgabe 07.10.2026.
 Schedule::command('familie:uebergaenge-anwenden')->dailyAt('05:40');
 // Zusammenfuehrungen nach Ablauf der Rueckgaengig-Frist abschliessen (KI-064).
 Schedule::command('kunden:zusammenfuehrungen-abschliessen')->dailyAt('05:45')->withoutOverlapping();

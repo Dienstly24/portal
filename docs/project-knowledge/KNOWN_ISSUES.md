@@ -42,6 +42,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-089 | MEDIUM | correctness | E-Signatur: keine formale Zustandsmaschine (Status an 9 Stellen direkt gesetzt) | OPEN (Teil C) |
 | KI-090 | LOW | performance | E-Signatur: Abschluss + Qualitaetsgate synchron im Unterschreiben-Request (12 Seiten 1,1 s) | OPEN (Warnung ab 5 s im Log, 07.10.2026) |
 | KI-093 | HIGH | correctness | Dokumenten-Eingang: NAFI-Kfz-Antrag mit "Tarifkennung / Versicherer" - Versicherer leer, kein Vertrag angelegt | FIXED |
+| KI-096 | HIGH | correctness | Kinder unter 16 bekamen eine eigene Kundennummer (und damit Vertrag/Portal moeglich) - kein Anlageweg fragte das Alter | FIXED (Bestand: Umstellung wartet auf Betreiber) |
 | KI-094 | MEDIUM | correctness | Merge ergaenzte leere Teilfelder der Anschrift aus der ANDEREN Anschrift (Strasse der einen + Zusatz der anderen); abweichende Stammdaten waren nicht waehlbar | FIXED |
 | KI-092 | HIGH | correctness | E-Signatur: zweite Fortschreibung vergibt dieselben Bildnamen (`/D24Sig4x0` doppelt) - ein Bild faellt weg | FIXED |
 | KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
@@ -295,6 +296,13 @@ und PHPStan) auf `main` gruen ist.
 - **Description** Bildnamen hiessen `D24Sig<Seite>x<Zaehler>`. Wird ein bereits fortgeschriebenes PDF ein ZWEITES Mal gestempelt (interne Unterschrift, danach der Kunde - Teil B), vergab der zweite Lauf dieselben Namen: qpdf meldete "dictionary has duplicated key /D24Sig4x0", ein Betrachter verwirft dann eines der beiden Bilder. Vor Teil B gab es nur einen Stempellauf je Dokument, deshalb fiel es nie auf.
 - **Fix** Der Name traegt die im ganzen Dokument eindeutige OBJEKTNUMMER des Bildes (`D24Sig<obj>`). Test `InterneUnterschriftTest::test_intern_kunde_endfassung_drei_hashes_und_sichtbar` (ohne den Fix "Fehler bei Fertigstellung").
 - **Discovered** 07.10.2026 (eigener Test, Teil B)
+
+### KI-096 - Kinder unter 16 mit eigener Kundennummer
+- **Category** correctness · **Severity** HIGH · **Status** FIXED (07.10.2026) - der BESTAND ist noch nicht umgestellt (Betreiber entscheidet nach `kunden:kinder-pruefen`)
+- **Location** `Customer` (creating-Hook), `CustomerAutoCreationService`, `AdminController::storeCustomer`, `RegisteredUserController`, `SmartDocumentUploadController::createCustomersFromPersons`, `Contract` (saving-Hook), `PortalAccessService`
+- **Description** Betreiber-Meldung 07.10.2026: "Tala Alhamoud" ist als Kind mit den Eltern verknuepft und traegt trotzdem die Kundennummer 2600810. Jeder Anlageweg zog die Nummer vorab beim `CustomerNumberGenerator`, keiner fragte Geburtsdatum oder Rolle. Besonders "👪 N Kunden anlegen" (Gesundheitskarten / Antrag auf Familienversicherung) legt je Person eine Akte an - Kinder eingeschlossen. Folge: Kinder konnten Vertraege, Portal-Einladungen und eigene Vorgaenge bekommen.
+- **Fix** Regel als Einstellung (`App\Support\FamilienAlter`, Standard Erinnerung 15 / Selbststaendigkeit 16). `customer_number` nullbar; creating-Hook leert die Nummer unter 16, `als_kind` ohne Geburtsdatum. `Customer::eigenstaendigkeitsSperre()` sperrt Vertrag (Modell-Hook + Formular + Eingang), Portal (Einladung) und Registrierung. Erinnerung mit 15 (`familie:portal-vorbereitung-erinnern`, Aufgabe an der Vaterakte), Nummer ab 16 durch das Team. Bestand: `kunden:kinder-pruefen` (lesend), `kunden:kind-umstellen` (Probelauf, verweigert bei Vertrag/Provision/Signatur), alte Nummer in `archivierte_kundennummern`. Tests `AbhaengigeKinderTest` (23 Faelle).
+- **Discovered** 07.10.2026 (Betreiber-Meldung)
 
 ### KI-093 - NAFI-Kfz-Antrag: Versicherer mit Tarifkennung -> kein Vertrag
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (07.10.2026)

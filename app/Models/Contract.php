@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Exceptions\AbhaengigerKundeException;
 use App\Services\Kfz\SfReferenceNotifier;
 use App\Services\Provision\ContractProvisionService;
 use App\Services\Vermittler\VermittlerReference;
@@ -824,6 +825,21 @@ class Contract extends Model
     protected static function boot() {
         parent::boot();
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
+
+        // KI-096 (07.10.2026): KEIN Vertrag an der Akte eines abhaengigen
+        // Kindes (juenger als das Selbststaendigkeitsalter oder ohne eigene
+        // Kundennummer) - der Vertrag gehoert an die Akte des Elternteils.
+        // Zentral am Modell, damit JEDER Anlageweg greift (Formular,
+        // Dokumenten-Eingang, Import, CLI). Die Oberflaechen pruefen vorher
+        // selbst und zeigen die Meldung; das hier ist das Netz.
+        static::saving(function (Contract $m): void {
+            if (! $m->exists || $m->isDirty('customer_id')) {
+                $kunde = $m->customer_id ? Customer::mitArchiv()->find($m->customer_id) : null;
+                if ($kunde !== null && ($grund = $kunde->eigenstaendigkeitsSperre()) !== null) {
+                    throw new AbhaengigerKundeException('Vertrag nicht angelegt: '.$grund);
+                }
+            }
+        });
 
         // E-Scooter: feste Fachregeln zentral erzwingen - egal woher der Vertrag
         // kommt (Formular, Dokumenten-Eingang, Import). Der Vertrag endet immer

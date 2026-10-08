@@ -6,7 +6,9 @@ use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Models\Customer;
 use App\Models\CustomerFamilyRelation;
 use App\Models\Task;
+use App\Services\Family\AbhaengigesKindService;
 use App\Services\Family\FamilyRelationService;
+use App\Support\FamilienAlter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -117,7 +119,7 @@ class CustomerFamilyRelationController extends Controller
         $relation = $this->service->link($customer, $related, $data['relationship_type'], auth()->id(), $data['note'] ?? null);
 
         $hinweis = $relation->is_dependent
-            ? ' Als abhängiges Familienmitglied geführt (unter '.Customer::DEPENDENT_AGE.' Jahren) – die Kundenakte bleibt vollständig erhalten.'
+            ? ' Als abhängiges Familienmitglied geführt (unter '.FamilienAlter::selbststaendig().' Jahren) – die Kundenakte bleibt vollständig erhalten.'
             : '';
 
         return back()->with('success', ($related->user?->name ?: 'Kunde').' wurde als '
@@ -163,7 +165,7 @@ class CustomerFamilyRelationController extends Controller
     }
 
     /**
-     * "Kinder werden 15" - Familienmitglieder mit bevorstehender
+     * "Kinder werden 16" (Selbststaendigkeitsalter, Einstellung) - Familienmitglieder mit bevorstehender
      * Verselbststaendigung, sortiert nach verbleibender Zeit.
      */
     public function transitions(Request $request)
@@ -202,9 +204,9 @@ class CustomerFamilyRelationController extends Controller
         $relation->forceFill(['transition_prepared_at' => now()])->save();
 
         Task::forceCreate([
-            'title' => 'Übergang vorbereiten: '.($kind?->user?->name ?: 'Familienmitglied').' wird 15',
+            'title' => 'Übergang vorbereiten: '.($kind?->user?->name ?: 'Familienmitglied').' wird '.FamilienAlter::selbststaendig(),
             'description' => 'Familienmitglied von '.($relation->customer?->user?->name ?: '—').'. '
-                .'15. Geburtstag: '.($stichtag ? $stichtag->format('d.m.Y') : 'unbekannt').'. '
+                .FamilienAlter::selbststaendig().'. Geburtstag: '.($stichtag ? $stichtag->format('d.m.Y') : 'unbekannt').'. '
                 .'Zu prüfen: eigene Verträge/Vorgänge, eigene Kontaktdaten (bisher von der Bezugsperson übernommen), '
                 .'Portal-Zugang. Es wird nichts automatisch geändert.',
             'type' => 'reminder',
@@ -218,5 +220,24 @@ class CustomerFamilyRelationController extends Controller
 
         return back()->with('success', 'Übergang vorgemerkt: eine Wiedervorlage wurde angelegt. '
             .'Verträge wurden bewusst NICHT verändert – das bleibt eine bewusste Entscheidung.');
+    }
+
+    /**
+     * Eigene Kundennummer fuer ein bisher abhaengiges Kind (KI-096). Erst ab
+     * dem Selbststaendigkeitsalter - die Pruefung steht im Dienst, nicht nur
+     * am Knopf. Die Familienbeziehung bleibt bestehen.
+     */
+    public function kundennummerVergeben(string $id)
+    {
+        $this->authorizeCustomerAccess($id);
+        $kind = Customer::with('user')->findOrFail($id);
+
+        try {
+            $nummer = app(AbhaengigesKindService::class)->kundennummerVergeben($kind, auth()->id());
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Kundennummer '.$nummer.' vergeben. Jetzt kann der Portal-Zugang eingerichtet werden.');
     }
 }

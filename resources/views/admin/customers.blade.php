@@ -33,7 +33,7 @@ $typeConfig = [
         {{-- "Kinder werden 15" war ein eigener Punkt in der Seitenleiste,
              obwohl es eine LISTE VON KUNDEN ist - sie gehoert an die
              Kundenliste, nicht in die Hauptnavigation. --}}
-        <a href="{{ route('admin.family.transitions') }}" class="btn btn-ghost">👪 Kinder werden 15</a>
+        <a href="{{ route('admin.family.transitions') }}" class="btn btn-ghost">👪 Kinder werden {{ \App\Support\FamilienAlter::selbststaendig() }}</a>
         <a href="{{ route('admin.customers.duplicates') }}" class="btn btn-ghost">🔀 Dubletten prüfen @if(($dupCount ?? 0) > 0)<span class="nav-badge" style="background:#A32D2D;">{{ $dupCount }}</span>@endif</a>
         <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">+ Neuer Kunde</a>
     </div>

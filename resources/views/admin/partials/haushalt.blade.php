@@ -30,7 +30,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;{{ !$loop->first ? 'border-top:1px solid var(--line);' : '' }}flex-wrap:wrap;">
             <div style="min-width:0;flex:1;">
                 <a href="{{ route('admin.customer', $person->id) }}" style="font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;">{{ $person->user?->name ?? 'Unbekannt' }}</a>
-                <span class="muted-xs"> · {{ $person->customer_number }}</span>
+                <span class="muted-xs"> · {{ $person->customer_number ?? 'ohne Kundennummer (Kind)' }}</span>
                 @if((string) $person->id === (string) $customer->id)<span class="muted-xs"> · diese Akte</span>@endif
                 @if($m->hauptansprechpartner)
                 <span style="font-size:11px;background:#E7F6EE;color:#0F6B3A;border-radius:999px;padding:2px 8px;margin-left:4px;">Hauptansprechpartner</span>

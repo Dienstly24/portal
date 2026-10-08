@@ -8,6 +8,16 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 07.10.2026 - Kinder unter 16: keine eigene Kundennummer, Erinnerung mit 15 (KI-096)
+
+- **Task**: Betreiber-Auftrag 07.10.2026 - "Tala Alhamoud" (Kind) trug die Kundennummer 2600810. Regel: unter 16 keine Nummer, kein Vertrag, kein Portal; Kind unter dem Vater (sonst Mutter); Erinnerung mit 15; Nummer ab 16; beide Alter als Einstellung. Bestand ZUERST pruefen, dann auf Freigabe umstellen.
+- **Files Changed**: Migration `2026_10_07_120000_abhaengige_kinder_ohne_kundennummer`; neu `App\Support\FamilienAlter`, `ArchivierteKundennummer`, `Family/AbhaengigesKindService`, `AbhaengigerKundeException`, Befehle `ErinnereKinderPortalVorbereitung`, `PruefeKinderMitKundennummer`, `StelleKindAufAbhaengigUm`; geaendert `Customer`, `CustomerFamilyRelation`, `Contract`, `CustomerNumberGenerator`, `CustomerAutoCreationService`, `FamilyRelationService`, `ApplyFamilyTransitions`, `PortalAccessService`, `DocumentIntakeService`, `AdminController`, `Admin\ContractController`, `CustomerFamilyRelationController`, `SmartDocumentUploadController`, `RegisteredUserController`, `SettingsController` + `UpdateSettingsRequest`, Views `customer_show`, `partials/family_relations`, `family_transitions`, `customers`, `settings`, `routes/web.php`, `routes/console.php`, `lang/ar.json`; Tests `AbhaengigeKinderTest` (neu), `CustomerFamilyRelationTest` (nachgezogen); `CLAUDE.md`.
+- **Components Affected**: jede Kundenanlage, Vertragsanlage, Portal-Einladung, Registrierung, Familien-Registerkarte, Einstellungen, Planer.
+- **Database Changes**: `customers.customer_number` nullbar, neue Spalte `customers.portal_vorbereitung_erinnert_at`, neue Tabelle `archivierte_kundennummern`. Bestandsdaten werden von der Migration NICHT veraendert.
+- **API Changes**: Route `POST admin/customers/{id}/kundennummer-vergeben` (`admin.customer.kundennummer_vergeben`).
+- **Potential Side Effects**: Das Selbststaendigkeitsalter steigt von 15 auf 16 - Kinder, die 15 sind, gelten wieder als abhaengig (Anzeige, Vererbung der Kontaktdaten). Neue Kinderakten erscheinen in Listen ohne Kundennummer. Ein Vertrag kann nicht mehr an einer Kinderakte angelegt werden.
+- **Tests Performed**: `AbhaengigeKinderTest` 23 Faelle (20 davon rot auf dem alten Stand); volle Suite, PHPStan 0, Pint sauber.
+- **Result**: KI-096 FIXED im Code; Bestand wartet auf `kunden:kinder-pruefen` + Freigabe.
 ## 08.10.2026 - Haushalt: Mitglieder, Hauptansprechpartner, Vertraege des Haushalts (PR-5b)
 
 - **Task**: PR-5 des freigegebenen Dubletten-/Familien-Plans, zweiter Teil.

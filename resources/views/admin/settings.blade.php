@@ -137,6 +137,30 @@
     </div>
 </div>
 
+{{-- Kinder (KI-096, 07.10.2026): Altersgrenzen als Einstellung. Eigener
+     Marker (familie_form) wie bei KFZ und Postfach. --}}
+<div class="card">
+    <div class="card-title" style="margin-bottom:8px;">👪 Familie / Kinder</div>
+    <input type="hidden" name="familie_form" value="1">
+    <div style="display:flex;gap:18px;flex-wrap:wrap;">
+        <label style="font-size:13px;">Erinnerung „Portal vorbereiten" ab
+            <input type="number" name="{{ \App\Support\FamilienAlter::SETTING_ERINNERUNG }}" min="{{ \App\Support\FamilienAlter::MIN }}" max="{{ \App\Support\FamilienAlter::MAX }}"
+                   value="{{ $settings[\App\Support\FamilienAlter::SETTING_ERINNERUNG] }}" style="width:70px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;"> Jahren
+        </label>
+        <label style="font-size:13px;">Eigene Kundennummer, Verträge und Portal ab
+            <input type="number" name="{{ \App\Support\FamilienAlter::SETTING_SELBSTSTAENDIG }}" min="{{ \App\Support\FamilienAlter::MIN }}" max="{{ \App\Support\FamilienAlter::MAX }}"
+                   value="{{ $settings[\App\Support\FamilienAlter::SETTING_SELBSTSTAENDIG] }}" style="width:70px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;"> Jahren
+        </label>
+    </div>
+    @error(\App\Support\FamilienAlter::SETTING_ERINNERUNG)<div style="color:#A32D2D;font-size:12.5px;margin-top:6px;">{{ $message }}</div>@enderror
+    <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-top:8px;">
+        Jünger als das zweite Alter: <strong>keine eigene Kundennummer</strong>, kein Vertrag, kein Portal – das Kind wird als
+        abhängiges Familienmitglied unter der Akte des Vaters (sonst der Mutter) geführt. Mit dem ersten Alter legt das
+        System für das Team eine Aufgabe „Portal vorbereiten" an (einmal je Kind). Die eigene Kundennummer vergibt das Team
+        ab dem zweiten Alter in der Akte des Kindes. Voreinstellung: 15 und 16.
+    </div>
+</div>
+
 {{-- Postfach: kanaluebergreifende Unterhaltungen. Eigener Marker
      (messaging_form) aus demselben Grund wie bei der Sicherheit. --}}
 <div class="card">

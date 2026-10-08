@@ -10,6 +10,7 @@ use App\Models\CustomerTimeline;
 use App\Models\InternalNotification;
 use App\Models\SystemSetting;
 use App\Services\Relationships\CustomerRelationshipService;
+use App\Support\FamilienAlter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -235,8 +236,8 @@ class FamilyRelationService
     }
 
     /**
-     * Kinder kurz vor dem 15. Geburtstag ("Familienmitglieder mit
-     * bevorstehender Verselbststaendigung"), sortiert nach verbleibender Zeit.
+     * Kinder kurz vor dem Selbststaendigkeitsalter (Einstellung, Standard
+     * 16), sortiert nach verbleibender Zeit.
      *
      * @param  array<int,string>|null  $customerIds  Portfolio-Begrenzung (null = alle).
      * @return Collection<int, CustomerFamilyRelation>
@@ -245,10 +246,10 @@ class FamilyRelationService
     {
         $lead = $leadMonths ?? $this->leadMonths();
         $today = Carbon::today();
-        // 15. Geburtstag = Geburtsdatum + 15 Jahre. Gesucht sind Geburtstage
-        // zwischen heute und heute + Vorlauf -> Geburtsdatum zwischen
-        // (heute - 15 J.) und (heute - 15 J. + Vorlauf).
-        $von = $today->copy()->subYears(Customer::DEPENDENT_AGE);
+        // Stichtag = Geburtsdatum + N Jahre (N = Selbststaendigkeitsalter).
+        // Gesucht sind Stichtage zwischen heute und heute + Vorlauf ->
+        // Geburtsdatum zwischen (heute - N J.) und (heute - N J. + Vorlauf).
+        $von = $today->copy()->subYears(FamilienAlter::selbststaendig());
         $bis = $von->copy()->addMonths($lead);
 
         return CustomerFamilyRelation::query()
@@ -269,13 +270,14 @@ class FamilyRelationService
     }
 
     /**
-     * Abhaengige Familienmitglieder, die das 15. Lebensjahr ERREICHT haben.
+     * Abhaengige Familienmitglieder, die das Selbststaendigkeitsalter
+     * ERREICHT haben.
      *
      * @return Collection<int, CustomerFamilyRelation>
      */
     public function dueTransitions(): Collection
     {
-        $grenze = Carbon::today()->subYears(Customer::DEPENDENT_AGE);
+        $grenze = Carbon::today()->subYears(FamilienAlter::selbststaendig());
 
         return CustomerFamilyRelation::query()
             ->where('is_dependent', true)
@@ -304,12 +306,16 @@ class FamilyRelationService
         $bezug = $relation->customer;
 
         if ($kind) {
+            $alter = FamilienAlter::selbststaendig();
             $this->note(
                 $kind,
-                'Eigenständiger Kunde (15. Geburtstag)',
-                'Das 15. Lebensjahr ist erreicht: Status „abhängiges Familienmitglied" → „eigenständiger Kunde". '
+                'Eigenständiger Kunde ('.$alter.'. Geburtstag)',
+                'Das '.$alter.'. Lebensjahr ist erreicht: Status „abhängiges Familienmitglied" → „eigenständiger Kunde". '
                     .'Die Familienbeziehung zu '.($bezug?->user?->name ?: 'der Bezugsperson').' bleibt bestehen ('
                     .CustomerFamilyRelation::roleLabel($relation->relationship_type).'). '
+                    .(blank($kind->customer_number)
+                        ? 'Eine eigene Kundennummer wird NICHT automatisch vergeben – das Team vergibt sie in der Akte („Kundennummer vergeben") und lädt dann ins Portal ein. '
+                        : '')
                     .'Verträge wurden NICHT verändert – bitte eigene Verträge/Vorgänge prüfen.',
                 $byUserId
             );
@@ -339,7 +345,9 @@ class FamilyRelationService
 
     /**
      * Abhaengig ist ein Familienmitglied nur, wenn es als KIND verknuepft ist
-     * UND sein Geburtsdatum ein Alter unter 15 belegt. Ohne Geburtsdatum wird
+     * UND sein Geburtsdatum ein Alter unter dem Selbststaendigkeitsalter
+     * belegt - ODER es (noch) keine eigene Kundennummer traegt (KI-096: als
+     * Kind angelegt, Geburtsdatum fehlt). Ohne Geburtsdatum wird
      * nichts angenommen - ein Alter zu raten waere schlimmer als es offen zu
      * lassen.
      */
@@ -348,9 +356,12 @@ class FamilyRelationService
         if (! in_array($role, CustomerFamilyRelation::CHILD_ROLES, true)) {
             return false;
         }
+        if ($related->exists && blank($related->customer_number) && $related->age() === null) {
+            return true;
+        }
         $age = $related->age();
 
-        return $age !== null && $age < Customer::DEPENDENT_AGE;
+        return $age !== null && $age < FamilienAlter::selbststaendig();
     }
 
     /** Eintrag in der Kundenakte-Timeline. Darf den Vorgang nie scheitern lassen. */
@@ -379,9 +390,11 @@ class FamilyRelationService
                     [
                         'user_id' => $user->id,
                         'type' => 'family_transition',
-                        'title' => 'Familienmitglied ist 15 geworden',
+                        'title' => 'Familienmitglied ist '.FamilienAlter::selbststaendig().' geworden',
                         'body' => ($kind->user?->name ?: 'Ein Familienmitglied')
-                            .' gilt jetzt als eigenständiger Kunde. Verträge wurden nicht verändert – bitte prüfen.',
+                            .' gilt jetzt als eigenständiger Kunde.'
+                            .(blank($kind->customer_number) ? ' Bitte Kundennummer vergeben und Portal aktivieren.' : '')
+                            .' Verträge wurden nicht verändert – bitte prüfen.',
                         'link' => route('admin.customer', $kind->id),
                     ]
                 );
