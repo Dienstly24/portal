@@ -24,7 +24,7 @@ $labels = [
 <div class="card" style="max-width:680px;">
     <div style="background:#FEF3C7;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:#92400E;line-height:1.6;">
         ⚠ <strong>Hauptkunde:</strong> {{ $customer->user?->name }} ({{ $customer->customer_number }})<br>
-        Alle Verträge, Tickets, Dokumente, Familie, Fahrzeuge, Notizen, Nachrichten, Einwilligungen und Termine des Duplikats werden auf den Hauptkunden übertragen. Fehlende Stammdaten werden ergänzt. <strong>Es wird nichts gelöscht</strong> außer der dann leeren Duplikat-Akte. Diese Aktion kann nicht rückgängig gemacht werden.<br><br>
+        Alle Verträge, Tickets, Dokumente, Familie, Fahrzeuge, Notizen, Nachrichten, Einwilligungen und Termine des Duplikats werden auf den Hauptkunden übertragen. Fehlende Stammdaten werden ergänzt; bei <strong>abweichenden</strong> Angaben wählen Sie unten, welche gilt. <strong>Es wird nichts gelöscht</strong>: die leere Duplikat-Akte wird archiviert, ihre Kundennummer führt weiter zum Hauptkunden. Ein Admin kann die Zusammenführung <strong>30 Tage lang rückgängig</strong> machen.<br><br>
         🔐 <strong>Portal-Zugang bleibt erhalten:</strong> Der besser gepflegte Login-Account (echte E-Mail-Adresse statt Import-Platzhalter, gesetztes Passwort, erfolgte Logins) überlebt automatisch – unabhängig davon, welche Akte als Hauptkunde gewählt ist. Eine zweite echte E-Mail-Adresse wird als alternative E-Mail gesichert.
     </div>
 
@@ -47,7 +47,7 @@ $labels = [
         {{-- Sofort-Suche statt einer Auswahlliste ueber den ganzen Bestand:
              das <select> wuchs mit jedem Neukunden mit. --}}
         <div class="field">
-            <label>Duplikat auswählen (wird nach Übertragung entfernt)</label>
+            <label>Duplikat auswählen (wird nach der Übertragung archiviert)</label>
             <div style="position:relative;">
                 <input type="text" id="dup-search" autocomplete="off"
                     placeholder="Name, Kundennummer, Telefon oder Anschrift"
@@ -60,6 +60,38 @@ $labels = [
                 @if($suggested)✓ Vorgeschlagener Treffer ist ausgewählt – bitte prüfen.@else Mindestens zwei Zeichen eingeben.@endif
             </div>
         </div>
+        @if(!empty($abweichend))
+        {{-- Feldwahl (PR-3c): bei abweichenden Angaben entscheidet ein Mensch.
+             Gruppen wie die Anschrift gelten nur als Ganzes - eine halbe
+             Anschrift aus zwei Akten gibt es nicht. Voreinstellung: Hauptkunde. --}}
+        @php
+            $maskiert = ['iban', 'iban2', 'tax_id', 'pension_insurance_number'];
+            $zeige = function (string $gruppe, string $wert) use ($maskiert) {
+                if (in_array($gruppe, $maskiert, true) || $gruppe === 'krankenkasse') {
+                    if (in_array($gruppe, ['iban', 'iban2'], true)) { $wert = preg_replace('/\s+/', '', $wert); }
+                    return preg_replace_callback('/[A-Z0-9]{6,}/i', fn ($m) => preg_match('/\d/', $m[0]) ? str_repeat('•', max(0, strlen($m[0]) - 4)).substr($m[0], -4) : $m[0], $wert);
+                }
+                return $wert;
+            };
+        @endphp
+        <div id="merge-feldwahl" style="border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;">
+            <strong>Abweichende Angaben – welche gilt?</strong>
+            <div style="color:var(--ink-soft);margin:4px 0 10px;">Beide Akten führen hier verschiedene Werte. Ohne Auswahl bleibt der Wert des Hauptkunden. Die Anschrift wird immer vollständig aus einer Akte übernommen.</div>
+            @foreach($abweichend as $gruppe => $info)
+            <fieldset style="border:0;padding:8px 0;margin:0;border-top:1px solid var(--line);">
+                <legend style="font-weight:600;padding:0;">{{ $info['name'] }}</legend>
+                <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin-top:4px;">
+                    <input type="radio" name="feldwahl[{{ $gruppe }}]" value="haupt" @checked(old('feldwahl.'.$gruppe, 'haupt') === 'haupt')>
+                    <span>Hauptkunde: {{ $zeige($gruppe, $info['haupt']) }}</span>
+                </label>
+                <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin-top:4px;">
+                    <input type="radio" name="feldwahl[{{ $gruppe }}]" value="duplikat" @checked(old('feldwahl.'.$gruppe) === 'duplikat')>
+                    <span>Duplikat: {{ $zeige($gruppe, $info['duplikat']) }}</span>
+                </label>
+            </fieldset>
+            @endforeach
+        </div>
+        @endif
         @if(!empty($konflikte))
         {{-- Widerspruch (KI-063): verschiedene Personen. Zusammenfuehren nur
              mit ausdruecklicher Bestaetigung und Begruendung (protokolliert). --}}
@@ -102,7 +134,10 @@ $labels = [
         wert.value = id;
         feld.value = text;
         liste.style.display = 'none';
-        hinweis.textContent = '✓ Ausgewählt: ' + text;
+        hinweis.textContent = '✓ Ausgewählt: ' + text + ' – Vorschau wird geladen …';
+        // Vorschau, Sperren und abweichende Angaben gelten fuer GENAU dieses
+        // Paar - deshalb die Seite mit dem gewaehlten Duplikat neu laden.
+        window.location.href = '{{ route('admin.customer.merge', $customer->id) }}?duplicate=' + encodeURIComponent(id);
     }
 
     feld.addEventListener('input', function () {
@@ -175,6 +210,6 @@ $labels = [
 @pushOnce('cspScripts')
 <script @cspNonce>
 window.__h = window.__h || {};
-window.__h["25eb1da5ed"] = function (event) { return confirm('Wirklich zusammenführen? Alle Daten des Duplikats werden übertragen, die leere Duplikat-Akte danach gelöscht.'); };
+window.__h["25eb1da5ed"] = function (event) { return confirm('Wirklich zusammenführen? Alle Daten des Duplikats werden übertragen, die leere Duplikat-Akte wird archiviert (30 Tage rückgängig machbar).'); };
 </script>
 @endPushOnce

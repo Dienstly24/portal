@@ -432,17 +432,23 @@ class DuplicateController extends Controller
             }
         }
         $konflikte = [];
+        $abweichend = [];
         if ($suggested) {
             $preview = $merge->preview($suggested);
             $konflikte = $merge->mergeBlockers($customer, $suggested);
+            $abweichend = $merge->abweichendeFelder($customer, $suggested);
         }
 
-        return view('admin.customer_merge', compact('customer', 'suggested', 'preview', 'konflikte'));
+        return view('admin.customer_merge', compact('customer', 'suggested', 'preview', 'konflikte', 'abweichend'));
     }
 
     public function mergeCustomers(Request $request, $id, CustomerMergeService $merge) {
         $this->authorizeCustomerAccess($id);
-        $request->validate(['duplicate_id' => 'required|different:id']);
+        $request->validate([
+            'duplicate_id' => 'required|different:id',
+            'feldwahl' => 'nullable|array',
+            'feldwahl.*' => 'in:haupt,duplikat',
+        ]);
         $this->authorizeCustomerAccess($request->duplicate_id);
         $primary = Customer::with('user')->findOrFail($id);
         $dup = Customer::with('user')->findOrFail($request->duplicate_id);
@@ -479,7 +485,11 @@ class DuplicateController extends Controller
             ]);
         }
 
-        $moved = $merge->merge($primary, $dup, auth()->id(), $konflikte === [] ? null : (string) $request->input('konflikt_begruendung'));
+        // Welche abweichende Angabe vom Duplikat kommt, entscheidet der
+        // Server selbst neu (abweichendeFelder) - das Formular nennt nur die
+        // Wahl, nie Feldnamen oder Werte (PR-3c).
+        $feldwahl = array_filter((array) $request->input('feldwahl', []), 'is_string');
+        $moved = $merge->merge($primary, $dup, auth()->id(), $konflikte === [] ? null : (string) $request->input('konflikt_begruendung'), $feldwahl);
 
         $summary = collect($moved)->sum();
         return redirect()->route('admin.customer', $primary->id)
