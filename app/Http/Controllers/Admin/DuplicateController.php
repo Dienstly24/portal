@@ -151,10 +151,10 @@ class DuplicateController extends Controller
             'customer_b' => 'required|string|different:customer_a',
             'note' => 'nullable|string|max:255|required_if:type,sonstiges',
             'type' => 'nullable|in:'.implode(',', CustomerRelationship::TYPES),
-            'parent_customer_id' => 'nullable|string|required_if:type,elternteil_kind',
+            'parent_customer_id' => 'nullable|string|required_if:type,elternteil_kind,grosseltern_enkel',
         ], [
             'note.required_if' => 'Bitte beschreiben Sie die Beziehung bei „Sonstiges".',
-            'parent_customer_id.required_if' => 'Bitte wählen Sie, wer der Elternteil ist.',
+            'parent_customer_id.required_if' => 'Bitte wählen Sie, wer der Elternteil bzw. Großelternteil ist.',
         ]);
         $this->authorizeCustomerAccess($data['customer_a']);
         $this->authorizeCustomerAccess($data['customer_b']);
@@ -193,7 +193,7 @@ class DuplicateController extends Controller
             'type' => 'nullable|in:'.implode(',', CustomerRelationship::BULK_TYPES),
             'note' => 'nullable|string|max:255|required_if:type,sonstiges',
         ], [
-            'type.in' => '„Elternteil – Kind" lässt sich nur einzeln festlegen – dort wird gewählt, wer der Elternteil ist.',
+            'type.in' => '„Elternteil – Kind" und „Großelternteil – Enkel" lassen sich nur einzeln festlegen – dort wird die Richtung gewählt.',
             'note.required_if' => 'Bitte beschreiben Sie die Beziehung bei „Sonstiges".',
         ]);
         $type = $data['type'] ?? 'not_duplicate';
@@ -277,12 +277,12 @@ class DuplicateController extends Controller
         $data = $request->validate([
             'related_customer_id' => 'required|string|different:'.$id,
             'type' => 'required|in:'.implode(',', CustomerRelationship::RELATION_TYPES),
-            'parent' => 'nullable|required_if:type,elternteil_kind|in:self,other',
+            'parent' => 'nullable|required_if:type,elternteil_kind,grosseltern_enkel|in:self,other',
             'note' => 'nullable|string|max:255|required_if:type,sonstiges',
         ], [
             'related_customer_id.required' => 'Bitte wählen Sie zuerst einen Kunden aus.',
             'related_customer_id.different' => 'Ein Kunde kann nicht mit sich selbst verknüpft werden.',
-            'parent.required_if' => 'Bitte wählen Sie, wer der Elternteil ist.',
+            'parent.required_if' => 'Bitte wählen Sie, wer der Elternteil bzw. Großelternteil ist.',
             'note.required_if' => 'Bitte beschreiben Sie die Beziehung bei „Sonstiges".',
         ]);
         $this->authorizeCustomerAccess($id);
@@ -323,10 +323,10 @@ class DuplicateController extends Controller
     public function relationshipSetType(Request $request, $id, CustomerRelationshipService $relations) {
         $data = $request->validate([
             'type' => 'required|in:'.implode(',', CustomerRelationship::TYPES),
-            'parent_customer_id' => 'nullable|string|required_if:type,elternteil_kind',
+            'parent_customer_id' => 'nullable|string|required_if:type,elternteil_kind,grosseltern_enkel',
             'note' => 'nullable|string|max:255|required_if:type,sonstiges',
         ], [
-            'parent_customer_id.required_if' => 'Bitte wählen Sie, wer der Elternteil ist.',
+            'parent_customer_id.required_if' => 'Bitte wählen Sie, wer der Elternteil bzw. Großelternteil ist.',
             'note.required_if' => 'Bitte beschreiben Sie die Beziehung bei „Sonstiges".',
         ]);
         $rel = CustomerRelationship::findOrFail($id);

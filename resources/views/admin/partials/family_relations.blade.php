@@ -14,9 +14,11 @@
 @php
     $famVorlaufTage = app(\App\Services\Family\FamilyRelationService::class)->leadMonths() * 30;
     $rollenGruppen = [
-        ['titel' => 'Ehepartner/in', 'items' => $familie['spouses']],
+        ['titel' => 'Partner/in',    'items' => $familie['spouses']],
         ['titel' => 'Kinder',        'items' => $familie['children']],
         ['titel' => 'Eltern',        'items' => $familie['parents']],
+        ['titel' => 'Enkel',         'items' => $familie['grandchildren']],
+        ['titel' => 'Großeltern',    'items' => $familie['grandparents']],
         ['titel' => 'Weitere Familienmitglieder', 'items' => $familie['others']],
     ];
     $gesamt = $familie['all']->count();
