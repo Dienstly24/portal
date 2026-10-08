@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 08.10.2026 aus `php artisan route:list --json` (534 Routen).
+Generiert am 08.10.2026 aus `php artisan route:list --json` (539 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -93,6 +93,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | DELETE | `admin/customers/{id}/familie/{relation}` | admin.customer.family.unlink | auth role:staff |
 | POST | `admin/customers/{id}/familie/{relation}/rolle` | admin.customer.family.role | auth role:staff |
 | POST | `admin/customers/{id}/family` | admin.customer.family.store | auth role:staff |
+| POST | `admin/customers/{id}/haushalt` | admin.customer.haushalt.gruenden | auth role:staff |
 | POST | `admin/customers/{id}/internal-messages` | admin.internal.store | auth role:staff |
 | GET | `admin/customers/{id}/merge` | admin.customer.merge | auth role:staff role:admin |
 | POST | `admin/customers/{id}/merge` | admin.customer.merge.do | auth role:staff role:admin |
@@ -181,6 +182,10 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | DELETE | `admin/firmensignaturen/{id}` | admin.signatures.company.destroy | auth role:staff |
 | GET | `admin/firmensignaturen/{id}/bild` | admin.signatures.company.image | auth role:staff |
 | POST | `admin/firmensignaturen/{id}/standard` | admin.signatures.company.default | auth role:staff |
+| POST | `admin/haushalt-mitglieder/{id}/austragen` | admin.haushalt.austragen | auth role:staff |
+| POST | `admin/haushalt-mitglieder/{id}/beitragszahler` | admin.haushalt.beitragszahler | auth role:staff |
+| POST | `admin/haushalt-mitglieder/{id}/hauptansprechpartner` | admin.haushalt.hauptansprechpartner | auth role:staff |
+| POST | `admin/haushalte/{haushaltId}/mitglieder` | admin.haushalt.aufnehmen | auth role:staff |
 | POST | `admin/import` | admin.import | auth role:staff role:admin,manager |
 | GET | `admin/import-export` | admin.import_export | auth role:staff role:admin,manager |
 | POST | `admin/import/confirm` | admin.import.confirm | auth role:staff role:admin,manager |

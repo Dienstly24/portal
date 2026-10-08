@@ -22,6 +22,7 @@ use App\Services\CustomerConversationService;
 use App\Services\CustomerDeletionService;
 use App\Services\CustomerNumberGenerator;
 use App\Services\Family\FamilyRelationService;
+use App\Services\Haushalt\HaushaltService;
 use App\Services\Matching\DuplicateDetectionService;
 use App\Services\Portal\PortalAccessService;
 use App\Services\Relationships\CustomerRelationshipService;
@@ -335,13 +336,15 @@ class AdminController extends Controller
         // "Verknuepfte Kunden": festgelegte Beziehungen (customer_relationships).
         // Nur Paare, deren andere Seite im Portfolio liegt.
         $verknuepft = $this->linkedCustomers($customer);
+        // Haushalt (PR-5b): Mitglieder ausserhalb des Portfolios nur als Anzahl.
+        $haushalt = app(HaushaltService::class)->uebersicht($customer, $this->visibleCustomerIds());
 
         // Zusammenfuehrungen in diese Akte (KI-064) - nur fuer den Admin, der
         // sie zuruecknehmen darf; die Liste zeigt auch, warum es nicht mehr geht.
         $zusammenfuehrungen = auth()->user()?->role === 'admin'
             ? CustomerMerge::where('primary_customer_id', $customer->id)->latest()->limit(10)->get()
             : collect();
-        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie', 'verknuepft', 'zusammenfuehrungen'));
+        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie', 'verknuepft', 'zusammenfuehrungen', 'haushalt'));
     }
 
 

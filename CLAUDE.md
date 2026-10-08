@@ -4751,8 +4751,35 @@ Merge von PR #358, Teil E/F).
   keine Rolle in keiner Gruppe steht. Der Rueckbau der Migration vom
   02.10.2026 bricht bei JEDER Art ab, die er nicht abbilden kann.
   Tests: `WeitereBeziehungsartenTest`.
-- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-5b
-  Haushalt + Uebernahme des Bestands; PR-6
+- **Haushalt (PR-5b, 08.10.2026)**: `haushalte` + `haushalt_mitglieder`
+  (`App\Models\Haushalt`/`HaushaltMitglied`), einzige Schreibstelle
+  `App\Services\Haushalt\HaushaltService`. Eine GRUPPE von Akten, kein
+  Paar und keine Rolle - jede Akte bleibt eigenstaendig, nichts wird
+  kopiert. Ein Kunde gehoert hoechstens zu EINEM aktuellen Haushalt.
+  Austragen LOESCHT NIE: `valid_until` = Tag des Auszugs (erster Tag NICHT
+  mehr dabei, halb-offen wie die Wechsel-Kette); ein Wiedereinzug oeffnet
+  dieselbe Zeile (UNIQUE haushalt_id+customer_id - die Zusammenfuehrung
+  verwirft damit eine doppelte Zeile von selbst). Hauptansprechpartner
+  hoechstens EINER; geht er, bleibt die Stelle LEER und die Karte warnt -
+  wer nachrueckt, entscheidet ein Mensch. Beitragszahler duerfen mehrere
+  sein. Karte "Haushalt" oben in der Registerkarte "Familie"
+  (`admin/partials/haushalt`): Mitglieder, laufende EIGENE Vertraege des
+  Haushalts samt Monatsbeitrag (Fremdvertraege nur als Anzahl), Warnung
+  bei abweichenden Anschriften. Portfolio-Scope: fremde Mitglieder nur als
+  ANZAHL; jede Aktion prueft jede beteiligte Akte, aufnehmen nur aus einer
+  Akte DIESES Haushalts. Wer heute zusammen wohnt, erscheint nicht als
+  Dublette (`HaushaltService::paarSchluessel()`); nach dem Auszug wieder.
+  Die Sofort-Suche ist jetzt EIN Skript fuer jede Karte
+  (`admin/partials/kundensuche_script`).
+  **Bestand**: `php artisan haushalte:aus-beziehungen-bilden` (Probelauf;
+  `--ausfuehren` legt an) verbindet die "Gleicher Haushalt"-Paare zu
+  Gruppen (A-B + B-C = ein Haushalt), ueberspringt Gruppen mit jemandem,
+  der schon einen Haushalt hat, bestimmt KEINEN Hauptansprechpartner und
+  erfindet KEIN Einzugsdatum; die Beziehungen bleiben stehen.
+  `--zuruecknehmen` entfernt nur Uebernahme-Haushalte, an denen seither
+  niemand etwas geaendert hat. Ausgabe mit Kundennummern, nie Namen.
+  Tests: `HaushaltTest`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-6
   Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
   Person, Kinderzugang ab 16, Elternzugriff Standard AUS, endet mit 18;
   PR-8 Lebensereignisse. Altersgrenzen getrennt und einstellbar - seit

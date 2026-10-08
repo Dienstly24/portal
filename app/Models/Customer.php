@@ -553,6 +553,9 @@ class Customer extends Model
     /** Beziehungen, in denen dieser Kunde das verknuepfte Mitglied ist ("ich bin <Rolle> von X"). */
     /** @return HasMany<CustomerFamilyRelation, $this> */
     public function familyRelationsOf(): HasMany { return $this->hasMany(CustomerFamilyRelation::class, 'related_customer_id'); }
+    /** Mitgliedschaften in Haushalten (PR-5b), auch beendete. */
+    /** @return HasMany<HaushaltMitglied, $this> */
+    public function haushaltMitgliedschaften(): HasMany { return $this->hasMany(HaushaltMitglied::class, 'customer_id'); }
     /** @return HasMany<CustomerVehicle, $this> */
     public function vehicles(): HasMany { return $this->hasMany(CustomerVehicle::class); }
     /** @return HasMany<CustomerMessage, $this> */
