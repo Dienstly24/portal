@@ -22,6 +22,7 @@ use App\Services\Kfz\SfReferenceService;
 use App\Services\Kfz\SfReferenceValidator;
 use App\Services\VehicleOverlapGuard;
 use App\Services\Vermittler\VermittlerLinkService;
+use App\Services\Vertrag\VertragBeteiligteService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -290,7 +291,11 @@ class ContractController extends Controller
         $contract = Contract::with(['vehicleDetail.claims', 'vehicleDetail.mileageReadings', 'vehicleDetail.sfHistory', 'vehicleDetail.sfReferences.referenceContract.vehicleDetail', 'vehicleDetail.sfReferences.proofDocument', 'vehicleDetail.sfReferences.verifier', 'sfDependents.vehicleDetail.contract', 'energyDetail.meterReadings', 'internetDetail', 'customer.user', 'customer.documents', 'revisions.changedBy'])->findOrFail($id);
         $this->authorizeCustomerAccess($contract->customer_id);
         $sfWarnings = $contract->type === 'kfz' ? app(SfReferenceValidator::class)->warnings($contract) : [];
-        return view('admin.contract_edit', compact('contract', 'sfWarnings'));
+        // Weitere Personen (PR-6); verlinkt wird eine beteiligte Akte nur,
+        // wenn der Bearbeiter sie sehen darf.
+        $beteiligte = app(VertragBeteiligteService::class)->fuerVertrag($contract);
+        $sichtbareKunden = $this->visibleCustomerIds();
+        return view('admin.contract_edit', compact('contract', 'sfWarnings', 'beteiligte', 'sichtbareKunden'));
     }
 
     /**

@@ -1,5 +1,5 @@
 {{-- Sofort-Suche fuer jedes [data-verknuepfen-form] der Seite ("Verknuepfte
-     Kunden", "Haushalt"). Trefferliste per textContent (Kundennamen sind
+     Kunden", "Haushalt", "Weitere Personen" am Vertrag). Trefferliste per textContent (Kundennamen sind
      Fremddaten). --}}
 @pushOnce('cspScripts')
 <script @cspNonce>
@@ -43,7 +43,9 @@
         }, 250);
     });
     form.addEventListener('submit', function (e) {
-        if (!idFeld.value) { e.preventDefault(); alert('Bitte zuerst einen Kunden aus der Suche auswählen.'); }
+        // data-verknuepfen-optional: die Akte ist freiwillig (z. B. versicherte
+        // Person ohne eigene Kundenakte) - der Server prueft, ob ein Name da ist.
+        if (!idFeld.value && !form.hasAttribute('data-verknuepfen-optional')) { e.preventDefault(); alert('Bitte zuerst einen Kunden aus der Suche auswählen.'); }
     });
   });
 })();

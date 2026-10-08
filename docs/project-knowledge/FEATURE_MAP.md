@@ -42,7 +42,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - S `Family/FamilyRelationService`, `Family/AbhaengigesKindService`; Support `FamilienAlter` (Einstellung 15/16); C `CustomerFamilyRelationController` (inkl. `kundennummerVergeben`); V `admin/partials/family_relations`, `admin/family_transitions`, Karte "Familie / Kinder" in `admin/settings`; T `customer_family_relations`, `customer_family`, `archivierte_kundennummern`, `customers.portal_vorbereitung_erinnert_at`; Planer `familie:portal-vorbereitung-erinnern` (05:35), `familie:uebergaenge-anwenden` (05:40); Befehle `kunden:kinder-pruefen` (lesend), `kunden:kind-umstellen` (Probelauf)
 - Kinder unter 16: keine Kundennummer, kein Vertrag, kein Portal (KI-096, 07.10.2026)
 - Haushalt (PR-5b): S `Haushalt/HaushaltService`; C `Admin/HaushaltController`; V `admin/partials/haushalt`; T `haushalte`, `haushalt_mitglieder`; Befehl `haushalte:aus-beziehungen-bilden`
-- Tests `CustomerFamilyRelationTest`, `AdminFamilyDisplayTest`, `AbhaengigeKinderTest`, `WeitereBeziehungsartenTest`, `HaushaltTest`
+- Vertragsrollen (PR-6): S `Vertrag/VertragBeteiligteService`; C `Admin/VertragBeteiligteController`; V `admin/partials/vertrag_beteiligte`; T `vertrag_beteiligte`
+- Tests `CustomerFamilyRelationTest`, `AdminFamilyDisplayTest`, `AbhaengigeKinderTest`, `WeitereBeziehungsartenTest`, `HaushaltTest`, `VertragBeteiligteTest`
 - Status **ACTIVE**
 
 ### F-004 Vertraege (alle Sparten) + Status-Logik

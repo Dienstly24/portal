@@ -4779,8 +4779,31 @@ Merge von PR #358, Teil E/F).
   `--zuruecknehmen` entfernt nur Uebernahme-Haushalte, an denen seither
   niemand etwas geaendert hat. Ausgabe mit Kundennummern, nie Namen.
   Tests: `HaushaltTest`.
-- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-6
-  Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
+- **Vertragsrollen (PR-6, 08.10.2026)**: `vertrag_beteiligte`
+  (`App\Models\VertragBeteiligter`), einzige Schreibstelle
+  `App\Services\Vertrag\VertragBeteiligteService`. Der
+  VERSICHERUNGSNEHMER bleibt `contracts.customer_id` - daran haengen
+  Portfolio, Provision, Portal und jede Kennzahl, und der Dienst aendert
+  ihn nie. Daneben: versicherte Personen (mehrere, der VN darf selbst
+  dazugehoeren), ein ABWEICHENDER Beitragszahler (hoechstens einer, nie
+  der VN - ohne Eintrag zahlt der VN; ihn einzutragen waere eine zweite
+  Quelle fuer dieselbe Aussage) und Beguenstigte (Anteil optional, nur
+  dort, Summe nie ueber 100 %; Pruefung unter Sperre der Vertragszeile).
+  Eine Person braucht KEINE eigene Akte (Kind in der Krankenversicherung):
+  `customer_id` nullbar + nullOnDelete, `name` ist die Kopie, die bleibt.
+  Jede Aenderung: Version History (`beteiligte_<rolle>`) + ActivityLog
+  `contract_party_added/_removed` (dort nur Kennungen). Der Verlauftext
+  nennt bewusst KEINE Kundennummer - er ist fuer jeden lesbar, der den
+  Vertrag oeffnet. Portfolio: Zugriff auf den VN UND die verknuepfte
+  Akte; eine Akte ausserhalb des Bestands erscheint ohne Link und
+  Nummer. Karte "Personen am Vertrag" auf der Vertragsseite, Karte
+  "Beteiligt an Vertraegen anderer Kunden" in der Kundenakte (Reiter
+  Vertraege; fremde VN nur als Anzahl). Beteiligungen zaehlen NIE zu den
+  eigenen Vertraegen, in die Beitragsuebersicht oder ins Portal - das
+  Portal je Person ist PR-7. Die Zusammenfuehrung haengt
+  `vertrag_beteiligte.customer_id` generisch um (UNIQUE verwirft eine
+  doppelte Zeile, protokolliert). Tests: `VertragBeteiligteTest`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-7 Portal je
   Person, Kinderzugang ab 16, Elternzugriff Standard AUS, endet mit 18;
   PR-8 Lebensereignisse. Altersgrenzen getrennt und einstellbar - seit
   07.10.2026 GEBAUT als `App\Support\FamilienAlter` (Erinnerung 15,
