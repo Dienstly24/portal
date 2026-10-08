@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerFamilyRelation;
 use App\Models\CustomerRelationship;
 use App\Models\GeteilterKontaktwert;
+use App\Services\Haushalt\HaushaltService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -115,7 +116,9 @@ class DuplicateDetectionService
         // Ebenso Paare mit einer Familienrolle (customer_family_relations):
         // eine festgelegte Beziehung erscheint nie wieder als Verdachtsfall,
         // auch wenn die Gleichlauf-Zeile in customer_relationships fehlt.
-        $dismissed = CustomerRelationship::dismissedKeySet() + $this->familyPairKeySet();
+        // Und Paare, die heute im selben Haushalt leben (PR-5b).
+        $dismissed = CustomerRelationship::dismissedKeySet() + $this->familyPairKeySet()
+            + HaushaltService::paarSchluessel();
 
         // 2) Kandidatenpaare aus allen Bloecken einsammeln (dedupliziert).
         $pairIndex = [];  // "i|j" => true

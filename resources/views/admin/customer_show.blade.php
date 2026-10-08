@@ -410,6 +410,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 
 {{-- ================= Familie-Tab ================= --}}
 <div class="tab-section" id="tab-familie" style="display:none;">
+@include('admin.partials.haushalt', ['customer' => $customer, 'haushalt' => $haushalt])
 @include('admin.partials.family_relations', ['customer' => $customer, 'familie' => $familie])
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px;">

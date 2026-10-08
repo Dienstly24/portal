@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 08.10.2026 - Haushalt: Mitglieder, Hauptansprechpartner, Vertraege des Haushalts (PR-5b)
+
+- **Task**: PR-5 des freigegebenen Dubletten-/Familien-Plans, zweiter Teil.
+- **Files Changed**: Migration `2026_10_08_100000_haushalte`; neu `App\Models\Haushalt`, `App\Models\HaushaltMitglied`, `App\Services\Haushalt\HaushaltService`, `Admin\HaushaltController`, Befehl `haushalte:aus-beziehungen-bilden`, Views `admin/partials/haushalt`, `admin/partials/kundensuche_script` (aus `linked_customers` herausgeloest, jetzt fuer jede Karte); `Customer::haushaltMitgliedschaften()`; `AdminController::show`; `DuplicateDetectionService` (Mitbewohner sind keine Dublette); `routes/web.php`; Test `HaushaltTest`; `CLAUDE.md`, Wissensbasis.
+- **Components Affected**: Kundenakte (Registerkarte "Familie"), Dubletten-Pruefung, Kunden-Zusammenfuehrung (generisch, UNIQUE verwirft doppelte Zeilen).
+- **Database Changes**: neue Tabellen `haushalte`, `haushalt_mitglieder` (reversibel). Kein bestehender Datensatz wird geaendert; die Uebernahme aus "Gleicher Haushalt" ist ein eigener Befehl mit Probelauf.
+- **API Changes**: `POST admin/customers/{id}/haushalt`, `POST admin/haushalte/{haushaltId}/mitglieder`, `POST admin/haushalt-mitglieder/{id}/austragen|hauptansprechpartner|beitragszahler` - alle Personalrollen, Zugriff auf jede beteiligte Akte geprueft.
+- **Potential Side Effects**: Paare im selben aktuellen Haushalt verschwinden aus der Dubletten-Liste (nach dem Auszug erscheinen sie wieder).
+- **Tests Performed**: `HaushaltTest` 10 Faelle (der Dubletten-Fall scheitert ohne die Aenderung im Abgleich, alle anderen ohne die neuen Tabellen); volle Suite 3482, 3477 gruen, 5 uebersprungen (OCR, lokal kein tesseract); PHPStan 0 Fehler, Pint sauber. Nicht im Browser angesehen.
+- **Result**: gebaut.
+
 ## 08.10.2026 - Weitere Beziehungsarten: Lebenspartnerschaft, Lebensgefaehrten, Grosselternteil - Enkel (PR-5a)
 
 - **Task**: PR-5 des freigegebenen Dubletten-/Familien-Plans, erster Teil (Beziehungsarten). Der Haushalt folgt als PR-5b.

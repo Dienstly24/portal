@@ -30,6 +30,8 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 | `customer_family` | Familienmitglieder OHNE eigene Akte |
 | `customer_family_relations` | gerichtete Beziehung zwischen zwei AKTEN (Paar hin/rueck), `is_dependent` |
 | `customer_relationships` | Beziehung zweier Akten (kein Duplikat): Art (`ehepartner`, `lebenspartnerschaft`, `lebensgefaehrten`, `elternteil_kind`, `grosseltern_enkel`, `geschwister`, `sonstige_verwandte`, `gleicher_haushalt`, `nachbar`, `sonstiges`, `not_duplicate`), Paar sortiert a<b, UNIQUE (a, b, type); `parent_customer_id` nur bei den gerichteten Arten `elternteil_kind`/`grosseltern_enkel` = die aeltere Generation (= a oder b, Modell-Guard statt CHECK). Familienarten laufen gleich mit `customer_family_relations` |
+| `haushalte` | Haushalt (PR-5b): Name, `herkunft` (manuell/uebernahme), Notiz |
+| `haushalt_mitglieder` | Mitgliedschaft einer Akte in einem Haushalt: Hauptansprechpartner (hoechstens einer), Beitragszahler, `valid_from`, `valid_until` = Auszugstag (halb-offen, nie geloescht); UNIQUE (haushalt_id, customer_id) |
 | `customer_consents` | DSGVO-Einwilligungen |
 | `customer_change_requests`, `change_request_documents`, `change_notifications` | Self-Service-Aenderungen, Nachweise, Mitteilungen an Gesellschaften |
 | `customer_channel_identities` | Kanal-Kennung -> Kunde, `match_method`, `verified_*` |
