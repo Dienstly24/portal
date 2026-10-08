@@ -4710,8 +4710,28 @@ Merge von PR #358, Teil E/F).
   ihn zurueck, wenn das Feld seither unveraendert ist. Die Auswahl eines
   Duplikats per Suche laedt die Vorschau fuer genau dieses Paar.
   Tests: `MergeFeldwahlTest`.
-- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR):
-  PR-4 geteilte Kontaktdaten + Adressnormalisierung (KI-069); PR-5
+- **Gemeinsam genutzte Kontaktdaten + Hausnummer einmal (PR-4,
+  08.10.2026, KI-069/KI-095)**: eine Familien-E-Mail, ein Festnetz, das
+  Konto der Eltern oder ein Mehrfamilienhaus laesst sich auf der
+  Dubletten-Seite als "gemeinsam genutzt" markieren (nur admin/manager,
+  wirkt systemweit) - der Wert bildet danach weder Block noch Signal
+  (`DuplicateDetectionService`), ein Paar bleibt nur, wenn es ein ANDERES
+  Merkmal teilt. Tabelle `geteilte_kontaktdaten` speichert NIE den Wert:
+  HMAC mit dem APP_KEY (eine Telefonnummer waere als einfacher Hash in
+  Sekunden erraten) plus maskierte Anzeige ("…3000", "r***@domain",
+  "PLZ Ort"). Der Wert kommt aus den Akten, das Formular nennt nur Paar
+  und Art. Wird der APP_KEY gewechselt, greifen die Markierungen nicht
+  mehr - die Paare erscheinen wieder, verloren geht nichts. Liste mit
+  "Aufheben" unten auf der Dubletten-Seite; ActivityLog
+  `shared_contact_marked/_unmarked`. `App\Support\Anschrift` ist die
+  EINE Regel fuer Strasse + Hausnummer: dieselbe Nummer in Strasse und
+  Feld erscheint einmal, zwei VERSCHIEDENE ("Nagelshof 20" + "51")
+  bleiben wie erfasst - nie raten; der Haushalts-Schluessel gleicht
+  "Straße"/"Strasse"/"Str." und Umlaute an. Widersprueche listet
+  `php artisan kunden:anschriften-pruefen [--alle] [--csv=datei]`
+  (STRENG LESEND, Kundennummer statt Namen). Tests:
+  `GeteilteKontaktdatenTest`, `tests/Unit/AnschriftTest.php`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-5
   Haushalt + weitere Beziehungsarten + Uebernahme des Bestands; PR-6
   Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
   Person, Kinderzugang ab 16, Elternzugriff Standard AUS, endet mit 18;

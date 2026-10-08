@@ -374,6 +374,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->name('customers.duplicates.dismiss');
     Route::post('/customers/duplicates/dismiss-bulk', [AdminDuplicateController::class, 'dismissBulk'])
         ->name('customers.duplicates.dismiss_bulk');
+    // Gemeinsam genutzte Kontaktdaten (Familien-E-Mail, Festnetz ...): kein
+    // Dubletten-Signal mehr. Wirkt systemweit -> nur admin/manager.
+    Route::post('/customers/duplicates/geteilt', [AdminDuplicateController::class, 'geteiltMarkieren'])
+        ->name('customers.duplicates.geteilt')->middleware('role:admin,manager');
+    Route::delete('/customers/duplicates/geteilt/{id}', [AdminDuplicateController::class, 'geteiltAufheben'])
+        ->whereNumber('id')->name('customers.duplicates.geteilt.aufheben')->middleware('role:admin,manager');
     // Verwandte Kunden (Beziehungen). GET vor /customers/{id} registrieren.
     Route::get('/customers/relationships', [AdminDuplicateController::class, 'relationships'])->name('customers.relationships');
     Route::post('/customers/relationships/{id}/type', [AdminDuplicateController::class, 'relationshipSetType'])->name('customers.relationships.type');

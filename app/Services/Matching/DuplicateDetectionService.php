@@ -5,6 +5,7 @@ namespace App\Services\Matching;
 use App\Models\Customer;
 use App\Models\CustomerFamilyRelation;
 use App\Models\CustomerRelationship;
+use App\Models\GeteilterKontaktwert;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -93,8 +94,12 @@ class DuplicateDetectionService
             $customers = $customers->slice(0, self::MAX_SCAN)->values();
         }
 
+        // Gemeinsam genutzte Kontaktwerte (Familien-E-Mail, Festnetz, Konto
+        // der Eltern) bilden kein Verdachtspaar (PR-4).
+        $geteilt = GeteilterKontaktwert::hashMenge();
+
         // 1) Blocking: normalisierte Schluessel -> Liste der Kundenindizes.
-        $buckets = $this->buildBuckets($customers);
+        $buckets = $this->buildBuckets($customers, $geteilt);
 
         // Bloecke nach Signalstaerke ordnen, damit bei erreichtem Paar-Limit
         // die starken Signale (Vertrag/IBAN/E-Mail/Telefon/Name) zuerst
@@ -130,7 +135,7 @@ class DuplicateDetectionService
             if ($count <= self::BUCKET_ALLPAIRS_LIMIT) {
                 for ($x = 0; $x < $count; $x++) {
                     for ($y = $x + 1; $y < $count; $y++) {
-                        $this->addPair($customers, $members[$x], $members[$y], $pairIndex, $pairs, $bucketCapped, $dismissed);
+                        $this->addPair($customers, $members[$x], $members[$y], $pairIndex, $pairs, $bucketCapped, $dismissed, $geteilt);
                     }
                 }
             } else {
@@ -139,7 +144,7 @@ class DuplicateDetectionService
                     if ($m === $anchor) {
                         continue;
                     }
-                    $this->addPair($customers, $anchor, $m, $pairIndex, $pairs, $bucketCapped, $dismissed);
+                    $this->addPair($customers, $anchor, $m, $pairIndex, $pairs, $bucketCapped, $dismissed, $geteilt);
                 }
             }
         }
@@ -276,14 +281,16 @@ class DuplicateDetectionService
      * Baut die Blocking-Bloecke ueber alle relevanten Merkmale auf.
      *
      * @param Collection<int, Customer> $customers
+     * @param array<string, array<string, bool>> $geteilt Gemeinsam genutzte Werte (art => hash)
      * @return array<string, array<int, int>> Schluessel -> Kundenindizes
      */
-    private function buildBuckets($customers): array
+    private function buildBuckets($customers, array $geteilt = []): array
     {
         $buckets = [];
         $add = function (string $key, int $idx) use (&$buckets) {
             $buckets[$key][] = $idx;
         };
+        $frei = fn (string $art, string $wert): bool => ! $this->istGeteilt($geteilt, $art, $wert);
 
         foreach ($customers as $idx => $customer) {
             // Name (exakt normalisiert, Wortreihenfolge egal). Bewusst KEIN
@@ -300,7 +307,7 @@ class DuplicateDetectionService
             // Telefon + Mobil.
             foreach ([$customer->phone, $customer->mobile] as $phone) {
                 $p = $this->phoneKey($phone);
-                if ($p !== '') {
+                if ($p !== '' && $frei('telefon', $p)) {
                     $add('p:'.$p, $idx);
                 }
             }
@@ -308,14 +315,14 @@ class DuplicateDetectionService
             // E-Mail (Login-Adresse + Zweit-Mail), Platzhalter ausgenommen.
             foreach ([$customer->user?->email, $customer->email2] as $email) {
                 $e = $this->emailKey($email);
-                if ($e !== '') {
+                if ($e !== '' && $frei('email', $e)) {
                     $add('e:'.$e, $idx);
                 }
             }
 
             // Anschrift (normalisierter Haushalts-Schluessel).
             $addr = $customer->householdKey();
-            if ($addr !== '') {
+            if ($addr !== '' && $frei('anschrift', $addr)) {
                 $add('a:'.$addr, $idx);
             }
 
@@ -323,7 +330,7 @@ class DuplicateDetectionService
             // signal (verschluesselt gespeichert, hier im Klartext verglichen).
             foreach ([$customer->iban, $customer->iban2] as $iban) {
                 $k = $this->ibanKey($iban);
-                if ($k !== '') {
+                if ($k !== '' && $frei('iban', $k)) {
                     $add('i:'.$k, $idx);
                 }
             }
@@ -347,8 +354,9 @@ class DuplicateDetectionService
      * @param array<string, bool> $pairIndex
      * @param array<int, array<string, mixed>> $pairs
      * @param array<string, bool> $dismissed  Als "kein Duplikat" markierte Paare (a|b).
+     * @param array<string, array<string, bool>> $geteilt Gemeinsam genutzte Werte (art => hash)
      */
-    private function addPair($customers, int $i, int $j, array &$pairIndex, array &$pairs, bool &$capped, array $dismissed = []): void
+    private function addPair($customers, int $i, int $j, array &$pairIndex, array &$pairs, bool &$capped, array $dismissed = [], array $geteilt = []): void
     {
         if ($i === $j) {
             return;
@@ -373,7 +381,7 @@ class DuplicateDetectionService
             return;
         }
 
-        $signals = $this->signalsFor($a, $b);
+        $signals = $this->signalsFor($a, $b, $geteilt);
         if ($signals === []) {
             return; // unscharfer Namensblock ohne echte Aehnlichkeit -> verwerfen
         }
@@ -399,9 +407,13 @@ class DuplicateDetectionService
      * Liste der tatsaechlich uebereinstimmenden Merkmale eines Paares.
      * Leeres Array = kein belastbares Signal (Paar verwerfen).
      *
+     * Ein als gemeinsam genutzt markierter Wert zaehlt NICHT (PR-4): die
+     * Familien-E-Mail allein haelt Vater und Sohn nicht mehr in der Liste.
+     *
+     * @param array<string, array<string, bool>> $geteilt Gemeinsam genutzte Werte (art => hash)
      * @return array<int, string>
      */
-    private function signalsFor(Customer $a, Customer $b): array
+    private function signalsFor(Customer $a, Customer $b, array $geteilt = []): array
     {
         $signals = [];
 
@@ -416,16 +428,16 @@ class DuplicateDetectionService
             }
         }
 
-        if ($this->sharesKey([$a->phone, $a->mobile], [$b->phone, $b->mobile], fn ($v) => $this->phoneKey($v))) {
+        if ($this->gemeinsameSchluessel('telefon', $a, $b, $geteilt) !== []) {
             $signals[] = 'Gleiche Telefonnummer';
         }
-        if ($this->sharesKey([$a->user?->email, $a->email2], [$b->user?->email, $b->email2], fn ($v) => $this->emailKey($v))) {
+        if ($this->gemeinsameSchluessel('email', $a, $b, $geteilt) !== []) {
             $signals[] = 'Gleiche E-Mail-Adresse';
         }
-        if ($a->householdKey() !== '' && $a->householdKey() === $b->householdKey()) {
+        if ($this->gemeinsameSchluessel('anschrift', $a, $b, $geteilt) !== []) {
             $signals[] = 'Gleiche Anschrift';
         }
-        if ($this->sharesKey([$a->iban, $a->iban2], [$b->iban, $b->iban2], fn ($v) => $this->ibanKey($v))) {
+        if ($this->gemeinsameSchluessel('iban', $a, $b, $geteilt) !== []) {
             $signals[] = 'Gleiche Bankverbindung (IBAN)';
         }
         if ($this->sharedContract($a, $b)) {
@@ -603,12 +615,74 @@ class DuplicateDetectionService
         return $set;
     }
 
-    /** @param array<int, ?string> $left @param array<int, ?string> $right */
-    private function sharesKey(array $left, array $right, callable $norm): bool
+    /** Signal-Text -> Art des gemeinsam nutzbaren Werts (PR-4). */
+    public const SIGNAL_ART = [
+        'Gleiche E-Mail-Adresse' => 'email',
+        'Gleiche Telefonnummer' => 'telefon',
+        'Gleiche Bankverbindung (IBAN)' => 'iban',
+        'Gleiche Anschrift' => 'anschrift',
+    ];
+
+    /**
+     * Normalisierte Werte einer Art, die BEIDE Kunden fuehren - ohne die als
+     * gemeinsam genutzt markierten.
+     *
+     * @param array<string, array<string, bool>> $geteilt
+     * @return list<string>
+     */
+    private function gemeinsameSchluessel(string $art, Customer $a, Customer $b, array $geteilt = []): array
     {
-        $l = array_filter(array_map($norm, $left), fn ($v) => $v !== '');
-        $r = array_filter(array_map($norm, $right), fn ($v) => $v !== '');
-        return array_intersect($l, $r) !== [];
+        $gemeinsam = array_values(array_unique(array_intersect($this->schluesselVon($art, $a), $this->schluesselVon($art, $b))));
+
+        return array_values(array_filter($gemeinsam, fn ($k) => ! $this->istGeteilt($geteilt, $art, $k)));
+    }
+
+    /** @return list<string> */
+    private function schluesselVon(string $art, Customer $c): array
+    {
+        $werte = match ($art) {
+            'telefon' => array_map(fn ($v) => $this->phoneKey($v), [$c->phone, $c->mobile]),
+            'email' => array_map(fn ($v) => $this->emailKey($v), [$c->user?->email, $c->email2]),
+            'iban' => array_map(fn ($v) => $this->ibanKey($v), [$c->iban, $c->iban2]),
+            'anschrift' => [$c->householdKey()],
+            default => [],
+        };
+
+        return array_values(array_filter($werte, fn ($v) => $v !== ''));
+    }
+
+    /** @param array<string, array<string, bool>> $geteilt */
+    private function istGeteilt(array $geteilt, string $art, string $schluessel): bool
+    {
+        return isset($geteilt[$art]) && isset($geteilt[$art][GeteilterKontaktwert::hashFuer($art, $schluessel)]);
+    }
+
+    /**
+     * Die Werte einer Art, die zwei Kunden gemeinsam fuehren, als
+     * Markier-Kandidaten: HMAC + maskierte Anzeige. Der Wert kommt aus den
+     * Akten, NIE aus dem Formular - wer markiert, nennt nur Paar und Art.
+     *
+     * @return list<array{hash: string, anzeige: string}>
+     */
+    public function gemeinsameWerte(Customer $a, Customer $b, string $art): array
+    {
+        $out = [];
+        foreach ($this->gemeinsameSchluessel($art, $a, $b) as $k) {
+            $out[] = ['hash' => GeteilterKontaktwert::hashFuer($art, $k), 'anzeige' => $this->maskiert($art, $k, $a)];
+        }
+
+        return $out;
+    }
+
+    /** Maskierte Anzeige - die Tabelle ueberlebt die Akten, der Wert nicht. */
+    private function maskiert(string $art, string $schluessel, Customer $c): string
+    {
+        return match ($art) {
+            'email' => mb_substr($schluessel, 0, 1).'***@'.Str::after($schluessel, '@'),
+            'telefon', 'iban' => '…'.substr($schluessel, -4),
+            'anschrift' => trim(($c->address_zip ?? '').' '.($c->address_city ?? '')) ?: 'Anschrift',
+            default => '…',
+        };
     }
 
     private function sharedContract(Customer $a, Customer $b): bool

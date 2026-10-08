@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\CustomerMerge;
 use App\Models\CustomerRelationship;
+use App\Models\GeteilterKontaktwert;
 use App\Services\Matching\CustomerMatchingService;
 use App\Services\Matching\CustomerMergeService;
 use App\Services\Matching\CustomerMergeUndoService;
@@ -82,7 +83,61 @@ class DuplicateController extends Controller
             'strongCount' => $strongCount,
             'catCounts' => $counts,
             'relationCount' => CustomerRelationship::count(),
+            'geteilteWerte' => GeteilterKontaktwert::with('ersteller:id,name')->latest()->get(),
         ]);
+    }
+
+    /**
+     * Markiert die Werte einer Art, die zwei Akten gemeinsam fuehren, als
+     * "gemeinsam genutzt" (Familien-E-Mail, Festnetz, Konto der Eltern,
+     * Mehrfamilienhaus). Sie bilden danach systemweit kein Verdachtspaar
+     * mehr (PR-4). Der Wert wird aus den Akten ermittelt, nie aus dem
+     * Formular; gespeichert ist nur ein HMAC und eine maskierte Anzeige.
+     * Nur admin/manager: die Markierung wirkt auf ALLE Kunden.
+     */
+    public function geteiltMarkieren(Request $request, DuplicateDetectionService $detection) {
+        $data = $request->validate([
+            'customer_a' => 'required|string',
+            'customer_b' => 'required|string|different:customer_a',
+            'art' => 'required|in:'.implode(',', array_keys(GeteilterKontaktwert::ARTEN)),
+            'notiz' => 'nullable|string|max:255',
+        ]);
+        $this->authorizeCustomerAccess($data['customer_a']);
+        $this->authorizeCustomerAccess($data['customer_b']);
+        $a = Customer::with('user')->findOrFail($data['customer_a']);
+        $b = Customer::with('user')->findOrFail($data['customer_b']);
+
+        $werte = $detection->gemeinsameWerte($a, $b, $data['art']);
+        if ($werte === []) {
+            return back()->with('error', 'Die beiden Akten teilen keine '.GeteilterKontaktwert::ARTEN[$data['art']].'.');
+        }
+
+        foreach ($werte as $w) {
+            $zeile = GeteilterKontaktwert::firstOrCreate(
+                ['art' => $data['art'], 'wert_hash' => $w['hash']],
+                ['anzeige' => $w['anzeige'], 'notiz' => $data['notiz'] ?? null, 'created_by' => auth()->id()]
+            );
+            if ($zeile->wasRecentlyCreated) {
+                ActivityLog::record('shared_contact_marked', 'geteilter_kontaktwert', $zeile->id, [
+                    'art' => $data['art'], 'anzeige' => $w['anzeige'], 'anlass' => [$a->id, $b->id],
+                ]);
+            }
+        }
+        $detection->forgetCount();
+
+        return back()->with('success', GeteilterKontaktwert::ARTEN[$data['art']].' als gemeinsam genutzt markiert – sie gilt nicht mehr als Hinweis auf eine Dublette. Beide Akten bleiben unverändert.');
+    }
+
+    /** Hebt eine Markierung auf - danach zaehlt der Wert wieder als Signal. */
+    public function geteiltAufheben(int $id, DuplicateDetectionService $detection) {
+        $zeile = GeteilterKontaktwert::findOrFail($id);
+        ActivityLog::record('shared_contact_unmarked', 'geteilter_kontaktwert', $zeile->id, [
+            'art' => $zeile->art, 'anzeige' => $zeile->anzeige,
+        ]);
+        $zeile->delete();
+        $detection->forgetCount();
+
+        return back()->with('success', 'Markierung aufgehoben – der Wert zählt wieder als Hinweis auf eine Dublette.');
     }
 
     /**

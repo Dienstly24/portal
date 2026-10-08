@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\SafeEncrypted;
 use App\Services\CustomerNumberGenerator;
 use App\Services\Matching\DuplicateDetectionService;
+use App\Support\Anschrift;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -79,10 +80,11 @@ class Customer extends Model
      */
     public function fullAddress(): string
     {
-        $street = trim(
-            ($this->address_street ?? '').' '.($this->address_house_number ?? '')
-            .($this->address_house_suffix ? ' '.$this->address_house_suffix : '')
-        );
+        // Hausnummer nur einmal, auch wenn sie zusaetzlich in der Strasse
+        // steht (KI-069) - die Regel steht in App\Support\Anschrift.
+        $street = Anschrift::strassenzeile(
+            $this->address_street, $this->address_house_number, $this->address_house_suffix
+        )['zeile'];
         $city = trim(($this->address_zip ?? '').' '.($this->address_city ?? ''));
         $parts = array_values(array_filter([$street, $city], fn ($p) => $p !== ''));
 
@@ -96,8 +98,9 @@ class Customer extends Model
      */
     public function householdKey(): string
     {
-        return Str::of($this->fullAddress())
-            ->lower()->replaceMatches('/[^a-z0-9]+/', '')->value();
+        // "Straße"/"Str.", Umlaute und doppelte Hausnummern ergeben denselben
+        // Schluessel - sonst gilt dieselbe Anschrift als zwei Haushalte.
+        return Anschrift::schluessel($this->fullAddress());
     }
 
     /**
