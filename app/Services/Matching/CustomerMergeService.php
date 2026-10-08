@@ -57,6 +57,43 @@ class CustomerMergeService
     private const FAMILY_TABLE = 'customer_family_relations';
 
     /**
+     * Stammdaten, die ein Merge vom Duplikat ERGAENZT (leere Felder) bzw.
+     * auf ausdrueckliche Wahl des Admins UEBERNIMMT (PR-3c).
+     */
+    public const STAMMDATEN = [
+        'phone', 'mobile', 'address', 'address2', 'iban', 'iban2', 'birth_date',
+        'marital_status', 'nationality', 'occupation', 'employer_name',
+        'employer_address', 'email2', 'company_name',
+        'company_type', 'customer_type', 'gender', 'birth_place',
+        'address_street', 'address_house_number', 'address_house_suffix',
+        'address_zip', 'address_city', 'health_insurance_number',
+        'health_insurance_company', 'health_insurance_type',
+        'pension_insurance_number', 'tax_id',
+    ];
+
+    /**
+     * Felder, die nur GEMEINSAM gewaehlt werden duerfen (PR-3c): Strasse aus
+     * der einen und PLZ aus der anderen Akte ergaeben eine Anschrift, die es
+     * nicht gibt. Alles uebrige ist eine Gruppe aus einem Feld.
+     */
+    public const FELDGRUPPEN = [
+        'anschrift' => ['address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city', 'address'],
+        'krankenkasse' => ['health_insurance_company', 'health_insurance_number', 'health_insurance_type'],
+        'arbeitgeber' => ['employer_name', 'employer_address'],
+    ];
+
+    public const GRUPPEN_NAMEN = [
+        'anschrift' => 'Anschrift', 'krankenkasse' => 'Krankenkasse', 'arbeitgeber' => 'Arbeitgeber',
+        'phone' => 'Telefon', 'mobile' => 'Mobil', 'address2' => 'Zweitanschrift',
+        'iban' => 'IBAN', 'iban2' => 'Zweite IBAN', 'birth_date' => 'Geburtsdatum',
+        'marital_status' => 'Familienstand', 'nationality' => 'Staatsangehörigkeit',
+        'occupation' => 'Beruf', 'email2' => 'Alternative E-Mail', 'company_name' => 'Firma',
+        'company_type' => 'Rechtsform', 'customer_type' => 'Kundentyp', 'gender' => 'Geschlecht',
+        'birth_place' => 'Geburtsort', 'pension_insurance_number' => 'Rentenversicherungsnummer',
+        'tax_id' => 'Steuer-ID',
+    ];
+
+    /**
      * Protokoll des laufenden Merges (KI-064): umgehaengte Zeilen, verworfene
      * Kollisionszeilen (vollstaendig), ergaenzte Felder, Konto. Wird als
      * `customer_merges`-Datensatz gespeichert - die Grundlage zum
@@ -115,13 +152,16 @@ class CustomerMergeService
     /**
      * @param ?string $uebersteuertMit Begruendung des Admins, wenn
      *        `mergeBlockers()` etwas meldet. Ohne sie wird nichts angefasst.
+     * @param array<string, string> $feldwahl Gruppe => 'duplikat' fuer
+     *        abweichende Stammdaten, bei denen der Wert des Duplikats gelten
+     *        soll (PR-3c). Ohne Eintrag bleibt der Hauptkunde.
      * @return array<string, int> Zusammenfassung: umgehaengte Datensaetze je Tabelle.
      * @throws \InvalidArgumentException bei ungueltigen Eingaben (Selbst-Merge,
      *         Nicht-Kunden-Account) - Schutz analog CustomerDeletionService.
      * @throws MergeBlockedException wenn Sperrgruende bestehen und keine
      *         Begruendung vorliegt.
      */
-    public function merge(Customer $primary, Customer $duplicate, ?int $actorId = null, ?string $uebersteuertMit = null): array
+    public function merge(Customer $primary, Customer $duplicate, ?int $actorId = null, ?string $uebersteuertMit = null, array $feldwahl = []): array
     {
         if ((string) $primary->id === (string) $duplicate->id) {
             throw new \InvalidArgumentException('Haupt- und Duplikat-Kunde sind identisch.');
@@ -139,9 +179,9 @@ class CustomerMergeService
             throw new MergeBlockedException($sperren);
         }
 
-        $this->protokoll = ['umgehaengt' => [], 'verworfen' => [], 'ergaenzt' => [], 'konto' => null];
+        $this->protokoll = ['umgehaengt' => [], 'verworfen' => [], 'ergaenzt' => [], 'uebernommen' => [], 'konto' => null];
 
-        return DB::transaction(function () use ($primary, $duplicate, $actorId, $sperren, $uebersteuertMit) {
+        return DB::transaction(function () use ($primary, $duplicate, $actorId, $sperren, $uebersteuertMit, $feldwahl) {
             $moved = [];
 
             // 1) Jede Tabelle mit customer_id-Spalte umhaengen (inkl. Pivot).
@@ -185,8 +225,11 @@ class CustomerMergeService
                 'sprache_vorher' => $langVorher,
             ];
 
-            // 5) Fehlende Stammdaten vom Duplikat ergaenzen (nie ueberschreiben).
-            $this->fillMissingFields($primary, $duplicate);
+            // 5) Abweichende Stammdaten: nur, was der Admin ausdruecklich
+            //    gewaehlt hat, kommt vom Duplikat (PR-3c). Danach fehlende
+            //    Felder ergaenzen (nie ueberschreiben).
+            $behalten = $this->applyFeldwahl($primary, $duplicate, $feldwahl);
+            $this->fillMissingFields($primary, $duplicate, $behalten);
             $primary->save();
 
             // 6) Die leere Duplikat-Akte wird ARCHIVIERT, nicht geloescht
@@ -232,6 +275,9 @@ class CustomerMergeService
                     'portal_account_deaktiviert' => $portalDeaktiviert,
                     'uebersteuert' => $sperren === [] ? null : ['gruende' => $sperren, 'begruendung' => $uebersteuertMit],
                     'moved' => $moved,
+                    // Nur die NAMEN der uebernommenen Felder - die Werte stehen
+                    // (verschluesselt) im Merge-Protokoll.
+                    'feldwahl' => array_keys($this->protokoll['uebernommen']),
                 ], JSON_UNESCAPED_UNICODE),
             ]);
 
@@ -667,19 +713,119 @@ class CustomerMergeService
     }
 
     /** Leere Stammdatenfelder des Hauptkunden aus dem Duplikat ergaenzen. */
-    private function fillMissingFields(Customer $primary, Customer $duplicate): void
+    /**
+     * Gruppen (siehe FELDGRUPPEN), in denen BEIDE Akten etwas fuehren und die
+     * Werte sich unterscheiden - genau dort muss ein Mensch waehlen. Leere
+     * Felder des Hauptkunden ergaenzt der Merge ohnehin.
+     *
+     * @return array<string, array{name: string, felder: list<string>, haupt: string, duplikat: string}>
+     */
+    public function abweichendeFelder(Customer $primary, Customer $duplicate): array
     {
-        $fields = [
-            'phone', 'mobile', 'address', 'address2', 'iban', 'iban2', 'birth_date',
-            'marital_status', 'nationality', 'occupation', 'employer_name',
-            'employer_address', 'email2', 'company_name',
-            'company_type', 'customer_type', 'gender', 'birth_place',
-            'address_street', 'address_house_number', 'address_house_suffix',
-            'address_zip', 'address_city', 'health_insurance_number',
-            'health_insurance_company', 'health_insurance_type',
-            'pension_insurance_number', 'tax_id',
-        ];
-        foreach ($fields as $f) {
+        $ergebnis = [];
+        foreach ($this->gruppen() as $gruppe => $felder) {
+            $haupt = $this->gruppenText($primary, $felder);
+            $dup = $this->gruppenText($duplicate, $felder);
+            if ($haupt === '' || $dup === '' || $this->vergleichbar($haupt) === $this->vergleichbar($dup)) {
+                continue;
+            }
+            $ergebnis[$gruppe] = [
+                'name' => self::GRUPPEN_NAMEN[$gruppe] ?? $gruppe,
+                'felder' => $felder,
+                'haupt' => $haupt,
+                'duplikat' => $dup,
+            ];
+        }
+
+        return $ergebnis;
+    }
+
+    /** @return array<string, list<string>> */
+    private function gruppen(): array
+    {
+        $gruppen = self::FELDGRUPPEN;
+        $vergeben = array_merge(...array_values(self::FELDGRUPPEN));
+        foreach (self::STAMMDATEN as $f) {
+            if (! in_array($f, $vergeben, true)) {
+                $gruppen[$f] = [$f];
+            }
+        }
+
+        return $gruppen;
+    }
+
+    /** @param list<string> $felder */
+    private function gruppenText(Customer $c, array $felder): string
+    {
+        if ($felder === self::FELDGRUPPEN['anschrift']) {
+            $strukturiert = $c->fullAddress();
+
+            return $strukturiert !== '' ? $strukturiert : trim((string) $c->address);
+        }
+
+        return implode(' · ', array_values(array_filter(
+            array_map(fn ($f) => trim((string) $c->$f), $felder),
+            fn ($v) => $v !== ''
+        )));
+    }
+
+    private function vergleichbar(string $wert): string
+    {
+        $wert = mb_strtolower($wert);
+        $wert = str_replace(['ß', 'str.'], ['ss', 'strasse'], $wert);
+
+        return (string) preg_replace('/[\s,.\-\/·]+/u', '', $wert);
+    }
+
+    /**
+     * Uebernimmt die gewaehlten Gruppen vom Duplikat - IMMER als ganze Gruppe
+     * (eine halbe Anschrift gibt es nicht). Unbekannte Gruppen und Gruppen
+     * ohne echte Abweichung werden ignoriert: dem Formular wird nichts
+     * geglaubt, was die Pruefung nicht selbst ermittelt hat.
+     *
+     * @param array<string, string> $feldwahl
+     * @return list<string> Felder abweichender Gruppen, bei denen der
+     *         Hauptkunde bleibt - sie werden auch nicht teilweise ergaenzt.
+     */
+    private function applyFeldwahl(Customer $primary, Customer $duplicate, array $feldwahl): array
+    {
+        $abweichend = $this->abweichendeFelder($primary, $duplicate);
+        $behalten = [];
+        foreach ($abweichend as $gruppe => $info) {
+            if (($feldwahl[$gruppe] ?? null) !== 'duplikat') {
+                array_push($behalten, ...$info['felder']);
+            }
+        }
+        foreach ($feldwahl as $gruppe => $wahl) {
+            if ($wahl !== 'duplikat' || ! isset($abweichend[$gruppe])) {
+                continue;
+            }
+            foreach ($abweichend[$gruppe]['felder'] as $f) {
+                if ($primary->$f == $duplicate->$f) {
+                    continue;
+                }
+                // Alter Wert fuers Rueckgaengigmachen (Protokoll ist
+                // verschluesselt und wird nach der Frist geleert).
+                $this->protokoll['uebernommen'][$f] = $primary->$f;
+                $primary->$f = $duplicate->$f;
+            }
+        }
+
+        return $behalten;
+    }
+
+    /**
+     * @param list<string> $nichtErgaenzen Felder einer abweichenden Gruppe, bei
+     *        der der Hauptkunde bleibt: die Hausnummer-Ergaenzung der einen
+     *        Anschrift an die Strasse der anderen ergaebe eine Adresse, die
+     *        es nicht gibt (PR-3c).
+     */
+    private function fillMissingFields(Customer $primary, Customer $duplicate, array $nichtErgaenzen = []): void
+    {
+        foreach (self::STAMMDATEN as $f) {
+            if (in_array($f, $nichtErgaenzen, true)) {
+                continue;
+            }
             if (empty($primary->$f) && ! empty($duplicate->$f)) {
                 // Nur der NAME: der Wert steht weiter in der archivierten Huelle.
                 $this->protokoll['ergaenzt'][] = $f;

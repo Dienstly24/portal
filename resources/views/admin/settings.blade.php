@@ -137,7 +137,7 @@
     </div>
 </div>
 
-{{-- Kinder (KI-094, 07.10.2026): Altersgrenzen als Einstellung. Eigener
+{{-- Kinder (KI-095, 07.10.2026): Altersgrenzen als Einstellung. Eigener
      Marker (familie_form) wie bei KFZ und Postfach. --}}
 <div class="card">
     <div class="card-title" style="margin-bottom:8px;">👪 Familie / Kinder</div>

@@ -426,7 +426,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Verselbststaendigung. Bewusst NICHT unter /customers/... - dort wuerde
     // die Route-Reihenfolge sie als Kunden-ID missdeuten.
     Route::get('/familie/uebergaenge', [CustomerFamilyRelationController::class, 'transitions'])->name('family.transitions');
-    // KI-094: eigene Kundennummer fuer ein Kind erst ab dem Selbststaendigkeitsalter.
+    // KI-095: eigene Kundennummer fuer ein Kind erst ab dem Selbststaendigkeitsalter.
     Route::post('/customers/{id}/kundennummer-vergeben', [CustomerFamilyRelationController::class, 'kundennummerVergeben'])->name('customer.kundennummer_vergeben');
     Route::post('/familie/uebergaenge/{relation}/vorbereiten', [CustomerFamilyRelationController::class, 'prepareTransition'])->name('family.prepare_transition');
 

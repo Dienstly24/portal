@@ -28,7 +28,7 @@ Regeln fuer jede Schemaaenderung: siehe Abschnitt "Aenderungsregeln" unten.
 | `customer_addresses`, `customer_contacts`, `customer_vehicles`, `customer_notes`, `customer_timeline`, `customer_views` | Unterlagen der Akte |
 | `customer_family` | Familienmitglieder OHNE eigene Akte |
 | `customer_family_relations` | gerichtete Beziehung zwischen zwei AKTEN (Paar hin/rueck), `is_dependent` |
-| `archivierte_kundennummern` | Kundennummern, die nicht mehr gelten, aber belegt bleiben (KI-094: einem Kind zu Unrecht vergeben) - nie geloescht, nie neu vergeben; `customer_id`/`bezugsperson_customer_id` nullOnDelete. `customers.customer_number` ist seit 07.10.2026 NULLBAR (abhaengiges Kind) |
+| `archivierte_kundennummern` | Kundennummern, die nicht mehr gelten, aber belegt bleiben (KI-095: einem Kind zu Unrecht vergeben) - nie geloescht, nie neu vergeben; `customer_id`/`bezugsperson_customer_id` nullOnDelete. `customers.customer_number` ist seit 07.10.2026 NULLBAR (abhaengiges Kind) |
 | `customer_relationships` | Beziehung zweier Akten (kein Duplikat): Art (`ehepartner`, `elternteil_kind`, `geschwister`, `sonstige_verwandte`, `gleicher_haushalt`, `nachbar`, `sonstiges`, `not_duplicate`), Paar sortiert a<b, UNIQUE (a, b, type); `parent_customer_id` nur bei `elternteil_kind` (= a oder b, Modell-Guard statt CHECK). Familienarten laufen gleich mit `customer_family_relations` |
 | `customer_consents` | DSGVO-Einwilligungen |
 | `customer_change_requests`, `change_request_documents`, `change_notifications` | Self-Service-Aenderungen, Nachweise, Mitteilungen an Gesellschaften |

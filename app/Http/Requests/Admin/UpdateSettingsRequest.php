@@ -136,7 +136,7 @@ class UpdateSettingsRequest extends FormRequest
             SfReferenceValidator::SETTING_REQUIRED => ['sometimes'],
             'messaging_form' => ['sometimes'],
             ChannelRoutingService::SETTING_AUTO_JOIN => ['sometimes'],
-            // Kinder (KI-094): Erinnerung liegt immer VOR der
+            // Kinder (KI-095): Erinnerung liegt immer VOR der
             // Selbststaendigkeit - dieselbe Regel prueft FamilienAlter::setze().
             'familie_form' => ['sometimes'],
             FamilienAlter::SETTING_SELBSTSTAENDIG => ['sometimes', 'integer', 'between:'.FamilienAlter::MIN.','.FamilienAlter::MAX],

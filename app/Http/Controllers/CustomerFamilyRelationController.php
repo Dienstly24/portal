@@ -223,7 +223,7 @@ class CustomerFamilyRelationController extends Controller
     }
 
     /**
-     * Eigene Kundennummer fuer ein bisher abhaengiges Kind (KI-094). Erst ab
+     * Eigene Kundennummer fuer ein bisher abhaengiges Kind (KI-095). Erst ab
      * dem Selbststaendigkeitsalter - die Pruefung steht im Dienst, nicht nur
      * am Knopf. Die Familienbeziehung bleibt bestehen.
      */

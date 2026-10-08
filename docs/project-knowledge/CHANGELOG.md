@@ -8,7 +8,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
-## 07.10.2026 - Kinder unter 16: keine eigene Kundennummer, Erinnerung mit 15 (KI-094)
+## 07.10.2026 - Kinder unter 16: keine eigene Kundennummer, Erinnerung mit 15 (KI-095)
 
 - **Task**: Betreiber-Auftrag 07.10.2026 - "Tala Alhamoud" (Kind) trug die Kundennummer 2600810. Regel: unter 16 keine Nummer, kein Vertrag, kein Portal; Kind unter dem Vater (sonst Mutter); Erinnerung mit 15; Nummer ab 16; beide Alter als Einstellung. Bestand ZUERST pruefen, dann auf Freigabe umstellen.
 - **Files Changed**: Migration `2026_10_07_120000_abhaengige_kinder_ohne_kundennummer`; neu `App\Support\FamilienAlter`, `ArchivierteKundennummer`, `Family/AbhaengigesKindService`, `AbhaengigerKundeException`, Befehle `ErinnereKinderPortalVorbereitung`, `PruefeKinderMitKundennummer`, `StelleKindAufAbhaengigUm`; geaendert `Customer`, `CustomerFamilyRelation`, `Contract`, `CustomerNumberGenerator`, `CustomerAutoCreationService`, `FamilyRelationService`, `ApplyFamilyTransitions`, `PortalAccessService`, `DocumentIntakeService`, `AdminController`, `Admin\ContractController`, `CustomerFamilyRelationController`, `SmartDocumentUploadController`, `RegisteredUserController`, `SettingsController` + `UpdateSettingsRequest`, Views `customer_show`, `partials/family_relations`, `family_transitions`, `customers`, `settings`, `routes/web.php`, `routes/console.php`, `lang/ar.json`; Tests `AbhaengigeKinderTest` (neu), `CustomerFamilyRelationTest` (nachgezogen); `CLAUDE.md`.
@@ -17,7 +17,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **API Changes**: Route `POST admin/customers/{id}/kundennummer-vergeben` (`admin.customer.kundennummer_vergeben`).
 - **Potential Side Effects**: Das Selbststaendigkeitsalter steigt von 15 auf 16 - Kinder, die 15 sind, gelten wieder als abhaengig (Anzeige, Vererbung der Kontaktdaten). Neue Kinderakten erscheinen in Listen ohne Kundennummer. Ein Vertrag kann nicht mehr an einer Kinderakte angelegt werden.
 - **Tests Performed**: `AbhaengigeKinderTest` 23 Faelle (20 davon rot auf dem alten Stand); volle Suite, PHPStan 0, Pint sauber.
-- **Result**: KI-094 FIXED im Code; Bestand wartet auf `kunden:kinder-pruefen` + Freigabe.
+- **Result**: KI-095 FIXED im Code; Bestand wartet auf `kunden:kinder-pruefen` + Freigabe.
+## 07.10.2026 - Merge-Vorschau: abweichende Angaben waehlen (PR-3c, KI-094)
+
+- **Task**: PR-3c des freigegebenen Dubletten-Plans (Schritt 3, letzter Teil).
+- **Files Changed**: `CustomerMergeService` (`STAMMDATEN`, `FELDGRUPPEN`, `abweichendeFelder()`, `applyFeldwahl()`, `merge(..., $feldwahl)`, keine Teil-Ergaenzung behaltener Gruppen); `CustomerMergeUndoService` (uebernommene Werte zurueck); `Admin\DuplicateController::mergeForm/mergeCustomers`; `admin/customer_merge.blade.php` (Abschnitt "Abweichende Angaben", Auswahl per Suche laedt die Vorschau fuer genau dieses Paar, veraltete Texte "geloescht"/"nicht rueckgaengig" korrigiert); neu `tests/Feature/MergeFeldwahlTest.php`; `CLAUDE.md`, `KNOWN_ISSUES.md`, `FEATURE_MAP.md`.
+- **Components Affected**: Kunden-Zusammenfuehrung (Einzel-Merge; Sammel-Merge behaelt den Hauptkunden, mischt aber keine Anschriften mehr).
+- **Database Changes**: keine (Protokoll bekommt den Schluessel `uebernommen`).
+- **API Changes**: `POST admin/customers/{id}/merge` nimmt `feldwahl[<gruppe>]=haupt|duplikat`.
+- **Potential Side Effects**: Weicht die Anschrift ab und bleibt der Hauptkunde, wird sie nicht mehr aus der anderen ergaenzt - einzelne Teilfelder koennen deshalb leer bleiben, wo frueher ein falscher Wert stand.
+- **Tests Performed**: `MergeFeldwahlTest` 10 Faelle (9 rot ohne den Fix). Volle Suite 3442, 3437 gruen, 5 uebersprungen (OCR, tesseract lokal nicht installiert). PHPStan 0 Fehler, Pint sauber. Nicht im Browser angesehen.
+- **Result**: KI-094 FIXED; Schritt 3 des Plans abgeschlossen.
 
 ## 07.10.2026 - NAFI-Kfz-Antrag: Vertrag wird wieder angelegt (KI-093)
 

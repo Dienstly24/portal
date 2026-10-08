@@ -42,7 +42,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-089 | MEDIUM | correctness | E-Signatur: keine formale Zustandsmaschine (Status an 9 Stellen direkt gesetzt) | OPEN (Teil C) |
 | KI-090 | LOW | performance | E-Signatur: Abschluss + Qualitaetsgate synchron im Unterschreiben-Request (12 Seiten 1,1 s) | OPEN (Warnung ab 5 s im Log, 07.10.2026) |
 | KI-093 | HIGH | correctness | Dokumenten-Eingang: NAFI-Kfz-Antrag mit "Tarifkennung / Versicherer" - Versicherer leer, kein Vertrag angelegt | FIXED |
-| KI-094 | HIGH | correctness | Kinder unter 16 bekamen eine eigene Kundennummer (und damit Vertrag/Portal moeglich) - kein Anlageweg fragte das Alter | FIXED (Bestand: Umstellung wartet auf Betreiber) |
+| KI-095 | HIGH | correctness | Kinder unter 16 bekamen eine eigene Kundennummer (und damit Vertrag/Portal moeglich) - kein Anlageweg fragte das Alter | FIXED (Bestand: Umstellung wartet auf Betreiber) |
+| KI-094 | MEDIUM | correctness | Merge ergaenzte leere Teilfelder der Anschrift aus der ANDEREN Anschrift (Strasse der einen + Zusatz der anderen); abweichende Stammdaten waren nicht waehlbar | FIXED |
 | KI-092 | HIGH | correctness | E-Signatur: zweite Fortschreibung vergibt dieselben Bildnamen (`/D24Sig4x0` doppelt) - ein Bild faellt weg | FIXED |
 | KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
 | KI-062 | HIGH | correctness | E-Signatur: /Resources als Referenz -> Bilder in verschachteltes /Resources geschrieben, "XObject unknown" (8 von 11 Vorgaengen) | FIXED |
@@ -273,6 +274,13 @@ und PHPStan) auf `main` gruen ist.
 - **Fix** Eingebettete Unicode-Schrift erst bei Bedarf.
 - **Discovered** 04.10.2026 (Audit E-Signatur Teil A, `docs/AUDIT_2026-10-04_SIGNATUR.md`)
 
+### KI-094 - Merge mischte zwei Anschriften, abweichende Angaben nicht waehlbar
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED (07.10.2026)
+- **Location** `CustomerMergeService::fillMissingFields`
+- **Description** Beim Zusammenfuehren gewann bei abweichenden Stammdaten immer der Hauptkunde, und jedes LEERE Feld wurde einzeln vom Duplikat ergaenzt. Hatten beide Akten verschiedene Anschriften und fehlte beim Hauptkunden z. B. der Hausnummer-Zusatz, entstand "Hauptstr. 5 b" - die Strasse der einen, der Zusatz der anderen Anschrift, eine Adresse, die es nicht gibt. Und war die neuere Angabe (Telefon, IBAN, Anschrift) beim Duplikat, gab es keinen Weg, sie zu uebernehmen.
+- **Fix** PR-3c: `abweichendeFelder()` nennt die Gruppen, in denen beide Akten verschiedene Werte fuehren (Anschrift, Krankenkasse, Arbeitgeber als GANZES, sonst je Feld; Schreibweisen wie "Strasse"/"Str." gelten als gleich). Die Merge-Vorschau laesst je Gruppe waehlen (Voreinstellung Hauptkunde, IBAN/Steuer-ID maskiert); der Server ermittelt die Gruppen selbst neu und nimmt aus dem Formular nur die Wahl. Eine behaltene abweichende Gruppe wird nicht mehr teilweise ergaenzt. Der alte Wert steht im (verschluesselten) Merge-Protokoll; Rueckgaengig stellt ihn wieder her, wenn das Feld seither unveraendert ist. Test `MergeFeldwahlTest` (9 von 10 Faellen rot ohne den Fix).
+- **Discovered** 07.10.2026 (Bau PR-3c)
+
 ### KI-092 - Zweite Fortschreibung: doppelte Bildnamen
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (07.10.2026)
 - **Location** `PdfStamper::stampPage` (Bildname)
@@ -280,7 +288,7 @@ und PHPStan) auf `main` gruen ist.
 - **Fix** Der Name traegt die im ganzen Dokument eindeutige OBJEKTNUMMER des Bildes (`D24Sig<obj>`). Test `InterneUnterschriftTest::test_intern_kunde_endfassung_drei_hashes_und_sichtbar` (ohne den Fix "Fehler bei Fertigstellung").
 - **Discovered** 07.10.2026 (eigener Test, Teil B)
 
-### KI-094 - Kinder unter 16 mit eigener Kundennummer
+### KI-095 - Kinder unter 16 mit eigener Kundennummer
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (07.10.2026) - der BESTAND ist noch nicht umgestellt (Betreiber entscheidet nach `kunden:kinder-pruefen`)
 - **Location** `Customer` (creating-Hook), `CustomerAutoCreationService`, `AdminController::storeCustomer`, `RegisteredUserController`, `SmartDocumentUploadController::createCustomersFromPersons`, `Contract` (saving-Hook), `PortalAccessService`
 - **Description** Betreiber-Meldung 07.10.2026: "Tala Alhamoud" ist als Kind mit den Eltern verknuepft und traegt trotzdem die Kundennummer 2600810. Jeder Anlageweg zog die Nummer vorab beim `CustomerNumberGenerator`, keiner fragte Geburtsdatum oder Rolle. Besonders "👪 N Kunden anlegen" (Gesundheitskarten / Antrag auf Familienversicherung) legt je Person eine Akte an - Kinder eingeschlossen. Folge: Kinder konnten Vertraege, Portal-Einladungen und eigene Vorgaenge bekommen.

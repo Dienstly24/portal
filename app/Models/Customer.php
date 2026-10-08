@@ -277,7 +277,7 @@ class Customer extends Model
                   // Bewusst als Unterabfrage am globalen Scope vorbei.
                     ->orWhereIn('customers.id', fn ($s) => $s->select('merged_into_id')->from('customers')
                         ->whereNotNull('archived_at')->where('customer_number', 'like', $like))
-                  // Archivierte Nummer (KI-094): die einem Kind zu Unrecht
+                  // Archivierte Nummer (KI-095): die einem Kind zu Unrecht
                   // vergebene Nummer findet weiterhin das Kind.
                     ->orWhereIn('customers.id', fn ($s) => $s->select('customer_id')->from('archivierte_kundennummern')
                         ->whereNotNull('customer_id')->where('customer_number', 'like', $like))
@@ -434,7 +434,7 @@ class Customer extends Model
             if ($m->created_by === null && auth()->check() && auth()->user()->isStaff()) {
                 $m->created_by = auth()->id();
             }
-            // KI-094 (07.10.2026): ein Kind unter dem Selbststaendigkeitsalter
+            // KI-095 (07.10.2026): ein Kind unter dem Selbststaendigkeitsalter
             // bekommt KEINE eigene Kundennummer - egal ueber welchen Weg es
             // entsteht (Formular, Dokumenten-Eingang, Gesundheitskarten einer
             // Familie, Import). Die Aufrufer ziehen die Nummer vorab; hier ist
@@ -621,7 +621,7 @@ class Customer extends Model
 
     /**
      * Juenger als das Selbststaendigkeitsalter (Standard 16)? Ohne
-     * Geburtsdatum: nein - ein Alter wird nie geraten (KI-094).
+     * Geburtsdatum: nein - ein Alter wird nie geraten (KI-095).
      */
     public function unterSelbststaendigkeitsalter(): bool
     {

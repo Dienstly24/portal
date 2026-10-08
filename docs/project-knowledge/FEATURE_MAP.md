@@ -32,12 +32,13 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Merge-Sperren `CustomerMergeService::mergeBlockers()` (Widerspruch, zwei aktive Portalzugaenge) - `merge()` verweigert sich ohne Begruendung; Sammel-Merge nur `sicher` (KI-065/068)
 - Zusammenfuehren ARCHIVIERT das Duplikat (`merged_into_id`/`archived_at`, Alias der alten Kundennummer, Weiterleitung alter Links) und schreibt ein Protokoll `customer_merges` (KI-064, PR-3a)
 - Rueckgaengig innerhalb von 30 Tagen (`CustomerMergeUndoService`, Route `admin.customer.merge.undo`, nur admin) und Abschluss nach Fristablauf (`kunden:zusammenfuehrungen-abschliessen`, 05:45) (KI-064, PR-3b)
-- Tests `DublettenFamilieTest`, `MergeSperrenTest`, `MergeArchivTest`, `MergeRueckgaengigTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
+- Merge-Vorschau mit Feldwahl: abweichende Stammdaten je Gruppe waehlbar, Anschrift nur als Ganzes (`CustomerMergeService::abweichendeFelder`) (KI-094, PR-3c)
+- Tests `DublettenFamilieTest`, `MergeSperrenTest`, `MergeArchivTest`, `MergeRueckgaengigTest`, `MergeFeldwahlTest`, `CustomerMergeDataPreservationTest`, `DuplicateBulkMergeTest`, `DuplicateDetection*Test`, `CustomerMergeServiceTest`, `CustomerRelationshipTest`, `KundenbeziehungenTest`
 - Status **ACTIVE**
 
 ### F-003 Familie und Kundenbeziehungen (inkl. Kinder unter 16, Uebergang mit 16)
 - S `Family/FamilyRelationService`, `Family/AbhaengigesKindService`; Support `FamilienAlter` (Einstellung 15/16); C `CustomerFamilyRelationController` (inkl. `kundennummerVergeben`); V `admin/partials/family_relations`, `admin/family_transitions`, Karte "Familie / Kinder" in `admin/settings`; T `customer_family_relations`, `customer_family`, `archivierte_kundennummern`, `customers.portal_vorbereitung_erinnert_at`; Planer `familie:portal-vorbereitung-erinnern` (05:35), `familie:uebergaenge-anwenden` (05:40); Befehle `kunden:kinder-pruefen` (lesend), `kunden:kind-umstellen` (Probelauf)
-- Kinder unter 16: keine Kundennummer, kein Vertrag, kein Portal (KI-094, 07.10.2026)
+- Kinder unter 16: keine Kundennummer, kein Vertrag, kein Portal (KI-095, 07.10.2026)
 - Tests `CustomerFamilyRelationTest`, `AdminFamilyDisplayTest`, `AbhaengigeKinderTest`
 - Status **ACTIVE**
 

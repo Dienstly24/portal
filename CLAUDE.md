@@ -2231,7 +2231,7 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   **ABHAENGIG NUR MIT BELEG**: `is_dependent` wird gesetzt, wenn die Rolle
   ein KIND beschreibt UND das Geburtsdatum ein Alter unter dem
   Selbststaendigkeitsalter (16) belegt - oder die Akte als Kind OHNE
-  Kundennummer angelegt wurde (KI-094). Sonst entsteht ohne Geburtsdatum
+  Kundennummer angelegt wurde (KI-095). Sonst entsteht ohne Geburtsdatum
   keine Abhaengigkeit - ein Alter wird nie geraten.
   Das Flag steht immer nur an der Zeile der Bezugsperson (ein Elternteil ist
   nie vom Kind abhaengig).
@@ -4701,10 +4701,22 @@ Merge von PR #358, Teil E/F).
   Stammdaten der Huelle (Datenminimierung) und anonymisiert Konten, die
   keine lebende Akte mehr benutzt - die Kundennummer bleibt als Alias.
   Tests: `MergeRueckgaengigTest`.
-- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR): PR-3c
-  Feldwahl in der Merge-Vorschau (bei abweichenden Werten waehlt der
-  Admin je Feld; heute gewinnt immer der Hauptkunde, leere Felder werden
-  ergaenzt);
+- **Feldwahl in der Merge-Vorschau (PR-3c, 07.10.2026, KI-094)**:
+  `CustomerMergeService::abweichendeFelder()` nennt die Gruppen, in denen
+  BEIDE Akten verschiedene Werte fuehren - Anschrift, Krankenkasse und
+  Arbeitgeber nur als GANZES (`FELDGRUPPEN`; Strasse der einen + PLZ der
+  anderen ergaebe eine Adresse, die es nicht gibt), sonst je Feld;
+  Schreibweisen ("Strasse"/"Str.", "ss"/"ß") gelten als gleich. Die
+  Vorschau laesst je Gruppe waehlen, Voreinstellung Hauptkunde, IBAN/
+  Steuer-ID/Kassennummern maskiert. Dem Formular wird nur die WAHL
+  geglaubt - welche Gruppen abweichen, ermittelt `merge(..., $feldwahl)`
+  selbst neu. Eine behaltene abweichende Gruppe wird nicht mehr TEILWEISE
+  aus der anderen ergaenzt (gilt auch im Sammel-Merge). Der ersetzte Wert
+  steht im verschluesselten Protokoll (`uebernommen`), Rueckgaengig holt
+  ihn zurueck, wenn das Feld seither unveraendert ist. Die Auswahl eines
+  Duplikats per Suche laedt die Vorschau fuer genau dieses Paar.
+  Tests: `MergeFeldwahlTest`.
+- **Freigegebener Fahrplan, NOCH NICHT gebaut** (je ein PR):
   PR-4 geteilte Kontaktdaten + Adressnormalisierung (KI-069); PR-5
   Haushalt + weitere Beziehungsarten + Uebernahme des Bestands; PR-6
   Vertragsrollen (VN bleibt `contracts.customer_id`); PR-7 Portal je
@@ -4715,7 +4727,7 @@ Merge von PR #358, Teil E/F).
   `Customer::DEPENDENT_AGE` gibt es nicht mehr), siehe "Kinder unter 16".
 - Tests: `DublettenFamilieTest`; nachgezogen `DuplicateBulkMergeTest`.
 
-## Kinder unter 16: keine eigene Kundennummer (Betreiber-Auftrag 07.10.2026, KI-094)
+## Kinder unter 16: keine eigene Kundennummer (Betreiber-Auftrag 07.10.2026, KI-095)
 
 - **Anlass**: die Tochter "Tala Alhamoud" war als Kind verknuepft und trug
   trotzdem eine eigene Kundennummer (2600810). Ursache: KEIN Anlageweg

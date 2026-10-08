@@ -93,7 +93,7 @@ class RegisteredUserController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255',
                 'unique:'.User::class],
             'birth_date' => ['nullable', 'date', 'before_or_equal:today',
-                // KI-094: unter dem Selbststaendigkeitsalter gibt es kein
+                // KI-095: unter dem Selbststaendigkeitsalter gibt es kein
                 // eigenes Kundenkonto - Kinder laufen ueber die Akte eines
                 // Elternteils. Ohne diese Pruefung entstuende beim Bestaetigen
                 // ein Portal-Login ohne Kundennummer.

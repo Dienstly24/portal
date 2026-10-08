@@ -339,7 +339,7 @@ class FamilyRelationService
     /**
      * Abhaengig ist ein Familienmitglied nur, wenn es als KIND verknuepft ist
      * UND sein Geburtsdatum ein Alter unter dem Selbststaendigkeitsalter
-     * belegt - ODER es (noch) keine eigene Kundennummer traegt (KI-094: als
+     * belegt - ODER es (noch) keine eigene Kundennummer traegt (KI-095: als
      * Kind angelegt, Geburtsdatum fehlt). Ohne Geburtsdatum wird
      * nichts angenommen - ein Alter zu raten waere schlimmer als es offen zu
      * lassen.

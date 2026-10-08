@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Kinder unter dem Selbststaendigkeitsalter bekommen keine eigene
- * Kundennummer mehr (Betreiber-Auftrag 07.10.2026, KI-094).
+ * Kundennummer mehr (Betreiber-Auftrag 07.10.2026, KI-095).
  *
  *  1. `customers.customer_number` wird NULLBAR. Die Akte des Kindes bleibt
  *     (Name, Geburtsdatum, Krankenkasse, Dokumente haengen an ihr), sie
