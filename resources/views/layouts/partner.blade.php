@@ -105,7 +105,8 @@ tr:last-child td{border-bottom:none;}
     </div>
 </div>
 <div class="main">
-    @if(session('success'))<div class="alert-success">{{ session('success') }}</div>@endif
+    @if(session('success'))<div class="alert-success" role="status">{{ session('success') }}</div>@endif
+    @include('partials.feldfehler')
     @yield('content')
 </div>
 

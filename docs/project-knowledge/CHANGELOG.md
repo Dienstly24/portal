@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 09.10.2026 - Bedienung: Auswahl, Popover, Datum TT.MM.JJJJ, Sammelaktionen Aufgaben, Geburtsort optional
+
+- **Task**: Betreiber-Auftrag "Bedienung im gesamten System professioneller, eindeutiger, kontrollierbar" (7 Punkte), zentral gebaut.
+- **Files Changed**: neu `resources/css/bedienung.css`, `resources/js/datum.js`, `resources/js/datum-logik.js`, `resources/views/partials/feldfehler.blade.php`, `tests/js/datum-logik.test.js`, `tests/Feature/AufgabenSammelaktionTest.php`, `tests/Feature/GeburtsortOptionalTest.php`, `docs/BEDIENUNG_UX_2026-10-09.md`; geaendert `components.css`, `app.css`, `app.js`, `ui.js`, Layouts admin/portal/partner, `TaskController`, `AdminController`, `PortalController`, Views `tasks`, `contract_edit/create/new`, `customer_edit/create`, `portal/profile`, Partials `contract_origin_fields`, `contract_form_fields`, `beziehung_festlegen`, `routes/web.php`, `lang/ar.json`, `package.json` (`test:js`), `.github/workflows/deploy.yml`; `CLAUDE.md`, Wissensbasis.
+- **Components Affected**: jedes Formular (Checkbox/Radio, Datum, Feldfehler), Popover/Menues, Aufgabenliste, Vertragsformular, Kundenformular, Kundenportal-Profil.
+- **Database Changes**: keine (`customers.birth_place` war bereits nullable).
+- **API Changes**: `POST admin/tasks/sammelaktion` (`admin.tasks.bulk`), `POST admin/tasks/sammelaktion/rueckgaengig` (`admin.tasks.bulk_undo`), beide staff + throttle.
+- **Potential Side Effects**: Datumsfelder sind jetzt Textfelder mit Maske (Original bleibt verborgen als Formularfeld); Skripte, die `.value` des Originals setzen, aktualisieren die Anzeige mit. Reiter der Beraterwelt aktiv gruen statt graphit. `?tab=<unbekannt>` zeigt "Meine Aufgaben".
+- **Tests Performed**: `AufgabenSammelaktionTest` 11, `GeburtsortOptionalTest` 3 (ohne Fix 3/3 rot), `npm run test:js` 6; volle Suite; Pint sauber; PHPStan lokal NICHT lauffaehig (Paket nur ueber gesperrten Host), laeuft in CI. Browser: Herkunft aendern + speichern, Datum tippen/einfuegen/31.02., Router-Segment, Sammelaktion + Rueckgaengig, Beziehungs-Dialog (1366/820 px), Sweep ueber 87 Admin- und 15 Portalseiten.
+- **Result**: gebaut; offene mittlere/niedrige Punkte in `docs/BEDIENUNG_UX_2026-10-09.md`.
+
 ## 08.10.2026 - Vertragsrollen: versicherte Personen, Beitragszahler, Beguenstigte (PR-6)
 
 - **Task**: PR-6 des freigegebenen Dubletten-/Familien-Plans. Der Versicherungsnehmer bleibt `contracts.customer_id`; weitere Personen eines Vertrags werden verknuepft statt in eine Akte gezwungen.

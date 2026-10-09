@@ -334,11 +334,15 @@
 
     {{-- Router: inklusive oder mit monatlichem Aufpreis. --}}
     <div style="font-weight:600;font-size:13px;margin:10px 0 8px;color:var(--ink);">Router</div>
+    {{-- Ja/Nein als Segment (09.10.2026): eine einzelne Checkbox "Mit
+         Router" liess offen, ob "nicht angehakt" "ohne Router" oder "nicht
+         angegeben" heisst. Der Server liest unveraendert boolean(). --}}
+    @php $mitRouter = (bool) old('internet.has_router', $net->has_router ?? false); @endphp
     <div class="field">
-        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
-            <input type="checkbox" name="internet[has_router]" value="1" {{ old('internet.has_router', $net->has_router ?? false) ? 'checked' : '' }}>
-            Mit Router
-        </label>
+        <div class="segment" role="radiogroup" aria-label="Router">
+            <label><input type="radio" name="internet[has_router]" value="1" @checked($mitRouter)><span>Mit Router</span></label>
+            <label><input type="radio" name="internet[has_router]" value="0" @checked(! $mitRouter)><span>Ohne Router</span></label>
+        </div>
     </div>
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
         <div class="field"><label>Router-Modell</label><input type="text" name="internet[router_name]" maxlength="120" value="{{ $val('internet.router_name', $net->router_name ?? '') }}" placeholder="z. B. Telekom Speedport Smart 4" aria-label="Router-Modell"></div>

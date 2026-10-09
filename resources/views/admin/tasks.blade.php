@@ -86,7 +86,7 @@
             <div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;">
                 @foreach(['today'=>'Heute','overdue'=>'Überfällig','7'=>'7 Tage','14'=>'14 Tage',''=>'Alle'] as $val=>$lbl)
                 <button type="submit" name="due" value="{{ $val }}"
-                    style="padding:8px 13px;border:none;font-size:13px;cursor:pointer;background:{{ request('due','')===$val?'var(--graphite)':'#fff' }};color:{{ request('due','')===$val?'#fff':'var(--ink)' }};white-space:nowrap;">
+                    style="padding:8px 13px;border:none;font-size:13px;cursor:pointer;background:{{ request('due','')===$val?'var(--emerald)':'#fff' }};color:{{ request('due','')===$val?'#fff':'var(--ink)' }};white-space:nowrap;">
                     {{ $lbl }}
                 </button>
                 @endforeach
@@ -113,6 +113,74 @@
 
 <div style="font-size:14px;font-weight:700;margin-bottom:14px;">Aufgaben ({{ $tasks->total() }})</div>
 
+@if(session('aufgaben_rueckgaengig'))
+{{-- Rueckgaengig nach einer Sammelaktion (15 Minuten, nur der Ausloeser). --}}
+<form method="POST" action="{{ route('admin.tasks.bulk_undo') }}" class="alert alert-info" style="justify-content:space-between;flex-wrap:wrap;">
+    @csrf
+    <input type="hidden" name="token" value="{{ session('aufgaben_rueckgaengig')['token'] }}">
+    <span>↩ Die Sammelaktion lässt sich {{ session('aufgaben_rueckgaengig')['minuten'] }} Minuten lang zurücknehmen.</span>
+    <button type="submit" class="btn btn-ghost btn-sm">Rückgängig machen</button>
+</form>
+@endif
+
+@if($tasks->isNotEmpty())
+{{-- Sammelaktionen (09.10.2026). Eigenes Formular AUSSERHALB der Karten -
+     dort stehen bereits Formulare, und Formulare duerfen nicht
+     verschachtelt sein. Die Checkboxen haengen per form="sammel-form" daran.
+     Bei "alle Treffer des Filters" reisen die Filter mit - der Server
+     waehlt mit DERSELBEN Abfrage wie die Liste aus. --}}
+<form id="sammel-form" method="POST" action="{{ route('admin.tasks.bulk') }}" data-sammel data-gesamt="{{ $tasks->total() }}" data-seite="{{ $tasks->count() }}" data-bestaetigen-ab="{{ \App\Http\Controllers\TaskController::SAMMEL_BESTAETIGEN_AB }}">
+    @csrf
+    <input type="hidden" name="auswahl" value="ids" data-sammel-auswahl>
+    <input type="hidden" name="bestaetigt" value="0" data-sammel-bestaetigt>
+    <input type="hidden" name="tab" value="{{ $tab }}">
+    @foreach(['status', 'type', 'due', 'q', 'customer'] as $fName)
+        @if(request()->filled($fName))<input type="hidden" name="{{ $fName }}" value="{{ request($fName) }}">@endif
+    @endforeach
+
+    <div class="sammel-kopf">
+        <label><input type="checkbox" data-sammel-alle> Alle auf dieser Seite auswählen ({{ $tasks->count() }})</label>
+        @if($tasks->total() > $tasks->count())
+        <span data-sammel-filter-hinweis hidden>
+            <button type="button" class="btn btn-ghost btn-sm" data-sammel-filter>Alle {{ $tasks->total() }} Treffer des aktuellen Filters auswählen</button>
+        </span>
+        @endif
+    </div>
+
+    <div class="sammel-leiste" data-sammel-leiste hidden role="region" aria-label="Sammelaktionen">
+        <span class="sammel-zahl"><span data-sammel-anzahl>0</span> ausgewählt</span>
+        @if($tab !== 'done')
+        <button type="submit" name="aktion" value="erledigt" class="btn btn-emerald btn-sm">✓ Erledigt</button>
+        @endif
+        <span style="display:inline-flex;gap:4px;align-items:center;">
+            <select name="neuer_status" aria-label="Neuer Status">
+                <option value="">Status …</option>
+                @foreach(\App\Models\Task::STATUSES as $sKey => $sLabel)<option value="{{ $sKey }}">{{ $sLabel }}</option>@endforeach
+            </select>
+            <button type="submit" name="aktion" value="status" class="btn btn-ghost btn-sm">Setzen</button>
+        </span>
+        <span style="display:inline-flex;gap:4px;align-items:center;">
+            <select name="tage" aria-label="Verschieben um">
+                <option value="">Später …</option>
+                <option value="1">+1 Tag</option><option value="3">+3 Tage</option><option value="7">+1 Woche</option>
+                <option value="14">+2 Wochen</option><option value="30">+1 Monat</option>
+            </select>
+            <button type="submit" name="aktion" value="verschieben" class="btn btn-ghost btn-sm">Verschieben</button>
+        </span>
+        <span style="display:inline-flex;gap:4px;align-items:center;">
+            <select name="assigned_to" aria-label="Zuweisen an">
+                <option value="">Zuweisen an …</option>
+                @foreach($staff as $s)<option value="{{ $s->id }}">{{ $s->name }}</option>@endforeach
+            </select>
+            <button type="submit" name="aktion" value="zuweisen" class="btn btn-ghost btn-sm">Zuweisen</button>
+        </span>
+        <button type="submit" name="aktion" value="loeschen" class="btn btn-danger btn-sm">🗑 Löschen</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-sammel-leeren style="margin-left:auto;">Auswahl aufheben</button>
+        <span data-sammel-meldung role="status" style="flex-basis:100%;font-size:12.5px;color:#FDE68A;"></span>
+    </div>
+</form>
+@endif
+
 @if($tasks->isEmpty())
 <div class="card" style="text-align:center;padding:48px 24px;color:var(--ink-soft);">
     <div style="font-size:34px;margin-bottom:10px;">✅</div>
@@ -129,8 +197,9 @@ $priorityText = ['high'=>'#A32D2D','medium'=>'#92400E','low'=>'var(--emerald)'];
 $overdue = $t->isOverdue();
 $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'icon'=>'📌'];
 @endphp
-<div class="card" id="task-{{ $t->id }}" style="padding:16px 20px;margin:0;{{ $overdue ? 'border-left:4px solid #C25454;' : '' }}">
+<div class="card sammel-karte" id="task-{{ $t->id }}" style="padding:16px 20px;margin:0;{{ $overdue ? 'border-left:4px solid #C25454;' : '' }}">
     <div style="display:flex;align-items:center;gap:14px;">
+        <input type="checkbox" form="sammel-form" name="ids[]" value="{{ $t->id }}" data-sammel-item aria-label="Aufgabe auswählen: {{ $t->title }}">
         <div style="width:40px;height:40px;border-radius:10px;background:{{ $overdue ? '#F9E3E3' : '#EDEAE0' }};display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;" title="{{ $typeDef['label'] }}">
             {{ $typeDef['icon'] }}
         </div>
@@ -211,6 +280,76 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
 </div>
 <div style="margin-top:16px;">{{ $tasks->links() }}</div>
 @endif
+
+<script @cspNonce>
+(function () {
+    // Sammelauswahl der Aufgaben (09.10.2026). Selbsttragend (Nonce,
+    // addEventListener) - keine Registrierung in window.__h noetig.
+    var form = document.getElementById('sammel-form');
+    if (!form) return;
+    var gesamt = +form.dataset.gesamt, ab = +form.dataset.bestaetigenAb;
+    var leiste = form.querySelector('[data-sammel-leiste]');
+    var alle = form.querySelector('[data-sammel-alle]');
+    var filterHinweis = form.querySelector('[data-sammel-filter-hinweis]');
+    var auswahl = form.querySelector('[data-sammel-auswahl]');
+    var meldung = form.querySelector('[data-sammel-meldung]');
+    var items = function () { return Array.prototype.slice.call(document.querySelectorAll('[data-sammel-item]')); };
+    var anzahl = function () {
+        return auswahl.value === 'filter' ? gesamt : items().filter(function (i) { return i.checked; }).length;
+    };
+    function aktualisieren() {
+        var liste = items(), n = liste.filter(function (i) { return i.checked; }).length;
+        alle.checked = n > 0 && n === liste.length;
+        alle.indeterminate = n > 0 && n < liste.length;
+        if (filterHinweis) filterHinweis.hidden = !(n === liste.length && n > 0) || auswahl.value === 'filter';
+        leiste.hidden = n === 0;
+        form.querySelector('[data-sammel-anzahl]').textContent = auswahl.value === 'filter'
+            ? 'Alle ' + gesamt + ' Treffer des Filters' : String(n);
+        meldung.textContent = '';
+    }
+    document.addEventListener('change', function (e) {
+        if (e.target === alle) {
+            items().forEach(function (i) { i.checked = alle.checked; });
+            auswahl.value = 'ids';
+        } else if (e.target.matches('[data-sammel-item]')) {
+            auswahl.value = 'ids';
+        } else { return; }
+        aktualisieren();
+    });
+    form.addEventListener('click', function (e) {
+        if (e.target.closest('[data-sammel-filter]')) {
+            items().forEach(function (i) { i.checked = true; });
+            auswahl.value = 'filter';
+            aktualisieren();
+        }
+        if (e.target.closest('[data-sammel-leeren]')) {
+            items().forEach(function (i) { i.checked = false; });
+            auswahl.value = 'ids';
+            aktualisieren();
+        }
+    });
+    form.addEventListener('submit', function (e) {
+        var aktion = e.submitter ? e.submitter.value : '';
+        var n = anzahl();
+        var fehlt = { status: ['neuer_status', 'Bitte zuerst den neuen Status wählen.'],
+            verschieben: ['tage', 'Bitte zuerst wählen, um wie viel verschoben wird.'],
+            zuweisen: ['assigned_to', 'Bitte zuerst den Mitarbeiter wählen.'] }[aktion];
+        if (fehlt && !form.querySelector('[name="' + fehlt[0] + '"]').value) {
+            e.preventDefault(); meldung.textContent = '⚠ ' + fehlt[1]; return;
+        }
+        var bestaetigt = form.querySelector('[data-sammel-bestaetigt]');
+        bestaetigt.value = '0';
+        if (aktion === 'loeschen' || n >= ab) {
+            var text = aktion === 'loeschen'
+                ? n + ' Aufgabe(n) endgültig löschen?\n\nDas lässt sich 15 Minuten lang über „Rückgängig“ zurücknehmen.'
+                : 'Diese Aktion betrifft ' + n + ' Aufgaben. Fortfahren?';
+            if (!confirm(text)) { e.preventDefault(); return; }
+            bestaetigt.value = '1';
+        }
+    });
+    aktualisieren();
+})();
+</script>
 
 {{-- Aufgaben-Modal (Anlegen + Bearbeiten) --}}
 <div class="d24-modal" id="task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;">
@@ -432,9 +571,11 @@ function fillAutoEmail(ae) {
 function pickDue(days, chip) {
     const d = new Date();
     d.setDate(d.getDate() + days);
-    el('tf-due').value = d.toISOString().slice(0, 10);
+    // Ortszeit statt toISOString(): das rechnet in UTC und lieferte kurz
+    // nach Mitternacht den Vortag.
+    el('tf-due').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     document.querySelectorAll('.due-chip').forEach(c => { c.style.background = '#fff'; c.style.borderColor = 'var(--line)'; c.style.color = 'var(--ink)'; c.style.fontWeight = '400'; });
-    if (chip) { chip.style.background = 'var(--graphite)'; chip.style.borderColor = 'var(--graphite)'; chip.style.color = '#fff'; chip.style.fontWeight = '600'; }
+    if (chip) { chip.style.background = 'var(--emerald)'; chip.style.borderColor = 'var(--emerald)'; chip.style.color = '#fff'; chip.style.fontWeight = '600'; }
 }
 function clearDueChips() {
     document.querySelectorAll('.due-chip').forEach(c => { c.style.background = '#fff'; c.style.borderColor = 'var(--line)'; c.style.color = 'var(--ink)'; c.style.fontWeight = '400'; });

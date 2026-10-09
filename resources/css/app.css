@@ -16,6 +16,10 @@
 /* Wiederkehrende Oberflaechen-Bausteine (UX-2) - siehe components.css */
 @import './components.css';
 
+/* Bedienelemente: Auswahl, Popover, Datum, Feldfehler, Sammelaktionen
+   (09.10.2026) - siehe bedienung.css */
+@import './bedienung.css';
+
 /* Auswertungsseite "Berichte & Analysen" - nur dort benutzte Bausteine */
 @import './analytics.css';
 

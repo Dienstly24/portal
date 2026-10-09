@@ -35,6 +35,16 @@ Test: `DesignSystemTest`.
 - `resources/js/ui.js` (Modul): generische Verhalten ueber data-Attribute:
   `data-confirm`, `data-row-nav`, `data-toggle/-show/-hide`, `data-fill-target`,
   `data-menu*`, `data-bulk*`, `data-h-<ereignis>="<name>"`.
+  Seit 09.10.2026 ausserdem: schwebende Popover (`details[data-pop]`,
+  `data-pop="dialog"`, `data-pop-schliessen`, Bestand `.pop`/`.bz-pick`/
+  `[data-menu-panel]`), Fehler am Feld (JSON aus `partials/feldfehler`),
+  `form[data-aenderungen-warnen]` + `[data-ungespeichert-hinweis]`.
+- `resources/js/datum.js` + `datum-logik.js`: jedes `<input type="date">`
+  zeigt TT.MM.JJJJ mit Maske; das Original bleibt Formularfeld (ISO).
+  Opt-out `data-datum-nativ`. Tests `npm run test:js`.
+- `resources/css/bedienung.css`: Checkbox/Radio, `.wahl`, `.segment`,
+  `.schalter`, Popover/Dialog, `.datum`, `.feld-hat-fehler`,
+  `.aktionsleiste`, `.sammel-leiste`.
 - Seitenspezifische Handler: `@pushOnce('cspScripts')` mit
   `<script @cspNonce>window.__h = window.__h || {}; window.__h["name"] = fn;</script>`.
 - **FALLE**: `@push` NACH `@stack` derselben Datei geht still verloren

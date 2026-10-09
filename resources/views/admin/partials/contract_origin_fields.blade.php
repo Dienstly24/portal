@@ -58,8 +58,8 @@
     </div>
     @if($oc)
     {{-- Aenderung der Herkunft = bewusste, protokollierte Entscheidung. --}}
-    <label id="origin-change-confirm" data-original="{{ $ocOriginal }}" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid #E8C36A;background:#FEF3C7;border-radius:8px;font-size:12.5px;gap:8px;align-items:flex-start;">
-        <input type="checkbox" name="origin_change_confirmed" value="1" style="margin-top:2px;">
+    <label id="origin-change-confirm" class="wahl wahl-warnung" data-original="{{ $ocOriginal }}" style="display:none;margin-top:10px;font-size:12.5px;">
+        <input type="checkbox" name="origin_change_confirmed" value="1" @checked(old('origin_change_confirmed'))>
         <span>⚠️ Ich ändere die Herkunft dieses Vertrags bewusst (bisher: <strong>{{ $oc->originLabel() }}</strong>). Die Änderung wird mit Name und Zeitpunkt protokolliert.</span>
     </label>
     @endif
@@ -79,9 +79,9 @@
             <div class="muted-2xs" style="margin-top:4px;">Datum der Maklervollmacht bzw. Courtagezusage.</div>
         </div>
         <div class="field origin-only-external" style="margin-bottom:0;display:none;">
-            <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
-                <input type="hidden" name="cancellation_submitted_by_us" value="0">
-                <input type="checkbox" name="cancellation_submitted_by_us" value="1" {{ old('cancellation_submitted_by_us', $oc->cancellation_submitted_by_us ?? false) ? 'checked' : '' }} style="margin-top:3px;">
+            <input type="hidden" name="cancellation_submitted_by_us" value="0">
+            <label class="wahl" style="font-weight:500;margin-top:22px;">
+                <input type="checkbox" name="cancellation_submitted_by_us" value="1" {{ old('cancellation_submitted_by_us', $oc->cancellation_submitted_by_us ?? false) ? 'checked' : '' }}>
                 <span>Kündigung haben <strong>wir</strong> im Auftrag des Kunden eingereicht</span>
             </label>
         </div>
@@ -109,12 +109,12 @@
 <div class="origin-section" data-origin-for="brokered transferred" style="display:none;border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
     <div style="font-weight:600;font-size:13.5px;margin-bottom:8px;">↩ Ersetzt einen bestehenden Vertrag?</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:6px;">
-        <label style="display:flex;gap:6px;align-items:center;"><input type="radio" name="replaces_mode" value="none" {{ $ocReplacesMode === 'none' ? 'checked' : '' }} data-replaces-radio> Nein</label>
+        <label class="wahl" style="padding:7px 12px;"><input type="radio" name="replaces_mode" value="none" {{ $ocReplacesMode === 'none' ? 'checked' : '' }} data-replaces-radio> Nein</label>
         @if($ocKandidaten->isNotEmpty())
-        <label style="display:flex;gap:6px;align-items:center;"><input type="radio" name="replaces_mode" value="existing" {{ $ocReplacesMode === 'existing' ? 'checked' : '' }} data-replaces-radio> Ja – vorhandenen Vertrag wählen</label>
+        <label class="wahl" style="padding:7px 12px;"><input type="radio" name="replaces_mode" value="existing" {{ $ocReplacesMode === 'existing' ? 'checked' : '' }} data-replaces-radio> Ja – vorhandenen Vertrag wählen</label>
         @endif
         @if(! $oc)
-        <label style="display:flex;gap:6px;align-items:center;"><input type="radio" name="replaces_mode" value="new" {{ $ocReplacesMode === 'new' ? 'checked' : '' }} data-replaces-radio> Ja – Vorvertrag jetzt als Fremdvertrag erfassen</label>
+        <label class="wahl" style="padding:7px 12px;"><input type="radio" name="replaces_mode" value="new" {{ $ocReplacesMode === 'new' ? 'checked' : '' }} data-replaces-radio> Ja – Vorvertrag jetzt als Fremdvertrag erfassen</label>
         @endif
     </div>
     @if($ocKandidaten->isNotEmpty())
@@ -140,10 +140,10 @@
             <div class="field" style="margin-bottom:0;"><label>Monatsbeitrag des Vorvertrags (€)</label>
                 <input type="number" step="0.01" min="0" name="predecessor[premium_amount]" value="{{ old('predecessor.premium_amount') }}" aria-label="Monatsbeitrag des Vorvertrags"></div>
         </div>
-        <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:10px;">
-            <input type="hidden" name="predecessor[cancellation_submitted_by_us]" value="0">
+        <input type="hidden" name="predecessor[cancellation_submitted_by_us]" value="0">
+        <label class="wahl" style="margin-top:10px;">
             <input type="checkbox" name="predecessor[cancellation_submitted_by_us]" value="1" {{ old('predecessor.cancellation_submitted_by_us') ? 'checked' : '' }}>
-            Kündigung haben <strong>wir</strong> im Auftrag des Kunden eingereicht
+            <span>Kündigung haben <strong>wir</strong> im Auftrag des Kunden eingereicht</span>
         </label>
         <div class="muted-2xs" style="margin-top:6px;">Der Vorvertrag entsteht als <strong>Fremdvertrag – nur Dokumentation</strong> in derselben Sparte, gekündigt zum Beginn des neuen Vertrags.</div>
     </div>
@@ -178,13 +178,38 @@
         document.querySelectorAll('.origin-only-transferred').forEach(function (el) { el.style.display = o === 'transferred' ? '' : 'none'; });
         const conf = document.getElementById('origin-change-confirm');
         if (conf) conf.style.display = (o && o !== conf.dataset.original) ? 'flex' : 'none';
+        sperreSpeichern(conf);
         const mode = document.querySelector('input[name="replaces_mode"]:checked');
         document.querySelectorAll('.replaces-part').forEach(function (el) {
             el.style.display = mode && el.dataset.replacesFor === mode.value ? '' : 'none';
         });
     }
+    // Speichern erst, wenn die Herkunftsaenderung bestaetigt ist
+    // (09.10.2026). Vorher lief das Formular zum Server, kam mit einer
+    // Fehlermeldung GANZ OBEN zurueck, und der Bearbeiter unten am Knopf
+    // sah nur, dass "nichts passiert". Der Server prueft weiterhin selbst.
+    function sperreSpeichern(conf) {
+        const form = document.getElementById('origin-block')?.closest('form');
+        if (!form) return;
+        const box = conf && conf.querySelector('input[type=checkbox]');
+        const fehlt = !!(conf && conf.style.display !== 'none' && box && !box.checked);
+        form.querySelectorAll('button[type=submit]').forEach(function (b) {
+            b.disabled = fehlt;
+            b.title = fehlt ? 'Bitte zuerst die Änderung der Vertragsherkunft bestätigen.' : '';
+        });
+        let hinweis = form.querySelector('[data-origin-hinweis]');
+        const knopf = form.querySelector('button[type=submit]');
+        if (!hinweis && knopf) {
+            hinweis = document.createElement('span');
+            hinweis.className = 'aktionsleiste-hinweis';
+            hinweis.setAttribute('data-origin-hinweis', '');
+            hinweis.setAttribute('role', 'status');
+            knopf.parentNode.appendChild(hinweis);
+        }
+        if (hinweis) hinweis.textContent = fehlt ? '⚠ Speichern erst nach Bestätigung der Herkunftsänderung (oben).' : '';
+    }
     document.addEventListener('change', function (e) {
-        if (e.target.matches('[data-origin-radio],[data-replaces-radio]')) sync();
+        if (e.target.matches('[data-origin-radio],[data-replaces-radio],[name="origin_change_confirmed"]')) sync();
     });
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sync); else sync();
 })();

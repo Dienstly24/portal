@@ -56,6 +56,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+      # Datumslogik TT.MM.JJJJ (09.10.2026) - reine JS-Tests, ohne Browser
+      - run: npm run test:js
 
       # Ohne diese Pakete UEBERSPRINGEN sich fuenf OCR-Testfaelle still -
       # die Suite meldet trotzdem "bestanden". Auf dem Produktionsserver

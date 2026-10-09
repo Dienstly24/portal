@@ -106,7 +106,7 @@ table tr:hover td{background:#EDEAE0;}
 .tab-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
 .tab-row .tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-soft);text-decoration:none;background:var(--surface);transition:.15s;}
 .tab-row .tab:hover{border-color:var(--ink-soft);color:var(--ink);}
-.tab-row .tab.active{background:var(--graphite);border-color:var(--graphite);color:#fff;}
+.tab-row .tab.active{background:var(--emerald);border-color:var(--emerald);color:#fff;}
 .tab-row .tab .tab-count{font-weight:700;margin-left:4px;}
 .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 .customer-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;}
@@ -247,9 +247,10 @@ table tr:hover td{background:#EDEAE0;}
 </div>
 <div class="main">
     <div class="main-inner">
-        @if(session('success'))<div class="alert alert-success">✓ {{ session('success') }}</div>@endif
-        @if(session('error'))<div class="alert alert-error">✗ {{ session('error') }}</div>@endif
-        @if(session('warning'))<div class="alert alert-warning">⚠ {{ session('warning') }}</div>@endif
+        @if(session('success'))<div class="alert alert-success" role="status">✓ {{ session('success') }}</div>@endif
+        @if(session('error'))<div class="alert alert-error" role="alert">✗ {{ session('error') }}</div>@endif
+        @if(session('warning'))<div class="alert alert-warning" role="status">⚠ {{ session('warning') }}</div>@endif
+        @include('partials.feldfehler')
         @yield('content')
     </div>
 </div>

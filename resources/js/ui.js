@@ -349,3 +349,244 @@ document.addEventListener('click', (event) => {
         }
     }
 });
+
+// ---------------------------------------------------------------------
+// 7) Popover schweben ueber allem (09.10.2026)
+//
+//    Befund: "Beziehung festlegen" stand absolut in einer Karte mit
+//    overflow:hidden - die Liste wurde abgeschnitten, Speichern war nicht
+//    erreichbar. Dasselbe drohte jedem Popover in einer Tabelle mit
+//    waagerechtem Bildlauf. Offene Popover stehen deshalb position:fixed
+//    am Ausloeser, in der Hoehe auf den freien Platz begrenzt; mit
+//    data-pop="dialog" als mittiger Dialog. Esc und Klick ausserhalb
+//    schliessen.
+//
+//    <details data-pop> <summary>…</summary> <div data-pop-panel>…</div> </details>
+//    Bestand: details.pop/.pop-panel, details.bz-pick/.bz-panel und die
+//    Zeilenmenues [data-menu-panel] gelten ohne Aenderung mit.
+// ---------------------------------------------------------------------
+const POP = 'details[data-pop], details.pop, details.bz-pick';
+const POP_PANEL = ':scope > [data-pop-panel], :scope > .pop-panel, :scope > .bz-panel';
+
+function schwebendPlatzieren(anker, panel) {
+    panel.classList.add('pop-schwebend');
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.maxHeight = '';
+    const r = anker.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = window.innerHeight;
+    const abstand = 8;
+    const breite = Math.min(panel.offsetWidth, vw - 2 * abstand);
+    const ausrichtung = panel.dataset.popAusrichtung || (panel.classList.contains('pop-panel') ? 'links' : 'rechts');
+    let links = ausrichtung === 'links' ? r.left : r.right - breite;
+    if (links + breite > vw - abstand) links = vw - abstand - breite;
+    if (links < abstand) links = abstand;
+    const unten = vh - r.bottom - abstand - 6;
+    const oben = r.top - abstand - 6;
+    const hoehe = panel.scrollHeight;
+    let top;
+    if (hoehe <= unten || unten >= oben) {
+        top = r.bottom + 6;
+        panel.style.maxHeight = Math.max(160, unten) + 'px';
+    } else {
+        panel.style.maxHeight = Math.max(160, oben) + 'px';
+        top = Math.max(abstand, r.top - 6 - Math.min(hoehe, oben));
+    }
+    panel.style.left = links + 'px';
+    panel.style.top = top + 'px';
+}
+
+function schwebendLoesen(panel) {
+    panel.classList.remove('pop-schwebend', 'pop-dialog');
+    ['left', 'top', 'right', 'bottom', 'maxHeight'].forEach((k) => { panel.style[k] = ''; });
+}
+
+function popPlatzieren(details) {
+    const panel = details.querySelector(POP_PANEL);
+    const summary = details.querySelector(':scope > summary');
+    if (!panel || !summary) return;
+    if (details.dataset.pop === 'dialog') {
+        panel.classList.add('pop-dialog');
+    } else {
+        schwebendPlatzieren(summary, panel);
+    }
+}
+
+document.addEventListener('toggle', (event) => {
+    const details = event.target;
+    if (!(details instanceof HTMLDetailsElement) || !details.matches(POP)) return;
+    const panel = details.querySelector(POP_PANEL);
+    if (!panel) return;
+    if (details.open) {
+        document.querySelectorAll(POP).forEach((d) => { if (d !== details && d.open) d.open = false; });
+        alleMenuesSchliessen(null);
+        popPlatzieren(details);
+        const erstes = panel.querySelector('input:not([type=hidden]):not([disabled]), select, textarea, button');
+        if (details.dataset.pop === 'dialog' && erstes) erstes.focus({ preventScroll: true });
+    } else {
+        schwebendLoesen(panel);
+    }
+}, true);
+
+function offenePopsSchliessen(ausser) {
+    document.querySelectorAll(POP).forEach((d) => {
+        if (d.open && d !== ausser) d.open = false;
+    });
+}
+
+document.addEventListener('click', (event) => {
+    const schliessen = event.target.closest('[data-pop-schliessen]');
+    if (schliessen) {
+        const d = schliessen.closest('details');
+        if (d) { event.preventDefault(); d.open = false; d.querySelector(':scope > summary')?.focus(); }
+        return;
+    }
+    // Klick ausserhalb jedes offenen Popovers schliesst es.
+    const innen = event.target.closest(POP);
+    offenePopsSchliessen(innen);
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll(POP).forEach((d) => {
+        if (d.open) { d.open = false; d.querySelector(':scope > summary')?.focus(); }
+    });
+});
+
+// Beim Scrollen/Groessenaendern mitwandern; ist der Ausloeser aus dem
+// Bild, schliesst sich das Popover (es hinge sonst in der Luft).
+function allePopsNachfuehren() {
+    document.querySelectorAll(POP).forEach((d) => {
+        if (!d.open || d.dataset.pop === 'dialog') return;
+        const s = d.querySelector(':scope > summary');
+        const r = s && s.getBoundingClientRect();
+        if (!r || r.bottom < 0 || r.top > window.innerHeight) { d.open = false; return; }
+        popPlatzieren(d);
+    });
+    document.querySelectorAll('[data-menu]').forEach((menu) => {
+        const panel = menu.querySelector('[data-menu-panel]');
+        const trigger = menu.querySelector('[data-menu-trigger]');
+        if (panel && trigger && !panel.hidden) schwebendPlatzieren(trigger, panel);
+    });
+}
+window.addEventListener('scroll', (event) => {
+    // Bildlauf INNERHALB eines Popovers bewegt es nicht.
+    if (event.target instanceof Element && event.target.closest('.pop-schwebend, .pop-dialog')) return;
+    allePopsNachfuehren();
+}, true);
+window.addEventListener('resize', allePopsNachfuehren);
+
+// Zeilenmenues ("•••") ebenfalls schwebend: sie stehen in Tabellen mit
+// waagerechtem Bildlauf und wurden dort sonst abgeschnitten.
+document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-menu-trigger]');
+    if (!trigger) return;
+    const panel = trigger.closest('[data-menu]')?.querySelector('[data-menu-panel]');
+    if (!panel) return;
+    if (panel.hidden) schwebendLoesen(panel);
+    else schwebendPlatzieren(trigger, panel);
+});
+
+// ---------------------------------------------------------------------
+// 8) Fehler am Feld (09.10.2026)
+//
+//    Das Layout legt die Meldungen des Servers als JSON ab
+//    (<script type="application/json" id="d24-feldfehler">). Hier werden
+//    sie dem Feld zugeordnet: rot umrandet, Text direkt darunter, Sprung
+//    zum ersten Fehler. "a.b.0" sucht name="a[b][0]" bzw. "a[b][]".
+// ---------------------------------------------------------------------
+function feldFinden(schluessel) {
+    const teile = schluessel.split('.');
+    const klammer = teile[0] + teile.slice(1).map((t) => '[' + t + ']').join('');
+    const kandidaten = [klammer, klammer + '[]', schluessel];
+    if (/\.\d+$/.test(schluessel)) kandidaten.push(klammer.replace(/\[\d+\]$/, '[]'));
+    for (const name of kandidaten) {
+        const felder = [...document.querySelectorAll('form [name="' + CSS.escape(name) + '"]')]
+            .filter((f) => f.type !== 'hidden');
+        if (felder.length) return felder;
+    }
+    return [];
+}
+
+function feldfehlerAnzeigen() {
+    const quelle = document.getElementById('d24-feldfehler');
+    if (!quelle) return;
+    let fehler;
+    try { fehler = JSON.parse(quelle.textContent || '{}'); } catch (e) { return; }
+    let erstes = null;
+    Object.entries(fehler).forEach(([schluessel, meldungen]) => {
+        const felder = feldFinden(schluessel);
+        if (!felder.length) return;
+        const text = Array.isArray(meldungen) ? meldungen[0] : String(meldungen);
+        let ziel = felder[0];
+        // Datumsfeld: die sichtbare Anzeige markieren
+        const datum = ziel.closest('.datum');
+        if (datum) ziel = datum.querySelector('.datum-anzeige') || ziel;
+        felder.forEach((f) => { if (f.type !== 'radio' && f.type !== 'checkbox') f.classList.add('feld-hat-fehler'); });
+        ziel.setAttribute('aria-invalid', 'true');
+        const behaelter = ziel.closest('.field, .wahl, [role=radiogroup], .origin-cards') || datum || ziel;
+        const umschlag = behaelter.matches('.field') ? behaelter : null;
+        if (umschlag && umschlag.textContent.includes(text)) { erstes = erstes || ziel; return; }
+        const hinweis = document.createElement('div');
+        hinweis.className = 'feld-fehler-text';
+        hinweis.setAttribute('role', 'alert');
+        hinweis.textContent = text;
+        if (umschlag) umschlag.appendChild(hinweis);
+        else behaelter.insertAdjacentElement('afterend', hinweis);
+        if (behaelter.matches('.wahl')) behaelter.classList.add('feld-hat-fehler');
+        erstes = erstes || ziel;
+        const weg = () => {
+            felder.forEach((f) => f.classList.remove('feld-hat-fehler'));
+            behaelter.classList?.remove('feld-hat-fehler');
+            hinweis.remove();
+        };
+        felder.forEach((f) => f.addEventListener(f.type === 'checkbox' || f.type === 'radio' ? 'change' : 'input', weg, { once: true }));
+    });
+    if (erstes && erstes.offsetParent !== null) {
+        erstes.scrollIntoView({ block: 'center' });
+        try { erstes.focus({ preventScroll: true }); } catch (e) { /* nicht fokussierbar */ }
+    }
+}
+
+// ---------------------------------------------------------------------
+// 9) Warnung bei ungespeicherten Aenderungen (09.10.2026)
+//
+//    <form data-aenderungen-warnen> - bewusst NUR an den grossen
+//    Bearbeiten-Formularen. Global waere es falsch: Filterleisten und
+//    Status-Dropdowns, die sich per form.submit() selbst absenden, loesten
+//    sonst bei jedem Klick die Rueckfrage aus.
+// ---------------------------------------------------------------------
+let wirdGesendet = false;
+const geaendert = new Set();
+
+function zustandMelden(form) {
+    form.querySelectorAll('[data-ungespeichert-hinweis]').forEach((el) => {
+        el.textContent = geaendert.has(form) ? '● Ungespeicherte Änderungen' : '';
+    });
+}
+
+['input', 'change'].forEach((typ) => document.addEventListener(typ, (event) => {
+    const form = event.target.closest?.('form[data-aenderungen-warnen]');
+    if (!form || !event.isTrusted) return;
+    geaendert.add(form);
+    zustandMelden(form);
+}));
+
+document.addEventListener('submit', (event) => {
+    if (event.defaultPrevented) return;
+    wirdGesendet = true;
+    if (event.target instanceof HTMLFormElement) geaendert.delete(event.target);
+});
+
+window.addEventListener('beforeunload', (event) => {
+    if (wirdGesendet || geaendert.size === 0) return;
+    event.preventDefault();
+    event.returnValue = '';
+});
+
+function bedienungStarten() {
+    feldfehlerAnzeigen();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bedienungStarten);
+else bedienungStarten();

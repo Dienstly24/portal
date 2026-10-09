@@ -19,7 +19,7 @@
 </div>
 @endif
 
-<form method="POST" action="{{ route('admin.customer.update', $customer->id) }}">
+<form method="POST" action="{{ route('admin.customer.update', $customer->id) }}" data-aenderungen-warnen>
 @csrf @method('PUT')
 {{-- Tabs --}}
 <div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:24px;">
@@ -36,7 +36,7 @@
         <div class="field"><label>Vorname *</label><input type="text" name="first_name" required value="{{ $__np[0] ?? '' }}" aria-label="Vorname"></div>
         <div class="field"><label>Nachname *</label><input type="text" name="last_name" required value="{{ $__np[1] ?? '' }}" aria-label="Nachname"></div>
         <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" value="{{ old('birth_date', $customer->birth_date) }}" aria-label="Geburtsdatum"></div>
-        <div class="field"><label>Geburtsort *</label><input type="text" name="birth_place" required value="{{ old('birth_place', $customer->birth_place) }}" placeholder="z.B. Damaskus" aria-label="Geburtsort"></div>
+        <div class="field"><label>Geburtsort <span class="muted-2xs">(optional)</span></label><input type="text" name="birth_place" value="{{ old('birth_place', $customer->birth_place) }}" placeholder="z.B. Damaskus" aria-label="Geburtsort"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Nationalität *</label><input type="text" name="nationality" required value="{{ old('nationality', $customer->nationality) }}" placeholder="z.B. Deutsch, Syrisch" aria-label="Nationalität"></div>
@@ -272,12 +272,13 @@
     </div>
 </div>
 
-<div style="display:flex;gap:12px;max-width:760px;margin-top:8px;">
-    <button type="submit" class="btn btn-primary">
+<div class="aktionsleiste aktionsleiste-frei" style="max-width:760px;justify-content:flex-start;">
+    <button type="submit" class="btn btn-emerald">
         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         Speichern
     </button>
     <a href="{{ route('admin.customer', $customer->id) }}" class="btn btn-ghost">Abbrechen</a>
+    <span class="ungespeichert-hinweis" data-ungespeichert-hinweis role="status"></span>
 </div>
 </form>
 

@@ -223,7 +223,8 @@ form textarea{min-height:90px;resize:vertical;}
             <div id="p-bell-list" style="max-height:340px;overflow-y:auto;"><p style="padding:14px;font-size:13px;color:var(--ink-soft);">{{ __('Laden…') }}</p></div>
         </div>
     </div>
-    @if(session('success'))<div class="alert-success">{{ session('success') }}</div>@endif
+    @if(session('success'))<div class="alert-success" role="status">{{ session('success') }}</div>@endif
+    @include('partials.feldfehler')
     @if(session('error'))<div class="alert-error">{{ session('error') }}</div>@endif
     @if($errors->any())
     <div class="alert-error">

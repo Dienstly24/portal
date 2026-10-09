@@ -5,7 +5,7 @@
     <h1 class="page-title">Neuen Kunden erstellen</h1>
 </div>
 
-<form method="POST" action="{{ route('admin.customers.store') }}">
+<form method="POST" action="{{ route('admin.customers.store') }}" data-aenderungen-warnen>
 @csrf
 
 @if($errors->any())
@@ -144,12 +144,13 @@
 </div>
 @endif
 
-<div style="display:flex;gap:12px;max-width:800px;">
-    <button type="submit" class="btn btn-primary">
+<div class="aktionsleiste aktionsleiste-frei" style="max-width:800px;justify-content:flex-start;">
+    <button type="submit" class="btn btn-emerald">
         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         Kunde anlegen
     </button>
     <a href="{{ route('admin.customers') }}" class="btn btn-ghost">Abbrechen</a>
+    <span class="ungespeichert-hinweis" data-ungespeichert-hinweis role="status"></span>
 </div>
 </form>
 @include('admin.partials.phone_hints')

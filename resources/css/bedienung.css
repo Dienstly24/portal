@@ -1,0 +1,226 @@
+/*
+ * Bedienelemente: EINE Definition fuer Auswahl, Popover, Datum, Feldfehler,
+ * Sammelaktionen (Betreiber-Auftrag 09.10.2026 "Bedienung professionell,
+ * eindeutig und vollstaendig kontrollierbar").
+ *
+ * WARUM EINE EIGENE DATEI: bis hierher hatte jede Seite ihre eigene
+ * Fassung derselben Idee (origin-card, kfz-chip, end-mode-chip, bz-panel,
+ * pop-panel ...). Jede einzelne war in Ordnung - zusammen ergab das ein
+ * System, in dem "ausgewaehlt" an jeder Stelle anders aussah. Die
+ * vorhandenen Klassen bleiben (keine Seite bricht), neue Seiten nehmen die
+ * Bausteine von hier.
+ *
+ * SPEZIFITAET: Grundregeln stehen in :where(), haben also die Spezifitaet 0.
+ * Jede Regel einer Seite und jedes style-Attribut gewinnt damit weiterhin -
+ * die Grundregel fuellt nur aus, was niemand gesetzt hat. Tailwind 4 legt
+ * seine Basis (inkl. forms-Plugin) in Cascade-Layers; diese Datei ist
+ * ungelayert und schlaegt sie deshalb trotz Spezifitaet 0.
+ *
+ * Markenfarben aus brand.css, Statusfarben bewusst als Hex (siehe
+ * components.css).
+ */
+
+/* === 1. CHECKBOX UND RADIO ==========================================
+ * Befund: `.field input { width:100%; padding; background }` traf auch
+ * Checkboxen. Ergebnis war ein grauer Balken ueber die ganze Breite, der
+ * Text klebte rechts, und ob etwas angehakt war, sah man nicht (die
+ * Fuellung des forms-Plugins wurde vom background-Kurzwert ueberschrieben).
+ * components.css schliesst Checkbox/Radio dort jetzt aus; hier steht ihre
+ * eigene, feste Gestalt.
+ * ------------------------------------------------------------------ */
+:where(input[type=checkbox], input[type=radio]) {
+    -webkit-appearance: none; appearance: none;
+    width: 20px; height: 20px; min-width: 20px; flex: none;
+    margin: 0; padding: 0;
+    border: 2px solid #8C968F; border-radius: 5px;
+    background-color: #fff; background-repeat: no-repeat; background-position: center; background-size: 14px;
+    cursor: pointer; vertical-align: middle;
+    transition: background-color .12s, border-color .12s, box-shadow .12s;
+}
+:where(input[type=radio]) { border-radius: 50%; }
+:where(input[type=checkbox], input[type=radio]):hover { border-color: var(--emerald); }
+:where(input[type=checkbox]):checked {
+    background-color: var(--emerald); border-color: var(--emerald);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+}
+:where(input[type=checkbox]):indeterminate {
+    background-color: var(--emerald); border-color: var(--emerald);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath stroke='white' stroke-width='2.4' stroke-linecap='round' d='M4 8h8'/%3E%3C/svg%3E");
+}
+:where(input[type=radio]):checked {
+    border-color: var(--emerald);
+    background-image: radial-gradient(circle, var(--emerald) 0 42%, transparent 46%);
+    background-size: 100%;
+}
+/* Tastatur: deutlich sichtbarer Ring, nur bei Tastaturbedienung */
+:where(input[type=checkbox], input[type=radio]):focus-visible {
+    outline: 3px solid var(--emerald); outline-offset: 2px;
+}
+:where(input[type=checkbox], input[type=radio]):disabled { opacity: .45; cursor: not-allowed; }
+
+/* Beschriftung mit Checkbox/Radio: eine Zeile, ganze Zeile klickbar.
+   `.field label` ist sonst display:block - die Checkbox stuende ueber dem
+   Text. */
+.field label:has(> input:is([type=checkbox], [type=radio])) {
+    display: flex; align-items: flex-start; gap: 10px; cursor: pointer; color: var(--ink);
+}
+label:has(> input:is([type=checkbox], [type=radio])) > input:is([type=checkbox], [type=radio]) { margin-top: 1px; }
+
+/* === 2. AUSWAHLZEILE / AUSWAHLKARTE (.wahl) =========================
+ *   <label class="wahl"><input type="checkbox" ...><span>Text</span></label>
+ * Ausgewaehlt = gruener Rahmen + leicht gruener Grund (+ das ✓ der
+ * Checkbox). Gilt auch fuer die vorhandenen Herkunfts-Karten.
+ * ------------------------------------------------------------------ */
+.wahl {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--surface); color: var(--ink); cursor: pointer;
+    font-size: 13px; line-height: 1.45; transition: border-color .12s, background-color .12s;
+}
+.wahl:hover { border-color: var(--emerald); }
+.wahl:has(input:checked) { border-color: var(--emerald); background: var(--emerald-soft); box-shadow: inset 0 0 0 1px var(--emerald); }
+.wahl:has(input:focus-visible) { outline: 3px solid var(--emerald); outline-offset: 2px; }
+.wahl:has(input:disabled) { opacity: .6; cursor: not-allowed; }
+.wahl-warnung { border-color: #E8C36A; background: #FEF3C7; }
+.wahl-warnung:has(input:checked) { border-color: var(--emerald); background: var(--emerald-soft); }
+
+/* Vorhandene Karten-Auswahl (Vertragsherkunft): ausgewaehlte Karte traegt
+   zusaetzlich ein ✓, damit der Zustand nicht nur an der Farbe haengt. */
+.origin-card input:checked + .origin-card-body { position: relative; }
+.origin-card input:checked + .origin-card-body::after,
+.kfz-chip input:checked + span::after {
+    content: '✓'; position: absolute; top: 8px; right: 10px;
+    width: 20px; height: 20px; border-radius: 50%; background: var(--emerald); color: #fff;
+    font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.kfz-chip input:checked + span { position: relative; padding-right: 34px !important; }
+.kfz-chip input:checked + span::after { top: 50%; transform: translateY(-50%); right: 8px; width: 18px; height: 18px; font-size: 11px; }
+
+/* === 3. SEGMENT (Ja/Nein, wenige Optionen) =========================
+ *   <div class="segment" role="radiogroup">
+ *     <label><input type="radio" name="x" value="1"><span>Ja</span></label>
+ *     <label><input type="radio" name="x" value="0"><span>Nein</span></label>
+ *   </div>
+ * ------------------------------------------------------------------ */
+.segment { display: inline-flex; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.segment > label { position: relative; margin: 0 !important; display: block !important; }
+.segment > label > input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.segment > label > span { display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--ink-soft); cursor: pointer; user-select: none; }
+.segment > label + label > span { border-left: 1.5px solid var(--line); }
+.segment > label > input:checked + span { background: var(--emerald); color: #fff; }
+.segment > label > input:checked + span::before { content: '✓'; }
+.segment > label > input:focus-visible + span { outline: 3px solid var(--emerald); outline-offset: -3px; }
+
+/* === 4. SCHALTER (Toggle) ===========================================
+ *   <label class="schalter"><input type="checkbox" ...><span>Beschriftung</span></label>
+ * ------------------------------------------------------------------ */
+.schalter { display: inline-flex !important; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; color: var(--ink); }
+.schalter > input[type=checkbox] {
+    width: 40px; height: 22px; min-width: 40px; border-radius: 999px; border: 2px solid #8C968F;
+    background: #D9D6CC radial-gradient(circle at 9px 50%, #fff 0 7px, transparent 7.5px) no-repeat;
+    background-size: 100% 100%; transition: background .15s, border-color .15s;
+}
+.schalter > input[type=checkbox]:checked {
+    background: var(--emerald) radial-gradient(circle at calc(100% - 9px) 50%, #fff 0 7px, transparent 7.5px) no-repeat;
+    background-size: 100% 100%; border-color: var(--emerald);
+}
+.schalter .schalter-zustand { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.schalter > input:checked ~ .schalter-zustand { color: var(--emerald-deep); }
+
+/* === 5. POPOVER UND DIALOG ==========================================
+ * Befund: das Panel "Beziehung festlegen" stand absolut in einer Karte mit
+ * `overflow:hidden` und wurde abgeschnitten - Speichern war nicht
+ * erreichbar. ui.js setzt offene Popover (details[data-pop], .pop,
+ * .bz-pick, [data-menu-panel]) auf position:fixed, also ausserhalb jedes
+ * abschneidenden Containers, und begrenzt die Hoehe auf den freien Platz.
+ * `data-pop="dialog"` macht daraus einen mittig stehenden Dialog mit
+ * Abdunkelung; die Aktionsleiste (.pop-aktionen) bleibt unten sichtbar.
+ * ------------------------------------------------------------------ */
+.pop-schwebend { position: fixed !important; z-index: 300 !important; overflow-y: auto; overscroll-behavior: contain; }
+details[data-pop="dialog"][open] > summary::before {
+    /* Abdunkelung als Teil von <summary>: ein Klick darauf schliesst das
+       <details> von selbst - "Klick ausserhalb" ohne zusaetzlichen Code. */
+    content: ''; position: fixed; inset: 0; background: rgba(15, 21, 18, .45); z-index: 299; cursor: default;
+}
+.pop-dialog {
+    position: fixed !important; z-index: 300 !important;
+    left: 50% !important; top: 50% !important; right: auto !important; bottom: auto !important;
+    transform: translate(-50%, -50%);
+    width: min(440px, calc(100vw - 32px)) !important;
+    max-height: 80vh; max-height: 80dvh;
+    display: flex !important; flex-direction: column; padding: 0 !important; overflow: hidden;
+}
+.pop-dialog > form { display: flex; flex-direction: column; min-height: 0; flex: 1; margin: 0; }
+.pop-dialog .pop-inhalt { overflow-y: auto; overscroll-behavior: contain; padding: 16px 18px; flex: 1; min-height: 0; }
+.pop-kopf { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 14.5px; }
+.pop-kopf button { border: none; background: none; font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink-soft); padding: 4px; }
+.pop-aktionen { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 18px; border-top: 1px solid var(--line); background: var(--surface); flex: none; }
+
+/* === 6. DATUM (TT.MM.JJJJ) ==========================================
+ * ui/datum.js ersetzt die Anzeige jedes <input type="date"> durch ein
+ * Textfeld mit Maske. Das ORIGINALFELD bleibt als Formularfeld (ISO-Wert,
+ * Name, id) erhalten und dient dem Kalender-Knopf - Speicherformat,
+ * Server und alle vorhandenen Skripte bleiben unberuehrt.
+ * ------------------------------------------------------------------ */
+.datum { position: relative; display: inline-flex; align-items: stretch; max-width: 100%; vertical-align: middle; }
+.field .datum, .datum.datum-breit { display: flex; width: 100%; }
+.datum > .datum-anzeige { flex: 1; min-width: 0; padding-right: 40px !important; font-variant-numeric: tabular-nums; }
+.datum > input[type=date] {
+    position: absolute !important; right: 0; bottom: 0; width: 1px !important; height: 1px !important;
+    padding: 0 !important; border: 0 !important; opacity: 0; pointer-events: none;
+}
+.datum > .datum-kalender {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border: none; background: none; cursor: pointer; border-radius: 6px;
+    font-size: 16px; line-height: 1; color: var(--ink-soft);
+}
+.datum > .datum-kalender:hover { background: var(--canvas); color: var(--ink); }
+.datum > .datum-kalender:focus-visible { outline: 2px solid var(--emerald); }
+.datum-fehler { color: #A32D2D; font-size: 12px; margin-top: 4px; }
+
+/* === 7. FEHLER AM FELD ==============================================
+ * Der Server liefert seine Meldungen weiterhin; ui.js haengt sie zusaetzlich
+ * an das betroffene Feld (rot umrandet, Text darunter) und springt zum
+ * ersten. Bisher standen sie nur gesammelt oben auf der Seite - bei einem
+ * langen Formular unten am Speichern-Knopf nicht zu sehen.
+ * ------------------------------------------------------------------ */
+.feld-hat-fehler,
+.field .feld-hat-fehler { border-color: #C25454 !important; box-shadow: 0 0 0 1px #C25454; }
+.feld-fehler-text { color: #A32D2D; font-size: 12.5px; margin-top: 5px; font-weight: 500; }
+.feld-fehler-text::before { content: '⚠ '; }
+
+/* === 8. AKTIONSLEISTE IMMER ERREICHBAR ==============================
+ * Lange Formulare (Vertrag, Kunde, Einstellungen): die Leiste mit
+ * Speichern/Abbrechen klebt am unteren Rand, solange das Formular im Bild
+ * ist.
+ * ------------------------------------------------------------------ */
+.aktionsleiste {
+    position: sticky; bottom: 0; z-index: 20;
+    display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    margin: 8px -24px -20px; padding: 14px 24px;
+    background: var(--surface); border-top: 1px solid var(--line);
+    border-radius: 0 0 12px 12px; box-shadow: 0 -6px 16px rgba(15, 21, 18, .06);
+}
+.aktionsleiste-hinweis { font-size: 12.5px; color: #92400E; font-weight: 600; }
+.btn:disabled, .btn[aria-disabled=true] { opacity: .5; cursor: not-allowed; }
+.ungespeichert-hinweis { font-size: 12px; color: #92400E; font-weight: 600; }
+
+/* === 9. SAMMELAKTIONEN (Leiste bei Auswahl) ========================= */
+.sammel-leiste {
+    position: sticky; top: 72px; /* unter der festen Kopfzeile der Beraterwelt (64 px) */ z-index: 30;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; margin-bottom: 14px;
+    background: var(--graphite-deep); color: #fff; border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(15, 21, 18, .22); font-size: 13px;
+}
+.sammel-leiste .sammel-zahl { font-weight: 700; margin-right: 6px; }
+.sammel-leiste select, .sammel-leiste input[type=date] { padding: 6px 8px; border-radius: 7px; border: 1px solid rgba(255,255,255,.25); font-size: 12.5px; background: #fff; color: var(--ink); }
+.sammel-leiste .btn-ghost { color: #fff; border-color: rgba(255,255,255,.35); }
+.sammel-leiste .btn-ghost:hover { border-color: #fff; }
+.sammel-kopf { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 13px; margin-bottom: 10px; }
+.sammel-kopf label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+.ausgewaehlt-karte { outline: 2px solid var(--emerald); background: #F3FAF6 !important; }
+.sammel-karte:has(input[data-sammel-item]:checked) { outline: 2px solid var(--emerald); background: #F3FAF6; }
+.sammel-leiste .btn-danger { background: #F9E3E3; }
+/* Aktionsleiste ausserhalb einer Karte (Formular steht frei auf der Seite) */
+.aktionsleiste-frei { margin: 16px 0 0; border: 1px solid var(--line); border-radius: 12px; }

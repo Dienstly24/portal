@@ -13,7 +13,7 @@
 @endif
 
 <div class="card" style="max-width:980px;">
-    <form method="POST" id="contract-form" action="">
+    <form method="POST" id="contract-form" action="" data-aenderungen-warnen>
     @csrf
 
     <div class="field">
@@ -34,9 +34,10 @@
 
     @include('admin.partials.contract_form_fields')
 
-    <div style="border-top:1px solid var(--line);padding-top:20px;display:flex;justify-content:space-between;margin-top:8px;">
+    <div class="aktionsleiste">
         <a href="{{ route('admin.contracts') }}" class="btn btn-ghost">Abbrechen</a>
-        <button type="submit" class="btn btn-primary">
+        <span class="ungespeichert-hinweis" data-ungespeichert-hinweis role="status"></span>
+        <button type="submit" class="btn btn-emerald">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             Vertrag speichern
         </button>
