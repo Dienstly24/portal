@@ -39,7 +39,7 @@
             </div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('Geburtsort') }} *</label><input type="text" name="birth_place" required value="{{ $customer?->birth_place }}" aria-label="{{ __('Geburtsort') }}"></div>
+            <div class="field"><label>{{ __('Geburtsort') }} <span style="font-weight:400;opacity:.7;">({{ __('optional') }})</span></label><input type="text" name="birth_place" value="{{ $customer?->birth_place }}" aria-label="{{ __('Geburtsort') }}"></div>
             <div class="field"><label>{{ __('Nationalität') }} *</label><input type="text" name="nationality" required value="{{ $customer?->nationality }}" placeholder="{{ __('z.B. Deutsch, Syrisch') }}" aria-label="{{ __('Nationalität') }}"></div>
         </div>
         <div class="grid-2">

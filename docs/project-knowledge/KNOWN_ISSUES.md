@@ -43,6 +43,10 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-090 | LOW | performance | E-Signatur: Abschluss + Qualitaetsgate synchron im Unterschreiben-Request (12 Seiten 1,1 s) | OPEN (Warnung ab 5 s im Log, 07.10.2026) |
 | KI-093 | HIGH | correctness | Dokumenten-Eingang: NAFI-Kfz-Antrag mit "Tarifkennung / Versicherer" - Versicherer leer, kein Vertrag angelegt | FIXED |
 | KI-096 | HIGH | correctness | Kinder unter 16 bekamen eine eigene Kundennummer (und damit Vertrag/Portal moeglich) - kein Anlageweg fragte das Alter | FIXED (Bestand: Umstellung wartet auf Betreiber) |
+| KI-097 | HIGH | ux | Checkbox/Radio in `.field` als grauer Balken ueber die ganze Breite, Zustand unsichtbar | FIXED |
+| KI-098 | HIGH | ux | Popover "Beziehung festlegen" in Karte mit overflow:hidden abgeschnitten - Speichern unerreichbar | FIXED |
+| KI-099 | MEDIUM | security | `/admin/tasks?tab=<unbekannt>` zeigte ALLE Aufgaben, auch fremde | FIXED |
+| KI-100 | MEDIUM | ux | Datumsfelder im Format der Browser-Sprache (06/10/2026) | FIXED |
 | KI-094 | MEDIUM | correctness | Merge ergaenzte leere Teilfelder der Anschrift aus der ANDEREN Anschrift (Strasse der einen + Zusatz der anderen); abweichende Stammdaten waren nicht waehlbar | FIXED |
 | KI-092 | HIGH | correctness | E-Signatur: zweite Fortschreibung vergibt dieselben Bildnamen (`/D24Sig4x0` doppelt) - ein Bild faellt weg | FIXED |
 | KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
@@ -296,6 +300,31 @@ und PHPStan) auf `main` gruen ist.
 - **Description** Bildnamen hiessen `D24Sig<Seite>x<Zaehler>`. Wird ein bereits fortgeschriebenes PDF ein ZWEITES Mal gestempelt (interne Unterschrift, danach der Kunde - Teil B), vergab der zweite Lauf dieselben Namen: qpdf meldete "dictionary has duplicated key /D24Sig4x0", ein Betrachter verwirft dann eines der beiden Bilder. Vor Teil B gab es nur einen Stempellauf je Dokument, deshalb fiel es nie auf.
 - **Fix** Der Name traegt die im ganzen Dokument eindeutige OBJEKTNUMMER des Bildes (`D24Sig<obj>`). Test `InterneUnterschriftTest::test_intern_kunde_endfassung_drei_hashes_und_sichtbar` (ohne den Fix "Fehler bei Fertigstellung").
 - **Discovered** 07.10.2026 (eigener Test, Teil B)
+
+### KI-097 - Checkbox/Radio als grauer Balken
+- **Category** ux · **Severity** HIGH · **Status** FIXED (09.10.2026)
+- **Location** `resources/css/components.css` (`.field input`)
+- **Description** Betreiber-Meldung: in der Vertragsherkunft ("Ich aendere die Herkunft ... bewusst", "Kuendigung haben wir ... eingereicht") und beim Router standen Checkboxen als breiter grauer Balken, der Text rechts gequetscht, der Zustand nicht erkennbar. `.field input { width:100%; padding; background }` traf auch Checkbox/Radio; der `background`-Kurzwert loeschte zudem die Fuellung des forms-Plugins.
+- **Fix** `.field input:where(:not([type=checkbox],[type=radio]))` (Spezifitaet unveraendert) + eigene Gestalt in `bedienung.css` (20 px, gruen + ✓, Fokusring); `.wahl`, `.segment`, `.schalter`. Browser-Sweep ueber alle Admin-Seiten: 0 Checkboxen breiter als 30 px.
+- **Discovered** 09.10.2026 (Betreiber-Meldung)
+
+### KI-098 - Abgeschnittene Popover
+- **Category** ux · **Severity** HIGH · **Status** FIXED (09.10.2026)
+- **Location** `admin/partials/beziehung_festlegen` (`.bz-panel` absolut in `.dupCard{overflow:hidden}`), ebenso `.pop-panel`, `[data-menu-panel]` in Tabellen
+- **Fix** `ui.js` Abschnitt 7: offene Popover `position:fixed` am Ausloeser, Hoehe auf freien Platz begrenzt, Esc/Klick ausserhalb; "Beziehung festlegen" als Dialog mit fester Aktionsleiste. Im Browser bei 1366 und 820 px geprueft.
+- **Discovered** 09.10.2026 (Betreiber-Meldung)
+
+### KI-099 - Aufgabenliste mit unbekanntem Reiter
+- **Category** security · **Severity** MEDIUM · **Status** FIXED (09.10.2026)
+- **Location** `TaskController::index` - die Reiter-Bedingung kannte nur mine/customer/done; jeder andere Wert liess sie ganz weg.
+- **Fix** Unbekannter Reiter = "Meine Aufgaben"; dieselbe Abfrage (`filterQuery`) speist die Sammelaktion, die zusaetzlich die Rechte als Bedingung traegt. Test `AufgabenSammelaktionTest::test_unbekannter_reiter_zeigt_keine_fremden_aufgaben`.
+- **Discovered** 09.10.2026 (Code-Analyse beim Bau der Sammelaktionen)
+
+### KI-100 - Datumsanzeige nach Browser-Sprache
+- **Category** ux · **Severity** MEDIUM · **Status** FIXED (09.10.2026)
+- **Location** alle `<input type="date">` (rund 70 in 34 Vorlagen)
+- **Fix** `resources/js/datum.js`: Textfeld TT.MM.JJJJ mit Maske vor dem Original, das als Formularfeld (ISO) und Kalender bleibt. Speicherformat unveraendert. Tests `tests/js/datum-logik.test.js`.
+- **Discovered** 09.10.2026 (Betreiber-Meldung)
 
 ### KI-096 - Kinder unter 16 mit eigener Kundennummer
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (07.10.2026) - der BESTAND ist noch nicht umgestellt (Betreiber entscheidet nach `kunden:kinder-pruefen`)

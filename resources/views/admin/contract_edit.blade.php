@@ -96,7 +96,7 @@
 @include('admin.partials.contract_commission_box', ['contract' => $contract])
 
 <div class="card" style="max-width:980px;">
-    <form method="POST" action="{{ route('admin.contract.update', $contract->id) }}">
+    <form method="POST" action="{{ route('admin.contract.update', $contract->id) }}" data-aenderungen-warnen>
         @csrf @method('PUT')
         @include('admin.partials.contract_form_fields', ['contract' => $contract])
 
@@ -110,9 +110,10 @@
         </div>
         @endif
 
-        <div style="border-top:1px solid var(--line);padding-top:20px;display:flex;gap:10px;justify-content:space-between;margin-top:8px;">
-            <div style="display:flex;gap:10px;">
-                <button type="submit" class="btn btn-primary">Änderungen speichern</button>
+        <div class="aktionsleiste">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button type="submit" class="btn btn-emerald">Änderungen speichern</button>
+                <span class="ungespeichert-hinweis" data-ungespeichert-hinweis role="status"></span>
                 <a href="{{ route('admin.customer', $contract->customer_id) }}" class="btn btn-ghost">Abbrechen</a>
             </div>
         </div>

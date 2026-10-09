@@ -592,7 +592,9 @@ class AdminController extends Controller
             // Eingabe im Browser). Serverseitig "sometimes|required": ist das
             // Feld Teil des Submits, darf es nicht leer sein - Teil-Updates ohne
             // diese Schluessel (z. B. reine Partner-/E-Mail-Zuordnung) bleiben moeglich.
-            'birth_place' => 'sometimes|required|string|max:255',
+            // Geburtsort ist OPTIONAL (Betreiber-Vorgabe 09.10.2026): im Alltag
+            // oft unbekannt, und ein Pflichtfeld erzwang Fantasiewerte.
+            'birth_place' => 'nullable|string|max:255',
             'nationality' => 'sometimes|required|string|max:100',
         ] + $this->phoneFieldRules());
 

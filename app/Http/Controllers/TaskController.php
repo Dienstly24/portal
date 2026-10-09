@@ -3,12 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\MessageTemplate;
 use App\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -29,49 +34,22 @@ class TaskController extends Controller
 {
     use ScopesCustomerAccess;
 
+    /** Die drei Reiter. Ein unbekannter Wert (?tab=alle) fiel frueher durch
+     *  jede Bedingung und zeigte ALLE Aufgaben - auch fremde. */
+    private const TABS = ['mine', 'customer', 'done'];
+
+    private function tab(Request $request): string {
+        $tab = (string) $request->get('tab', 'mine');
+        return in_array($tab, self::TABS, true) ? $tab : 'mine';
+    }
+
     public function index(Request $request) {
         $user = auth()->user();
-        $tab = $request->get('tab', 'mine');
-        $status = $request->get('status', '');
-        $type = $request->get('type', '');
-        $due = $request->get('due', '');
-        $q = trim((string) $request->get('q', ''));
+        $tab = $this->tab($request);
         $vids = $this->visibleCustomerIds();
-        $seesAll = in_array($user->role, ['admin', 'manager'], true);
 
-        $query = Task::with(['assignedTo', 'customer.user', 'createdBy', 'emailMessage']);
-
-        // Tabs: Meine + Kunden zeigen OFFENE Vorgaenge, Erledigtes hat den
-        // eigenen Tab. Kunden-Aufgaben nur im eigenen Portfolio-Scope
-        // (Mitarbeiter sehen keine fremden Kundennamen), Erledigt fuer
-        // Nicht-Verwaltung nur eigene (zugewiesen oder selbst erstellt).
-        if ($tab === 'mine') {
-            $query->where('assigned_to', $user->id)->open();
-        } elseif ($tab === 'customer') {
-            $query->whereNotNull('customer_id')->open()
-                ->when($vids !== null, fn ($qq) => $qq->whereIn('customer_id', $vids));
-        } elseif ($tab === 'done') {
-            $query->where('status', 'done')
-                ->when(! $seesAll, fn ($qq) => $qq->where(fn ($w) => $w
-                    ->where('assigned_to', $user->id)->orWhere('created_by', $user->id)));
-        }
-
-        if ($status) $query->where('status', $status);
-        if ($type) $query->where('type', $type);
-        if ($due === 'today') $query->whereDate('due_date', today());
-        elseif ($due === 'overdue') $query->whereDate('due_date', '<', today())->open();
-        elseif (in_array($due, ['7', '14', '30'], true)) $query->whereDate('due_date', '<=', today()->addDays((int) $due));
-        if ($request->filled('customer')) $query->where('customer_id', $request->get('customer'));
-
-        if ($q !== '') {
-            $like = '%'.addcslashes($q, '%_\\').'%';
-            $query->where(function ($w) use ($like) {
-                $w->where('title', 'like', $like)
-                    ->orWhere('description', 'like', $like)
-                    ->orWhereHas('customer', fn ($c) => $c->where('customer_number', 'like', $like))
-                    ->orWhereHas('customer.user', fn ($u) => $u->where('name', 'like', $like));
-            });
-        }
+        $query = $this->filterQuery($request, $user)
+            ->with(['assignedTo', 'customer.user', 'createdBy', 'emailMessage']);
 
         // CASE statt MySQL-spezifischem FIELD(), damit die Seite auch auf
         // SQLite/Postgres funktioniert. (Audit M5) Ohne Faelligkeit ans Ende.
@@ -119,6 +97,61 @@ class TaskController extends Controller
             'canAutoEmail' => $this->mayScheduleEmails($user),
             'openModal' => $request->boolean('neu') || $request->filled('customer_id'),
         ]);
+    }
+
+    /**
+     * Die Filter der Liste (Tab, Status, Typ, Faelligkeit, Suche, Kunde) als
+     * EINE Abfrage - die Liste UND die Sammelaktion "alle Treffer des
+     * Filters" benutzen dieselbe. Zwei Fassungen koennten auseinanderlaufen,
+     * und dann trifft "alle 896 ueberfaelligen erledigen" andere Aufgaben,
+     * als die Liste gezeigt hat.
+     *
+     * @return Builder<Task>
+     */
+    private function filterQuery(Request $request, User $user) {
+        $tab = $this->tab($request);
+        $status = $request->get('status', '');
+        $type = $request->get('type', '');
+        $due = $request->get('due', '');
+        $q = trim((string) $request->get('q', ''));
+        $vids = $this->visibleCustomerIds();
+        $seesAll = in_array($user->role, ['admin', 'manager'], true);
+
+        $query = Task::query();
+
+        // Tabs: Meine + Kunden zeigen OFFENE Vorgaenge, Erledigtes hat den
+        // eigenen Tab. Kunden-Aufgaben nur im eigenen Portfolio-Scope
+        // (Mitarbeiter sehen keine fremden Kundennamen), Erledigt fuer
+        // Nicht-Verwaltung nur eigene (zugewiesen oder selbst erstellt).
+        if ($tab === 'mine') {
+            $query->where('assigned_to', $user->id)->open();
+        } elseif ($tab === 'customer') {
+            $query->whereNotNull('customer_id')->open()
+                ->when($vids !== null, fn ($qq) => $qq->whereIn('customer_id', $vids));
+        } elseif ($tab === 'done') {
+            $query->where('status', 'done')
+                ->when(! $seesAll, fn ($qq) => $qq->where(fn ($w) => $w
+                    ->where('assigned_to', $user->id)->orWhere('created_by', $user->id)));
+        }
+
+        if ($status) $query->where('status', $status);
+        if ($type) $query->where('type', $type);
+        if ($due === 'today') $query->whereDate('due_date', today());
+        elseif ($due === 'overdue') $query->whereDate('due_date', '<', today())->open();
+        elseif (in_array($due, ['7', '14', '30'], true)) $query->whereDate('due_date', '<=', today()->addDays((int) $due));
+        if ($request->filled('customer')) $query->where('customer_id', $request->get('customer'));
+
+        if ($q !== '') {
+            $like = '%'.addcslashes($q, '%_\\').'%';
+            $query->where(function ($w) use ($like) {
+                $w->where('title', 'like', $like)
+                    ->orWhere('description', 'like', $like)
+                    ->orWhereHas('customer', fn ($c) => $c->where('customer_number', 'like', $like))
+                    ->orWhereHas('customer.user', fn ($u) => $u->where('name', 'like', $like));
+            });
+        }
+
+        return $query;
     }
 
     /**
@@ -221,6 +254,235 @@ class TaskController extends Controller
         $this->authorizeTask($task);
         $task->delete();
         return back()->with('success', 'Aufgabe gelöscht.');
+    }
+
+    /** Obergrenze je Sammelaktion - schuetzt vor einem versehentlichen Lauf ueber den Gesamtbestand. */
+    public const SAMMEL_MAX = 5000;
+
+    /** Ab dieser Anzahl verlangt die Oberflaeche eine ausdrueckliche Bestaetigung. */
+    public const SAMMEL_BESTAETIGEN_AB = 50;
+
+    /** Wie lange "Rueckgaengig" moeglich ist. */
+    public const RUECKGAENGIG_MINUTEN = 15;
+
+    /**
+     * Sammelaktion ueber die AUSGEWAEHLTEN Aufgaben oder ALLE Treffer des
+     * aktuellen Filters (Betreiber-Auftrag 09.10.2026: 929 Aufgaben, davon
+     * 896 ueberfaellig, liessen sich nur einzeln bearbeiten).
+     *
+     * EIN Request, Aenderungen in wenigen Abfragen. Berechtigung wie beim
+     * Einzelzugriff (authorizeTask): Verwaltung alles, sonst nur eigene
+     * Aufgaben bzw. Aufgaben zu Kunden im eigenen Portfolio - als
+     * Bedingung IN der Abfrage, nicht als Nachpruefung je Zeile. Eine
+     * fremde ID im Formular wird damit nicht abgelehnt, sondern schlicht
+     * nicht getroffen.
+     */
+    public function bulk(Request $request) {
+        $user = auth()->user();
+        $data = $request->validate([
+            'aktion' => 'required|in:erledigt,status,verschieben,zuweisen,loeschen',
+            'auswahl' => 'required|in:ids,filter',
+            'ids' => 'required_if:auswahl,ids|array|max:'.self::SAMMEL_MAX,
+            'ids.*' => 'uuid',
+            // "neuer_status", nicht "status": status ist ein FILTER der Liste
+            // und reist bei "alle Treffer" im selben Formular mit.
+            'neuer_status' => 'required_if:aktion,status|nullable|in:'.implode(',', array_keys(Task::STATUSES)),
+            'tage' => 'nullable|integer|in:1,3,7,14,30',
+            'datum' => 'nullable|date|after_or_equal:today',
+            'assigned_to' => ['required_if:aktion,zuweisen', 'nullable', Rule::exists('users', 'id')
+                ->where(fn ($q) => $q->whereIn('role', ['admin', 'manager', 'support', 'employee'])->where('is_active', true))],
+            'bestaetigt' => 'nullable|boolean',
+        ], [
+            'ids.required_if' => 'Bitte mindestens eine Aufgabe auswählen.',
+            'neuer_status.required_if' => 'Bitte den neuen Status wählen.',
+            'assigned_to.required_if' => 'Bitte einen Mitarbeiter für die Zuweisung wählen.',
+            'assigned_to.exists' => 'Dieser Mitarbeiter ist nicht (mehr) aktiv.',
+            'datum.after_or_equal' => 'Das neue Fälligkeitsdatum darf nicht in der Vergangenheit liegen.',
+        ]);
+        if ($data['aktion'] === 'verschieben' && empty($data['tage']) && empty($data['datum'])) {
+            throw ValidationException::withMessages(['tage' => 'Bitte angeben, um wie viele Tage oder auf welches Datum verschoben wird.']);
+        }
+
+        $query = $data['auswahl'] === 'filter'
+            ? $this->filterQuery($request, $user)
+            : Task::whereIn('id', $data['ids'] ?? []);
+        $this->berechtigt($query, $user);
+
+        $ids = $query->limit(self::SAMMEL_MAX + 1)->pluck('id')->all();
+        if ($ids === []) {
+            return back()->with('error', 'Keine Aufgabe getroffen – die Auswahl ist leer oder Sie dürfen diese Aufgaben nicht bearbeiten.');
+        }
+        if (count($ids) > self::SAMMEL_MAX) {
+            return back()->with('error', 'Zu viele Aufgaben auf einmal (mehr als '.self::SAMMEL_MAX.'). Bitte den Filter enger fassen.');
+        }
+        $braucht = $data['aktion'] === 'loeschen' || count($ids) >= self::SAMMEL_BESTAETIGEN_AB;
+        if ($braucht && ! $request->boolean('bestaetigt')) {
+            return back()->with('error', 'Bitte die Sammelaktion über '.count($ids).' Aufgabe(n) ausdrücklich bestätigen.');
+        }
+
+        $spalten = ['id', 'status', 'completed_at', 'due_date', 'assigned_to', 'auto_email_status', 'auto_email_error'];
+        $vorher = [];
+        foreach (array_chunk($ids, 500) as $teil) {
+            $zeilen = DB::table('tasks')->whereIn('id', $teil)
+                ->get($data['aktion'] === 'loeschen' ? ['*'] : $spalten);
+            foreach ($zeilen as $z) $vorher[] = (array) $z;
+        }
+
+        $anzahl = count($ids);
+        DB::transaction(function () use ($data, $ids) {
+            foreach (array_chunk($ids, 500) as $teil) {
+                $this->sammelAusfuehren($data, $teil);
+            }
+        });
+
+        ActivityLog::record('tasks_bulk', 'task', null, [
+            'aktion' => $data['aktion'],
+            'anzahl' => $anzahl,
+            'auswahl' => $data['auswahl'],
+            'status' => $data['neuer_status'] ?? null,
+            'assigned_to' => $data['assigned_to'] ?? null,
+        ]);
+
+        $token = (string) Str::uuid();
+        Cache::put('aufgaben-rueckgaengig:'.$token, [
+            'user_id' => $user->id,
+            'aktion' => $data['aktion'],
+            'zeilen' => $vorher,
+        ], now()->addMinutes(self::RUECKGAENGIG_MINUTEN));
+
+        $text = match ($data['aktion']) {
+            'erledigt' => $anzahl.' Aufgabe(n) als erledigt markiert.',
+            'status' => $anzahl.' Aufgabe(n) auf „'.Task::STATUSES[$data['neuer_status']].'“ gesetzt.',
+            'verschieben' => $anzahl.' Aufgabe(n) verschoben'.(! empty($data['datum'])
+                ? ' auf den '.Carbon::parse($data['datum'])->format('d.m.Y').'.' : ' um '.$data['tage'].' Tag(e).'),
+            'zuweisen' => $anzahl.' Aufgabe(n) an '.(User::whereKey($data['assigned_to'])->value('name') ?? 'Mitarbeiter').' zugewiesen.',
+            'loeschen' => $anzahl.' Aufgabe(n) gelöscht.',
+            default => $anzahl.' Aufgabe(n) bearbeitet.',
+        };
+
+        return back()->with('success', $text)->with('aufgaben_rueckgaengig', [
+            'token' => $token,
+            'minuten' => self::RUECKGAENGIG_MINUTEN,
+        ]);
+    }
+
+    /**
+     * Die eigentliche Aenderung je Block. Laeuft an Eloquent vorbei (eine
+     * Abfrage statt 900) und bildet deshalb den saving-Hook von Task
+     * AUSDRUECKLICH nach: erledigt => completed_at setzen und eine geplante
+     * Auto-E-Mail ueberspringen; nicht erledigt => completed_at leeren.
+     *
+     * @param  array<string,mixed>  $data
+     * @param  list<string>  $ids
+     */
+    private function sammelAusfuehren(array $data, array $ids): void {
+        $tabelle = fn () => DB::table('tasks')->whereIn('id', $ids);
+        $jetzt = now();
+        $status = $data['aktion'] === 'erledigt' ? 'done' : ($data['neuer_status'] ?? null);
+
+        switch ($data['aktion']) {
+            case 'erledigt':
+            case 'status':
+                if ($status === 'done') {
+                    $tabelle()->whereNull('completed_at')->update(['completed_at' => $jetzt]);
+                    $tabelle()->where('auto_email_status', 'pending')->update([
+                        'auto_email_status' => 'skipped',
+                        'auto_email_error' => 'Aufgabe erledigt - geplanter Versand uebersprungen.',
+                    ]);
+                    $tabelle()->update(['status' => 'done', 'updated_at' => $jetzt]);
+                } else {
+                    $tabelle()->update(['status' => $status, 'completed_at' => null, 'updated_at' => $jetzt]);
+                }
+                return;
+            case 'verschieben':
+                if (! empty($data['datum'])) {
+                    $tabelle()->update(['due_date' => Carbon::parse($data['datum'])->toDateString(), 'updated_at' => $jetzt]);
+                    return;
+                }
+                // Wie das Einzel-Verschieben: Basis ist die spaetere von
+                // Faelligkeit und heute. Ueberfaellige (der Normalfall bei
+                // 896 Stueck) laufen in EINER Abfrage, nur Aufgaben mit
+                // Faelligkeit in der Zukunft brauchen ihren eigenen Wert.
+                // REIHENFOLGE: die kuenftigen ZUERST lesen - nach dem ersten
+                // Update laegen die eben verschobenen ueberfaelligen selbst in
+                // der Zukunft und wuerden ein zweites Mal verschoben.
+                $tage = (int) $data['tage'];
+                $heute = today();
+                $kuenftig = $tabelle()->whereDate('due_date', '>', $heute)->get(['id', 'due_date']);
+                $tabelle()->where(fn ($q) => $q->whereNull('due_date')->orWhereDate('due_date', '<=', $heute))
+                    ->update(['due_date' => $heute->copy()->addDays($tage)->toDateString(), 'updated_at' => $jetzt]);
+                $kuenftig
+                    ->groupBy(fn ($z) => substr((string) $z->due_date, 0, 10))
+                    ->each(function ($gruppe, $faellig) use ($tage, $jetzt) {
+                        DB::table('tasks')->whereIn('id', $gruppe->pluck('id'))->update([
+                            'due_date' => Carbon::parse($faellig)->addDays($tage)->toDateString(),
+                            'updated_at' => $jetzt,
+                        ]);
+                    });
+                return;
+            case 'zuweisen':
+                $tabelle()->update(['assigned_to' => (int) $data['assigned_to'], 'updated_at' => $jetzt]);
+                return;
+            case 'loeschen':
+                $tabelle()->delete();
+                return;
+        }
+    }
+
+    /**
+     * Sammelaktion zuruecknehmen (15 Minuten, nur wer sie ausgeloest hat).
+     * Zurueck geht nur, was es noch gibt bzw. was fehlt: eine geloeschte
+     * Aufgabe wird mit ihrer alten ID wieder angelegt, eine geaenderte
+     * bekommt ihre vorherigen Werte. Danach ist der Schluessel verbraucht.
+     */
+    public function bulkUndo(Request $request) {
+        $request->validate(['token' => 'required|uuid']);
+        $schluessel = 'aufgaben-rueckgaengig:'.$request->input('token');
+        $stand = Cache::get($schluessel);
+        if (! is_array($stand) || (int) $stand['user_id'] !== (int) auth()->id()) {
+            return back()->with('error', 'Rückgängig ist nicht mehr möglich (abgelaufen oder bereits ausgeführt).');
+        }
+        Cache::forget($schluessel);
+
+        $zeilen = $stand['zeilen'] ?? [];
+        DB::transaction(function () use ($stand, $zeilen) {
+            if ($stand['aktion'] === 'loeschen') {
+                $vorhanden = [];
+                foreach (array_chunk(array_column($zeilen, 'id'), 500) as $teil) {
+                    $vorhanden = array_merge($vorhanden, DB::table('tasks')->whereIn('id', $teil)->pluck('id')->all());
+                }
+                $fehlend = array_values(array_filter($zeilen, fn ($z) => ! in_array($z['id'], $vorhanden, true)));
+                foreach (array_chunk($fehlend, 200) as $teil) {
+                    DB::table('tasks')->insert($teil);
+                }
+                return;
+            }
+            foreach ($zeilen as $z) {
+                $id = $z['id'];
+                unset($z['id']);
+                DB::table('tasks')->where('id', $id)->update($z);
+            }
+        });
+
+        ActivityLog::record('tasks_bulk_undo', 'task', null, ['aktion' => $stand['aktion'], 'anzahl' => count($zeilen)]);
+
+        return back()->with('success', count($zeilen).' Aufgabe(n) wiederhergestellt.');
+    }
+
+    /** Dieselbe Grenze wie authorizeTask(), als Bedingung in der Abfrage. */
+    private function berechtigt($query, User $user): void {
+        if (in_array($user->role, ['admin', 'manager'], true)) {
+            return;
+        }
+        $vids = $this->visibleCustomerIds();
+        $query->where(function ($w) use ($user, $vids) {
+            $w->where('assigned_to', $user->id)->orWhere('created_by', $user->id);
+            if ($vids === null) {
+                $w->orWhereNotNull('customer_id');
+            } elseif ($vids !== []) {
+                $w->orWhereIn('customer_id', $vids);
+            }
+        });
     }
 
     /** Gemeinsame Validierung fuer Anlegen + Voll-Bearbeitung. */

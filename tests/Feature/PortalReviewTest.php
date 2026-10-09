@@ -110,9 +110,12 @@ class PortalReviewTest extends TestCase
     public function test_empty_required_profile_field_is_rejected(): void
     {
         $customer = $this->makeCustomer();
+        // Seit 09.10.2026 ist der Geburtsort optional (GeburtsortOptionalTest) -
+        // die Regel "leeres Pflichtfeld wird abgelehnt" gilt weiter, hier am
+        // Beispiel der Nationalitaet.
         $this->actingAs($customer->user)->post(route('portal.profile.update'), [
-            'birth_place' => '', 'nationality' => 'Deutsch',
-        ])->assertSessionHasErrors('birth_place');
+            'birth_place' => 'Hamburg', 'nationality' => '',
+        ])->assertSessionHasErrors('nationality');
 
         $this->assertSame(0, CustomerChangeRequest::where('type', 'profile')->count());
     }

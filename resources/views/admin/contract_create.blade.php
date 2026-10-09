@@ -19,13 +19,14 @@
 @endif
 
 <div class="card" style="max-width:980px;">
-    <form method="POST" action="{{ route('admin.contract.store', $customer->id) }}">
+    <form method="POST" action="{{ route('admin.contract.store', $customer->id) }}" data-aenderungen-warnen>
         @csrf
         @include('admin.partials.contract_form_fields')
 
-        <div style="border-top:1px solid var(--line);padding-top:20px;display:flex;gap:10px;margin-top:8px;">
-            <button type="submit" class="btn btn-primary">Vertrag speichern</button>
+        <div class="aktionsleiste" style="justify-content:flex-start;">
+            <button type="submit" class="btn btn-emerald">Vertrag speichern</button>
             <a href="{{ route('admin.customer', $customer->id) }}" class="btn btn-ghost">Abbrechen</a>
+            <span class="ungespeichert-hinweis" data-ungespeichert-hinweis role="status"></span>
         </div>
     </form>
 </div>

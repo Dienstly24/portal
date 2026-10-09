@@ -53,8 +53,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Status **ACTIVE**
 
 ### F-005 Aufgaben & Wiedervorlagen (inkl. Auto-E-Mail)
-- C `TaskController`; T `tasks`; Planer `tasks:remind`, `tasks:send-auto-emails`
-- Tests `TaskSystemTest` · Status **ACTIVE**
+- C `TaskController` (seit 09.10.2026 `bulk`/`bulkUndo`: Sammelaktionen ueber Auswahl oder alle Filtertreffer, Rueckgaengig 15 Min); T `tasks`; Planer `tasks:remind`, `tasks:send-auto-emails`
+- Tests `TaskSystemTest`, `AufgabenSammelaktionTest` · Status **ACTIVE** · Issues KI-099
 
 ### F-006 Termine, Ankuendigungen
 - C `AppointmentController`, AdminController (announcements); T `appointments`, `announcements`
@@ -283,6 +283,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 ### F-094 Erinnerungen (E-Scooter, Schutzbrief, Wechsel, Geburtstag)
 - S `*ReminderService`; Befehle `escooter:*`, `schutzbrief:*`
 - Tests `EscooterRenewalReminderTest`, `SchutzbriefRenewalReminderTest`, `BatchResilienceTest` · Status **ACTIVE**
+
+### F-100 Bedienelemente (Auswahl, Popover, Datum, Feldfehler)
+- CSS `resources/css/bedienung.css`; JS `resources/js/ui.js` (Abschnitte 7-9), `resources/js/datum.js`, `datum-logik.js`; V `partials/feldfehler`
+- Tests `tests/js/datum-logik.test.js` (`npm run test:js`, in CI) · Status **ACTIVE** (09.10.2026) · Issues KI-097, KI-098, KI-100
 
 ## J. Entfernt / tot
 

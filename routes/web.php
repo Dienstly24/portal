@@ -891,6 +891,11 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/tasks/kunden-suche', [TaskController::class, 'customerSearch'])
         ->middleware('throttle:120,1')->name('tasks.customer_search');
     Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    // Sammelaktionen (09.10.2026): EIN Request fuer Auswahl oder alle Treffer des Filters.
+    Route::post('/tasks/sammelaktion', [TaskController::class, 'bulk'])
+        ->middleware('throttle:30,1')->name('tasks.bulk');
+    Route::post('/tasks/sammelaktion/rueckgaengig', [TaskController::class, 'bulkUndo'])
+        ->middleware('throttle:30,1')->name('tasks.bulk_undo');
     Route::put('/tasks/{id}', [TaskController::class, 'update'])->name('tasks.update');
     Route::delete('/tasks/{id}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 

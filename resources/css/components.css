@@ -84,6 +84,11 @@
 /* --- Raster ------------------------------------------------------- */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--grid-gap); }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-3-gap); margin-bottom: var(--grid-3-mb); }
+/* Rasterzellen duerfen schmaler werden als ihr Inhalt (09.10.2026): `1fr`
+   heisst minmax(auto, 1fr) - ein Diagramm oder eine breite Tabelle drueckte
+   die Spalte sonst ueber den Bildschirmrand (Ticket-Statistik, gemessen
+   bei 1280 px). */
+.grid-2 > *, .grid-3 > * { min-width: 0; }
 
 /* --- Schaltflaechen ------------------------------------------------
  * .btn-emerald hiess bis UX-1 .btn-gold, trug aber immer schon das
@@ -124,11 +129,15 @@
 /* --- Formularfeld -------------------------------------------------- */
 .field { margin-bottom: var(--field-mb); }
 .field label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; font-weight: 500; }
-.field input, .field select, .field textarea {
+/* Checkbox/Radio sind ausgenommen (bedienung.css): mit width:100% und
+   Hintergrund wurden sie zum grauen Balken ueber die ganze Breite.
+   :where() haelt die Spezifitaet bei (0,1,1) - Seitenregeln wie
+   `.field input.x` gewinnen weiter wie bisher. */
+.field input:where(:not([type=checkbox], [type=radio])), .field select, .field textarea {
     width: 100%; padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px;
     font-size: 14px; background: var(--surface-soft); color: var(--ink); font-family: inherit; transition: .15s;
 }
-.field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--emerald); outline-offset: 1px; }
+.field input:where(:not([type=checkbox], [type=radio])):focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--emerald); outline-offset: 1px; }
 .field textarea { min-height: 90px; resize: vertical; }
 
 /* --- Einzelnes Bedienelement OHNE eigene Beschriftungszeile ----------

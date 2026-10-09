@@ -35,6 +35,17 @@ und angemeldet: keine Konsolen-/Netzwerkfehler, kein waagerechter Bildlauf,
 | Mitarbeiter-Anlage: Mail nannte nicht vergebene Rechte | irrefuehrend | KI-006 **behoben** (das Formular zeigt die Kaesten weiterhin allen - offen als Verbesserung) |
 | Loeschknopf an fremden Ankuendigungen | Mitarbeiter konnte Leitungs-Mitteilungen loeschen | KI-019 **behoben** |
 
+## Bedienung (Auftrag 09.10.2026)
+
+Systemweiter Durchlauf mit Headless-Chromium (84 Admin-Seiten + Akten bei
+1280/820 px, 15 Portalseiten bei 390 px): JS-Fehler, Checkbox/Radio > 30 px,
+waagerechter Ueberlauf, nicht umgestelltes Datumsfeld - nach den Aenderungen
+0 Befunde. Gebaut: Checkbox/Radio/`.wahl`/`.segment`/`.schalter`,
+schwebende Popover + Dialog, Datum TT.MM.JJJJ, Feldfehler, Warnung bei
+ungespeicherten Aenderungen, sticky `.aktionsleiste`, Sammelaktionen der
+Aufgaben. Details, offene Punkte (mittel/niedrig) und Pflichtfeld-Liste:
+`docs/BEDIENUNG_UX_2026-10-09.md`. Issues KI-097 bis KI-100.
+
 ## Pruefregeln (verbindlich)
 
 1. Jede sichtbare Aenderung in BEIDEN Sprachen und auf JEDEM betroffenen
@@ -46,3 +57,6 @@ und angemeldet: keine Konsolen-/Netzwerkfehler, kein waagerechter Bildlauf,
 5. `[hidden]` gegen Klassen mit `display` absichern (in selbsttragenden
    Partials selbst definieren).
 6. Kein Bedienelement, das nichts tut (lieber ausblenden).
+7. Auswahl/Popover/Datum/Feldfehler NUR mit den Bausteinen aus
+   `resources/css/bedienung.css` + `ui.js`/`datum.js` - keine neue
+   Seitenfassung derselben Idee (09.10.2026).

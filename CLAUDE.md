@@ -4866,6 +4866,78 @@ Merge von PR #358, Teil E/F).
 - Tests: `AbhaengigeKinderTest` (23 Faelle); nachgezogen
   `CustomerFamilyRelationTest`.
 
+## Bedienelemente: Auswahl, Popover, Datum, Feldfehler (Betreiber-Auftrag 09.10.2026)
+
+Vollstaendig in `docs/BEDIENUNG_UX_2026-10-09.md` (inkl. Bericht zu den
+automatisch erzeugten Aufgaben, Pflichtfeld-Liste und offenen Punkten).
+Regel: diese Dinge werden NUR mit den zentralen Bausteinen gebaut - keine
+neue Seitenfassung derselben Idee.
+
+- **Checkbox/Radio** (`resources/css/bedienung.css`): `.field input` schliesst
+  sie aus (`:where(:not([type=checkbox],[type=radio]))` - Spezifitaet bleibt
+  (0,1,1)). Vorher: grauer Balken ueber die ganze Breite, und der
+  `background`-Kurzwert loeschte die Fuellung - man sah nicht, ob angehakt.
+  Grundregeln stehen in `:where()` (Spezifitaet 0): jedes style-Attribut
+  und jede Seitenregel gewinnt weiter; sie schlagen trotzdem das
+  forms-Plugin, weil Tailwind 4 dieses in einen Cascade-Layer legt.
+  Bausteine: `.wahl` (Zeile/Karte, gruen wenn gewaehlt), `.segment`
+  (Ja/Nein, z. B. Router - der Server liest weiter `boolean()`),
+  `.schalter` (Toggle).
+- **Popover** (`ui.js` Abschnitt 7): offene `details[data-pop]`, `.pop`,
+  `.bz-pick` und `[data-menu-panel]` stehen `position:fixed` am Ausloeser,
+  in der Hoehe auf den freien Platz begrenzt - kein `overflow:hidden`
+  schneidet sie mehr ab ("Beziehung festlegen" war in der Dubletten-Karte
+  abgeschnitten, Speichern unerreichbar). `data-pop="dialog"` = mittiger
+  Dialog (`.pop-kopf`/`.pop-inhalt`/`.pop-aktionen`, max 80vh, Aktionen
+  immer sichtbar); die Abdunkelung ist `summary::before` - ein Klick darauf
+  schliesst das `<details>` von selbst. Esc schliesst, `data-pop-schliessen`
+  ist der Abbrechen-Knopf.
+- **Datum TT.MM.JJJJ** (`resources/js/datum.js`, Logik DOM-frei in
+  `datum-logik.js`, `npm run test:js` in CI): jedes `<input type="date">`
+  bekommt ein Textfeld mit Maske davor. Das ORIGINAL bleibt das
+  Formularfeld (Name, id, ISO-Wert) und der Kalender (`showPicker()`).
+  Darum musste keine der ~70 Stellen angefasst werden und das
+  Speicherformat bleibt ISO. Skripte, die `orig.value` setzen ("Heute",
+  Ablauf-Automatik), aktualisieren die Anzeige ueber einen
+  instanzeigenen value-Setter mit. `required` wandert auf die Anzeige
+  (ein verborgenes Pflichtfeld blockiert das Absenden STILL - "invalid
+  form control is not focusable"). Zweistellige Jahre: bis +20 Jahre =
+  20xx; bei Geburtsdatum (`birth`/`geburt` im Namen oder
+  `data-datum-vergangenheit`) nie Zukunft. Opt-out `data-datum-nativ`.
+  Ohne JavaScript bleibt das native Feld.
+- **Fehler am Feld**: Layouts legen `$errors` als JSON ab
+  (`partials/feldfehler`, `type="application/json"`, `@json` maskiert);
+  `ui.js` Abschnitt 8 markiert das Feld, schreibt den Text darunter und
+  springt zum ersten. Die Sammelliste oben bleibt.
+- **Ungespeicherte Aenderungen**: `form[data-aenderungen-warnen]` - bewusst
+  OPT-IN (Filter-/Statusformulare senden sich per `form.submit()` selbst,
+  ohne submit-Ereignis; global gaebe es dort Fehlalarme). Hinweis
+  `[data-ungespeichert-hinweis]` in der sticky `.aktionsleiste`.
+- **Vertragsherkunft aendern**: Speichern ist gesperrt, bis die
+  Bestaetigung angehakt ist, und der Grund steht neben dem Knopf.
+  Vorher kam die Ablehnung GANZ OBEN zurueck - unten am Knopf sah es aus,
+  als passiere nichts. Der Server prueft unveraendert selbst.
+- **Aufgaben: Sammelaktionen** (`TaskController::bulk`/`bulkUndo`):
+  Auswahl oder ALLE Treffer des Filters - ueber `filterQuery()`, dieselbe
+  Abfrage wie die Liste (zwei Fassungen liefen auseinander). Rechte als
+  BEDINGUNG in der Abfrage (wie `authorizeTask`): eine fremde ID wird nicht
+  abgelehnt, sondern nicht getroffen. Wenige Abfragen statt einer je
+  Aufgabe - deshalb bildet `sammelAusfuehren()` den saving-Hook von `Task`
+  AUSDRUECKLICH nach (erledigt => `completed_at`, geplante Auto-Mail
+  `skipped`). Beim Verschieben die kuenftigen Faelligkeiten ZUERST lesen,
+  sonst laufen die eben verschobenen ueberfaelligen ein zweites Mal mit.
+  Bestaetigung bei Loeschen und ab 50; Rueckgaengig 15 Minuten (Stand im
+  Cache, nur fuer den Ausloeser, einmal). Das Status-Feld heisst
+  `neuer_status`, weil `status` ein Filter ist, der mitreist.
+  Nebenbei: `?tab=<unbekannt>` zeigte frueher ALLE Aufgaben (KI-099).
+- **Geburtsort ist optional** (Beraterwelt + Portal, `nullable`); die
+  Spalte war schon nullable. Andere oft unbekannte Pflichtfelder
+  (Nationalitaet, Hausnummer im Portal) stehen zur Entscheidung im Doku.
+- **Raster**: `.grid-2 > *, .grid-3 > * { min-width: 0 }` - `1fr` ist
+  `minmax(auto,1fr)`, ein Diagramm drueckte die Spalte ueber den Rand.
+- Tests: `AufgabenSammelaktionTest`, `GeburtsortOptionalTest`,
+  `tests/js/datum-logik.test.js`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

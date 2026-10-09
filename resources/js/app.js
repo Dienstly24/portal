@@ -9,3 +9,5 @@
  */
 
 import './ui';
+// Datumsfelder TT.MM.JJJJ (09.10.2026) - siehe datum.js
+import './datum';

@@ -842,7 +842,9 @@ class PortalController extends Controller
             'last_name' => 'sometimes|required|string|max:100',
             'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'birth_date' => 'sometimes|required|date',
-            'birth_place' => 'sometimes|required|string|max:255',
+            // Geburtsort ist OPTIONAL (Betreiber-Vorgabe 09.10.2026): im Alltag
+            // oft unbekannt, und ein Pflichtfeld erzwang Fantasiewerte.
+            'birth_place' => 'nullable|string|max:255',
             'nationality' => 'sometimes|required|string|max:100',
             'marital_status' => 'nullable|in:ledig,verheiratet,geschieden,verwitwet',
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
