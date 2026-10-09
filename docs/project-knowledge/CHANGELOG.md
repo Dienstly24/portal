@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 08.10.2026 - Vertragsrollen: versicherte Personen, Beitragszahler, Beguenstigte (PR-6)
+
+- **Task**: PR-6 des freigegebenen Dubletten-/Familien-Plans. Der Versicherungsnehmer bleibt `contracts.customer_id`; weitere Personen eines Vertrags werden verknuepft statt in eine Akte gezwungen.
+- **Files Changed**: Migration `2026_10_08_110000_vertrag_beteiligte`; neu `App\Models\VertragBeteiligter`, `App\Services\Vertrag\VertragBeteiligteService`, `Admin\VertragBeteiligteController`, View `admin/partials/vertrag_beteiligte`; geaendert `Admin\ContractController::contractEdit`, `AdminController::show`, Views `contract_edit`, `customer_show`, `partials/kundensuche_script` (`data-verknuepfen-optional`), `routes/web.php`; Test `VertragBeteiligteTest`; `CLAUDE.md`, Wissensbasis.
+- **Components Affected**: Vertrag bearbeiten (Karte "Personen am Vertrag"), Kundenakte Registerkarte "Vertraege" (Karte "Beteiligt an Vertraegen anderer Kunden"), Version History, Kunden-Zusammenfuehrung (generisch).
+- **Database Changes**: neue Tabelle `vertrag_beteiligte` (reversibel). Kein bestehender Datensatz wird geaendert.
+- **API Changes**: `POST admin/contracts/{id}/beteiligte` (`admin.contract.beteiligte.store`), `DELETE admin/vertrag-beteiligte/{id}` (`admin.contract.beteiligte.destroy`) - alle Personalrollen, Zugriff auf VN UND verknuepfte Akte geprueft.
+- **Potential Side Effects**: keine Kennzahl aendert sich - Beteiligungen zaehlen nicht zu den eigenen Vertraegen, nicht in die Beitragsuebersicht und nicht ins Portal (Portal je Person ist PR-7).
+- **Tests Performed**: `VertragBeteiligteTest` 10 Faelle (alle rot ohne die neue Tabelle/Route); volle Suite 3515, 3510 gruen, 5 uebersprungen (OCR, lokal kein tesseract); PHPStan 0 Fehler, Pint sauber. Nicht im Browser angesehen.
+- **Result**: gebaut.
+
 ## 07.10.2026 - Kinder unter 16: keine eigene Kundennummer, Erinnerung mit 15 (KI-096)
 
 - **Task**: Betreiber-Auftrag 07.10.2026 - "Tala Alhamoud" (Kind) trug die Kundennummer 2600810. Regel: unter 16 keine Nummer, kein Vertrag, kein Portal; Kind unter dem Vater (sonst Mutter); Erinnerung mit 15; Nummer ab 16; beide Alter als Einstellung. Bestand ZUERST pruefen, dann auf Freigabe umstellen.

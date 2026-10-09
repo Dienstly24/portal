@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 08.10.2026 aus `php artisan route:list --json` (539 Routen).
+Generiert am 08.10.2026 aus `php artisan route:list --json` (542 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -58,6 +58,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/contracts/{customerId}` | admin.contract.store | auth role:staff |
 | PUT | `admin/contracts/{id}` | admin.contract.update | auth role:staff |
 | DELETE | `admin/contracts/{id}` | admin.contract.destroy | auth role:staff |
+| POST | `admin/contracts/{id}/beteiligte` | admin.contract.beteiligte.store | auth role:staff |
 | GET | `admin/contracts/{id}/edit` | admin.contract.edit | auth role:staff |
 | POST | `admin/contracts/{id}/switch-responded` | admin.contracts.switch_responded | auth role:staff |
 | POST | `admin/contracts/{id}/zaehlerstand` | admin.contract.meter_reading.store | auth role:staff |
@@ -95,6 +96,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/customers/{id}/family` | admin.customer.family.store | auth role:staff |
 | POST | `admin/customers/{id}/haushalt` | admin.customer.haushalt.gruenden | auth role:staff |
 | POST | `admin/customers/{id}/internal-messages` | admin.internal.store | auth role:staff |
+| POST | `admin/customers/{id}/kundennummer-vergeben` | admin.customer.kundennummer_vergeben | auth role:staff |
 | GET | `admin/customers/{id}/merge` | admin.customer.merge | auth role:staff role:admin |
 | POST | `admin/customers/{id}/merge` | admin.customer.merge.do | auth role:staff role:admin |
 | POST | `admin/customers/{id}/messages` | admin.customer.messages.store | auth role:staff |
@@ -400,6 +402,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | GET | `admin/vermittler-abrechnung/vertrag-suche` | admin.vermittler.contract_search | auth role:staff can:provisionen-verwalten |
 | POST | `admin/vermittler-abrechnung/vorgangsliste` | admin.vermittler.vorgangsliste | auth role:staff can:provisionen-verwalten |
 | GET | `admin/vermittler-abrechnung/{id}` | admin.vermittler.show | auth role:staff can:provisionen-verwalten |
+| DELETE | `admin/vertrag-beteiligte/{id}` | admin.contract.beteiligte.destroy | auth role:staff |
 | GET | `admin/vertragsherkunft/fremdbestand` | admin.contracts.fremdbestand | auth role:staff |
 | GET | `admin/vertragsherkunft/pruefen` | admin.contracts.origin_review | auth role:staff |
 | POST | `admin/vertragsherkunft/pruefen` | admin.contracts.origin_review.store | auth role:staff |

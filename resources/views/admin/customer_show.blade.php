@@ -552,6 +552,26 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 </div>
 
 <div class="tab-section" id="tab-vertraege" style="display:none;">
+@if($beteiligungen['eintraege']->isNotEmpty() || $beteiligungen['verborgen'] > 0)
+{{-- PR-6: Vertraege anderer Kunden, an denen diese Person beteiligt ist
+     (versichert, zahlt oder beguenstigt). Sie zaehlen NICHT zu den eigenen
+     Vertraegen und nicht in die Beitragsuebersicht. --}}
+<div class="card" id="beteiligungen" style="margin-bottom:20px;">
+    <div class="card-title" style="margin-bottom:6px;">👥 Beteiligt an Verträgen anderer Kunden</div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px;">Versicherungsnehmer ist jeweils ein anderer Kunde – diese Verträge zählen nicht zu den eigenen.</p>
+    @foreach($beteiligungen['eintraege'] as $b)
+    @php $v = $b->contract; @endphp
+    <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;{{ !$loop->first ? 'border-top:1px solid var(--line);' : '' }}flex-wrap:wrap;">
+        <span><a href="{{ route('admin.contract.edit', $v->id) }}" style="color:var(--ink);font-weight:600;text-decoration:none;">{{ $v->typeIcon() }} {{ $v->typeLabel() }} · {{ $v->insurer ?: '—' }}</a>
+            <span class="muted-xs">· VN: {{ $v->customer?->user?->name ?? 'Kunde' }}</span></span>
+        <span class="muted-xs">{{ $b->rolleLabel() }}@if($b->anteil_prozent !== null) · {{ rtrim(rtrim(number_format((float) $b->anteil_prozent, 2, ',', ''), '0'), ',') }} %@endif</span>
+    </div>
+    @endforeach
+    @if($beteiligungen['verborgen'] > 0)
+    <div class="muted-xs" style="padding-top:6px;">+ {{ $beteiligungen['verborgen'] }} weitere(r) Vertrag/Verträge außerhalb Ihres Kundenbestands.</div>
+    @endif
+</div>
+@endif
 {{-- Beitrags-Statistik: was zahlt der Kunde ueber alle AKTIVEN Vertraege
      (auf den Monat normiert, damit unterschiedliche Zahlweisen vergleichbar sind). --}}
 @php

@@ -119,6 +119,10 @@
     </form>
 </div>
 
+{{-- Weitere Personen am Vertrag (PR-6). Eigene Formulare, deshalb
+     ausserhalb des Bearbeiten-Formulars. --}}
+@include('admin.partials.vertrag_beteiligte', ['contract' => $contract, 'beteiligte' => $beteiligte, 'sichtbareKunden' => $sichtbareKunden])
+
 {{-- Signaturen zu diesem Vertrag (natives E-Signatur-Modul, 09.09.2026).
      Derselbe Baustein wie in der Kundenakte - zwei Kopien liefen
      erfahrungsgemaess auseinander. --}}

@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\KiTrainingController;
 use App\Http\Controllers\Admin\PostfachController;
 use App\Http\Controllers\Admin\SignatureController as AdminSignatureController;
 use App\Http\Controllers\Admin\SignatureQualityController;
+use App\Http\Controllers\Admin\VertragBeteiligteController;
 use App\Http\Controllers\Admin\WhatsAppOnboardingController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminCustomerChatController;
@@ -469,6 +470,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->name('contract.meter_reading.store');
     Route::delete('/contracts/{id}/zaehlerstand/{readingId}', [AdminContractController::class, 'contractMeterReadingDestroy'])
         ->middleware('role:admin,manager')->name('contract.meter_reading.destroy');
+    // Vertragsrollen (PR-6): versicherte Personen, abweichender
+    // Beitragszahler, Beguenstigte. Der VN bleibt contracts.customer_id.
+    Route::post('/contracts/{id}/beteiligte', [VertragBeteiligteController::class, 'store'])
+        ->name('contract.beteiligte.store');
+    Route::delete('/vertrag-beteiligte/{id}', [VertragBeteiligteController::class, 'destroy'])
+        ->whereNumber('id')->name('contract.beteiligte.destroy');
 
     // Tickets (Workflow: Status, Zuweisung, Eigenschaften, Notizen, Antwort)
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets');
