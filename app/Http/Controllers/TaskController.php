@@ -355,8 +355,9 @@ class TaskController extends Controller
             'status' => $anzahl.' Aufgabe(n) auf „'.Task::STATUSES[$data['neuer_status']].'“ gesetzt.',
             'verschieben' => $anzahl.' Aufgabe(n) verschoben'.(! empty($data['datum'])
                 ? ' auf den '.Carbon::parse($data['datum'])->format('d.m.Y').'.' : ' um '.$data['tage'].' Tag(e).'),
-            'zuweisen' => $anzahl.' Aufgabe(n) an '.(User::find($data['assigned_to'])?->name ?? 'Mitarbeiter').' zugewiesen.',
+            'zuweisen' => $anzahl.' Aufgabe(n) an '.(User::whereKey($data['assigned_to'])->value('name') ?? 'Mitarbeiter').' zugewiesen.',
             'loeschen' => $anzahl.' Aufgabe(n) gelöscht.',
+            default => $anzahl.' Aufgabe(n) bearbeitet.',
         };
 
         return back()->with('success', $text)->with('aufgaben_rueckgaengig', [
