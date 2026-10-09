@@ -269,6 +269,11 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         if ($versicherer !== null && ($name = $this->insurerName($versicherer)) !== null) {
             $raw['insurer'] = $name;
         }
+        // Ist das Feld nicht lesbar, nennt der Briefkopf den Versicherer: der
+        // Antrag ist an die Gesellschaft adressiert (KI-101).
+        if (! isset($raw['insurer']) && ($name = $this->insurerFromLetterhead()) !== null) {
+            $raw['insurer'] = $name;
+        }
         if (($v = $this->labelValue('Tarif')) !== null && preg_match('/^[\p{L}\d][\p{L}\d .\-+]{2,60}$/u', trim($v))) {
             $raw['tariff'] = trim($v);
         }
@@ -352,9 +357,17 @@ class NafiKfzAntragParser implements DocumentTemplateParser
      */
     private function insurerName(string $value): ?string
     {
-        $istName = fn (string $t): bool => (bool) preg_match('/^\p{L}[\p{L}\d .\-&+]{1,60}$/u', $t);
+        $istName = fn (string $t): bool => (bool) preg_match('/^\p{L}[\p{L}\d .,\'\-&+]{1,60}$/u', $t);
+        // Ein Klammerzusatz nennt den Konzern ("KRAVAG LOGISTIC (R+V)",
+        // KI-101) - er ist nicht der Versicherer. Klammern fielen frueher
+        // durch die Namensregel, der Versicherer blieb leer. Nur wenn der
+        // Wert NICHTS ausser der Klammer traegt, zaehlt ihr Inhalt.
+        $ohneKlammer = trim((string) preg_replace('/\s*\([^)]*\)\s*/u', ' ', $value));
+        if ($ohneKlammer === '' && preg_match('/\(([^)]*)\)/u', $value, $k)) {
+            $ohneKlammer = trim($k[1]);
+        }
         $teile = array_values(array_filter(
-            array_map('trim', preg_split('/\s*\/\s*/u', trim($value)) ?: []),
+            array_map('trim', preg_split('/\s*\/\s*/u', $ohneKlammer) ?: []),
             fn (string $t) => $t !== ''
         ));
 
@@ -364,6 +377,32 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         foreach (array_reverse($teile) as $teil) {
             if ($istName($teil) && ! preg_match('/^\p{L}{1,6}\d+$/u', $teil)) {
                 return $teil;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Versicherer aus dem Briefkopf - nur als Rueckfall, wenn das Feld
+     * "Versicherer / Risikotraeger" fehlt oder unlesbar ist. NAFI adressiert
+     * den Antrag an die Gesellschaft; ihr Name steht in den Zeilen VOR dem
+     * Titel. Gezaehlt wird nur eine Zeile mit Rechtsform am Zeilenanfang
+     * (links - rechts stehen die Vermittlerangaben), nie eine Zeile mit
+     * Doppelpunkt (Beschriftung) oder Ziffern (Anschrift, Vorgangs-ID).
+     */
+    private function insurerFromLetterhead(): ?string
+    {
+        foreach ($this->lines as $line) {
+            if (preg_match('/Antrag\s+Kraftfahrtversicherung/iu', $line)) {
+                break;
+            }
+            $zelle = trim((string) preg_split('/\s{3,}/u', trim($line))[0]);
+            if ($zelle === '' || str_contains($zelle, ':') || preg_match('/\d/', $zelle)) {
+                continue;
+            }
+            if (preg_match('/^\p{L}[\p{L} .\-&+]{1,80}\b(AG|SE|VVaG|a\.\s?G\.|GmbH|Aktiengesellschaft|Versicherungs-AG)$/u', $zelle)) {
+                return $zelle;
             }
         }
 

@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 09.10.2026 - NAFI-Kfz-Antrag: Versicherer mit Klammerzusatz (KI-101)
+
+- **Task**: Betreiber-Meldung "manchmal erkennt das System den Vertrag nicht" am KRAVAG-Antrag.
+- **Files Changed**: `app/Services/Ai/TemplateParsers/NafiKfzAntragParser.php`, `tests/Feature/Ai/NafiKfzAntragParserTest.php`; `CLAUDE.md`, `KNOWN_ISSUES.md`.
+- **Components Affected**: Dokumenten-Eingang (Kfz-Antraege aus NAFI).
+- **Database Changes**: keine.
+- **API Changes**: keine.
+- **Potential Side Effects**: Versicherer aus dem Feld ohne Klammerzusatz ("KRAVAG LOGISTIC" statt leer); bei unlesbarem Feld Rueckfall auf den Briefkopf.
+- **Tests Performed**: `NafiKfzAntragParserTest` (3 neue, rot ohne Fix), echter Antrag per pdftotext durch den Parser; volle Suite, Pint, PHPStan.
+- **Result**: Aus dem Antrag entsteht wieder ein Vertrag.
+
 ## 09.10.2026 - Bedienung: Auswahl, Popover, Datum TT.MM.JJJJ, Sammelaktionen Aufgaben, Geburtsort optional
 
 - **Task**: Betreiber-Auftrag "Bedienung im gesamten System professioneller, eindeutiger, kontrollierbar" (7 Punkte), zentral gebaut.
