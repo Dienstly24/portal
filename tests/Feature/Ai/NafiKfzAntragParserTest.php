@@ -251,9 +251,10 @@ class NafiKfzAntragParserTest extends TestCase
         $huk = (new NafiKfzAntragParser)->parse($this->andsafeText('HUK24'));
         $this->assertSame('HUK24', $huk['data']['versicherung']['insurer']);
 
-        // Nur Kennungen -> lieber leer als eine Kennung als Gesellschaft.
+        // Nur Kennungen -> nie eine Kennung als Gesellschaft; es gilt der
+        // Briefkopf mit Rechtsform (KI-101).
         $code = (new NafiKfzAntragParser)->parse($this->andsafeText('HFK1676 / VHV123'));
-        $this->assertArrayNotHasKey('insurer', $code['data']['versicherung']);
+        $this->assertSame('andsafe Aktiengesellschaft', $code['data']['versicherung']['insurer']);
     }
 
     public function test_echte_kette_legt_aus_dem_andsafe_antrag_einen_vertrag_an(): void
