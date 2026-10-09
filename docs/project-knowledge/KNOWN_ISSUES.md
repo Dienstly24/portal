@@ -47,6 +47,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-098 | HIGH | ux | Popover "Beziehung festlegen" in Karte mit overflow:hidden abgeschnitten - Speichern unerreichbar | FIXED |
 | KI-099 | MEDIUM | security | `/admin/tasks?tab=<unbekannt>` zeigte ALLE Aufgaben, auch fremde | FIXED |
 | KI-100 | MEDIUM | ux | Datumsfelder im Format der Browser-Sprache (06/10/2026) | FIXED |
+| KI-101 | HIGH | correctness | Dokumenten-Eingang: NAFI-Kfz-Antrag mit Klammerzusatz im Versicherer ("KRAVAG LOGISTIC (R+V)") - Versicherer leer, kein Vertrag angelegt | FIXED |
 | KI-094 | MEDIUM | correctness | Merge ergaenzte leere Teilfelder der Anschrift aus der ANDEREN Anschrift (Strasse der einen + Zusatz der anderen); abweichende Stammdaten waren nicht waehlbar | FIXED |
 | KI-092 | HIGH | correctness | E-Signatur: zweite Fortschreibung vergibt dieselben Bildnamen (`/D24Sig4x0` doppelt) - ein Bild faellt weg | FIXED |
 | KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
@@ -319,6 +320,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `TaskController::index` - die Reiter-Bedingung kannte nur mine/customer/done; jeder andere Wert liess sie ganz weg.
 - **Fix** Unbekannter Reiter = "Meine Aufgaben"; dieselbe Abfrage (`filterQuery`) speist die Sammelaktion, die zusaetzlich die Rechte als Bedingung traegt. Test `AufgabenSammelaktionTest::test_unbekannter_reiter_zeigt_keine_fremden_aufgaben`.
 - **Discovered** 09.10.2026 (Code-Analyse beim Bau der Sammelaktionen)
+
+### KI-101 - NAFI-Kfz-Antrag: Klammerzusatz im Versicherer -> kein Vertrag
+- **Category** correctness · **Severity** HIGH · **Status** FIXED (09.10.2026)
+- **Location** `NafiKfzAntragParser::insurerName` (Feld "Versicherer / Risikotraeger")
+- **Description** Betreiber-Meldung 09.10.2026 ("manchmal erkennt das System den Vertrag nicht"), am echten KRAVAG-Antrag nachgestellt (pdftotext -layout). Das Feld lautet "KRAVAG LOGISTIC (R+V)" - der Konzern steht in Klammern. Die Namensregel liess keine Klammern zu -> Versicherer leer -> ein Antrag ohne Vertragsnummer UND ohne Versicherer ergibt in `createContractFromExtraction` keinen Vertrag. Dieselbe Klasse wie KI-093 (dort Tarifkennung mit Schraegstrich): eine zu enge Zeichenregel an EINEM Feld, still. Daher "manchmal": es trifft nur Gesellschaften, deren Feld einen Klammerzusatz traegt.
+- **Fix** Klammerzusatz wird vor der Pruefung abgetrennt (nur Klammer -> ihr Inhalt); Namensregel erlaubt zusaetzlich Komma und Apostroph. Rueckfall: ist das Feld unlesbar, gilt die Briefkopf-Zeile mit Rechtsform vor dem Titel (der Antrag ist an die Gesellschaft adressiert) - ohne Rechtsform wird nichts geraten. Tests `NafiKfzAntragParserTest` (3 neue Faelle, rot ohne den Fix, einer durch die echte Kette bis zum angelegten Vertrag).
+- **Discovered** 09.10.2026 (Betreiber-Meldung)
 
 ### KI-100 - Datumsanzeige nach Browser-Sprache
 - **Category** ux · **Severity** MEDIUM · **Status** FIXED (09.10.2026)

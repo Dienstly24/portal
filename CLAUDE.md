@@ -915,6 +915,11 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   legt `createContractFromExtraction` keinen Vertrag an: der Eingang zeigte
   nur Kundendaten. Jetzt gewinnt der letzte NAME hinter dem Schraegstrich;
   eine reine Kennung neben einem Namen ist nie der Versicherer.
+  **Klammerzusatz** (KI-101, 09.10.2026): "KRAVAG LOGISTIC (R+V)" - die
+  Klammer nennt den Konzern und fiel durch dieselbe Namensregel. Sie wird
+  jetzt abgetrennt (steht NUR eine Klammer da, gilt ihr Inhalt); ist das
+  Feld unlesbar, gilt die Briefkopf-Zeile MIT Rechtsform vor dem Titel -
+  ohne Rechtsform wird nichts geraten.
 - **Kfz-Versicherungsschein der WGV** (`WgvKfzPoliceParser`, 05.08.2026):
   kommt als HANDYFOTO - die Feldsuche laesst Doppelpunkt, Spaltenabstand UND
   einfaches Leerzeichen zu und schaut notfalls in die Folgezeile (gleiche

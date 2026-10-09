@@ -276,4 +276,80 @@ class NafiKfzAntragParserTest extends TestCase
         $this->assertSame('antrag', $contract->stage);
         $this->assertNull($contract->contract_number);
     }
+
+    /**
+     * KI-101 (Betreiber-Meldung 09.10.2026, KRAVAG-Antrag): das Feld traegt
+     * den Konzern in Klammern ("KRAVAG LOGISTIC (R+V)"). Klammern fielen
+     * durch die Namensregel - Versicherer leer, kein Vertrag.
+     */
+    private function kravagText(string $versicherer = 'KRAVAG LOGISTIC (R+V)'): string
+    {
+        return implode("\n", [
+            '                    KFZ_ANTRAG_26092067_17e28566e213adbf9eb755a727f63d01af95_5,055157E+08',
+            '',
+            'KRAVAG Logistic Versicherungs-AG',
+            'Heidenkampsweg 102',
+            '20097 Hamburg                                                     Vermittlernummer:           177392',
+            'Antrag Kraftfahrtversicherung',
+            ' Versicherungsnehmer',
+            $this->row('Anrede, Titel, Vorname, Nachname', 'Herr Max Mustermann'),
+            $this->row('Straße', 'Kieler Str. 10'),
+            $this->row('Plz, Ort', '24610 Trappenkamp'),
+            ' Antragsdaten',
+            $this->row('Tarif', 'KRAVAG LOGISTIC'),
+            $this->row('Versicherer / Risikoträger', $versicherer),
+            $this->row('Gewünschter Versicherungsbeginn', '09.10.2026'),
+            $this->row('Amtliches Kennzeichen', 'RD - AA 123'),
+            $this->row('Fahrgestellnummer', 'ZCFC70C10E5968881'),
+            $this->row('Zu zahlender Gesamtbeitrag (halbjährlich)', '1.570,44 EUR'),
+            $this->row('Zahlungspflichtige Person', 'Andere Person'),
+            'Kfz-Antrag vom 09.10.2026 / Seite 1 / ID 26092067 / Erzeugt durch NAFI-Software',
+        ]);
+    }
+
+    public function test_klammerzusatz_im_versicherer_wird_abgetrennt(): void
+    {
+        $r = (new NafiKfzAntragParser)->parse($this->kravagText());
+
+        $this->assertSame('KRAVAG LOGISTIC', $r['data']['versicherung']['insurer']);
+        $this->assertSame('RD-AA 123', $r['data']['kfz']['license_plate']);
+        $this->assertSame(1570.44, $r['data']['versicherung']['premium_amount']);
+        $this->assertSame('semiannual', $r['data']['versicherung']['premium_interval']);
+        // Ein Dritter zahlt -> kein Konto in der Akte.
+        $this->assertSame([], $r['data']['bank']);
+
+        // Steht NUR die Klammer da, zaehlt ihr Inhalt.
+        $nur = (new NafiKfzAntragParser)->parse($this->kravagText('(R+V Allgemeine Versicherung AG)'));
+        $this->assertSame('R+V Allgemeine Versicherung AG', $nur['data']['versicherung']['insurer']);
+    }
+
+    public function test_unlesbares_feld_faellt_auf_den_briefkopf_zurueck(): void
+    {
+        $r = (new NafiKfzAntragParser)->parse($this->kravagText('#### ??'));
+        $this->assertSame('KRAVAG Logistic Versicherungs-AG', $r['data']['versicherung']['insurer']);
+
+        // Ohne Rechtsform im Briefkopf wird nichts geraten.
+        $ohne = str_replace('KRAVAG Logistic Versicherungs-AG', 'Schadenabteilung', $this->kravagText('#### ??'));
+        $this->assertArrayNotHasKey('insurer', (new NafiKfzAntragParser)->parse($ohne)['data']['versicherung']);
+    }
+
+    public function test_echte_kette_legt_aus_dem_kravag_antrag_einen_vertrag_an(): void
+    {
+        $r = app(DocumentTemplateParser::class)->parse($this->kravagText());
+        $this->assertSame('kfz_vertrag', $r['type']);
+
+        $user = User::factory()->create(['role' => 'customer']);
+        $customer = Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(Str::random(6))]);
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'contract', 'file_name' => 'antrag.pdf',
+            'file_path' => 'documents/eingang/antrag.pdf', 'disk' => 'local', 'ai_status' => 'done',
+            'ai_type' => $r['type'], 'ai_extracted' => $r['data'],
+        ]);
+
+        $contract = app(DocumentIntakeService::class)->createContractFromExtraction($doc, $customer, null);
+
+        $this->assertNotNull($contract, 'Aus dem Antrag muss ein Vertrag entstehen.');
+        $this->assertSame('KRAVAG LOGISTIC', $contract->insurer);
+        $this->assertSame('antrag', $contract->stage);
+    }
 }
