@@ -298,7 +298,7 @@ class DevkKfzPoliceParser implements DocumentTemplateParser
         }
 
         return [
-            $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== '')),
+            $this->validatedInsurance(array_filter($raw, fn ($v) => (string) $v !== '')),
             $dates['aenderung'] ?? null,
         ];
     }
