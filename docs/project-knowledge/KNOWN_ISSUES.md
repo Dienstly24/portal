@@ -48,6 +48,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-099 | MEDIUM | security | `/admin/tasks?tab=<unbekannt>` zeigte ALLE Aufgaben, auch fremde | FIXED |
 | KI-100 | MEDIUM | ux | Datumsfelder im Format der Browser-Sprache (06/10/2026) | FIXED |
 | KI-101 | HIGH | correctness | Dokumenten-Eingang: NAFI-Kfz-Antrag mit Klammerzusatz im Versicherer ("KRAVAG LOGISTIC (R+V)") - Versicherer leer, kein Vertrag angelegt | FIXED |
+| KI-102 | HIGH | correctness | Dokumenten-Eingang: DEVK-Kfz-Versicherungsschein (Anpassung) wurde als CHECK24-Beratungsprotokoll gelesen - fast keine Daten | FIXED |
 | KI-094 | MEDIUM | correctness | Merge ergaenzte leere Teilfelder der Anschrift aus der ANDEREN Anschrift (Strasse der einen + Zusatz der anderen); abweichende Stammdaten waren nicht waehlbar | FIXED |
 | KI-092 | HIGH | correctness | E-Signatur: zweite Fortschreibung vergibt dieselben Bildnamen (`/D24Sig4x0` doppelt) - ein Bild faellt weg | FIXED |
 | KI-091 | LOW | correctness | E-Signatur: fertiges PDF nicht PDF/A-konform; Zeichen ausserhalb WinAnsi umschrieben (Bestand 0/1424) | OPEN |
@@ -320,6 +321,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `TaskController::index` - die Reiter-Bedingung kannte nur mine/customer/done; jeder andere Wert liess sie ganz weg.
 - **Fix** Unbekannter Reiter = "Meine Aufgaben"; dieselbe Abfrage (`filterQuery`) speist die Sammelaktion, die zusaetzlich die Rechte als Bedingung traegt. Test `AufgabenSammelaktionTest::test_unbekannter_reiter_zeigt_keine_fremden_aufgaben`.
 - **Discovered** 09.10.2026 (Code-Analyse beim Bau der Sammelaktionen)
+
+### KI-102 - DEVK-Kfz-Police als CHECK24-Beratungsprotokoll gelesen
+- **Category** correctness · **Severity** HIGH · **Status** FIXED (11.10.2026)
+- **Location** Parser-Kette in `AppServiceProvider` (`Check24KfzProtocolParser` stand vorn, ein DEVK-Parser fehlte)
+- **Description** Betreiber-Meldung 11.10.2026 mit einer echten "Anpassung Kfz-Versicherung" der DEVK, per pdftotext -layout durch die echte Kette nachgestellt. Die Police nennt CHECK24 als Vermittler ("Ihr Vertrag wurde online vermittelt ueber") und im Kleingedruckten das Wort "Beratungsprotokoll" ("siehe auch Hinweis im Beratungsprotokoll/Antrag"). Damit erfuellte sie alle drei Stichworte des `Check24KfzProtocolParser` (BERATUNGSPROTOKOLL + KFZ + CHECK24), und der Composite nimmt den ERSTEN Treffer: Ergebnis "CHECK24-Beratungsprotokoll Kfz" ohne Person und mit Vergleichs-Logik statt Police. Einen Parser fuer die DEVK-Police gab es nicht. Dieselbe Klasse wie KI-054 (Stichwort im Kleingedruckten) und die Lehre "spezialisiert vor generisch" (13.09.2026).
+- **Fix** Neuer `DevkKfzPoliceParser` (Neuvertrag UND Anpassung), registriert VOR dem CHECK24-Protokoll. Die Kopftabelle (Beginn der Versicherung / Beginn der Aenderung / Ablauf) wird ueber die SPALTENPOSITION gelesen - bei der Anpassung ist "Beginn der Versicherung" leer, und der Reihe nach gelesen waere der Aenderungstag zum Vertragsbeginn geworden. Tests `DevkKfzPoliceParserTest` (6 Faelle, Kettentest rot ohne den Fix).
+- **Discovered** 11.10.2026 (Betreiber-Meldung)
 
 ### KI-101 - NAFI-Kfz-Antrag: Klammerzusatz im Versicherer -> kein Vertrag
 - **Category** correctness · **Severity** HIGH · **Status** FIXED (09.10.2026)

@@ -106,6 +106,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Krankenkassen-Bestaetigung (`MitgliedsbescheinigungParser`): Empfaenger ist der ARBEITGEBER, der Kunde steht im Fliesstext - die UMKEHRUNG der sonstigen Regel. Test `MitgliedsbescheinigungParserTest`
 - Familienversicherung (`FamilienversicherungParser`): ZWEI Bauformen in EINEM Parser (aelterer Fragebogen + KKH-Vordruck 0765 mit dreispaltiger Angehoerigen-Tabelle). Die Rolle kommt aus der Spalten-Kopfzeile, nie aus dem Nachnamen; Verknuepfung ueber `DocumentIntakeService::linkFamilienversicherungAngehoerige()`. Tests `FamilienversicherungFaveParserTest`, `FamilienversicherungAnlageTest`
 - Erkennung braucht mehr als EIN Stichwort: `GeburtsurkundeParser` verlangt zusaetzlich einen Standesamts-Beleg - das Wort "Geburtsurkunde" steht im Kleingedruckten vieler Formulare (KI-054)
+- DEVK-Kfz-Police (`DevkKfzPoliceParser`, Neuvertrag + Anpassung): steht VOR `Check24KfzProtocolParser` - die Police nennt CHECK24 als Vermittler und "Beratungsprotokoll" im Kleingedruckten (KI-102). Test `DevkKfzPoliceParserTest`
 - Status **ACTIVE** · Regel `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`
 
 ### F-022 Dokumenten-Anforderungen

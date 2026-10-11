@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 11.10.2026 - DEVK-Kfz-Versicherungsschein / Anpassung wird erkannt (KI-102)
+
+- **Task**: Betreiber-Meldung: "Anpassung Kfz-Versicherung" der DEVK wird nicht erkannt.
+- **Files Changed**: neu `app/Services/Ai/TemplateParsers/DevkKfzPoliceParser.php`, `tests/Feature/Ai/DevkKfzPoliceParserTest.php`, `tests/Fixtures/devk_kfz_anpassung.txt` (echte Textebene, Personendaten ausgetauscht); `app/Providers/AppServiceProvider.php`; `CLAUDE.md`, `FEATURE_MAP.md`, `KNOWN_ISSUES.md`.
+- **Components Affected**: Dokumenten-Eingang (Kfz-Policen der DEVK).
+- **Database Changes**: keine.
+- **API Changes**: keine.
+- **Potential Side Effects**: Ein DEVK-Versicherungsschein wird nicht mehr vom CHECK24-Protokoll-Parser beansprucht. Die Anpassung ergaenzt den vorhandenen Vertrag ueber Vers.-Nr./FIN (bestehender Abgleich), ohne einen Beginn zu setzen.
+- **Tests Performed**: `DevkKfzPoliceParserTest` 6 (Kettentest rot ohne Fix); echtes PDF per pdftotext durch die Kette; volle Suite, Pint. PHPStan lokal NICHT lauffaehig (Paket nur ueber gesperrten Host), laeuft in CI.
+- **Result**: Person, Vertrag, Fahrzeug, SF-Klasse, Deckung und Beitrag werden gratis gelesen.
+
 ## 09.10.2026 - NAFI-Kfz-Antrag: Versicherer mit Klammerzusatz (KI-101)
 
 - **Task**: Betreiber-Meldung "manchmal erkennt das System den Vertrag nicht" am KRAVAG-Antrag.
