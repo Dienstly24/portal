@@ -59,6 +59,7 @@ use App\Services\Ai\TemplateParsers\Check24KfzProtocolParser;
 use App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser;
 use App\Services\Ai\TemplateParsers\DaDirektKfzPoliceParser;
 use App\Services\Ai\TemplateParsers\DeckungsauftragParser;
+use App\Services\Ai\TemplateParsers\DevkKfzPoliceParser;
 use App\Services\Ai\TemplateParsers\DialogFrachtfuehrerPoliceParser;
 use App\Services\Ai\TemplateParsers\DslAuftragParser;
 use App\Services\Ai\TemplateParsers\EnergieAuftragParser;
@@ -192,6 +193,9 @@ class AppServiceProvider extends ServiceProvider
                 // Kundendokument. Wird sie frueh erkannt, kostet sie keinen
                 // KI-Aufruf und der Eingang nennt den richtigen Weg.
                 $app->make(VermittlerVorgangslisteHinweisParser::class),
+                // VOR dem CHECK24-Protokoll: die DEVK-Police nennt CHECK24 als
+                // Vermittler und "Beratungsprotokoll" im Kleingedruckten.
+                $app->make(DevkKfzPoliceParser::class),
                 $app->make(Check24KfzProtocolParser::class),
                 $app->make(AdacAutoversicherungParser::class),
                 $app->make(AdacMitgliedschaftParser::class),

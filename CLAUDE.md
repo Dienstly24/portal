@@ -932,6 +932,23 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   die Kunden-IBAN ist maskiert, die vollstaendige gehoert der WGV. Neue
   Fahrzeugfelder `acquisition_date`, `initial_mileage`, `vehicle_type` sind
   jetzt extrahierbar (Validierung, Vertragsanlage, Version History).
+- **Kfz-Versicherungsschein der DEVK - Neuvertrag UND Anpassung**
+  (`DevkKfzPoliceParser`, Betreiber-Meldung 11.10.2026, KI-102): gemeldet
+  war "die Anpassung wird nicht erkannt". Gemessen griff der
+  `Check24KfzProtocolParser`: die Police nennt CHECK24 als VERMITTLER und im
+  Kleingedruckten das Wort "Beratungsprotokoll" - drei Stichworte erfuellt,
+  der erste Treffer gewinnt. Der DEVK-Parser steht deshalb VOR dem
+  CHECK24-Protokoll (spezialisiert vor generisch) und sperrt sich bewusst
+  NICHT ueber `looksLikeComparisonProtocol` (das Wort CHECK24 allein macht
+  aus einer Police kein Protokoll). DIE KOPFTABELLE wird ueber die
+  SPALTENPOSITION gelesen: bei der Anpassung ist "Beginn der Versicherung"
+  LEER und nur "Beginn der Aenderung" gefuellt - der Reihe nach gelesen
+  waere der Aenderungstag zum Vertragsbeginn geworden. Der Aenderungstag
+  steht nur in der Zusammenfassung; die Anpassung ergaenzt den vorhandenen
+  Vertrag ueber Vers.-Nr./FIN. Beitrag = Gesamtbeitrag BRUTTO zur
+  Zahlungsweise; Teilkasko-SB, Schutzbrief/Werkstattbindung, SF-Klasse,
+  Kilometerstand, Zulassung auf den VN. Keine Bankdaten (nur
+  "Lastschriftverfahren"). Tests: `DevkKfzPoliceParserTest`.
 - **Kfz-Angebot der Sparkassen DirektVersicherung**
   (`SparkasseDirektKfzParser`, 31.07.2026): Spaltenlayout (Beschriftung links,
   Wert rechts), Stufe `antrag`. Bewusst NICHT übernommen: die Empfehlung
