@@ -627,6 +627,13 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   (schreibende Kundenaktionen) ist weiterhin offen, siehe unten.
   Bestandsaufnahme + Sicherheitspruefung:
   `docs/PARTNERPORTAL_BESTANDSAUFNAHME.md`. Tests: `PartnerPortalTest`.
+- **ROLLE TIPPGEBER (Betreiber-Vorgabe 09.11.2026)**: Dienstly24 haelt
+  KEINE Erlaubnis/Registrierung nach Paragraph 34d GewO und ist auch KEIN
+  (vertraglich gebundener) Untervermittler. Beratung und Vermittlung von
+  Versicherungen erfolgen ausschliesslich durch den Partnermakler NESA
+  Versicherung und Finanzen; Dienstly24 stellt den Kontakt her. Kein Text
+  der Website darf Dienstly24 als Vermittler/Makler/Berater fuer
+  Versicherungen darstellen. Test: `TippgeberRolleTest`.
 - **Rechtsseiten** (`/impressum`, `/agb`, `/datenschutz`,
   `/cookie-richtlinie`, `/kontakt`): leiten standardmäßig auf die offizielle
   Website weiter (`LegalPageController`, Basis-URL unter Einstellungen →
@@ -3887,6 +3894,10 @@ Vollstaendig in `docs/AUDIT_2026-10-04_SIGNATUR.md`, Befunde KI-080..091.
   6 Bildarten, DPR 1/2/3): je Feld sichtbar UND nicht einfarbig.
   **qpdf gehoert zur Testumgebung** (CI installiert es) - ohne qpdf
   scheitert der Test mit klarer Meldung, statt sich zu ueberspringen.
+  **qpdf 12 / Ubuntu 26 (09.11.2026)**: eine Seite ohne `/Resources`
+  (weder eigen noch geerbt) ist dort ein Pruef-Fehler, und qpdf oeffnet
+  wegen AppArmor nur Dateien mit Endung `.pdf`. Test-PDF deshalb IMMER
+  mit `/Resources`, temporaere Dateien fuer qpdf IMMER `*.pdf`.
 - **Gemessen**: Abschluss 1 Seite 28 -> 108 ms, 12 Seiten 108 -> 1079 ms
   (Median 3 Laeufe). Synchron im Request bleibt vorerst (KI-090).
 - **Betrieb**: `apt install qpdf`; nach dem Deploy einmal

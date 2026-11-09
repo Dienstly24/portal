@@ -205,11 +205,15 @@ final class SignaturPdfFixtures
      */
     public static function qpdfCheck(string $pdf): array
     {
-        $datei = tempnam(sys_get_temp_dir(), 'qchk');
+        // Endung .pdf ist Pflicht: unter Ubuntu 26 (qpdf 12, AppArmor) darf
+        // qpdf eine Datei ohne diese Endung nicht oeffnen ("Permission denied").
+        $basis = tempnam(sys_get_temp_dir(), 'qchk');
+        $datei = $basis.'.pdf';
         file_put_contents($datei, $pdf);
         $p = new Process(['qpdf', '--check', $datei]);
         $p->run();
         @unlink($datei);
+        @unlink($basis);
 
         return ['code' => (int) $p->getExitCode(), 'ausgabe' => $p->getOutput().$p->getErrorOutput()];
     }
@@ -217,8 +221,9 @@ final class SignaturPdfFixtures
     /** @param  list<string>  $argumente */
     private static function qpdf(string $pdf, array $argumente): string
     {
-        $ein = tempnam(sys_get_temp_dir(), 'qin');
-        $aus = $ein.'.aus.pdf';
+        $basis = tempnam(sys_get_temp_dir(), 'qin');
+        $ein = $basis.'.pdf'; // Endung Pflicht, siehe qpdfCheck()
+        $aus = $basis.'.aus.pdf';
         file_put_contents($ein, $pdf);
         // Optionen VOR den Dateinamen; --encrypt endet mit "--".
         $befehl = array_merge(['qpdf'], $argumente, [$ein, $aus]);
@@ -227,6 +232,7 @@ final class SignaturPdfFixtures
         $ergebnis = is_file($aus) ? (string) file_get_contents($aus) : '';
         @unlink($ein);
         @unlink($aus);
+        @unlink($basis);
         if ($ergebnis === '') {
             throw new \RuntimeException('qpdf konnte die Bauform nicht erzeugen: '.$p->getErrorOutput());
         }

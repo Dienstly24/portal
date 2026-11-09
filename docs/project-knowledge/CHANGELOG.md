@@ -8,6 +8,27 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 09.11.2026 - CI wieder gruen: qpdf 12 (Ubuntu 26) und symfony-Sicherheitsupdates
+
+- **Task**: Nach der Umstellung von `ubuntu-latest` auf Ubuntu 26 scheiterten 131 Signatur-Tests, dazu meldete `composer audit` 7 neue Hinweise - der Deploy war damit blockiert.
+- **Ursache 1 (qpdf 12)**: `qpdf --check` meldet eine Seite OHNE `/Resources` (weder eigen noch geerbt) jetzt als Warnung (Exit 3), und ein Neuschreiben repariert das nicht - die Eingangspruefung lehnte die handgebauten Test-PDF als "beschaedigt" ab. Mit libqpdf 12.4 nachgemessen: gueltige PDF (auch mit GEERBTEN Ressourcen) bestehen weiterhin. Der Produktionscode ist korrekt, die Test-PDF waren nach PDF-Norm unvollstaendig (`/Resources` ist Pflicht) und tragen jetzt `/Resources << >>`.
+- **Ursache 2 (AppArmor)**: qpdf darf unter Ubuntu 26 keine Datei ohne Endung `.pdf` oeffnen ("Permission denied"). Der Produktionscode nutzt laengst `ein.pdf`/`aus.pdf`; nur `tests/Support/SignaturPdfFixtures.php` legte Dateien per `tempnam()` ohne Endung an.
+- **Ursache 3 (Audit)**: symfony/http-foundation, http-kernel, mime, routing -> 7.4.22/7.4.23 (nur Patch-Stand, `composer update --with-dependencies`).
+- **Files Changed**: 13 Feature-Tests (Test-PDF), `tests/Support/SignaturPdfFixtures.php`, `composer.lock`, `CLAUDE.md`.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Tests Performed**: qpdf-12-Verhalten mit pikepdf 10.18 (libqpdf 12.4.2, QPDFJob = dieselbe Logik wie die Kommandozeile) nachgestellt; `composer audit` nach dem Update ohne Befund; volle Suite in CI.
+
+## 09.11.2026 - Rechtstexte: Dienstly24 als Tippgeber, nicht als Vermittler
+
+- **Task**: Betreiber-Vorgabe: Dienstly24 ist Tippgeber (keine Erlaubnis/Registrierung nach Paragraph 34d GewO). Impressum, Erstinformation und weitere Texte bezeichneten Dienstly24 als "vertraglich gebundenen Vermittler (Untervermittler)" - eine falsche Angabe ueber das eigene Unternehmen.
+- **Files Changed**: `resources/views/website/legal/{erstinformation,impressum,agb}.blade.php`, `resources/views/website/hamburg.blade.php`, `resources/views/website/partials/whatsapp.blade.php`, `database/seeders/ServicePageSeeder.php`, neu `database/migrations/2026_11_09_100000_tippgeber_text_versicherungsmakler_seite.php`, neu `tests/Feature/TippgeberRolleTest.php`, `tests/Feature/SeoSichtbarkeitTest.php`, `tests/Feature/EinwilligungUndHamburgTest.php`, `CLAUDE.md`.
+- **Components Affected**: Website (Rechtsseiten, Hamburg-Seite, WhatsApp-Button, Leistungsseite /leistungen/versicherungsmakler).
+- **Database Changes**: Daten-Migration ersetzt auf der bestehenden Leistungsseite `versicherungsmakler` woertlich sechs Saetze (DE/AR); im Admin bereits geaenderte Texte bleiben unberuehrt. Kein Schema.
+- **API Changes**: keine.
+- **Potential Side Effects**: WhatsApp-Standardtext lautet jetzt "Rueckruf von einem Experten" statt "Beratung". Erstinformation nennt zusaetzlich DIHK-Registerstelle, PKV-Ombudsmann und die Tippgeber-Verguetung.
+- **Tests Performed**: `php -l` auf allen PHP-Dateien. Volle Suite lokal NICHT lauffaehig (Composer erreicht GitHub-Downloads in dieser Umgebung nicht) - laeuft in CI am PR.
+- **Result**: Keine Seite stellt Dienstly24 mehr als Vermittler dar; Beratung/Vermittlung liegt erkennbar bei NESA.
+
 ## 11.10.2026 - DEVK-Kfz-Versicherungsschein / Anpassung wird erkannt (KI-102)
 
 - **Task**: Betreiber-Meldung: "Anpassung Kfz-Versicherung" der DEVK wird nicht erkannt.

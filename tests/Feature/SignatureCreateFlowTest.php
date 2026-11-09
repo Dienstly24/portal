@@ -27,7 +27,7 @@ class SignatureCreateFlowTest extends TestCase
     {
         $o = [1 => '<< /Type /Catalog /Pages 2 0 R >>',
             2 => '<< /Type /Pages /Kids [3 0 R] /Count 1 /MediaBox [0 0 595 842] >>',
-            3 => '<< /Type /Page /Parent 2 0 R >>'];
+            3 => '<< /Type /Page /Parent 2 0 R /Resources << >> >>'];
         $pdf = "%PDF-1.4\n";
         $off = [];
         foreach ($o as $n => $k) {

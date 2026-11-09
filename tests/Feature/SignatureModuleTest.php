@@ -56,7 +56,7 @@ class SignatureModuleTest extends TestCase
                 .'] /Count '.$pages.' /MediaBox [0 0 595 842] >>',
         ];
         for ($i = 0; $i < $pages; $i++) {
-            $objekte[$i + 3] = '<< /Type /Page /Parent 2 0 R >>';
+            $objekte[$i + 3] = '<< /Type /Page /Parent 2 0 R /Resources << >> >>';
         }
 
         $pdf = "%PDF-1.4\n";

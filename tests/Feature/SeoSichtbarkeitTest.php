@@ -232,7 +232,8 @@ class SeoSichtbarkeitTest extends TestCase
         // KERNPUNKT: Dienstly24 haelt die Erlaubnis nach Paragraph 34d NICHT
         // selbst (siehe /erstinformation) - die Seite darf das nie behaupten.
         $this->assertStringNotContainsString('Wir sind Ihr Versicherungsmakler mit Erlaubnis', $html);
-        $this->assertStringContainsString('vertraglich gebundener Vermittler', $html);
+        $this->assertStringContainsString('in eigener Verantwortung', $html);
+        $this->assertStringNotContainsString('vertraglich gebundener Vermittler', $html);
         $this->assertStringContainsString(url('/erstinformation'), $html);
     }
 

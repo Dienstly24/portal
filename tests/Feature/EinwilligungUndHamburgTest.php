@@ -376,7 +376,8 @@ class EinwilligungUndHamburgTest extends TestCase
     {
         $html = $this->get('/versicherungsmakler-hamburg')->assertOk()->getContent();
 
-        $this->assertStringContainsString('vertraglich gebundener Vermittler', $html);
+        $this->assertStringContainsString('in eigener Verantwortung', $html);
+        $this->assertStringNotContainsString('vertraglich gebundener Vermittler', $html);
         $this->assertStringContainsString(url('/erstinformation'), $html);
         $this->assertStringNotContainsString('Wir sind Ihr Versicherungsmakler mit Erlaubnis', $html);
     }
