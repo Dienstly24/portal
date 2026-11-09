@@ -628,8 +628,8 @@ class CustomerMergeService
 
         $result = [];
         foreach (Schema::getIndexes($table) as $index) {
-            $columns = $index['columns'] ?? [];
-            if (($index['unique'] ?? false) && in_array('customer_id', $columns, true)) {
+            $columns = $index['columns'];
+            if ($index['unique'] && in_array('customer_id', $columns, true)) {
                 $result[] = array_values(array_filter($columns, fn ($c) => $c !== 'customer_id'));
             }
         }
@@ -876,7 +876,7 @@ class CustomerMergeService
 
         $tables = [];
         foreach (Schema::getTables() as $table) {
-            $name = is_array($table) ? ($table['name'] ?? null) : ($table->name ?? null);
+            $name = $table['name'];
             if ($name && Schema::hasColumn($name, 'customer_id')) {
                 $tables[] = $name;
             }

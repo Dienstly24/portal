@@ -28,7 +28,7 @@
 
 @section('description', $isAr
     ? 'وسيط تأمين مقرّه هامبورغ – كل شيء أونلاين، بالعربية والألمانية. تأمين السيارات والتأمين الصحي وتسجيل السيارات والكهرباء والغاز. لا داعي للحضور إلى أي مكتب. مجاناً وبدون التزام.'
-    : 'Versicherungsmakler mit Sitz in Hamburg – komplett online, auf Deutsch und Arabisch. Kfz, Krankenversicherung, Kfz-Zulassung sowie Strom & Gas. Sie müssen nirgendwo hinkommen. Kostenlos und unverbindlich.')
+    : 'Versicherungen aus Hamburg – Beratung durch unseren zugelassenen Partnermakler, komplett online, auf Deutsch und Arabisch. Kfz, Krankenversicherung, Kfz-Zulassung sowie Strom & Gas. Sie müssen nirgendwo hinkommen. Kostenlos und unverbindlich.')
 
 @section('og-title', $isAr ? 'وسيط تأمين في هامبورغ – كل شيء أونلاين' : 'Versicherungsmakler in Hamburg – komplett online')
 
@@ -192,10 +192,10 @@
           : 'Ein Handyfoto genügt – per WhatsApp oder als Upload im Kundenportal. Hilfreich sind: bestehende Policen oder Vertragsnummern, ein Ausweisdokument und – je nach Anliegen – Fahrzeugpapiere oder Angaben zum bisherigen Anbieter. Fehlt etwas, sagen wir Ihnen das; geraten wird nichts.' }}</p>
     </details>
     <details>
-      <summary>{{ $isAr ? 'هل الاستشارة بالعربية متاحة فعلاً؟' : 'Wird wirklich auch auf Arabisch beraten?' }}</summary>
+      <summary>{{ $isAr ? 'هل الاستشارة بالعربية متاحة فعلاً؟' : 'Gibt es die Beratung wirklich auch auf Arabisch?' }}</summary>
       <p>{{ $isAr
-          ? 'نعم. الاستشارة بالألمانية وبالعربية، وأنتم تختارون اللغة الأسهل عليكم.'
-          : 'Ja. Wir beraten auf Deutsch und auf Arabisch – Sie wählen, was Ihnen leichter fällt.' }}</p>
+          ? 'نعم. التواصل معنا والاستشارة عند شريكنا متاحان بالألمانية وبالعربية، وأنتم تختارون اللغة الأسهل عليكم.'
+          : 'Ja. Der Kontakt mit uns und die Beratung durch unseren Partnermakler sind auf Deutsch und auf Arabisch möglich – Sie wählen, was Ihnen leichter fällt.' }}</p>
     </details>
     <details>
       <summary>{{ $isAr ? 'هل تعملون خارج هامبورغ أيضاً؟' : 'Beraten Sie auch außerhalb von Hamburg?' }}</summary>

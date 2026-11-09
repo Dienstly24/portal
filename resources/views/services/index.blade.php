@@ -87,7 +87,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;col
         <span aria-current="page">{{ __('Leistungen') }}</span>
     </nav>
     <h1>{{ __('Unsere Leistungen') }}</h1>
-    <p class="lead">{{ __('Wählen Sie eine Leistung – wir beraten Sie persönlich, auf Deutsch und Arabisch.') }}</p>
+    <p class="lead">{{ __('Wählen Sie eine Leistung – wir sind persönlich für Sie da, auf Deutsch und Arabisch.') }}</p>
 
     <div class="grid">
         @foreach($pages as $page)

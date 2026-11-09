@@ -8,6 +8,13 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 09.11.2026 - Tippgeber: Nachzug auf Startseite, Hamburg-Seite, Widerruf, Leistungsuebersicht
+
+- **Task**: Nach #395 standen ausserhalb der Rechtsseiten noch Aussagen, die Dienstly24 als Berater/Vermittler darstellen ("Ihr Makler-Service", "wir beraten", "Erstberatung", "ueber uns vermittelte Vertraege"). Dazu der nach dem Merge gepushte AGB-Satz.
+- **Files Changed**: `resources/views/website/{home,hamburg}.blade.php`, `resources/views/website/legal/{agb,widerruf}.blade.php`, `resources/views/services/index.blade.php`, `lang/ar.json`.
+- **Database Changes**: keine. Die Intro-Texte der Leistungsseiten (DB, im Admin pflegbar) sind NICHT angefasst.
+- **Tests Performed**: CI.
+
 ## 09.11.2026 - CI wieder gruen: qpdf 12 (Ubuntu 26) und symfony-Sicherheitsupdates
 
 - **Task**: Nach der Umstellung von `ubuntu-latest` auf Ubuntu 26 scheiterten 131 Signatur-Tests, dazu meldete `composer audit` 7 neue Hinweise - der Deploy war damit blockiert.
