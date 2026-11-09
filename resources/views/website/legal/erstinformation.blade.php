@@ -3,10 +3,10 @@
 @section('title', 'Erstinformation')
 
 @section('content')
-<!-- Stand 11/2026: Dienstly24 ist Tippgeber (Informations- und Kontaktplattform), NICHT
+{{-- Stand 11/2026: Dienstly24 ist Tippgeber (Informations- und Kontaktplattform), NICHT
      Vermittler/Untervermittler nach § 34d GewO. Beratung und Vermittlung erfolgen allein
      durch NESA. Diese Erstinformation ist die des Vermittlers (NESA) - mit NESA abstimmen.
-     Kein Text auf der Website darf Dienstly24 als Vermittler, Makler oder Berater darstellen. -->
+     Kein Text auf der Website darf Dienstly24 als Vermittler, Makler oder Berater darstellen. --}}
 <h1>Erstinformation gemäß § 15 VersVermV</h1>
 
 <h2>Hinweis zur Rolle von Dienstly24</h2>
