@@ -184,7 +184,8 @@ class DaDirektKfzPoliceParser implements DocumentTemplateParser
         }
         // Ist ueberhaupt eine Fahrzeugversicherung (Kasko) ausgewiesen, beide
         // Flags setzen (auch false) - die Police ist eindeutig.
-        if ($hasTeil || $hasVoll || stripos($text, 'Fahrzeugversicherung') !== false) {
+        // $hasVoll setzt $hasTeil immer mit - die Pruefung auf $hasTeil genuegt.
+        if ($hasTeil || stripos($text, 'Fahrzeugversicherung') !== false) {
             $raw['has_teilkasko'] = $hasTeil;
             $raw['has_vollkasko'] = $hasVoll;
         }

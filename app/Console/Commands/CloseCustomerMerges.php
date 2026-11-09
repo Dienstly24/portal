@@ -95,7 +95,7 @@ class CloseCustomerMerges extends Command
     {
         return array_values(array_map(
             fn (array $c) => $c['name'],
-            array_filter(Schema::getColumns('customers'), fn (array $c) => ($c['nullable'] ?? false)
+            array_filter(Schema::getColumns('customers'), fn (array $c) => $c['nullable']
                 && ! in_array($c['name'], self::BEHALTEN, true))
         ));
     }
