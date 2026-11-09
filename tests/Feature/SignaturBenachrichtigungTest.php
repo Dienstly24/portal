@@ -46,7 +46,7 @@ class SignaturBenachrichtigungTest extends TestCase
         $kids = [];
         for ($i = 0; $i < $seiten; $i++) {
             $kids[] = ($i + 3).' 0 R';
-            $objekte[$i + 3] = '<< /Type /Page /Parent 2 0 R >>';
+            $objekte[$i + 3] = '<< /Type /Page /Parent 2 0 R /Resources << >> >>';
         }
         $objekte[2] = '<< /Type /Pages /Kids ['.implode(' ', $kids).'] /Count '.$seiten.' /MediaBox [0 0 595 842] >>';
         ksort($objekte);

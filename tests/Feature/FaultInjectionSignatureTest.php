@@ -33,7 +33,7 @@ class FaultInjectionSignatureTest extends TestCase
     {
         $o = [1 => '<< /Type /Catalog /Pages 2 0 R >>',
             2 => '<< /Type /Pages /Kids ['.implode(' ', array_map(fn ($i) => ($i + 3).' 0 R', range(0, $pages - 1))).'] /Count '.$pages.' /MediaBox [0 0 595 842] >>'];
-        for ($i = 0; $i < $pages; $i++) { $o[$i + 3] = '<< /Type /Page /Parent 2 0 R >>'; }
+        for ($i = 0; $i < $pages; $i++) { $o[$i + 3] = '<< /Type /Page /Parent 2 0 R /Resources << >> >>'; }
         $pdf = "%PDF-1.4\n";
         $off = [];
         foreach ($o as $n => $k) { $off[$n] = strlen($pdf);

@@ -3894,6 +3894,10 @@ Vollstaendig in `docs/AUDIT_2026-10-04_SIGNATUR.md`, Befunde KI-080..091.
   6 Bildarten, DPR 1/2/3): je Feld sichtbar UND nicht einfarbig.
   **qpdf gehoert zur Testumgebung** (CI installiert es) - ohne qpdf
   scheitert der Test mit klarer Meldung, statt sich zu ueberspringen.
+  **qpdf 12 / Ubuntu 26 (09.11.2026)**: eine Seite ohne `/Resources`
+  (weder eigen noch geerbt) ist dort ein Pruef-Fehler, und qpdf oeffnet
+  wegen AppArmor nur Dateien mit Endung `.pdf`. Test-PDF deshalb IMMER
+  mit `/Resources`, temporaere Dateien fuer qpdf IMMER `*.pdf`.
 - **Gemessen**: Abschluss 1 Seite 28 -> 108 ms, 12 Seiten 108 -> 1079 ms
   (Median 3 Laeufe). Synchron im Request bleibt vorerst (KI-090).
 - **Betrieb**: `apt install qpdf`; nach dem Deploy einmal
