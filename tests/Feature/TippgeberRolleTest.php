@@ -52,7 +52,8 @@ class TippgeberRolleTest extends TestCase
 
     public function test_whatsapp_text_fragt_keine_beratung_bei_dienstly24_an(): void
     {
-        $html = $this->get(self::HOST.'/impressum')->getContent();
+        // Der Float-Button sitzt im Website-Layout (Startseite), nicht auf den Rechtsseiten.
+        $html = $this->get(self::HOST.'/')->assertOk()->getContent();
 
         $this->assertStringNotContainsString(rawurlencode('ich interessiere mich für eine Beratung'), $html);
         $this->assertStringContainsString(rawurlencode('ich wünsche mir einen Rückruf von einem Experten'), $html);
