@@ -14,7 +14,7 @@
 <li>Beratung und Unterstützung bei der Kfz-Zulassung und dem Kennzeichenversand.</li>
 <li>Beratung zu Strom- und Gasanbietern.</li>
 </ul>
-<p>Dienstly24 ist weder Partei des Versicherungsvertrags noch des Maklervertrags; Vertragspartner des Versicherungsvertrags; sind stets das jeweilige Versicherungsunternehmen bzw. NESA Versicherung und Finanzen.</p>
+<p>Dienstly24 ist weder Partei des Versicherungsvertrags noch des Maklervertrags. Vertragspartner sind stets das jeweilige Versicherungsunternehmen bzw. NESA Versicherung und Finanzen.</p>
 <h2>3. Kosten</h2>
 <p>Die Kontaktaufnahme und die Beratung durch unseren Partner sind für Kunden kostenlos und unverbindlich. Etwaige Vergütungen für die Versicherungsvermittlung erfolgen ausschließlich in Form von Provisionen der Versicherungsunternehmen an NESA Versicherung und Finanzen und sind bereits im Versicherungsbeitrag enthalten — es entstehen dem Kunden dadurch keine zusätzlichen Kosten. Dienstly24 kann von NESA Versicherung und Finanzen eine Vergütung für die Weiterleitung von Kontaktanfragen erhalten, die ebenfalls keine Mehrkosten verursacht.</p>
 <h2>4. Pflichten des Kunden</h2>
