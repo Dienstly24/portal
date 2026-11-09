@@ -8,6 +8,17 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 09.11.2026 - Rechtstexte: Dienstly24 als Tippgeber, nicht als Vermittler
+
+- **Task**: Betreiber-Vorgabe: Dienstly24 ist Tippgeber (keine Erlaubnis/Registrierung nach Paragraph 34d GewO). Impressum, Erstinformation und weitere Texte bezeichneten Dienstly24 als "vertraglich gebundenen Vermittler (Untervermittler)" - eine falsche Angabe ueber das eigene Unternehmen.
+- **Files Changed**: `resources/views/website/legal/{erstinformation,impressum,agb}.blade.php`, `resources/views/website/hamburg.blade.php`, `resources/views/website/partials/whatsapp.blade.php`, `database/seeders/ServicePageSeeder.php`, neu `database/migrations/2026_11_09_100000_tippgeber_text_versicherungsmakler_seite.php`, neu `tests/Feature/TippgeberRolleTest.php`, `tests/Feature/SeoSichtbarkeitTest.php`, `tests/Feature/EinwilligungUndHamburgTest.php`, `CLAUDE.md`.
+- **Components Affected**: Website (Rechtsseiten, Hamburg-Seite, WhatsApp-Button, Leistungsseite /leistungen/versicherungsmakler).
+- **Database Changes**: Daten-Migration ersetzt auf der bestehenden Leistungsseite `versicherungsmakler` woertlich sechs Saetze (DE/AR); im Admin bereits geaenderte Texte bleiben unberuehrt. Kein Schema.
+- **API Changes**: keine.
+- **Potential Side Effects**: WhatsApp-Standardtext lautet jetzt "Rueckruf von einem Experten" statt "Beratung". Erstinformation nennt zusaetzlich DIHK-Registerstelle, PKV-Ombudsmann und die Tippgeber-Verguetung.
+- **Tests Performed**: `php -l` auf allen PHP-Dateien. Volle Suite lokal NICHT lauffaehig (Composer erreicht GitHub-Downloads in dieser Umgebung nicht) - laeuft in CI am PR.
+- **Result**: Keine Seite stellt Dienstly24 mehr als Vermittler dar; Beratung/Vermittlung liegt erkennbar bei NESA.
+
 ## 11.10.2026 - DEVK-Kfz-Versicherungsschein / Anpassung wird erkannt (KI-102)
 
 - **Task**: Betreiber-Meldung: "Anpassung Kfz-Versicherung" der DEVK wird nicht erkannt.

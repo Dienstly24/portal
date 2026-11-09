@@ -78,8 +78,8 @@
        Ortsseite, die das verschweigt, waere die bequemere - und eine
        falsche Angabe ueber das eigene Unternehmen. --}}
   <p class="hh-hinweis">{{ $isAr
-      ? 'ملاحظة: وساطة عقود التأمين تتم عبر وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف (GewO). وDienstly24 تعمل كوسيط مرتبط تعاقدياً وتحت مسؤوليته – التفاصيل الكاملة في صفحة المعلومات الأولى.'
-      : 'Hinweis: Die Vermittlung von Versicherungsverträgen erfolgt über einen zugelassenen Versicherungsmakler mit Erlaubnis nach § 34d Abs. 1 GewO. Dienstly24 tritt dabei als vertraglich gebundener Vermittler unter dessen Haftung auf – alle Angaben dazu stehen in der' }}
+      ? 'ملاحظة: الاستشارة ووساطة عقود التأمين يقدّمها شريكنا، وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف (GewO). أما Dienstly24 فتوصلكم به وتتابع معكم كل شيء أونلاين – التفاصيل الكاملة في صفحة المعلومات الأولى.'
+      : 'Hinweis: Beratung und Vermittlung von Versicherungsverträgen übernimmt unser Kooperationspartner, ein zugelassener Versicherungsmakler mit Erlaubnis nach § 34d Abs. 1 GewO, in eigener Verantwortung. Dienstly24 stellt den Kontakt her und begleitet Sie online – alle Angaben dazu stehen in der' }}
       <a href="{{ url('/erstinformation') }}">{{ $isAr ? 'Erstinformation' : 'Erstinformation' }}</a>.</p>
 
   {{-- Der Standort: die einzigen Angaben, die es nur hier gibt. --}}

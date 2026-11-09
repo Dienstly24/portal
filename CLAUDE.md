@@ -627,6 +627,13 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   (schreibende Kundenaktionen) ist weiterhin offen, siehe unten.
   Bestandsaufnahme + Sicherheitspruefung:
   `docs/PARTNERPORTAL_BESTANDSAUFNAHME.md`. Tests: `PartnerPortalTest`.
+- **ROLLE TIPPGEBER (Betreiber-Vorgabe 09.11.2026)**: Dienstly24 haelt
+  KEINE Erlaubnis/Registrierung nach Paragraph 34d GewO und ist auch KEIN
+  (vertraglich gebundener) Untervermittler. Beratung und Vermittlung von
+  Versicherungen erfolgen ausschliesslich durch den Partnermakler NESA
+  Versicherung und Finanzen; Dienstly24 stellt den Kontakt her. Kein Text
+  der Website darf Dienstly24 als Vermittler/Makler/Berater fuer
+  Versicherungen darstellen. Test: `TippgeberRolleTest`.
 - **Rechtsseiten** (`/impressum`, `/agb`, `/datenschutz`,
   `/cookie-richtlinie`, `/kontakt`): leiten standardmäßig auf die offizielle
   Website weiter (`LegalPageController`, Basis-URL unter Einstellungen →

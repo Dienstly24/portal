@@ -11,8 +11,8 @@
 @php
     $isArWa = app()->getLocale() === 'ar';
     $waText = $waText ?? ($isArWa
-        ? 'مرحباً Dienstly24، أريد استشارة بخصوص خدماتكم.'
-        : 'Hallo Dienstly24, ich interessiere mich für eine Beratung.');
+        ? 'مرحباً Dienstly24، أريد أن يتواصل معي خبير بخصوص خدماتكم.'
+        : 'Hallo Dienstly24, ich wünsche mir einen Rückruf von einem Experten.');
     $waHref = 'https://wa.me/' . config('website.whatsapp') . '?text=' . rawurlencode($waText);
 @endphp
 <a class="wa-float" href="{{ $waHref }}" target="_blank" rel="noopener"
