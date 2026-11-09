@@ -44,7 +44,7 @@
     ['كم تستغرق معالجة طلبي؟', 'عادةً نتواصل معكم خلال 24 ساعة.'],
     ['كيف يمكنني إرسال طلب؟', 'أسهل طريقة هي نموذج الاتصال، أو واتساب، أو الهاتف على الرقم ‎+49 179 9673909.'],
 ] : [
-    ['Ist die Beratung wirklich kostenlos?', 'Ja, die Erstberatung ist für Sie komplett kostenlos und unverbindlich.'],
+    ['Ist die Beratung wirklich kostenlos?', 'Ja. Die Kontaktaufnahme und die Beratung durch unseren Partnermakler sind für Sie kostenlos und unverbindlich.'],
     ['Sprechen Sie auch Arabisch?', 'Ja, unser Team berät Sie auf Deutsch und auf Arabisch – ganz wie es für Sie bequemer ist.'],
     ['Wie lange dauert die Bearbeitung meiner Anfrage?', 'In der Regel melden wir uns innerhalb von 24 Stunden bei Ihnen.'],
     ['Wie kann ich eine Anfrage stellen?', 'Am einfachsten über das Kontaktformular, per WhatsApp oder telefonisch unter +49 179 9673909.'],
@@ -56,7 +56,7 @@
 <section class="hero"><div class="hero-facet" aria-hidden="true"></div><div class="container">
   <div class="hero-grid">
     <div>
-      <span class="eyebrow"><span class="dot"></span><span>{{ $isAr ? 'خدمات الوساطة لكم في هامبورغ – وفي جميع أنحاء ألمانيا' : 'Ihr Makler-Service in Hamburg – deutschlandweit' }}</span></span>
+      <span class="eyebrow"><span class="dot"></span><span>{{ $isAr ? 'خدماتكم من هامبورغ – وفي جميع أنحاء ألمانيا' : 'Ihr Service aus Hamburg – deutschlandweit' }}</span></span>
       <h1 class="display"><span>{{ $isAr ? 'جميع أنواع التأمين.' : 'Alle Versicherungen.' }}</span><br><span class="gold">{{ $isAr ? 'جهة اتصال واحدة.' : 'Ein Ansprechpartner.' }}</span></h1>
       <p class="lead">{{ $isAr
           ? 'استشارة مستقلة عن شركات التأمين حول التأمين وتسجيل السيارات والطاقة – مجاناً وبلغة واضحة وبالألمانية والعربية.'
@@ -141,7 +141,7 @@
       @include('website.partials.picture', ['asset' => $svcImgs['krankenversicherung'], 'imgClass' => 'svc-bild', 'sizes' => $svcSizes])
       @unless($svcImgs['krankenversicherung'])<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6Z"/></svg></div>@endunless
       <h3>{{ $isAr ? 'التأمين الصحي' : 'Krankenversicherung' }}</h3>
-      <p>{{ $isAr ? 'قانوني أو خاص – نقدم لكم المشورة لاختيار الأنسب لوضعكم.' : 'Gesetzlich oder privat – wir beraten zu den Optionen, die zu Ihrer Situation passen.' }}</p>
+      <p>{{ $isAr ? 'قانوني أو خاص – شريكنا الوسيط المرخّص ينصحكم بالأنسب لوضعكم.' : 'Gesetzlich oder privat – unser Partnermakler berät Sie zu den Optionen, die zu Ihrer Situation passen.' }}</p>
       <span class="go">{{ $go }}</span></a>
     <a class="svc reveal" href="{{ $lPrefix }}zahnzusatzversicherung">
       @include('website.partials.picture', ['asset' => $svcImgs['zahnzusatzversicherung'], 'imgClass' => 'svc-bild', 'sizes' => $svcSizes])
@@ -258,7 +258,7 @@
     <h2 class="title display">{{ $isAr ? 'معلومات مفيدة' : 'Gut zu wissen' }}</h2>
   </div>
   <div class="faq reveal" style="max-width:760px;margin:0 auto;">
-    <details open><summary>{{ $isAr ? 'هل الاستشارة مجانية فعلاً؟' : 'Ist die Beratung wirklich kostenlos?' }}</summary><p>{{ $isAr ? 'نعم، الاستشارة الأولى مجانية تماماً وغير ملزمة.' : 'Ja, die Erstberatung ist für Sie komplett kostenlos und unverbindlich.' }}</p></details>
+    <details open><summary>{{ $isAr ? 'هل الاستشارة مجانية فعلاً؟' : 'Ist die Beratung wirklich kostenlos?' }}</summary><p>{{ $isAr ? 'نعم، التواصل والاستشارة عند شريكنا الوسيط مجانية تماماً وغير ملزمة.' : 'Ja. Die Kontaktaufnahme und die Beratung durch unseren Partnermakler sind für Sie kostenlos und unverbindlich.' }}</p></details>
     <details><summary>{{ $isAr ? 'هل تتحدثون العربية أيضاً؟' : 'Sprechen Sie auch Arabisch?' }}</summary><p>{{ $isAr ? 'نعم، فريقنا يقدم الاستشارة بالألمانية والعربية – كما هو أنسب لكم.' : 'Ja, unser Team berät Sie auf Deutsch und auf Arabisch – ganz wie es für Sie bequemer ist.' }}</p></details>
     <details><summary>{{ $isAr ? 'كم تستغرق معالجة طلبي؟' : 'Wie lange dauert die Bearbeitung meiner Anfrage?' }}</summary><p>{{ $isAr ? 'عادةً نتواصل معكم خلال 24 ساعة.' : 'In der Regel melden wir uns innerhalb von 24 Stunden bei Ihnen.' }}</p></details>
     <details><summary>{{ $isAr ? 'كيف يمكنني إرسال طلب؟' : 'Wie kann ich eine Anfrage stellen?' }}</summary><p>{{ $isAr ? 'أسهل طريقة هي نموذج الاتصال أدناه، أو واتساب، أو الهاتف.' : 'Am einfachsten über das Kontaktformular unten, per WhatsApp oder telefonisch.' }}</p></details>
