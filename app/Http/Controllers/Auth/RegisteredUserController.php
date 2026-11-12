@@ -12,6 +12,7 @@ use App\Services\CustomerNumberGenerator;
 use App\Services\Security\TurnstileVerifier;
 use App\Support\FamilienAlter;
 use App\Support\PasswordPolicy;
+use App\Support\VertrauterHost;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
@@ -315,7 +316,8 @@ class RegisteredUserController extends Controller
 
     private function sendVerificationMail(PendingRegistration $pending, string $token): void
     {
-        $url = route('register.verify', ['token' => $token]);
+        // Nie dem Host-Header der Anfrage folgen (Audit 12.11.2026).
+        $url = VertrauterHost::route('register.verify', ['token' => $token]);
 
         try {
             Mail::to($pending->email)->send(new RegistrationVerificationMail(

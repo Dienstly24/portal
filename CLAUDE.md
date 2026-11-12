@@ -4971,6 +4971,25 @@ neue Seitenfassung derselben Idee.
 - Tests: `AufgabenSammelaktionTest`, `GeburtsortOptionalTest`,
   `tests/js/datum-logik.test.js`.
 
+## System-Audit 12.11.2026: Links in Mails folgen nie dem Host-Header
+
+- **KI-103 (HIGH, behoben)**: `route()` nimmt den Host der laufenden
+  Anfrage. `POST /forgot-password` mit fremdem `Host:` verschickte eine
+  echte Mail, deren Reset-Link samt Token auf den fremden Host zeigte.
+  **Regel**: Links in Mails, die ein NICHT angemeldeter Besucher ausloesen
+  kann (Passwort vergessen, Registrierung bestaetigen), nur ueber
+  `App\Support\VertrauterHost::route()`. Eigener Host -> unveraendert,
+  sonst feste Basis aus `portal_url`/`admin_url`. Bewusst KEIN
+  `trustHosts`: ein vergessener eigener Host waere ein Totalausfall.
+  Betreiber zusaetzlich: nginx-Standard-vHost, der unbekannte Hosts abweist.
+- **KI-104**: JEDER Weg, der einen 2FA-Code annimmt, haengt an der Bremse
+  `2fa:<id>|<ip>` - jetzt auch "Ersatzcodes erneuern".
+- **KI-105**: HTML unter `/admin`, `/portal`, `/partner` traegt
+  `Cache-Control: no-store` (Zurueck-Taste nach dem Abmelden).
+- Offen: KI-106 (CI-Actions per Commit-SHA pinnen), KI-107.
+- Tests: `Security/HostHeaderVergiftungTest`,
+  `ZweiFaktorEinrichtungUmgehungTest`, `ContentSecurityPolicyTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

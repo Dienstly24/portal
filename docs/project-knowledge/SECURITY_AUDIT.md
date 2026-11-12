@@ -1,5 +1,14 @@
 # Security Audit
 
+**Nachtrag 12.11.2026 (System-Audit)**: ein HIGH-Befund gefunden und behoben -
+KI-103 (Host-Header-Vergiftung: Reset- und Registrierungslink folgten dem
+Host der Anfrage). Dazu KI-104/105 (LOW, behoben) und KI-106/107 (offen).
+Neue Regel: Links in Mails, die ein NICHT angemeldeter Besucher ausloesen
+kann, nur ueber `App\Support\VertrauterHost::route()` bauen. Erneut geprueft
+und ohne Befund: Rollen/Datensatz-Zugriff aller Personalrouten (zusaetzlich
+Routen OHNE Pfadparameter mit IDs im Formular), Portal-Zugriffe, Webhooks,
+oeffentliche Token-Seiten, `{!! !!}`-Ausgaben, Abhaengigkeiten.
+
 **Nachtrag 28.09.2026 (System-Audit, `docs/AUDIT_2026-09-28_SYSTEMPRUEFUNG.md`)**:
 drei HIGH-Befunde gefunden und behoben - KI-025 (SVG/HTML aus fremden
 Anhaengen inline, SVG ohne CSP -> Stored XSS in der Beraterwelt), KI-026

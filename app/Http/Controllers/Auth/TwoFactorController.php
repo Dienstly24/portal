@@ -115,10 +115,19 @@ class TwoFactorController extends Controller
 
         $request->validate(['code' => ['required', 'string']]);
 
+        // Dieselbe Bremse wie Abfrage und Einrichtung (KI-042, Audit
+        // 12.11.2026): auch dieser Weg nimmt einen Code an. Ohne sie liess
+        // sich aus einer uebernommenen Sitzung der Code durchprobieren und
+        // mit dem Treffer ein frischer Satz Ersatzcodes erzeugen.
+        $this->sperreGreift($request, $user);
+
         if (! $this->twoFactor->verify($user, (string) $request->input('code'))) {
+            $this->fehlversuch($request, $user, 'ersatzcodes');
+
             return back()->withErrors(['code' => 'Der Code stimmt nicht.']);
         }
 
+        RateLimiter::clear($this->sperrSchluessel($request, $user));
         $codes = $this->twoFactor->generateRecoveryCodes($user);
         ActivityLog::create([
             'user_id' => $user->id,

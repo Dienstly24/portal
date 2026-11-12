@@ -352,4 +352,20 @@ class ContentSecurityPolicyTest extends TestCase
     {
         return (string) $response->headers->get('Content-Security-Policy');
     }
+
+    /**
+     * Audit 12.11.2026: Seiten mit Kundendaten duerfen nicht im
+     * Browser-Cache landen (Zurueck-Taste nach dem Abmelden).
+     */
+    public function test_anwendungsseiten_werden_nicht_im_browser_gespeichert(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $antwort = $this->actingAs($admin)->get('/admin');
+        $antwort->assertOk();
+        $this->assertStringContainsString('no-store', (string) $antwort->headers->get('Cache-Control'));
+
+        // Oeffentliche Seiten bleiben speicherbar.
+        $this->assertStringNotContainsString('no-store', (string) $this->get('/login')->headers->get('Cache-Control'));
+    }
 }
