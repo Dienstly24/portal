@@ -45,6 +45,17 @@ class SecurityHeaders
             $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
         }
 
+        // Seiten mit Kundendaten gehoeren in keinen Browser-Cache (Audit
+        // 12.11.2026). Laravel sendet nur "no-cache, private": die Seite
+        // wird trotzdem gespeichert, und nach dem Abmelden zeigt die
+        // Zurueck-Taste am gemeinsam genutzten Rechner die Kundenakte
+        // wieder an. Nur HTML - Downloads (PDF, CSV) bleiben unberuehrt,
+        // sonst laesst sich eine Datei in manchen Browsern nicht speichern.
+        if ($request->is('admin', 'admin/*', 'portal', 'portal/*', 'partner', 'partner/*')
+            && str_contains((string) $response->headers->get('Content-Type'), 'text/html')) {
+            $response->headers->set('Cache-Control', 'no-store, private');
+        }
+
         // Content-Security-Policy (Audit SEC-1, verschaerft mit SEC-4).
         //
         // Bis SEC-4 stand hier `script-src 'self' 'unsafe-inline' 'unsafe-eval'`.

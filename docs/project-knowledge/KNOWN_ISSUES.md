@@ -20,6 +20,11 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 
 | ID | Sev | Kategorie | Kurz | Status |
 |---|---|---|---|---|
+| KI-103 | HIGH | security | Host-Header-Vergiftung: Reset- und Registrierungs-Bestaetigungslink folgten dem Host der Anfrage (Token an fremden Host) | FIXED |
+| KI-104 | LOW | security | "Ersatzcodes erneuern" pruefte den 2FA-Code ohne die gemeinsame Sperre und ohne Protokoll | FIXED |
+| KI-105 | LOW | security | Seiten mit Kundendaten ohne `no-store`: nach dem Abmelden per Zurueck-Taste wieder sichtbar | FIXED |
+| KI-106 | MEDIUM | ops/security | CI: Fremd-Actions mit Zugriff auf den SSH-Schluessel nur per Tag gepinnt (`appleboy/ssh-action@v1.2.5`), nicht per Commit-SHA | OPEN |
+| KI-107 | LOW | correctness | Portal: bei `portal_fremdvertraege = ausblenden` stehen Fremdvertraege weiter in der Vertragsauswahl des Dokument-Uploads und sind per Aenderungsantrag ansprechbar | OPEN |
 | KI-025 | HIGH | security | Stored XSS: SVG/HTML aus E-Mail-/WhatsApp-Anhaengen inline (SVG ohne CSP) | FIXED |
 | KI-026 | HIGH | security | Magic-Login/Einladungslink nach eigenem Passwort weiter benutzbar | FIXED |
 | KI-041 | MEDIUM | security | Admin-Reset des Portals liess alte Magic-/Einladungslinks gueltig (Umgehung von KI-026) | FIXED |
@@ -119,6 +124,41 @@ und PHPStan) auf `main` gruen ist.
 ---
 
 ## Befunde im Detail
+
+### KI-103 - Host-Header-Vergiftung bei Reset- und Bestaetigungslinks
+- **Category** security · **Severity** HIGH · **Status** FIXED
+- **Location** `app/Mail/PasswordResetMail.php`, `RegisteredUserController::sendVerificationMail`
+- **Description** `route()` baut absolute Adressen aus dem Host der laufenden Anfrage, und es gibt keine Host-Liste (`trustHosts`). `POST /forgot-password` mit `Host: angreifer.example` und der Kennung (E-Mail ODER Kundennummer) des Opfers verschickte eine echte Dienstly24-Mail, deren Link samt gueltigem Reset-Token auf den fremden Host zeigte. Ein Klick des Opfers = Kontouebernahme (Kunden haben keinen zweiten Faktor). Voraussetzung auf dem Server: der vHost nimmt fremde Host-Header an - aus dem Repository nicht feststellbar (UNKNOWN), bei einem Einzel-vHost aber der Normalfall.
+- **Fix (12.11.2026)**: `App\Support\VertrauterHost::route()` - auf einem eigenen Host (APP_URL, Portal-/Admin-Adresse, Website-/Staging-Hosts) unveraendert, sonst feste Basis (Kunde -> `portal_url`, Personal/Partner -> `admin_url`). Bewusst kein `trustHosts` (ein vergessener eigener Host waere ein Totalausfall).
+- **Betreiber (empfohlen, zusaetzlich)**: in nginx einen Standard-vHost anlegen, der unbekannte Hosts mit 444 abweist.
+- **Test** `Security/HostHeaderVergiftungTest` (scheitert ohne den Fix)
+- **Discovered** 12.11.2026 (System-Audit)
+
+### KI-104 - Ersatzcodes erneuern ohne gemeinsame Bremse
+- **Category** security · **Severity** LOW · **Status** FIXED
+- **Location** `TwoFactorController::regenerate`
+- **Description** Der Weg nimmt einen Code an, hing aber nicht am Limiter `2fa:<id>|<ip>` (Regel aus KI-042) und protokollierte Fehlversuche nicht. Nur aus einer bereits bestaetigten Sitzung erreichbar: wer eine solche Sitzung uebernimmt, konnte den Code mit 10/min durchprobieren und sich mit einem Treffer frische Ersatzcodes (= dauerhaften zweiten Faktor) erzeugen.
+- **Fix (12.11.2026)**: `sperreGreift` + `fehlversuch(..., 'ersatzcodes')` wie Abfrage und Einrichtung.
+- **Test** `Security/ZweiFaktorEinrichtungUmgehungTest::test_ersatzcodes_erneuern_zaehlt_fehlversuche_und_sperrt`
+
+### KI-105 - Kundendaten im Browser-Cache
+- **Category** security · **Severity** LOW · **Status** FIXED
+- **Location** `app/Http/Middleware/SecurityHeaders.php`
+- **Description** Laravel sendet `Cache-Control: no-cache, private`; die Seite wird gespeichert und nach dem Abmelden zeigt die Zurueck-Taste (gemeinsam genutzter Rechner) die Kundenakte wieder.
+- **Fix (12.11.2026)**: `no-store, private` fuer HTML unter `/admin`, `/portal`, `/partner`; Downloads unberuehrt.
+- **Test** `Security/ContentSecurityPolicyTest::test_anwendungsseiten_werden_nicht_im_browser_gespeichert`
+
+### KI-106 - CI-Actions mit Geheimniszugriff nur per Tag gepinnt
+- **Category** ops/security · **Severity** MEDIUM · **Status** OPEN
+- **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
+- **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
+- **Discovered** 12.11.2026
+
+### KI-107 - Ausgeblendete Fremdvertraege in der Upload-Auswahl
+- **Category** correctness · **Severity** LOW · **Status** OPEN
+- **Location** `PortalController::documents` / `documentUpload`, `SelfServiceController::contractChange`, `SmartDocumentUploadController::portalStore`
+- **Description** Steht `portal_fremdvertraege` auf "ausblenden", filtern Liste und Detailseite ueber `ownPortfolio()`, diese vier Stellen aber nicht. Es sind die EIGENEN Vertraege des Kunden (kein Datenabfluss), aber die Einstellung wird nicht durchgehend eingehalten.
+- **Discovered** 12.11.2026
 
 ### KI-049 - Dubletten-Seite: Handler-Skript syntaktisch kaputt
 - **Category** functionality · **Severity** MEDIUM · **Status** FIXED

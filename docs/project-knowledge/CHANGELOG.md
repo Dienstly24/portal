@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 12.11.2026 - System-Audit: Host-Header-Vergiftung, 2FA-Ersatzcodes, Browser-Cache (KI-103..107)
+
+- **Task**: Betreiber-Auftrag "System und Website vollstaendig pruefen, Luecken beheben".
+- **Gefunden und behoben**: KI-103 (HIGH, Reset-/Bestaetigungslink folgte dem Host-Header), KI-104 (LOW, Ersatzcodes ohne gemeinsame Bremse), KI-105 (LOW, kein `no-store`). **Offen registriert**: KI-106 (CI-Actions per SHA pinnen), KI-107 (ausgeblendete Fremdvertraege in der Upload-Auswahl).
+- **Files Changed**: neu `app/Support/VertrauterHost.php`; `app/Mail/PasswordResetMail.php`, `app/Http/Controllers/Auth/{RegisteredUserController,TwoFactorController}.php`, `app/Http/Middleware/SecurityHeaders.php`; Tests `Security/HostHeaderVergiftungTest` (neu), `Security/ZweiFaktorEinrichtungUmgehungTest`, `Security/ContentSecurityPolicyTest`; `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: Anwendungsseiten werden nicht mehr aus dem Browser-Cache gezeigt (Zurueck-Taste laedt neu). Reset-Mails von einem unbekannten Host tragen die Portal-/Admin-Adresse aus den Einstellungen.
+- **Tests Performed**: jeder neue Test gegen den alten Stand (rot) und den neuen (gruen); volle Suite lokal (ohne qpdf/tesseract: die davon abhaengigen Signatur-/OCR-Faelle laufen nur in CI); Pint gruen; `composer audit` und `npm audit` ohne Befund; `npm run build` gruen. `composer stan` lokal nicht moeglich (KI-018) -> CI. Live-Domains aus der Audit-Umgebung NICHT erreichbar (Netzrichtlinie) - Kopfzeilen, TLS und Server-Konfiguration der Produktion sind damit ungeprueft.
+
 ## 09.11.2026 - Tippgeber: Nachzug auf Startseite, Hamburg-Seite, Widerruf, Leistungsuebersicht
 
 - **Task**: Nach #395 standen ausserhalb der Rechtsseiten noch Aussagen, die Dienstly24 als Berater/Vermittler darstellen ("Ihr Makler-Service", "wir beraten", "Erstberatung", "ueber uns vermittelte Vertraege"). Dazu der nach dem Merge gepushte AGB-Satz.

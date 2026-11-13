@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\User;
+use App\Support\VertrauterHost;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -27,7 +28,8 @@ class PasswordResetMail extends Mailable
 
     public function __construct(public User $user, string $token)
     {
-        $this->resetUrl = route('password.reset', ['token' => $token, 'email' => $user->email]);
+        // Nie dem Host-Header der Anfrage folgen (Audit 12.11.2026, siehe VertrauterHost).
+        $this->resetUrl = VertrauterHost::route('password.reset', ['token' => $token, 'email' => $user->email], $user);
         $this->validMinutes = (int) config('auth.passwords.users.expire', 60);
     }
 

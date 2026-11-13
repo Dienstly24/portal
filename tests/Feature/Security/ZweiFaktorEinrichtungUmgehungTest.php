@@ -167,4 +167,33 @@ class ZweiFaktorEinrichtungUmgehungTest extends TestCase
         $this->assertNull(app(TwoFactorService::class)->confirmSetup($user->fresh(), Totp::code($secret)));
         $this->assertSame($vorher, $user->fresh()->two_factor_recovery_codes);
     }
+
+    /**
+     * Audit 12.11.2026: "Ersatzcodes erneuern" nimmt ebenfalls einen Code an
+     * und hing NICHT an der gemeinsamen Bremse. Aus einer uebernommenen,
+     * bereits bestaetigten Sitzung liess sich der Code durchprobieren - ein
+     * Treffer ergab einen frischen Satz Ersatzcodes, also einen dauerhaften
+     * zweiten Faktor fuer den Angreifer.
+     */
+    public function test_ersatzcodes_erneuern_zaehlt_fehlversuche_und_sperrt(): void
+    {
+        $user = $this->mitarbeiter();
+        $secret = $this->eingerichtet($user);
+        $sitzung = [TwoFactorService::sessionKey($user) => true];
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->actingAs($user)->withSession($sitzung)
+                ->post(route('two_factor.recovery_codes.renew'), ['code' => '000000']);
+        }
+
+        $this->assertSame(5, ActivityLog::where('user_id', $user->id)->where('action', 'two_factor_failed')->count());
+
+        // Gesperrt: selbst der RICHTIGE Code erzeugt jetzt keine neuen Ersatzcodes.
+        $this->actingAs($user)->withSession($sitzung)
+            ->post(route('two_factor.recovery_codes.renew'), ['code' => Totp::code($secret)])
+            ->assertSessionHasErrors('code');
+
+        $this->assertTrue(Hash::check(self::ERSATZCODE, $user->fresh()->two_factor_recovery_codes[0]));
+        $this->assertSame(0, ActivityLog::where('user_id', $user->id)->where('action', 'two_factor_recovery_codes_renewed')->count());
+    }
 }
