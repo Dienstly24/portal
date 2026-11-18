@@ -8,6 +8,14 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 18.11.2026 - FIN: Buchstaben I/O/Q werden abgelehnt (KI-108)
+
+- **Task**: Betreiber-Meldung: in der FIN wird "O" statt "0" erfasst; eine FIN enthaelt nie den Buchstaben O.
+- **Files Changed**: neu `app/Rules/Fahrgestellnummer.php`; `app/Http/Controllers/Admin/ContractController.php`; `resources/views/admin/partials/{contract_kfz_fields,contract_form_fields}.blade.php`; neu `tests/Feature/FahrgestellnummerValidierungTest.php`; `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: Ein Vertrag, dessen gespeicherte FIN bereits I/O/Q enthaelt, laesst sich erst nach Korrektur der FIN speichern (gewollt - die Meldung nennt den Grund). Kfz-FIN wird grossgeschrieben gespeichert.
+- **Tests Performed**: neuer Test gegen alten Stand (5/5 rot) und neuen (5/5 gruen); volle Suite; `composer stan` und `composer lint` gruen.
+
 ## 12.11.2026 - System-Audit: Host-Header-Vergiftung, 2FA-Ersatzcodes, Browser-Cache (KI-103..107)
 
 - **Task**: Betreiber-Auftrag "System und Website vollstaendig pruefen, Luecken beheben".

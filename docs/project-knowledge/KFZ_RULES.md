@@ -63,3 +63,7 @@ gelieferten AKB eingetragen; bis dahin `zu pruefen`.
 |---|---|---|---|---|
 | `WECHSEL-ZUSTIMMUNG` | Versand nur mit gespeicherter Annahme der Nutzungsbedingungen (`terms_accepted_at` + Version) und ohne Abmeldung; `marketing_consent` zaehlt NICHT. Sonst Anruf-Aufgabe, nur fuer Vertraege im erreichten Erinnerungsfenster | - | Betreiber-Entscheidung 01.10.2026; rechtliche Einordnung (UWG § 7) beim Anwalt | intern |
 | `WECHSEL-STUFEN` | 1. Erinnerung 10 Wochen vor Ablauf, 2. Erinnerung 6 Wochen vor Ablauf, letzte 7 Tage vor interner Frist (nur Pipeline "offen"), sofort bei Beitragsrechnung mit Sonderkuendigungsrecht | 10 W / 6 W / 7 T | Interne Fachlogik | intern |
+
+## Fahrzeugdaten: FIN (18.11.2026, KI-108)
+
+- Eine FIN (ISO 3779) enthaelt NIE die Buchstaben I, O und Q. Die Handerfassung (`vehicle.vin`, `escooter.vin`) lehnt sie ueber `App\Rules\Fahrgestellnummer` ab - ohne stille Umdeutung ("O" -> "0"), der Mitarbeiter gleicht mit dem Fahrzeugschein ab. Keine Laengenpruefung (E-Scooter/Altfahrzeuge). Gespeichert wird in Grossbuchstaben. Test: `FahrgestellnummerValidierungTest`.

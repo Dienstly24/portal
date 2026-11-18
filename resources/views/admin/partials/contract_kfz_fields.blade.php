@@ -229,7 +229,7 @@
         <div class="field"><label>Modell</label><input type="text" id="kfz-model" name="vehicle[model]" value="{{ $vd('model', $veh->model ?? '') }}" placeholder="Golf VIII" style="{{ $kfzInputStyle }}" aria-label="Modell"></div>
     </div>
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
-        <div class="field"><label>FIN (VIN)</label><input type="text" name="vehicle[vin]" maxlength="30" value="{{ $vd('vin', $veh->vin ?? '') }}" placeholder="WVWZZZ..." style="{{ $kfzInputStyle }}" aria-label="FIN (VIN)"></div>
+        <div class="field"><label>FIN (VIN)</label><input type="text" name="vehicle[vin]" maxlength="30" pattern="[^IiOoQq]*" title="Eine FIN enthält nie die Buchstaben I, O und Q – bitte 0 (Null) statt O und 1 statt I eingeben." value="{{ $vd('vin', $veh->vin ?? '') }}" placeholder="WVWZZZ..." style="{{ $kfzInputStyle }}" aria-label="FIN (VIN)"></div>
         <div class="field"><label>HSN</label><input type="text" name="vehicle[hsn]" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" value="{{ $vd('hsn', $veh->hsn ?? '') }}" placeholder="0603" style="{{ $kfzInputStyle }}" aria-label="HSN"></div>
         <div class="field"><label>TSN</label><input type="text" name="vehicle[tsn]" maxlength="10" value="{{ $vd('tsn', $veh->tsn ?? '') }}" placeholder="BJM" style="{{ $kfzInputStyle }}" aria-label="TSN"></div>
     </div>

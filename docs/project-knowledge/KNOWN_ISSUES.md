@@ -24,6 +24,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-104 | LOW | security | "Ersatzcodes erneuern" pruefte den 2FA-Code ohne die gemeinsame Sperre und ohne Protokoll | FIXED |
 | KI-105 | LOW | security | Seiten mit Kundendaten ohne `no-store`: nach dem Abmelden per Zurueck-Taste wieder sichtbar | FIXED |
 | KI-106 | MEDIUM | ops/security | CI: Fremd-Actions mit Zugriff auf den SSH-Schluessel nur per Tag gepinnt (`appleboy/ssh-action@v1.2.5`), nicht per Commit-SHA | OPEN |
+| KI-108 | MEDIUM | correctness | Kfz-/E-Scooter-Formular: FIN mit "O" statt "0" (bzw. I/Q) wurde angenommen - die Nummer passt zu keinem Fahrzeug | FIXED |
 | KI-107 | LOW | correctness | Portal: bei `portal_fremdvertraege = ausblenden` stehen Fremdvertraege weiter in der Vertragsauswahl des Dokument-Uploads und sind per Aenderungsantrag ansprechbar | OPEN |
 | KI-025 | HIGH | security | Stored XSS: SVG/HTML aus E-Mail-/WhatsApp-Anhaengen inline (SVG ohne CSP) | FIXED |
 | KI-026 | HIGH | security | Magic-Login/Einladungslink nach eigenem Passwort weiter benutzbar | FIXED |
@@ -153,6 +154,14 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-108 - FIN mit Buchstabe O statt Ziffer 0 angenommen
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** `Admin\ContractController::validateContract` (`vehicle.vin`, `escooter.vin`), `contract_kfz_fields.blade.php`, `contract_form_fields.blade.php`
+- **Description** Betreiber-Meldung 18.11.2026: bei der Erfassung wird in der FIN "O" statt "0" getippt (z.B. `WFOPXX...` statt `WF0PXX...`). Die Validierung war nur `string|max:30`. Eine FIN nach ISO 3779 enthaelt NIE I, O oder Q; eine solche Nummer passt zu keinem Fahrzeug und faellt erst beim Versicherer auf. Der Dokumenten-Eingang lehnte I/O/Q schon immer ab (`validatedVehicle`), nur die Handerfassung nicht.
+- **Fix (18.11.2026)**: Regel `App\Rules\Fahrgestellnummer` lehnt I/O/Q ab (mit Hinweis "0 statt O"), bewusst OHNE stille Umdeutung und ohne Laengenpruefung (E-Scooter/Altfahrzeuge haben kuerzere Nummern). Im Formular zusaetzlich `pattern`, damit der Browser schon vor dem Absenden warnt. Die Kfz-FIN wird jetzt wie beim E-Scooter grossgeschrieben gespeichert. Altbestand mit "O" wird beim naechsten Speichern des Vertrags zur Korrektur gemeldet.
+- **Test** `FahrgestellnummerValidierungTest` (5 Faelle, alle scheitern ohne den Fix)
+- **Discovered** 18.11.2026 (Betreiber)
 
 ### KI-107 - Ausgeblendete Fremdvertraege in der Upload-Auswahl
 - **Category** correctness · **Severity** LOW · **Status** OPEN
