@@ -375,7 +375,7 @@
     </p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Versicherungskennzeichen</label><input type="text" name="escooter[license_plate]" maxlength="20" value="{{ $val('escooter.license_plate', $veh->license_plate ?? '') }}" placeholder="z. B. 611 MDS" aria-label="Versicherungskennzeichen"></div>
-        <div class="field"><label>Fahrgestellnummer (FIN)</label><input type="text" name="escooter[vin]" maxlength="30" value="{{ $val('escooter.vin', $veh->vin ?? '') }}" placeholder="z. B. ZSF10Z23075358" aria-label="Fahrgestellnummer (FIN)"></div>
+        <div class="field"><label>Fahrgestellnummer (FIN)</label><input type="text" name="escooter[vin]" maxlength="30" pattern="[^IiOoQq]*" title="Eine FIN enthält nie die Buchstaben I, O und Q – bitte 0 (Null) statt O und 1 statt I eingeben." value="{{ $val('escooter.vin', $veh->vin ?? '') }}" placeholder="z. B. ZSF10Z23075358" aria-label="Fahrgestellnummer (FIN)"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Hersteller/Modellbezeichnung</label><input type="text" name="escooter[manufacturer]" maxlength="255" value="{{ $val('escooter.manufacturer', $veh->manufacturer ?? '') }}" placeholder="z. B. ZHEJIANG KUANTU (RC)" aria-label="Hersteller/Modellbezeichnung"></div>

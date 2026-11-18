@@ -927,6 +927,14 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   jetzt abgetrennt (steht NUR eine Klammer da, gilt ihr Inhalt); ist das
   Feld unlesbar, gilt die Briefkopf-Zeile MIT Rechtsform vor dem Titel -
   ohne Rechtsform wird nichts geraten.
+- **FIN ohne I/O/Q** (Betreiber-Meldung 18.11.2026, KI-108): bei der
+  Erfassung wurde "O" statt der Ziffer "0" getippt. Eine FIN (ISO 3779)
+  enthaelt NIE I, O oder Q - `App\Rules\Fahrgestellnummer` lehnt solche
+  Eingaben im Vertragsformular (Kfz + E-Scooter) ab, das Feld traegt
+  zusaetzlich ein `pattern` (Browser warnt vor dem Absenden). Bewusst
+  KEINE stille Umdeutung und KEINE Laengenpruefung (E-Scooter/Altfahrzeuge).
+  Der Dokumenten-Eingang verwarf I/O/Q schon vorher (`validatedVehicle`).
+  Test: `FahrgestellnummerValidierungTest`.
 - **Kfz-Versicherungsschein der WGV** (`WgvKfzPoliceParser`, 05.08.2026):
   kommt als HANDYFOTO - die Feldsuche laesst Doppelpunkt, Spaltenabstand UND
   einfaches Leerzeichen zu und schaut notfalls in die Folgezeile (gleiche

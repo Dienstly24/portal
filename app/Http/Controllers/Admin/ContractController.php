@@ -15,6 +15,7 @@ use App\Models\Document;
 use App\Models\MeterReading;
 use App\Models\VehicleClaim;
 use App\Models\VehicleSfReference;
+use App\Rules\Fahrgestellnummer;
 use App\Services\CommissionImport\CommissionAuditLogger;
 use App\Services\ContractSwitchService;
 use App\Services\Energy\MeterReadingService;
@@ -868,14 +869,15 @@ class ContractController extends Controller
             'escooter.license_plate' => 'nullable|string|max:20',
             'escooter.manufacturer' => 'nullable|string|max:255',
             'escooter.model' => 'nullable|string|max:255',
-            'escooter.vin' => 'nullable|string|max:30',
+            'escooter.vin' => ['nullable', 'string', 'max:30', new Fahrgestellnummer],
             'escooter.has_teilkasko' => 'nullable|boolean',
             // ---- KFZ (Redesign 17.07.2026): alle Kataloge kommen aus dem Model ----
             'vehicle.vehicle_type' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::VEHICLE_TYPES)),
             'vehicle.license_plate' => 'nullable|string|max:20',
             'vehicle.manufacturer' => 'nullable|string|max:255',
             'vehicle.model' => 'nullable|string|max:255',
-            'vehicle.vin' => 'nullable|string|max:30',
+            // FIN nach ISO 3779: nie I/O/Q ("O" statt "0" getippt, Meldung 18.11.2026).
+            'vehicle.vin' => ['nullable', 'string', 'max:30', new Fahrgestellnummer],
             'vehicle.hsn' => ['nullable', 'regex:/^[0-9]{4}$/'],
             'vehicle.tsn' => ['nullable', 'regex:/^[A-Za-z0-9]{1,10}$/'],
             'vehicle.first_registration' => 'nullable|date',
@@ -1051,7 +1053,7 @@ class ContractController extends Controller
                 'license_plate' => $blank('license_plate'),
                 'manufacturer' => $blank('manufacturer'),
                 'model' => $blank('model'),
-                'vin' => $blank('vin'),
+                'vin' => $blank('vin') ? strtoupper($v['vin']) : null,
                 'hsn' => $blank('hsn'),
                 'tsn' => $blank('tsn') ? strtoupper($v['tsn']) : null,
                 'first_registration' => $blank('first_registration'),
