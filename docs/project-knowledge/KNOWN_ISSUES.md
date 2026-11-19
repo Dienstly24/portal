@@ -24,6 +24,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-104 | LOW | security | "Ersatzcodes erneuern" pruefte den 2FA-Code ohne die gemeinsame Sperre und ohne Protokoll | FIXED |
 | KI-105 | LOW | security | Seiten mit Kundendaten ohne `no-store`: nach dem Abmelden per Zurueck-Taste wieder sichtbar | FIXED |
 | KI-106 | MEDIUM | ops/security | CI: Fremd-Actions mit Zugriff auf den SSH-Schluessel nur per Tag gepinnt (`appleboy/ssh-action@v1.2.5`), nicht per Commit-SHA | OPEN |
+| KI-111 | MEDIUM | usability | E-Signatur: ein fertig unterschriebenes Dokument liess sich nicht ergaenzen (zweiter Unterzeichner, vergessene Stelle, Textfeld) | FIXED |
 | KI-110 | MEDIUM | usability | E-Signatur: kein Weg, falsch Unterschriebenes neu anzufordern; Unterschrift nur ueber E-Mail-Link (kein WhatsApp-/Vor-Ort-Weg); Einladung wurde von Kunden fuer Betrug gehalten | FIXED |
 | KI-109 | HIGH | correctness | WhatsApp-Webhook: jede Zustellung lautlos 403, sobald das App-Secret am Konto vom aktuellen META_APP_SECRET abweicht; keine Protokollierung der Zustellungen | FIXED |
 | KI-108 | MEDIUM | correctness | Kfz-/E-Scooter-Formular: FIN mit "O" statt "0" (bzw. I/Q) wurde angenommen - die Nummer passt zu keinem Fahrzeug | FIXED |
@@ -156,6 +157,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-111 - E-Signatur: unterschriebenes Dokument ergaenzen
+- **Category** usability · **Severity** MEDIUM · **Status** FIXED
+- **Location** `SignatureRequestService::ergaenzen`, `Admin\SignatureController::supplement`, `SignatureRequestPolicy::supplement`, Views `admin/signatures/{index,show}`, Migration `2026_11_19_110000_signatur_ergaenzen`
+- **Description** Betreiber-Meldung 19.11.2026: nach dem Abschluss gab es keinen Weg, einen zweiten Kunden auf demselben Dokument unterschreiben zu lassen oder eine vergessene Stelle nachzuholen; "Neu anfordern" (KI-110) startet vom Original und verlangt alle Unterschriften erneut.
+- **Fix** "Ergaenzen": neuer Entwurf mit dem UNTERSCHRIEBENEN PDF als Basis (`ergaenzt_id`), Unterzeichner uebernommen, keine Felder; das Ergebnis ist eine Fortschreibung des bisher unterschriebenen Dokuments. Offen: vom Mitarbeiter vorgegebener Text (Vermerk) als eigene Feldart.
+- **Test** `SignaturErgaenzenTest`
 
 ### KI-110 - E-Signatur: Neu anfordern, Link ohne E-Mail, vertrauenswuerdige Einladung
 - **Category** usability · **Severity** MEDIUM · **Status** FIXED

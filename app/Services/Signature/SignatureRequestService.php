@@ -595,6 +595,98 @@ class SignatureRequestService
     }
 
     /**
+     * "Ergaenzen" (Betreiber-Meldung 19.11.2026): ein zweiter Kunde soll auf
+     * demselben Papier unterschreiben, eine Stelle wurde vergessen, ein
+     * Textfeld fehlt.
+     *
+     * Das unterschriebene PDF wird NIE veraendert - es ist der Nachweis. Es
+     * entsteht ein ENTWURF, dessen BASIS das unterschriebene Dokument ist
+     * (Gegenstueck zu reissue(), das vom ORIGINAL ausgeht): die vorhandenen
+     * Unterschriften stehen damit unveraendert im neuen Dokument, und das
+     * neue Ergebnis ist wieder eine Fortschreibung - Original ->
+     * erste Unterschriften -> Ergaenzung, jede Stufe mit eigenem Hash.
+     *
+     * Uebernommen werden die Unterzeichner (Name, E-Mail, Sprache), damit
+     * fuer eine vergessene Stelle nichts neu getippt werden muss - FELDER
+     * nicht: was unterschrieben ist, steht schon im Dokument. Wer nicht noch
+     * einmal unterschreiben soll, wird im Editor entfernt.
+     */
+    public function ergaenzen(SignatureRequest $alt, User $durch): SignatureRequest
+    {
+        if (! $alt->isCompleted()) {
+            throw new \RuntimeException('Ergänzen geht nur bei einem fertig unterschriebenen Dokument.');
+        }
+        $offen = $alt->ergaenzungen()->get()
+            ->first(fn (SignatureRequest $e) => ! in_array($e->status, SignatureStatus::FINAL, true));
+        if ($offen !== null) {
+            throw new \RuntimeException('Zu diesem Dokument ist bereits eine Ergänzung in Arbeit - bitte diese bearbeiten.');
+        }
+        $unterschrieben = $this->storage->read($alt->signed_path);
+        if ($unterschrieben === null) {
+            throw new \RuntimeException('Das unterschriebene PDF ist nicht mehr vorhanden.');
+        }
+        $basis = $this->eingang->pruefe($unterschrieben)['pdf'];
+        $seiten = $this->inspect($basis);
+
+        $alt->loadMissing('signers');
+
+        $neu = DB::transaction(function () use ($alt, $durch, $basis, $seiten) {
+            $neu = new SignatureRequest([
+                'title' => mb_substr($alt->title.' (Ergänzung)', 0, 255),
+                'status' => SignatureStatus::DRAFT,
+                'customer_id' => $alt->customer_id,
+                'contract_id' => $alt->contract_id,
+                'created_by' => $durch->id,
+                'original_path' => 'wird-gesetzt',
+                'original_name' => $alt->original_name,
+                'original_hash' => hash('sha256', $basis),
+                'original_size' => strlen($basis),
+                'page_count' => $seiten,
+                'feld_bezug' => SignatureRequest::BEZUG_CROPBOX,
+                'signing_order' => $alt->signing_order,
+                'identity_check' => $alt->identity_check,
+                'consent_text' => $alt->consent_text,
+                'document_type' => $alt->document_type,
+                'reference' => $alt->reference,
+                'note' => $alt->note,
+                'ergaenzt_id' => $alt->id,
+                'last_activity_at' => now(),
+            ]);
+            $neu->id = (string) Str::uuid();
+            $neu->original_path = $this->storage->originalPath($neu);
+            $neu->save();
+
+            foreach ($alt->signers as $s) {
+                $kopie = new SignatureSigner([
+                    'signature_request_id' => $neu->id,
+                    'name' => $s->name,
+                    'email' => $s->email,
+                    'locale' => $s->locale,
+                    'signing_order' => $s->signing_order,
+                    'status' => SignatureSigner::PENDING,
+                ]);
+                $kopie->dob_check = $s->dob_check;
+                $kopie->save();
+            }
+
+            return $neu;
+        });
+
+        $this->storage->disk()->put($neu->original_path, $basis);
+
+        $this->audit->record($alt, 'supplemented', description: 'Ergänzung angelegt von '.$durch->name, meta: ['neu' => $neu->id]);
+        $this->audit->record($neu, 'created', description: 'Ergänzung zu "'.$alt->title.'" - Basis ist das unterschriebene Dokument', meta: ['ergaenzt' => $alt->id]);
+        $this->audit->record($neu, 'document_uploaded', description: 'Unterschriebenes Dokument als Basis übernommen', meta: [
+            'sha256' => $neu->original_hash,
+            'sha256_unterschrieben' => $alt->signed_hash,
+            'seiten' => $seiten,
+            'bytes' => $neu->original_size,
+        ]);
+
+        return $neu;
+    }
+
+    /**
      * "Erneut zur Unterschrift anfordern" (Betreiber-Meldung 19.11.2026):
      * der Kunde hat falsch unterschrieben, oder der Vorgang ist abgelaufen,
      * abgelehnt oder storniert.

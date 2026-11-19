@@ -234,7 +234,7 @@ class SignatureController extends Controller
         Gate::authorize('view', $signature);
 
         return view('admin.signatures.show', [
-            'signature' => $signature->load(['signers', 'fields.signer', 'fields.internalUser', 'internalSignings', 'customer.user', 'contract', 'creator', 'completedDocument', 'replaces', 'replacedBy']),
+            'signature' => $signature->load(['signers', 'fields.signer', 'fields.internalUser', 'internalSignings', 'customer.user', 'contract', 'creator', 'completedDocument', 'replaces', 'replacedBy', 'ergaenzt', 'ergaenzungen']),
             'meineInternen' => app(InternalSigningService::class)->offeneFelder($signature, auth()->user()),
             'intern' => InternalSignatureController::editorDaten(auth()->user()),
             'events' => $signature->events()->with('user')->limit(200)->get(),
@@ -638,6 +638,25 @@ class SignatureController extends Controller
 
         return redirect()->route('admin.signatures.prepare', $neu->id)
             ->with('success', 'Neue Anfrage aus demselben Original angelegt - Unterzeichner und Felder sind übernommen. Bitte prüfen und senden.');
+    }
+
+    /**
+     * "Ergaenzen": weitere Unterschrift oder vergessene Stelle auf einem
+     * fertig unterschriebenen Dokument. Der Entwurf oeffnet im Editor.
+     */
+    public function supplement(Request $request, string $id)
+    {
+        $signature = $this->find($id);
+        Gate::authorize('supplement', $signature);
+
+        try {
+            $neu = $this->requests->ergaenzen($signature, $request->user());
+        } catch (\RuntimeException|PdfException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('admin.signatures.prepare', $neu->id)
+            ->with('success', 'Ergänzung angelegt: die vorhandenen Unterschriften stehen bereits im Dokument. Jetzt neue Felder setzen (z. B. für einen weiteren Unterzeichner) - wer nicht noch einmal unterschreiben soll, bitte als Unterzeichner entfernen.');
     }
 
     public function cancel(Request $request, string $id)

@@ -386,6 +386,25 @@ window.__h["sigInternShow"] = function () {
             </form>
             @endcan
         @endif
+        {{-- ERGAENZEN (Betreiber-Meldung 19.11.2026): weiterer Unterzeichner
+             oder vergessene Stelle auf dem UNTERSCHRIEBENEN Dokument. Das
+             unterschriebene PDF bleibt unveraendert; die Ergaenzung ist eine
+             neue Anfrage mit diesem Dokument als Basis. --}}
+        @can('supplement', $signature)
+            <form method="POST" action="{{ route('admin.signatures.supplement', $signature->id) }}"
+                  data-confirm="Ergänzung anlegen? Die vorhandenen Unterschriften bleiben im Dokument. Sie können danach einen weiteren Unterzeichner, eine vergessene Unterschriftsstelle oder ein Textfeld hinzufügen.">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-ghost" style="width:100%;">➕ Ergänzen (weitere Unterschrift / Feld)</button>
+            </form>
+        @endcan
+        @foreach($signature->ergaenzungen as $ergaenzung)
+            <a href="{{ route('admin.signatures.show', $ergaenzung->id) }}" class="btn btn-sm btn-ghost">→ Ergänzung vom {{ $ergaenzung->created_at?->lokal()->format('d.m.Y') }} ({{ $ergaenzung->statusLabel() }})</a>
+        @endforeach
+        @if($signature->ergaenzt)
+            <div class="muted-sm">Ergänzt das unterschriebene Dokument
+                <a href="{{ route('admin.signatures.show', $signature->ergaenzt->id) }}">vom {{ $signature->ergaenzt->created_at?->lokal()->format('d.m.Y') }}</a> - dessen Unterschriften stehen bereits im Dokument.
+            </div>
+        @endif
         @if($signature->replaces)
             <div class="muted-sm">Ersetzt die frühere Anfrage
                 <a href="{{ route('admin.signatures.show', $signature->replaces->id) }}">vom {{ $signature->replaces->created_at?->lokal()->format('d.m.Y') }}</a>.

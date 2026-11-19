@@ -96,6 +96,15 @@ class SignatureRequestPolicy
         return ! $request->isDraft() && $this->update($user, $request);
     }
 
+    /**
+     * "Ergaenzen": nur ein FERTIG unterschriebenes Dokument - es wird zur
+     * Basis einer neuen Anfrage (weitere Unterschrift, vergessene Stelle).
+     */
+    public function supplement(User $user, SignatureRequest $request): bool
+    {
+        return $request->isCompleted() && $this->update($user, $request);
+    }
+
     public function download(User $user, SignatureRequest $request): bool
     {
         return $this->view($user, $request);
