@@ -118,8 +118,8 @@ class WhatsAppKontoAnlegenTest extends TestCase
         $this->metaAntwortet(aboOk: false);
 
         $this->ausfuehren()
-            ->expectsOutputToContain('HTTP 403')
-            ->expectsOutputToContain('Permissions error')
+            // EINE Erwartung: Laravel zaehlt jede Ausgabezeile nur fuer eine.
+            ->expectsOutputToContain('HTTP 403 {"error":{"message":"(#200) Permissions error"')
             ->assertExitCode(1);
 
         $konto = ChannelAccount::firstOrFail();
@@ -177,7 +177,9 @@ class WhatsAppKontoAnlegenTest extends TestCase
         $unterhaltung = Conversation::findOrFail($eingang->conversation_id);
 
         $admin = User::factory()->create(['role' => 'admin']);
-        $this->actingAs($admin)->get(route('admin.postfach'))->assertSee('Hallo Dienstly24');
+        // Die Liste zeigt Kontakt und Nummer, nicht den Nachrichtentext.
+        $this->actingAs($admin)->get(route('admin.postfach'))
+            ->assertOk()->assertSee('Unbekannter Kontakt')->assertSee(self::ABSENDER);
 
         $this->actingAs($admin)
             ->post(route('admin.postfach.reply', $unterhaltung->id), ['body' => 'Guten Tag, wie koennen wir helfen?'])
