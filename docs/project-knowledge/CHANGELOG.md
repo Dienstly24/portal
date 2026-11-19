@@ -15,6 +15,13 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Database Changes**: keine (Konto in `channel_accounts`, Kanal `whatsapp` wird aktiv geschaltet). **API Changes**: keine.
 - **Potential Side Effects**: der Kanal `whatsapp` ist danach aktiv (Voraussetzung fuer Antworten aus dem Postfach).
 - **Tests Performed**: in der Arbeitsumgebung NICHT ausfuehrbar (PHP 8.3 statt 8.4, Composer-Downloads blockiert) - nur `php -l`; Testlauf in CI.
+## 19.11.2026 - CI wieder gruen: phpunit 13 zurueck auf 12 (PHP 8.3)
+
+- **Task**: Seit PR #400 (Dependabot, phpunit 12.5.30 -> 13.4.6) brach `composer install` in JEDEM CI-Job ab - phpunit 13 verlangt PHP 8.4, CI und Server laufen auf 8.3. Weil der Deploy an `needs: [test, audit]` haengt, wurden #401 und #402 nicht ausgeliefert.
+- **Files Changed**: `composer.json`, `composer.lock` (Stand vor #400, sonst unveraendert), `.github/dependabot.yml` (Major-Updates von phpunit gesperrt, bis Server und CI auf PHP 8.4 sind).
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: keine im Betrieb (phpunit ist nur Entwicklungsabhaengigkeit).
+- **Tests Performed**: Lockfile geprueft - kein Paket verlangt mehr PHP 8.4; der Lauf selbst in CI.
 
 ## 19.11.2026 - WhatsApp-Webhook: Protokoll + Signatur mit aktuellem App-Secret (KI-109)
 

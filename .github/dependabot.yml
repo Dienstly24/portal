@@ -32,6 +32,13 @@ updates:
       # Migrationsaufwand, kein woechentlicher Automatismus.
       - dependency-name: "laravel/framework"
         update-types: ["version-update:semver-major"]
+      # phpunit 13 verlangt PHP 8.4 - Server und CI laufen auf PHP 8.3.
+      # PR #400 hat den Sprung trotzdem gemergt: composer install brach in
+      # JEDEM CI-Job ab, und weil der Deploy an den Tests haengt, ging ab
+      # da nichts mehr auf den Server (19.11.2026). Erst mit PHP 8.4 auf
+      # Server UND in der CI wieder freigeben.
+      - dependency-name: "phpunit/phpunit"
+        update-types: ["version-update:semver-major"]
 
   # ------------------------------------------------------------------
   # JavaScript / npm
