@@ -3811,6 +3811,21 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   wie X". Jede Person behaelt ihren EIGENEN Link - es gibt bewusst keinen
   "weiter zur naechsten Person"-Knopf, sonst unterschriebe eine Person fuer
   beide. Tests: `SignaturMehrerePersonenTest`.
+- **Liste wie der Rest der Beraterwelt + Vorschau beim Ueberfahren**
+  (Nachtrag 19.11.2026, KI-113): Reiter als erhabene Knoepfe, Unterzeichner
+  als farbige Chips, Datum + letzte Aktivitaet in EINER Spalte, Hauptaktion
+  sichtbar (Anzeigen + je Lage Bearbeiten/Erinnern/PDF), alles Weitere im
+  •••-Menue (`data-menu`, wie Kunden/Tickets) - vorher liefen bis zu fuenf
+  Knoepfe je Zeile und die Dokumentspalte wurde abgeschnitten.
+  "Anzeigen" traegt `data-preview-url` -> `partials/doc_preview`
+  (Schnellvorschau beim Ueberfahren). Route `admin.signatures.preview`
+  (Policy `download`): fertig = unterschriebenes PDF; teilweise
+  unterschrieben = aktueller Stand IM SPEICHER gestempelt
+  (`SignedPdfBuilder::build(..., mitProtokoll: false)` - ohne
+  Protokollseite, nichts gespeichert, Status unberuehrt); sonst die Basis.
+  Inline, `no-store`; im Signatur-Protokoll hoechstens EIN Eintrag je
+  Mitarbeiter und 10 Minuten (`Cache::add`), sonst machte jedes
+  Ueberfahren das Protokoll unlesbar. Tests: `SignaturListeVorschauTest`.
 
 ### Die Unternehmenssignatur ist eine Signatur, kein Logo (Betreiber-Meldung 14.09.2026)
 

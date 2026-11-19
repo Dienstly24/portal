@@ -34,15 +34,14 @@
 {{-- Reiter und Suche sind normale Links bzw. ein GET-Formular: jeder Stand
      der Liste ist damit teilbar, zurueck-tauglich und als Lesezeichen
      speicherbar (Lehre aus den grossen Listen, 20.08.2026). --}}
-<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+<nav class="sigl-tabs" aria-label="Status">
     @foreach(SignatureStatus::TABS as $key => $definition)
     <a href="{{ route('admin.signatures.index', array_merge(request()->only('suche','von','bis','ersteller','kunde'), ['reiter' => $key])) }}"
-       class="badge {{ $tab === $key ? 'badge-success' : 'badge-muted' }}"
-       style="text-decoration:none;padding:7px 13px;font-size:13px;">
-        {{ $definition['label'] }} <strong>{{ $counts[$key] ?? 0 }}</strong>
+       class="sigl-tab {{ $tab === $key ? 'aktiv' : '' }}" @if($tab === $key) aria-current="page" @endif>
+        {{ $definition['label'] }} <span class="sigl-zahl">{{ $counts[$key] ?? 0 }}</span>
     </a>
     @endforeach
-</div>
+</nav>
 
 <form method="GET" action="{{ route('admin.signatures.index') }}" class="card"
       style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;padding:14px 16px;">
@@ -69,105 +68,184 @@
     @endif
 </form>
 
-<div class="card card-flush">
-    <table>
-        <thead><tr style="background:#F8F9FA;">
-            <th style="padding:10px 20px;">Dokument</th>
+{{-- LISTE (Betreiber-Meldung 19.11.2026): kompakt wie Kunden/Tickets -
+     Hauptaktion als erhabener Knopf, alles Weitere im •••-Menue. "Anzeigen"
+     zeigt beim Ueberfahren den AKTUELLEN Stand des Dokuments (wer hat wo
+     unterschrieben), ein Klick oeffnet den Vorgang. --}}
+<div class="card card-flush sigl-karte">
+<div class="sigl-scroll">
+    <table class="sigl-tabelle">
+        <thead><tr>
+            <th>Dokument</th>
             <th>Unterzeichner</th>
             <th>Kunde</th>
             <th>Status</th>
-            <th>Erstellt</th>
-            <th>Letzte Aktivität</th>
-            <th>Ablauf</th>
-            <th style="text-align:right;padding-right:20px;">Aktionen</th>
+            <th>Datum</th>
+            <th class="rechts">Aktionen</th>
         </tr></thead>
         <tbody>
         @forelse($signatures as $signature)
         <tr>
-            <td style="padding:12px 20px;font-size:13px;">
-                <a href="{{ route('admin.signatures.show', $signature->id) }}" style="font-weight:600;">{{ $signature->title }}</a>
+            <td class="sigl-dok">
+                <a href="{{ route('admin.signatures.show', $signature->id) }}" class="sigl-titel">
+                    <span class="sigl-icon" aria-hidden="true">📄</span><span>{{ $signature->title }}</span>
+                </a>
                 <div class="muted-sm">{{ $signature->page_count }} Seite{{ $signature->page_count === 1 ? '' : 'n' }}@if($signature->reference) · Ref. {{ $signature->reference }}@endif</div>
             </td>
-            <td style="font-size:13px;">
+            <td>
+                <div class="sigl-personen">
                 @forelse($signature->signers as $signer)
-                    <div>{{ $signer->hasSigned() ? '✓' : ($signer->hasDeclined() ? '✕' : '⏳') }} {{ $signer->name }}</div>
+                    <span class="sigl-person {{ $signer->hasSigned() ? 'ok' : ($signer->hasDeclined() ? 'nein' : 'offen') }}"
+                          title="{{ $signer->hasSigned() ? 'Unterschrieben' : ($signer->hasDeclined() ? 'Abgelehnt' : 'Noch offen') }}">
+                        {{ $signer->hasSigned() ? '✓' : ($signer->hasDeclined() ? '✕' : '⏳') }} {{ $signer->name }}
+                    </span>
                 @empty
                     <span class="muted-sm">noch keiner</span>
                 @endforelse
+                </div>
             </td>
-            <td style="font-size:13px;">
+            <td class="sigl-kunde">
                 @if($signature->customer)
                     <a href="{{ route('admin.customer', $signature->customer_id) }}">{{ $signature->customer->user?->name ?? $signature->customer->customer_number }}</a>
                 @else
                     <span class="muted-sm">nicht zugeordnet</span>
                 @endif
             </td>
-            <td><span class="badge {{ $signature->statusTone() }}">{{ $signature->statusLabel() }}</span></td>
-            <td style="font-size:13px;">{{ $signature->created_at?->lokal()->format('d.m.Y') }}</td>
-            <td style="font-size:13px;">{{ $signature->last_activity_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td>
-            <td style="font-size:13px;color:{{ $signature->hasExpired() ? '#B3261E' : 'var(--ink-soft)' }};">
-                {{ $signature->expires_at?->lokal()->format('d.m.Y') ?? '—' }}
+            <td>
+                <span class="badge {{ $signature->statusTone() }}">{{ $signature->statusLabel() }}</span>
+                @if($signature->expires_at)
+                <div class="muted-sm" style="margin-top:4px;color:{{ $signature->hasExpired() ? '#B3261E' : 'var(--ink-soft)' }};">Frist {{ $signature->expires_at->lokal()->format('d.m.Y') }}</div>
+                @endif
             </td>
-            {{-- AKTIONEN FOLGEN DER LAGE. Alles immer anzuzeigen hiesse,
-                 den Mitarbeiter auf Knoepfe klicken zu lassen, die in
-                 seinem Fall gar nichts tun koennen - "Erinnern" an einem
-                 Entwurf, "Bearbeiten" an einem unterschriebenen Dokument. --}}
-            <td style="text-align:right;padding-right:20px;white-space:nowrap;">
-                <a href="{{ route('admin.signatures.show', $signature->id) }}" class="btn btn-sm btn-ghost">Anzeigen</a>
-                @if($signature->isDraft())
-                    <a href="{{ route('admin.signatures.prepare', $signature->id) }}" class="btn btn-sm btn-ghost">Bearbeiten</a>
-                    @can('delete', $signature)
-                    <form method="POST" action="{{ route('admin.signatures.destroy', $signature->id) }}"
-                          style="display:inline;" data-confirm="Entwurf „{{ $signature->title }}“ löschen? Versendet wurde noch nichts.">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-sm btn-ghost" style="color:#B3261E;">Löschen</button>
-                    </form>
-                    @endcan
-                @elseif($signature->isCompleted())
-                    <a href="{{ route('admin.signatures.download', [$signature->id, 'signed']) }}" class="btn btn-sm btn-ghost">PDF öffnen</a>
-                    @can('supplement', $signature)
-                    <form method="POST" action="{{ route('admin.signatures.supplement', $signature->id) }}"
-                          style="display:inline;" data-confirm="Ergänzung anlegen? Die vorhandenen Unterschriften bleiben im Dokument; danach können Sie einen weiteren Unterzeichner, eine vergessene Stelle oder ein Textfeld hinzufügen.">
-                        @csrf
-                        <button type="submit" class="btn btn-sm btn-ghost" title="Weitere Unterschrift oder vergessene Stelle hinzufügen">➕ Ergänzen</button>
-                    </form>
-                    @endcan
-                @elseif($signature->acceptsSignatures())
-                    <form method="POST" action="{{ route('admin.signatures.remind', $signature->id) }}"
-                          style="display:inline;" data-confirm="Erinnerung an die offenen Unterzeichner senden?">
-                        @csrf
-                        <button type="submit" class="btn btn-sm btn-ghost">Erinnern</button>
-                    </form>
-                    @can('cancel', $signature)
-                    <form method="POST" action="{{ route('admin.signatures.cancel', $signature->id) }}"
-                          style="display:inline;" data-confirm="Auftrag „{{ $signature->title }}“ stornieren? Der Link funktioniert danach nicht mehr. Der Vorgang bleibt im Protokoll erhalten.">
-                        @csrf
-                        <button type="submit" class="btn btn-sm btn-ghost" style="color:#B3261E;">Stornieren</button>
-                    </form>
-                    @endcan
+            <td class="sigl-datum">
+                <div>{{ $signature->created_at?->lokal()->format('d.m.Y') }}</div>
+                @if($signature->last_activity_at)
+                <div class="muted-sm" title="Letzte Aktivität">⟳ {{ $signature->last_activity_at->lokal()->format('d.m. H:i') }}</div>
                 @endif
-                {{-- Erneut anfordern (Betreiber-Meldung 19.11.2026): falsch
-                     unterschrieben, abgelaufen, abgelehnt, storniert. --}}
-                @if(!$signature->isDraft() && !$signature->acceptsSignatures())
-                    @can('reissue', $signature)
-                    <form method="POST" action="{{ route('admin.signatures.reissue', $signature->id) }}"
-                          style="display:inline;" data-confirm="Neue Anfrage aus demselben Original anlegen? Dieser Vorgang bleibt als Nachweis unverändert erhalten.">
-                        @csrf
-                        <button type="submit" class="btn btn-sm btn-ghost" title="Erneut zur Unterschrift anfordern">🔁 Neu anfordern</button>
-                    </form>
-                    @endcan
-                @endif
+            </td>
+            <td class="rechts">
+                <div class="sigl-aktionen">
+                    <a href="{{ route('admin.signatures.show', $signature->id) }}" class="sigl-knopf"
+                       data-preview-url="{{ route('admin.signatures.preview', $signature->id) }}"
+                       data-preview-name="{{ $signature->title }}" data-preview-kind="pdf">👁 Anzeigen</a>
+                    @if($signature->isDraft())
+                        <a href="{{ route('admin.signatures.prepare', $signature->id) }}" class="sigl-knopf">✏️ Bearbeiten</a>
+                    @elseif($signature->isCompleted())
+                        <a href="{{ route('admin.signatures.download', [$signature->id, 'signed']) }}" class="sigl-knopf">⬇ PDF</a>
+                    @elseif($signature->acceptsSignatures())
+                        <form method="POST" action="{{ route('admin.signatures.remind', $signature->id) }}" style="display:inline;"
+                              data-confirm="Erinnerung an die offenen Unterzeichner senden?">
+                            @csrf
+                            <button type="submit" class="sigl-knopf">🔔 <span>Erinnern</span></button>
+                        </form>
+                    @endif
+
+                    <div data-menu class="sigl-menue">
+                        <button type="button" data-menu-trigger aria-haspopup="true" aria-expanded="false" title="Weitere Aktionen" class="sigl-knopf sigl-punkte">•••</button>
+                        <div data-menu-panel hidden class="sigl-panel">
+                            <a href="{{ route('admin.signatures.show', $signature->id) }}" class="rowmenu-item">👁 Vorgang öffnen</a>
+                            <a href="{{ route('admin.signatures.download', [$signature->id, 'original']) }}" class="rowmenu-item">📄 Original-PDF</a>
+                            @if($signature->isCompleted())
+                                @can('supplement', $signature)
+                                <form method="POST" action="{{ route('admin.signatures.supplement', $signature->id) }}" style="margin:0;"
+                                      data-confirm="Ergänzung anlegen? Die vorhandenen Unterschriften bleiben im Dokument; danach können Sie einen weiteren Unterzeichner, eine vergessene Stelle oder ein Textfeld hinzufügen.">
+                                    @csrf
+                                    <button type="submit" class="rowmenu-item">➕ Ergänzen (weitere Unterschrift)</button>
+                                </form>
+                                @endcan
+                            @endif
+                            @if(!$signature->isDraft() && !$signature->acceptsSignatures())
+                                @can('reissue', $signature)
+                                <form method="POST" action="{{ route('admin.signatures.reissue', $signature->id) }}" style="margin:0;"
+                                      data-confirm="Neue Anfrage aus demselben Original anlegen? Dieser Vorgang bleibt als Nachweis unverändert erhalten.">
+                                    @csrf
+                                    <button type="submit" class="rowmenu-item">🔁 Neu anfordern</button>
+                                </form>
+                                @endcan
+                            @endif
+                            @if($signature->acceptsSignatures())
+                                @can('cancel', $signature)
+                                <form method="POST" action="{{ route('admin.signatures.cancel', $signature->id) }}" style="margin:0;"
+                                      data-confirm="Auftrag „{{ $signature->title }}“ stornieren? Der Link funktioniert danach nicht mehr. Der Vorgang bleibt im Protokoll erhalten.">
+                                    @csrf
+                                    <button type="submit" class="rowmenu-item gefahr">⛔ Stornieren</button>
+                                </form>
+                                @endcan
+                            @endif
+                            @if($signature->isDraft())
+                                @can('delete', $signature)
+                                <form method="POST" action="{{ route('admin.signatures.destroy', $signature->id) }}" style="margin:0;"
+                                      data-confirm="Entwurf „{{ $signature->title }}“ löschen? Versendet wurde noch nichts.">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="rowmenu-item gefahr">🗑 Löschen</button>
+                                </form>
+                                @endcan
+                            @endif
+                        </div>
+                    </div>
+                </div>
             </td>
         </tr>
         @empty
-        <tr><td colspan="8" style="text-align:center;padding:34px;color:var(--ink-soft);">
+        <tr><td colspan="6" style="text-align:center;padding:34px;color:var(--ink-soft);">
             Keine Signaturanfragen in dieser Ansicht.
         </td></tr>
         @endforelse
         </tbody>
     </table>
 </div>
+</div>
+
+@include('partials.doc_preview')
+
+<style>
+/* Signaturen-Liste: dieselbe Bildsprache wie Kunden/Tickets, Knoepfe mit
+   leichter Tiefe (heller Verlauf, Unterkante, beim Druecken eingesunken). */
+.sigl-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.sigl-tab{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;font-size:13.5px;font-weight:600;
+  color:var(--ink);text-decoration:none;background:linear-gradient(180deg,#fff,#F3F1EA);border:1px solid var(--line);
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 2px 0 rgba(22,33,28,.08),0 3px 8px rgba(22,33,28,.06);transition:transform .08s,box-shadow .08s;}
+.sigl-tab:hover{transform:translateY(-1px);box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 3px 0 rgba(22,33,28,.08),0 6px 14px rgba(22,33,28,.08);}
+.sigl-tab.aktiv{background:linear-gradient(180deg,var(--emerald-bright),var(--emerald-deep));color:#fff;border-color:transparent;
+  box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 2px 0 rgba(0,0,0,.18),0 4px 12px rgba(23,166,91,.28);}
+.sigl-zahl{display:inline-block;min-width:22px;padding:1px 7px;border-radius:999px;background:rgba(22,33,28,.07);font-size:12px;text-align:center;}
+.sigl-tab.aktiv .sigl-zahl{background:rgba(255,255,255,.22);}
+.sigl-karte{overflow:visible;}
+.sigl-scroll{overflow-x:auto;}
+.sigl-tabelle{width:100%;min-width:900px;border-collapse:collapse;}
+.sigl-tabelle th{background:var(--canvas);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);
+  padding:11px 14px;text-align:left;white-space:nowrap;}
+.sigl-tabelle th:first-child,.sigl-tabelle td:first-child{padding-left:20px;}
+.sigl-tabelle td{padding:12px 14px;font-size:13px;vertical-align:middle;border-top:1px solid var(--line);}
+.sigl-tabelle tbody tr:hover{background:#FAF9F4;}
+.sigl-tabelle .rechts{text-align:right;padding-right:18px;}
+.sigl-dok{min-width:200px;max-width:280px;}
+.sigl-titel{display:inline-flex;gap:8px;align-items:flex-start;font-weight:700;color:var(--ink);text-decoration:none;}
+.sigl-titel:hover span:last-child{text-decoration:underline;}
+.sigl-icon{font-size:16px;line-height:1.2;}
+.sigl-personen{display:flex;flex-direction:column;gap:4px;align-items:flex-start;}
+.sigl-person{display:inline-flex;gap:5px;align-items:center;padding:3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap;}
+.sigl-person.ok{background:var(--emerald-soft);color:var(--emerald-deep);}
+.sigl-person.offen{background:#F7E7D6;color:#8A5D00;}
+.sigl-person.nein{background:#F9E3E3;color:#A32D2D;}
+.sigl-kunde a{color:var(--ink);font-weight:600;}
+.sigl-datum{white-space:nowrap;}
+.sigl-aktionen{display:inline-flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:nowrap;}
+.sigl-knopf{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--ink);
+  text-decoration:none;cursor:pointer;font-family:inherit;white-space:nowrap;background:linear-gradient(180deg,#fff,#F1EEE5);border:1px solid var(--line);
+  box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 2px 0 rgba(22,33,28,.10),0 3px 8px rgba(22,33,28,.06);transition:transform .08s,box-shadow .08s;}
+.sigl-knopf:hover{transform:translateY(-1px);border-color:var(--ink-soft);}
+.sigl-knopf:active{transform:translateY(1px);box-shadow:0 1px 2px rgba(22,33,28,.12) inset;}
+.sigl-punkte{padding:7px 10px;letter-spacing:1px;}
+.sigl-menue{position:relative;}
+.sigl-panel{position:absolute;right:0;top:100%;z-index:50;background:#fff;border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 12px 30px rgba(0,0,0,.16);min-width:250px;padding:6px;text-align:left;}
+.rowmenu-item{display:block;width:100%;text-align:left;padding:9px 12px;border-radius:7px;font-size:13.5px;color:var(--ink);text-decoration:none;
+  box-sizing:border-box;background:none;border:none;cursor:pointer;font-family:inherit;}
+.rowmenu-item:hover{background:#F4F7F5;}
+.rowmenu-item.gefahr{color:#A32D2D;}
+</style>
 
 <div style="margin-top:16px;">{{ $signatures->links() }}</div>
 @endsection

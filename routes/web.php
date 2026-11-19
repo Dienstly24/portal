@@ -610,6 +610,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::delete('/signaturen/{id}', [AdminSignatureController::class, 'destroy'])->name('signatures.destroy');
     Route::post('/signaturen/{id}/zuordnen', [AdminSignatureController::class, 'assign'])->name('signatures.assign');
     Route::get('/signaturen/{id}/protokoll', [AdminSignatureController::class, 'audit'])->name('signatures.audit');
+    // Vorschau beim Ueberfahren in der Liste (aktueller Stand, inline).
+    Route::get('/signaturen/{id}/vorschau', [AdminSignatureController::class, 'preview'])
+        ->middleware('throttle:120,1')->name('signatures.preview');
     Route::get('/signaturen/{id}/download/{which?}', [AdminSignatureController::class, 'download'])
         ->whereIn('which', ['signed', 'original'])->name('signatures.download');
     // Rate-Limits bewusst grosszuegig (10-fach ggue. Ausgangswert): der
