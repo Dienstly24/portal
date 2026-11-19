@@ -91,6 +91,8 @@ class SignatureSigningController extends Controller
             ]);
         }
 
+        $alle = $request->signers()->get();
+
         return view('signature.sign', [
             'signature' => $request,
             'signer' => $signer,
@@ -105,6 +107,27 @@ class SignatureSigningController extends Controller
             'companyFields' => $request->fields()->whereNotNull('company_asset_id')
                 ->with('companyAsset')->orderBy('page')->orderBy('sort')->get(),
             'companyName' => Firmensignatur::name(),
+            // MEHRERE PERSONEN (Betreiber-Meldung 19.11.2026): wer sonst
+            // unterschreibt und WO - die fremden Stellen erscheinen grau mit
+            // Namen, damit niemand an der Stelle des anderen unterschreibt.
+            // Nur Name, Zustand und Position; keine Adresse, kein Bild.
+            'mitunterzeichner' => $alle,
+            'teiltAdresse' => $signer->teiltAdresseMit($alle),
+            'fremdeFelder' => $request->fields()
+                ->whereNotNull('signature_signer_id')
+                ->where('signature_signer_id', '!=', $signer->id)
+                ->get()
+                ->map(function ($f) use ($alle) {
+                    $person = $alle->firstWhere('id', $f->signature_signer_id);
+
+                    return [
+                        'page' => $f->page, 'x' => (float) $f->pos_x, 'y' => (float) $f->pos_y,
+                        'width' => (float) $f->width, 'height' => (float) $f->height,
+                        'name' => (string) ($person->name ?? ''),
+                        'signed' => (bool) ($person?->hasSigned()),
+                    ];
+                })
+                ->values(),
             'geometry' => $this->renderer->geometry($request),
             'previewAvailable' => $this->renderer->available(),
         ]);
@@ -402,11 +425,19 @@ class SignatureSigningController extends Controller
     {
         [$signer, $signature] = $this->resolve($token, allowExpired: true);
 
+        // Wer als NAECHSTES an derselben Adresse unterschreibt - damit die
+        // Person am Geraet weiss, dass gleich eine zweite E-Mail kommt und
+        // wer sie oeffnen soll.
+        $alle = $signature->signers()->get();
+        $naechster = $signature->isCompleted() || $signer->hasDeclined() ? null
+            : $signer->teiltAdresseMit($alle)->first(fn (SignatureSigner $s) => $s->isPending());
+
         return view('signature.done', [
             'signature' => $signature,
             'signer' => $signer,
             'token' => $token,
             'declined' => $signer->hasDeclined(),
+            'naechsterGleicheAdresse' => $naechster,
         ]);
     }
 

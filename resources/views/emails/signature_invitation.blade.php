@@ -32,6 +32,15 @@
 </td></tr>
 
 <tr><td style="padding:30px;text-align:{{ $seite }};">
+@if($mehrerePersonen ?? false)
+{{-- Mehrere Personen: WEM diese Einladung gehoert, steht ganz oben. --}}
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FFF6E5;border-radius:8px;margin:0 0 16px;"><tr><td style="padding:12px 16px;text-align:{{ $seite }};">
+    <p style="font-size:16px;font-weight:bold;color:#8A5D00;margin:0;">✍ {{ __('signing.mail_for_person', ['name' => $signer->name]) }}</p>
+    @if($teiltAdresse ?? false)
+    <p style="font-size:13px;color:#8A5D00;margin:6px 0 0;">{{ __('signing.mail_shared_hint') }}</p>
+    @endif
+</td></tr></table>
+@endif
 <p style="font-size:15px;color:#333;margin:0 0 4px;">{{ __('signing.mail_greeting', ['name' => $signer->name]) }}</p>
 <p style="font-size:15px;color:#333;">
     {{ $isReminder ? __('signing.mail_reminder_intro') : __('signing.mail_invitation_intro') }}

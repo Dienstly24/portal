@@ -177,4 +177,16 @@ return [
     'mail_whatsapp_hint' => 'Do you have a question or is something unclear? Just message us on WhatsApp - we are happy to explain every detail.',
     'mail_whatsapp_button' => 'Ask us on WhatsApp',
     'whatsapp_link_text' => "Hello :name, as discussed, here is your contract \":title\" to sign:\n:url\n\nYou can sign directly on your phone with your finger. If you have any questions, just write to us here. Your Dienstly24 team",
+    // Mehrere Personen, eine E-Mail-Adresse (Betreiber-Meldung 19.11.2026)
+    'you_sign_as' => 'You are signing as: :name',
+    'several_signers' => ':count people sign this document. Your places are marked in green, the places of the other people in grey with their names - please do not sign there.',
+    'signer_you' => 'you',
+    'signer_state_signed' => 'has signed',
+    'signer_state_open' => 'not yet signed',
+    'shared_email_warning' => 'Important: several invitations go to your email address - one for each person. This link is ONLY for :name. Please let each person sign through their own email.',
+    'other_signs_here' => ':name signs here',
+    'mail_for_person' => 'This invitation is for: :name',
+    'mail_shared_hint' => 'Several invitations to the same document go to this email address - one for each person. Please open each person\'s own email so that everyone signs only in their own places.',
+    'mail_subject_for' => ':subject – for :name',
+    'done_next_same_email' => ':name signs next. A separate email is on its way to the same address - please open it and let :name sign personally.',
 ];
