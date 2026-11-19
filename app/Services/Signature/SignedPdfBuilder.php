@@ -209,11 +209,24 @@ class SignedPdfBuilder
         $stamper->add(PdfStamp::box($pageIndex, $x, $y + $height - $zeile * 1.32, $width, 0.0));
         // Die Zeile muss in die Feldbreite passen - sonst liefe das Datum
         // ueber die Unterschriftslinie hinaus in den Vertragstext.
-        $groesse = $zeile;
-        while ($groesse > 5.0 && PdfStamper::textBreite((string) $text, $groesse) > $width) {
+        $groesse = self::passendeGroesse((string) $text, $zeile, 5.0, $width);
+        $stamper->add(PdfStamp::text($pageIndex, (string) $text, $x, $y + $height - $zeile, $width, $zeile, $groesse));
+    }
+
+    /**
+     * Groesste Schrift ab $start (in Viertelpunkt-Schritten abwaerts, nie
+     * unter $minimum), bei der der Text in $breite passt. Eigene Methode,
+     * weil PHPStan die Abbruchbedingung der Schleife im Rumpf als "immer
+     * wahr" las (Typ des Startwerts statt des Schleifenwerts).
+     */
+    private static function passendeGroesse(string $text, float $start, float $minimum, float $breite): float
+    {
+        $groesse = $start;
+        while ($groesse > $minimum && PdfStamper::textBreite($text, $groesse) > $breite) {
             $groesse -= 0.25;
         }
-        $stamper->add(PdfStamp::text($pageIndex, (string) $text, $x, $y + $height - $zeile, $width, $zeile, $groesse));
+
+        return $groesse;
     }
 
     /**
