@@ -14,6 +14,12 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Files Changed**: `resources/views/admin/signatures/index.blade.php`, `app/Http/Controllers/Admin/SignatureController.php`, `app/Services/Signature/SignedPdfBuilder.php`, `routes/web.php`, neu `tests/Feature/SignaturListeVorschauTest.php`; `CLAUDE.md`, Wissensbasis, `docs/ANLEITUNG_SIGNATUREN_AR.md`.
 - **Database Changes**: keine. **API Changes**: neue Route `admin.signatures.preview` (`ROUTES_INVENTORY.md` neu erzeugen).
 - **Potential Side Effects**: Vorschau eines laufenden Vorgangs stempelt im Speicher (Rechenzeit wie ein Abschluss ohne Protokoll); gedrosselt 120/min.
+## 19.11.2026 - E-Signatur: mehrere Personen mit derselben E-Mail (KI-112)
+
+- **Task**: Betreiber-Meldung: bei zwei Unterzeichnern mit einem Postfach weiss der Kunde nicht, wo er unterschreiben soll.
+- **Files Changed**: `app/Models/SignatureSigner.php`, `app/Http/Controllers/SignatureSigningController.php`, `app/Mail/SignatureInvitationMail.php`, Views `signature/{sign,done,_layout}`, `emails/signature_invitation`, `admin/signatures/show`, `lang/{de,ar,en}/signing.php`, neu `tests/Feature/SignaturMehrerePersonenTest.php`; `CLAUDE.md`, Wissensbasis, `docs/ANLEITUNG_SIGNATUREN_AR.md`.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: Einladungen an Vorgaenge mit mehreren Unterzeichnern tragen oben einen "fuer NAME"-Kasten; bei geteilter Adresse steht der Name im Betreff.
 - **Tests Performed**: in der Arbeitsumgebung NICHT ausfuehrbar (Composer-Downloads von GitHub blockiert) - nur `php -l`; Testlauf in CI.
 
 ## 19.11.2026 - E-Signatur: unterschriebenes Dokument ergaenzen (KI-111)

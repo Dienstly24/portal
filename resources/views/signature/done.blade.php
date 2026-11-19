@@ -14,6 +14,13 @@
         @endif
     </p>
 
+    @if($naechsterGleicheAdresse ?? null)
+    {{-- Dieselbe Adresse, naechste Person: sie bekommt eine EIGENE Mail. --}}
+    <div class="hinweis hinweis-warn" style="margin-top:16px;text-align:start;">
+        {{ __('signing.done_next_same_email', ['name' => $naechsterGleicheAdresse->name]) }}
+    </div>
+    @endif
+
     @if(!$declined && $signature->isCompleted())
     <p style="margin-top:18px;">
         <a class="knopf" href="{{ route('signature.document', $token) }}" target="_blank" rel="noopener"
