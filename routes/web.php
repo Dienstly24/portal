@@ -594,6 +594,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/signaturen/{id}/erinnern', [AdminSignatureController::class, 'remind'])
         ->middleware('throttle:60,10')->name('signatures.remind');
     Route::post('/signaturen/{id}/abbrechen', [AdminSignatureController::class, 'cancel'])->name('signatures.cancel');
+    // Betreiber-Meldung 19.11.2026: Link ohne E-Mail (WhatsApp / vor Ort)
+    // und "Erneut zur Unterschrift anfordern".
+    Route::post('/signaturen/{id}/link/{signer}', [AdminSignatureController::class, 'link'])
+        ->middleware('throttle:60,10')->name('signatures.link');
+    Route::post('/signaturen/{id}/neu-anfordern', [AdminSignatureController::class, 'reissue'])
+        ->middleware('throttle:30,10')->name('signatures.reissue');
     Route::post('/signaturen/{id}/neu-erzeugen', [AdminSignatureController::class, 'regenerate'])
         ->middleware('throttle:20,10')->name('signatures.regenerate');
     // Loeschen gibt es NUR fuer Entwuerfe - alles Versandte wird storniert,

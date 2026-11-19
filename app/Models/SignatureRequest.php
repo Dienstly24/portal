@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 /**
@@ -40,6 +41,7 @@ class SignatureRequest extends Model
         'signing_order', 'identity_check', 'consent_text',
         'document_type', 'reference', 'note',
         'sent_at', 'completed_at', 'cancelled_at', 'cancel_reason', 'expires_at', 'last_activity_at',
+        'replaces_id',
     ];
 
     protected $casts = [
@@ -155,6 +157,28 @@ class SignatureRequest extends Model
     public function events(): HasMany
     {
         return $this->hasMany(SignatureEvent::class)->latest('created_at');
+    }
+
+    /**
+     * Die Anfrage, die diese ersetzt ("Erneut zur Unterschrift anfordern").
+     * Die alte bleibt unveraendert stehen - sie ist der Nachweis dessen,
+     * was damals unterschrieben wurde.
+     *
+     * @return BelongsTo<SignatureRequest, $this>
+     */
+    public function replaces(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'replaces_id');
+    }
+
+    /**
+     * Die neue Anfrage, die aus dieser entstanden ist - oder keine.
+     *
+     * @return HasOne<SignatureRequest, $this>
+     */
+    public function replacedBy(): HasOne
+    {
+        return $this->hasOne(self::class, 'replaces_id')->latest('created_at');
     }
 
     /** @return BelongsTo<Customer, $this> */

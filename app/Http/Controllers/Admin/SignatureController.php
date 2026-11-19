@@ -22,6 +22,7 @@ use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureStorage;
 use App\Support\Bildverarbeitung;
 use App\Support\Firmensignatur;
+use App\Support\QrCode;
 use App\Support\SignatureFieldType;
 use App\Support\SignatureStatus;
 use Carbon\Carbon;
@@ -233,7 +234,7 @@ class SignatureController extends Controller
         Gate::authorize('view', $signature);
 
         return view('admin.signatures.show', [
-            'signature' => $signature->load(['signers', 'fields.signer', 'fields.internalUser', 'internalSignings', 'customer.user', 'contract', 'creator', 'completedDocument']),
+            'signature' => $signature->load(['signers', 'fields.signer', 'fields.internalUser', 'internalSignings', 'customer.user', 'contract', 'creator', 'completedDocument', 'replaces', 'replacedBy']),
             'meineInternen' => app(InternalSigningService::class)->offeneFelder($signature, auth()->user()),
             'intern' => InternalSignatureController::editorDaten(auth()->user()),
             'events' => $signature->events()->with('user')->limit(200)->get(),
@@ -476,14 +477,17 @@ class SignatureController extends Controller
         }
 
         try {
-            $ergebnis = $this->requests->send($signature->load(['signers', 'fields']), $request->user());
+            $ergebnis = $this->requests->send($signature->load(['signers', 'fields']), $request->user(),
+                perMail: ! $request->boolean('ohne_mail'));
         } catch (\RuntimeException $e) {
             return $this->respond($request, false, $e->getMessage());
         }
         $meldung = match ($ergebnis) {
             SignatureRequestService::WARTET_INTERN => 'Der Versand wartet auf die interne Unterschrift - die Kollegen wurden benachrichtigt.',
             SignatureRequestService::ABGESCHLOSSEN => 'Das Dokument ist fertig unterschrieben.',
-            default => 'Die Einladung wurde versendet.',
+            default => $request->boolean('ohne_mail')
+                ? 'Bereit zur Unterschrift - es wurde KEINE E-Mail versendet. Jetzt beim Unterzeichner „Link / vor Ort" wählen.'
+                : 'Die Einladung wurde versendet.',
         };
 
         if ($request->expectsJson()) {
@@ -566,6 +570,74 @@ class SignatureController extends Controller
         return back()->with($signature->isCompleted() ? 'success' : 'error', $signature->isCompleted()
             ? 'Das unterschriebene Dokument wurde erzeugt und geprüft.'
             : 'Das Dokument hat die Prüfung erneut nicht bestanden. Details stehen im Protokoll.');
+    }
+
+    /**
+     * Unterschrifts-Link OHNE E-Mail - fuer WhatsApp oder das Tablet im
+     * Buero (Betreiber-Meldung 19.11.2026). Die Antwort ist eine SEITE und
+     * kein Redirect: das Token existiert nur in dieser einen Antwort und
+     * landet so weder in der Sitzung noch in der Datenbank.
+     */
+    public function link(Request $request, string $id, string $signerId)
+    {
+        $signature = $this->find($id);
+        Gate::authorize('send', $signature);
+        $signature->load(['signers', 'customer']);
+        $signer = $signature->signers->firstWhere('id', $signerId);
+        abort_if($signer === null, 404);
+
+        try {
+            $token = $this->requests->linkFor($signature, $signer, $request->user(), $request->boolean('vor_ort'));
+        } catch (\RuntimeException $e) {
+            return redirect()->route('admin.signatures.show', $signature->id)->with('error', $e->getMessage());
+        }
+
+        $url = route('signature.show', $token);
+        $nummer = '';
+        if ($signature->customer !== null) {
+            $nummer = preg_replace('/\D+/', '', (string) ($signature->customer->mobile ?: $signature->customer->phone)) ?? '';
+            if (str_starts_with($nummer, '00')) {
+                $nummer = substr($nummer, 2);
+            } elseif (str_starts_with($nummer, '0')) {
+                $nummer = '49'.substr($nummer, 1);
+            }
+        }
+        $text = (string) __('signing.whatsapp_link_text', [
+            'name' => $signer->name,
+            'title' => $signature->title,
+            'url' => $url,
+        ], $signer->localeCode());
+
+        return response()->view('admin.signatures.link', [
+            'signature' => $signature,
+            'signer' => $signer,
+            'url' => $url,
+            'vorOrt' => $request->boolean('vor_ort'),
+            'qr' => QrCode::svg($url, 5, 3, 'QR-Code: Dokument zur Unterschrift öffnen'),
+            'whatsappUrl' => 'https://wa.me/'.$nummer.'?text='.rawurlencode($text),
+            'whatsappNummer' => $nummer,
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * "Erneut zur Unterschrift anfordern" - falsch unterschrieben,
+     * abgelaufen, abgelehnt oder storniert. Der alte Vorgang bleibt als
+     * Nachweis stehen; der neue ist ein Entwurf und oeffnet im Editor, damit
+     * der Mitarbeiter vor dem Versand noch etwas aendern kann.
+     */
+    public function reissue(Request $request, string $id)
+    {
+        $signature = $this->find($id);
+        Gate::authorize('reissue', $signature);
+
+        try {
+            $neu = $this->requests->reissue($signature, $request->user());
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('admin.signatures.prepare', $neu->id)
+            ->with('success', 'Neue Anfrage aus demselben Original angelegt - Unterzeichner und Felder sind übernommen. Bitte prüfen und senden.');
     }
 
     public function cancel(Request $request, string $id)

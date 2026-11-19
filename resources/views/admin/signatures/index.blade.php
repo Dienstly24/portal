@@ -116,6 +116,14 @@
                 <a href="{{ route('admin.signatures.show', $signature->id) }}" class="btn btn-sm btn-ghost">Anzeigen</a>
                 @if($signature->isDraft())
                     <a href="{{ route('admin.signatures.prepare', $signature->id) }}" class="btn btn-sm btn-ghost">Bearbeiten</a>
+                    @can('delete', $signature)
+                    <form method="POST" action="{{ route('admin.signatures.destroy', $signature->id) }}"
+                          style="display:inline;" data-confirm="Entwurf „{{ $signature->title }}“ löschen? Versendet wurde noch nichts.">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-sm btn-ghost" style="color:#B3261E;">Löschen</button>
+                    </form>
+                    @endcan
                 @elseif($signature->isCompleted())
                     <a href="{{ route('admin.signatures.download', [$signature->id, 'signed']) }}" class="btn btn-sm btn-ghost">PDF öffnen</a>
                 @elseif($signature->acceptsSignatures())
@@ -124,6 +132,24 @@
                         @csrf
                         <button type="submit" class="btn btn-sm btn-ghost">Erinnern</button>
                     </form>
+                    @can('cancel', $signature)
+                    <form method="POST" action="{{ route('admin.signatures.cancel', $signature->id) }}"
+                          style="display:inline;" data-confirm="Auftrag „{{ $signature->title }}“ stornieren? Der Link funktioniert danach nicht mehr. Der Vorgang bleibt im Protokoll erhalten.">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-ghost" style="color:#B3261E;">Stornieren</button>
+                    </form>
+                    @endcan
+                @endif
+                {{-- Erneut anfordern (Betreiber-Meldung 19.11.2026): falsch
+                     unterschrieben, abgelaufen, abgelehnt, storniert. --}}
+                @if(!$signature->isDraft() && !$signature->acceptsSignatures())
+                    @can('reissue', $signature)
+                    <form method="POST" action="{{ route('admin.signatures.reissue', $signature->id) }}"
+                          style="display:inline;" data-confirm="Neue Anfrage aus demselben Original anlegen? Dieser Vorgang bleibt als Nachweis unverändert erhalten.">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-ghost" title="Erneut zur Unterschrift anfordern">🔁 Neu anfordern</button>
+                    </form>
+                    @endcan
                 @endif
             </td>
         </tr>

@@ -53,6 +53,12 @@ class SignatureInvitationMail extends Mailable
     {
         return new Content(view: 'emails.signature_invitation', with: [
             'signUrl' => route('signature.show', $this->token),
+            // Der Ansprechpartner (Betreiber-Meldung 19.11.2026): ein Name
+            // macht die Mail einordenbar. Per Abfrage statt Relation - die
+            // Anfrage kommt aus Schleifen, in denen nichts vorgeladen ist.
+            'ansprechpartner' => $this->signatureRequest->created_by === null
+                ? null
+                : $this->signatureRequest->creator()->value('name'),
         ]);
     }
 }

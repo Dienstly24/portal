@@ -24,6 +24,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-104 | LOW | security | "Ersatzcodes erneuern" pruefte den 2FA-Code ohne die gemeinsame Sperre und ohne Protokoll | FIXED |
 | KI-105 | LOW | security | Seiten mit Kundendaten ohne `no-store`: nach dem Abmelden per Zurueck-Taste wieder sichtbar | FIXED |
 | KI-106 | MEDIUM | ops/security | CI: Fremd-Actions mit Zugriff auf den SSH-Schluessel nur per Tag gepinnt (`appleboy/ssh-action@v1.2.5`), nicht per Commit-SHA | OPEN |
+| KI-110 | MEDIUM | usability | E-Signatur: kein Weg, falsch Unterschriebenes neu anzufordern; Unterschrift nur ueber E-Mail-Link (kein WhatsApp-/Vor-Ort-Weg); Einladung wurde von Kunden fuer Betrug gehalten | FIXED |
 | KI-109 | HIGH | correctness | WhatsApp-Webhook: jede Zustellung lautlos 403, sobald das App-Secret am Konto vom aktuellen META_APP_SECRET abweicht; keine Protokollierung der Zustellungen | FIXED |
 | KI-108 | MEDIUM | correctness | Kfz-/E-Scooter-Formular: FIN mit "O" statt "0" (bzw. I/Q) wurde angenommen - die Nummer passt zu keinem Fahrzeug | FIXED |
 | KI-107 | LOW | correctness | Portal: bei `portal_fremdvertraege = ausblenden` stehen Fremdvertraege weiter in der Vertragsauswahl des Dokument-Uploads und sind per Aenderungsantrag ansprechbar | OPEN |
@@ -155,6 +156,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-110 - E-Signatur: Neu anfordern, Link ohne E-Mail, vertrauenswuerdige Einladung
+- **Category** usability · **Severity** MEDIUM · **Status** FIXED
+- **Location** `Admin\SignatureController::{link,reissue,send}`, `SignatureRequestService::{linkFor,reissue,send}`, `SignatureRequestPolicy::reissue`, Views `admin/signatures/{index,show,link}`, `emails/signature_invitation`, `lang/{de,ar,en}/signing.php`, Migration `2026_11_19_100000_signatur_neu_anfordern`
+- **Description** Betreiber-Meldung 19.11.2026: (1) hat ein Kunde falsch unterschrieben, gab es keinen Weg, neu anzufordern (ein unterschriebener Vorgang wird zu Recht nie geloescht); (2) Unterschrift ging nur ueber die E-Mail - kein Link fuer WhatsApp, kein Unterschreiben auf dem Tablet im Buero; (3) Kunden hielten die Einladungs-Mail fuer Betrug. Loeschen (Entwurf) und Stornieren (versendet) gab es, aber nicht in der Liste.
+- **Fix** "Erneut zur Unterschrift anfordern": neuer ENTWURF aus dem ORIGINAL (Unterzeichner + Felder uebernommen, keine Unterschrift), `replaces_id` verknuepft beide, ein offener Vorgang wird dabei storniert, der alte bleibt als Nachweis. "Ohne E-Mail bereitstellen" + je Unterzeichner "Link fuer WhatsApp" (vorformulierte Nachricht in seiner Sprache, QR-Code) und "Jetzt im Buero unterschreiben" (Mitarbeiter bestaetigt die Identitaet, Code-/Geburtsdatum-Abfrage entfaellt, Ereignis `onsite_identity_confirmed` mit Mitarbeiter). Einladung nennt das WhatsApp-Gespraech, den Zweck, den Ansprechpartner, die Adresse der Seite und einen WhatsApp-Knopf - in der Sprache des Unterzeichners. Liste: Loeschen/Stornieren/Neu anfordern.
+- **Test** `SignaturNeuAnfordernUndLinkTest`
 
 ### KI-109 - WhatsApp-Webhook: Zustellungen ohne Spur abgewiesen
 - **Category** correctness · **Severity** HIGH · **Status** FIXED

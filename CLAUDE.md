@@ -3734,6 +3734,51 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   keine JavaScript-Fehler.
 - Tests: `SignaturWorkflowTest` (19 Faelle).
 
+### Neu anfordern, Link ohne E-Mail, Einladung mit WhatsApp-Bezug (Betreiber-Meldung 19.11.2026, KI-110)
+
+- **Erneut zur Unterschrift anfordern** (`SignatureRequestService::reissue`,
+  Route `admin.signatures.reissue`, Policy `reissue` = jeder VERSANDTE
+  Vorgang): falsch unterschrieben, abgelaufen, abgelehnt, storniert. Es
+  entsteht ein ENTWURF aus dem ORIGINAL (nie aus dem unterschriebenen PDF -
+  sonst stuende die falsche Unterschrift im neuen Dokument) mit denselben
+  Unterzeichnern, Feldern, Einstellungen; keine Unterschrift, kein
+  internes Bild wird uebernommen, das Firmenbild bleibt zugewiesen.
+  `signature_requests.replaces_id` verknuepft neu -> alt (beide Seiten
+  zeigen den Link). Der alte Vorgang bleibt UNVERAENDERT (Nachweis); ist er
+  noch offen, wird er storniert - zwei gueltige Links zu zwei Fassungen
+  desselben Vertrags waeren die naechste Verwechslung. Ein zweites
+  Neu-Anfordern wird abgelehnt, solange der Ersatz nicht storniert ist.
+- **Link ohne E-Mail** (`linkFor`, Route `admin.signatures.link`): je
+  Unterzeichner "Link fuer WhatsApp" und "Jetzt im Buero unterschreiben".
+  DERSELBE Zugang wie in der Einladung (frisches Token, nur der Hash in der
+  DB) - er ersetzt den bisherigen Link wie eine Erinnerung. Die Antwort ist
+  eine SEITE (`admin/signatures/link`, `no-store`), kein Redirect: das Token
+  landet weder in Sitzung noch DB. Seite: vorformulierte WhatsApp-Nachricht
+  in der Sprache des Unterzeichners (`signing.whatsapp_link_text`, Nummer
+  aus der Kundenakte, sonst waehlt WhatsApp den Empfaenger), Kopieren,
+  QR-Code (`App\Support\QrCode`), "auf diesem Geraet oeffnen". Nur fuer
+  den, der laut Reihenfolge dran ist.
+  **VOR ORT** bestaetigt ein MITARBEITER die Identitaet: Code-/Geburtsdatum-
+  Abfrage entfaellt, Ereignis `onsite_identity_confirmed` mit seinem Namen
+  und `user_id` - die Pruefung wird nicht uebersprungen, ein Mensch leistet
+  sie, und im Streitfall muss erkennbar sein, wer.
+  **"Ohne E-Mail bereitstellen"** (`send(..., perMail: false)`, Formularfeld
+  `ohne_mail`): Status SENT, aber KEINE Einladung - sonst laege ein zweiter
+  Zugang im Postfach.
+- **Einladung, die der Kunde einordnen kann**: Kunden hielten die Mail fuer
+  Betrug. Sie nennt jetzt das WhatsApp-Gespraech und die vereinbarten
+  Details (Betreff + Einleitung), einen Kasten "Warum erhalten Sie diese
+  E-Mail?", den Ansprechpartner (Ersteller), die Adresse der Seite (Host des
+  Links, nie fest verdrahtet) mit "wir fragen nie nach Passwoertern" und
+  einen WhatsApp-Knopf (`config('website.whatsapp')`). Sprache weiterhin
+  die des UNTERZEICHNERS (`signature_signers.locale`, Auswahl beim Anlegen) -
+  Arabisch kam schon vorher arabisch an, wenn beim Unterzeichner Arabisch
+  gewaehlt war.
+- **Liste**: Entwurf -> Bearbeiten/Loeschen, laufend -> Erinnern/Stornieren,
+  beendet -> Neu anfordern (Loeschen eines unterschriebenen Vorgangs bleibt
+  ausgeschlossen).
+- Tests: `SignaturNeuAnfordernUndLinkTest`.
+
 ### Die Unternehmenssignatur ist eine Signatur, kein Logo (Betreiber-Meldung 14.09.2026)
 
 - **Gemeldet**: „Company Signature fuegt nur ein Logo hinzu." Der Befund

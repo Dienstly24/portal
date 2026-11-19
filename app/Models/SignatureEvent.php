@@ -86,6 +86,13 @@ class SignatureEvent extends Model
         'expired' => 'Signaturanfrage abgelaufen',
         'token_revoked' => 'Zugang widerrufen',
         'access_denied' => 'Zugriff abgelehnt',
+        // Betreiber-Meldung 19.11.2026: falsch unterschrieben -> neue
+        // Anfrage aus demselben Original; ohne E-Mail weitergegebener Link
+        // (WhatsApp / im Buero) und die Identitaet, die ein MITARBEITER vor
+        // Ort bestaetigt hat - im Streitfall zaehlt genau, WER sie geprueft hat.
+        'reissued' => 'Erneut zur Unterschrift angefordert',
+        'link_created' => 'Unterschrifts-Link erzeugt (ohne E-Mail)',
+        'onsite_identity_confirmed' => 'Identität vor Ort durch Mitarbeiter bestätigt',
     ];
 
     protected static function boot()
