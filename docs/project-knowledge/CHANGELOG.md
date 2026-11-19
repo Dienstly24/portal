@@ -8,6 +8,14 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 19.11.2026 - WhatsApp-Nummer manuell anbinden (whatsapp:add-account)
+
+- **Task**: Betreiber-Auftrag: Testnummer von Meta ohne Embedded Signup anbinden (Video fuer das App Review).
+- **Files Changed**: neu `app/Console/Commands/WhatsAppKontoAnlegen.php`, `tests/Feature/Messaging/WhatsAppKontoAnlegenTest.php`; `MetaOnboardingClient` (`subscribeWabaAntwort`); `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine (Konto in `channel_accounts`, Kanal `whatsapp` wird aktiv geschaltet). **API Changes**: keine.
+- **Potential Side Effects**: der Kanal `whatsapp` ist danach aktiv (Voraussetzung fuer Antworten aus dem Postfach).
+- **Tests Performed**: in der Arbeitsumgebung NICHT ausfuehrbar (PHP 8.3 statt 8.4, Composer-Downloads blockiert) - nur `php -l`; Testlauf in CI.
+
 ## 19.11.2026 - WhatsApp-Webhook: Protokoll + Signatur mit aktuellem App-Secret (KI-109)
 
 - **Task**: Betreiber-Auftrag: letzte Meta-Zustellungen ("statuses" / "failed") pruefen; kamen sie nicht an, Ursache beheben und jede Nutzlast protokollieren.
