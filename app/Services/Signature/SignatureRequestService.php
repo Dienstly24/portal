@@ -12,6 +12,7 @@ use App\Services\Notifications\NotificationService;
 use App\Services\Pdf\PdfDocument;
 use App\Services\Pdf\PdfEingangspruefung;
 use App\Services\Pdf\PdfException;
+use App\Support\LocalTime;
 use App\Support\SignatureFieldType;
 use App\Support\SignatureStatus;
 use Illuminate\Http\UploadedFile;
@@ -706,7 +707,7 @@ class SignatureRequestService
 
         $this->audit->record($alt, 'reissued', description: 'Neue Anfrage angelegt von '.$durch->name, meta: ['neu' => $neu->id]);
         $this->audit->record($neu, 'created', description: 'Erneut angefordert - ersetzt "'.$alt->title.'" vom '
-            .$alt->created_at?->lokal()->format('d.m.Y'), meta: ['ersetzt' => $alt->id]);
+            .LocalTime::for($alt->created_at)?->format('d.m.Y'), meta: ['ersetzt' => $alt->id]);
         $this->audit->record($neu, 'document_uploaded', description: $neu->original_name.' (Original übernommen)', meta: [
             'sha256' => $neu->original_hash,
             'seiten' => $neu->page_count,
