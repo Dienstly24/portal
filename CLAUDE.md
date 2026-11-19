@@ -927,6 +927,16 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   jetzt abgetrennt (steht NUR eine Klammer da, gilt ihr Inhalt); ist das
   Feld unlesbar, gilt die Briefkopf-Zeile MIT Rechtsform vor dem Titel -
   ohne Rechtsform wird nichts geraten.
+- **WhatsApp-Webhook protokolliert JEDE Zustellung** (19.11.2026, KI-109):
+  Kanal `whatsapp_webhook` -> `storage/logs/whatsapp-webhook-JJJJ-MM-TT.log`
+  (14 Tage, personenbezogen). Je Aufruf "Zustellung eingegangen" (ganze
+  Nutzlast), je fehlgeschlagener Zustellmeldung "Zustellmeldung failed"
+  (code/title/message/details/recipient_id) und bei 403 der GRUND (kein
+  Konto zur phone_number_id / Signatur ungueltig). Signatur gilt mit dem
+  App-Secret des Kontos ODER `META_APP_SECRET` (dieselbe Meta-App; nach
+  einem Secret-Wechsel stand am Konto die alte Kopie und JEDE Zustellung
+  endete still mit 403). Signierte Zustellungen ohne Rufnummern-Kennung
+  werden quittiert (200), nicht abgewiesen. Test: `WhatsAppWebhookProtokollTest`.
 - **FIN ohne I/O/Q** (Betreiber-Meldung 18.11.2026, KI-108): bei der
   Erfassung wurde "O" statt der Ziffer "0" getippt. Eine FIN (ISO 3779)
   enthaelt NIE I, O oder Q - `App\Rules\Fahrgestellnummer` lehnt solche

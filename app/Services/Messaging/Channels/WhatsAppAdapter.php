@@ -53,19 +53,44 @@ class WhatsAppAdapter extends AbstractChannelAdapter
      */
     public function verifyWebhook(string $rawBody, array $headers, ?ChannelAccount $account): bool
     {
-        $secret = $account?->credential('app_secret');
-        if (! $secret) {
-            return false;
-        }
+        return $this->signaturPruefung($rawBody, $headers, $account) !== null;
+    }
 
+    /**
+     * Wie verifyWebhook, nennt aber, WELCHES Secret gepasst hat
+     * (`konto` | `server`) oder null.
+     *
+     * WARUM ZWEI SECRETS (19.11.2026, KI-109): das Konto bekommt beim
+     * Embedded Signup eine KOPIE von META_APP_SECRET. Wird das Secret
+     * bei Meta neu erzeugt und nur in der Server-.env nachgezogen,
+     * signiert Meta mit dem neuen Wert, das Konto prueft mit dem alten -
+     * und JEDE Zustellung (Nachrichten wie Zustellmeldungen) endete
+     * lautlos mit 403. Das Server-Secret gehoert zu DERSELBEN Meta-App,
+     * die die Zustellungen signiert; es ist also kein Aufweichen,
+     * sondern der gueltige Schluessel. Ohne irgendein Secret bleibt es
+     * bei Ablehnung.
+     *
+     * @param  array<string,mixed>  $headers
+     */
+    public function signaturPruefung(string $rawBody, array $headers, ?ChannelAccount $account): ?string
+    {
         $signature = $this->header($headers, 'x-hub-signature-256');
         if (! $signature || ! str_starts_with($signature, 'sha256=')) {
-            return false;
+            return null;
         }
 
-        $erwartet = 'sha256='.hash_hmac('sha256', $rawBody, $secret);
+        $kandidaten = [
+            'konto' => (string) ($account?->credential('app_secret') ?? ''),
+            'server' => (string) config('services.meta.app_secret', ''),
+        ];
 
-        return hash_equals($erwartet, $signature);
+        foreach ($kandidaten as $quelle => $secret) {
+            if ($secret !== '' && hash_equals('sha256='.hash_hmac('sha256', $rawBody, $secret), $signature)) {
+                return $quelle;
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -8,6 +8,14 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 19.11.2026 - WhatsApp-Webhook: Protokoll + Signatur mit aktuellem App-Secret (KI-109)
+
+- **Task**: Betreiber-Auftrag: letzte Meta-Zustellungen ("statuses" / "failed") pruefen; kamen sie nicht an, Ursache beheben und jede Nutzlast protokollieren.
+- **Files Changed**: `app/Http/Controllers/Webhooks/WhatsAppWebhookController.php`, `app/Services/Messaging/Channels/WhatsAppAdapter.php`, `config/logging.php`, `.env.example`; neu `tests/Feature/Messaging/WhatsAppWebhookProtokollTest.php`; `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine. **API Changes**: `/webhooks/whatsapp` antwortet auf signierte Zustellungen ohne Rufnummern-Kennung mit 200 statt 403.
+- **Potential Side Effects**: neue Logdatei mit personenbezogenen Inhalten (Rufnummern, Nachrichtentexte) - 14 Tage Aufbewahrung (`WHATSAPP_WEBHOOK_LOG_DAYS`).
+- **Tests Performed**: in der Arbeitsumgebung NICHT ausfuehrbar (PHP 8.3 statt 8.4, Composer-Downloads blockiert) - nur `php -l`; Testlauf in CI.
+
 ## 18.11.2026 - FIN: Buchstaben I/O/Q werden abgelehnt (KI-108)
 
 - **Task**: Betreiber-Meldung: in der FIN wird "O" statt "0" erfasst; eine FIN enthaelt nie den Buchstaben O.

@@ -24,6 +24,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-104 | LOW | security | "Ersatzcodes erneuern" pruefte den 2FA-Code ohne die gemeinsame Sperre und ohne Protokoll | FIXED |
 | KI-105 | LOW | security | Seiten mit Kundendaten ohne `no-store`: nach dem Abmelden per Zurueck-Taste wieder sichtbar | FIXED |
 | KI-106 | MEDIUM | ops/security | CI: Fremd-Actions mit Zugriff auf den SSH-Schluessel nur per Tag gepinnt (`appleboy/ssh-action@v1.2.5`), nicht per Commit-SHA | OPEN |
+| KI-109 | HIGH | correctness | WhatsApp-Webhook: jede Zustellung lautlos 403, sobald das App-Secret am Konto vom aktuellen META_APP_SECRET abweicht; keine Protokollierung der Zustellungen | FIXED |
 | KI-108 | MEDIUM | correctness | Kfz-/E-Scooter-Formular: FIN mit "O" statt "0" (bzw. I/Q) wurde angenommen - die Nummer passt zu keinem Fahrzeug | FIXED |
 | KI-107 | LOW | correctness | Portal: bei `portal_fremdvertraege = ausblenden` stehen Fremdvertraege weiter in der Vertragsauswahl des Dokument-Uploads und sind per Aenderungsantrag ansprechbar | OPEN |
 | KI-025 | HIGH | security | Stored XSS: SVG/HTML aus E-Mail-/WhatsApp-Anhaengen inline (SVG ohne CSP) | FIXED |
@@ -154,6 +155,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-109 - WhatsApp-Webhook: Zustellungen ohne Spur abgewiesen
+
+- **Gemeldet 19.11.2026**: Zustellmeldungen von Meta ("statuses", "failed") waren im Portal nicht auffindbar.
+- **Ursache**: (1) `/webhooks/whatsapp` protokollierte nichts - eine abgewiesene Zustellung hinterliess keine Spur. (2) Die Signatur wurde NUR mit der beim Embedded Signup kopierten `app_secret` des Kontos geprueft; wird das Secret bei Meta neu erzeugt und nur in der `.env` nachgezogen, endet jede Zustellung mit 403. (3) Signierte Zustellungen ohne `phone_number_id` (account_update u. a.) endeten immer mit 403 - Meta kann den Webhook bei anhaltenden Fehlern abschalten.
+- **Fix**: eigener Log-Kanal `whatsapp_webhook` (`storage/logs/whatsapp-webhook-*.log`, 14 Tage) fuer jede Zustellung samt Abweisungsgrund und je fehlgeschlagener Zustellmeldung (code/title/message/details/recipient_id); Signatur gilt mit Konto- ODER Server-App-Secret derselben Meta-App; signierte Zustellungen ohne Kennung werden quittiert. Test: `WhatsAppWebhookProtokollTest`.
+- **Status**: FIXED
 
 ### KI-108 - FIN mit Buchstabe O statt Ziffer 0 angenommen
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED
