@@ -54,14 +54,10 @@
      "Inaktive Verträge" nicht mit "deaktivierter Zugang" oder "in Bearbeitung"
      verwechselt wird (Betreiber-Vorgabe 17.08.2026). Die Zaehler kommen aus
      COUNT-Abfragen und folgen der Suche. --}}
-<div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:16px;flex-wrap:wrap;">
+<div class="tab-row">
     @foreach($reiter as $key => $texte)
-    @php $aktiv = $gruppe === $key; @endphp
     <a href="{{ route('admin.contracts', array_filter(['gruppe' => $key, 'herkunft' => $herkunft, 'q' => $suche])) }}"
-        style="padding:12px 20px;text-decoration:none;font-size:14px;margin-bottom:-2px;
-               font-weight:{{ $aktiv ? '700' : '500' }};
-               color:{{ $aktiv ? 'var(--graphite)' : 'var(--ink-soft)' }};
-               border-bottom:2px solid {{ $aktiv ? 'var(--graphite)' : 'transparent' }};">
+        class="tab {{ $gruppe === $key ? 'active' : '' }}">
         {{ $texte[0] }} ({{ $zaehler[$key] ?? 0 }})
     </a>
     @endforeach
@@ -72,7 +68,7 @@
     <span class="muted-xs">Herkunft:</span>
     @foreach(['eigen' => '🤝 Eigenbestand', 'fremd' => '📁 Fremdbestand', 'alle' => 'Alle'] as $hk => $hl)
     <a href="{{ route('admin.contracts', array_filter(['gruppe' => $gruppe, 'herkunft' => $hk, 'q' => $suche])) }}"
-        class="btn btn-ghost btn-sm" style="{{ $herkunft === $hk ? 'border-color:var(--graphite);font-weight:700;background:var(--canvas);' : '' }}"
+        class="btn btn-sm {{ $herkunft === $hk ? 'btn-primary' : 'btn-ghost' }}"
         title="{{ $hk === 'eigen' ? 'Von uns vermittelte und übernommene Verträge' : ($hk === 'fremd' ? 'Nicht über uns vermittelt – nur Dokumentation' : 'Eigen- und Fremdbestand') }}">{{ $hl }} ({{ $herkunftZaehler[$hk] ?? 0 }})</a>
     @endforeach
     <a href="{{ route('admin.contracts.fremdbestand') }}" class="muted-xs" style="margin-left:auto;">📈 Fremdbestand – Übernahmepotenzial →</a>

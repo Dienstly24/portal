@@ -104,9 +104,10 @@ table td{padding:13px 12px;border-bottom:1px solid var(--line);vertical-align:mi
 table tr:last-child td{border-bottom:none;}
 table tr:hover td{background:#EDEAE0;}
 .tab-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
-.tab-row .tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-soft);text-decoration:none;background:var(--surface);transition:.15s;}
-.tab-row .tab:hover{border-color:var(--ink-soft);color:var(--ink);}
-.tab-row .tab.active{background:var(--emerald);border-color:var(--emerald);color:#fff;}
+.tab-row .tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-soft);text-decoration:none;background:var(--tiefe-hell);box-shadow:var(--tiefe-schatten);transition:transform .08s,box-shadow .12s,border-color .15s;}
+.tab-row .tab:hover{border-color:var(--ink-soft);color:var(--ink);transform:translateY(-1px);box-shadow:var(--tiefe-schatten-hover);}
+.tab-row .tab:active{transform:translateY(1px);box-shadow:var(--tiefe-gedrueckt);}
+.tab-row .tab.active{background:var(--tiefe-smaragd);border-color:transparent;color:#fff;box-shadow:var(--tiefe-schatten-aktiv);}
 .tab-row .tab .tab-count{font-weight:700;margin-left:4px;}
 .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 .customer-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;}

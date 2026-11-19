@@ -14,8 +14,9 @@
 </div>
 @once
 <style>
-.rep-tab{padding:9px 18px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;}
-.rep-tab:hover{background:#F4F7F5;}
-.rep-tab-active{background:var(--graphite);color:#fff;border-color:var(--graphite);}
+.rep-tab{padding:9px 18px;border-radius:999px;border:1px solid var(--line);background:var(--tiefe-hell);box-shadow:var(--tiefe-schatten);transition:transform .08s,box-shadow .12s,border-color .15s;font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;}
+.rep-tab:hover{transform:translateY(-1px);box-shadow:var(--tiefe-schatten-hover);border-color:var(--ink-soft);}
+.rep-tab:active{transform:translateY(1px);box-shadow:var(--tiefe-gedrueckt);}
+.rep-tab-active{background:var(--tiefe-graphit);color:#fff;border-color:transparent;box-shadow:var(--tiefe-schatten-aktiv);}
 </style>
 @endonce

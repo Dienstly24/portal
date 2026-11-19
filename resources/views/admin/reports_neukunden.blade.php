@@ -373,9 +373,10 @@
 <div style="margin-top:16px;">{{ $customers->links() }}</div>
 
 <style>
-.rep-tab { padding:9px 18px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13.5px; font-weight:600; color:var(--ink); text-decoration:none; }
-.rep-tab:hover { background:#F4F7F5; }
-.rep-tab-active { background:var(--graphite); color:#fff; border-color:var(--graphite); }
+.rep-tab { padding:9px 18px; border-radius:999px; border:1px solid var(--line); background:var(--tiefe-hell);box-shadow:var(--tiefe-schatten);transition:transform .08s,box-shadow .12s,border-color .15s; font-size:13.5px; font-weight:600; color:var(--ink); text-decoration:none; }
+.rep-tab:hover{transform:translateY(-1px);box-shadow:var(--tiefe-schatten-hover);border-color:var(--ink-soft);}
+.rep-tab:active{transform:translateY(1px);box-shadow:var(--tiefe-gedrueckt);}
+.rep-tab-active{background:var(--tiefe-graphit);color:#fff;border-color:transparent;box-shadow:var(--tiefe-schatten-aktiv);}
 .flt-group { display:flex; flex-direction:column; gap:4px; }
 .flt-lbl { font-size:11.5px; color:var(--ink-soft); font-weight:600; }
 .flt-sel { padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:13.5px; background:#fff; min-width:150px; }
