@@ -29,7 +29,6 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .metric .label{font-size:13px;color:var(--ink-soft);margin-bottom:8px;}
 .metric .value{font-size:26px;font-weight:700;color:var(--ink);}
 /* Klickbare Listenzeilen: ganze Zeile fuehrt zum verknuepften Datensatz */
-.btn-primary:hover{background:var(--graphite-deep);}
 .sidebar-foot{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,.12);}
 .avatar{width:32px;height:32px;border-radius:50%;background:var(--emerald);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#ffffff;}
 .user-chip{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.85);}

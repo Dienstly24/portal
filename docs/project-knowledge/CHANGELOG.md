@@ -8,6 +8,16 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 19.11.2026 - Knoepfe mit leichter Tiefe (3D) in der ganzen Anwendung
+
+- **Task**: Betreiber-Wunsch: die Knopf-Optik der neuen Signaturen-Liste ueberall.
+- **Files Changed**: `resources/css/components.css` (`.btn` + Varianten), `resources/css/bedienung.css` (Sammel-Leiste), `resources/views/layouts/portal.blade.php` (flache Hover-Ueberschreibung entfernt), neu `tests/Feature/Knoepfe3dTest.php`; `CLAUDE.md`, `FRONTEND_MAP.md`.
+- **Components Affected**: alle `.btn` in Beraterwelt, Kundenportal, Partnerportal. Website und Fehlerseiten laden das Bundle nicht - unveraendert.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: Verlauf/Schatten nur bei `.btn.btn-*`; eine Variante OHNE `.btn` (Anmeldeseiten auf dunklem Glas) bleibt flach. Inline-`background` an einem Knopf gewinnt weiterhin.
+- **Tests Performed**: `Knoepfe3dTest`; Musterseite mit dem gebauten CSS in Chromium (hell + dunkle Sammel-Leiste).
+- **Result**: erledigt.
+
 ## 19.11.2026 - E-Signatur: Liste neu gestaltet + Vorschau beim Ueberfahren (KI-113)
 
 - **Task**: Betreiber-Meldung: Liste unprofessionell (abgeschnitten, zu viele Knoepfe), Vorschau beim Ueberfahren von "Anzeigen" wie im Rest des Systems.

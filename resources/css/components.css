@@ -97,18 +97,44 @@
  * ------------------------------------------------------------------ */
 .btn {
     display: inline-flex; align-items: center; gap: var(--btn-gap);
-    padding: var(--btn-pad); border-radius: 8px; border: none; cursor: pointer;
+    padding: var(--btn-pad); border-radius: 9px; border: none; cursor: pointer;
     font-size: var(--btn-size); font-weight: 600; text-decoration: none;
-    transition: var(--btn-transition);
+    font-family: inherit;
+    /* Leichte Tiefe (Betreiber-Wunsch 19.11.2026, Vorbild Signaturen-Liste):
+       Verlauf, helle Innenkante oben, dunkle Unterkante. Hover hebt an,
+       Druecken laesst einsinken - der Knopf fuehlt sich wie ein Knopf an. */
+    box-shadow: 0 1px 0 rgba(255,255,255,.22) inset, 0 2px 0 rgba(0,0,0,.16), 0 3px 8px rgba(22,33,28,.12);
+    transition: var(--btn-transition), transform .08s, box-shadow .12s;
 }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.22) inset, 0 3px 0 rgba(0,0,0,.14), 0 6px 14px rgba(22,33,28,.14); }
+.btn:active { transform: translateY(1px); box-shadow: 0 1px 3px rgba(0,0,0,.22) inset; }
+.btn:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+/* Flache Grundfassung: gilt auch dort, wo eine Seite die Variante OHNE
+   den Baustein `.btn` benutzt (Anmeldeseiten auf dunklem Glas). */
 .btn-primary { background: var(--graphite); color: #fff; }
-.btn-primary:hover { background: var(--graphite-deep); }
 .btn-emerald { background: var(--emerald); color: #fff; }
-.btn-emerald:hover { opacity: .9; }
 .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
-.btn-ghost:hover { border-color: var(--ink-soft); }
 .btn-danger { background: #F9E3E3; color: #A32D2D; border: 1px solid #F0A0A0; }
-.btn-sm { padding: 6px 12px; font-size: 12.5px; }
+/* 3D-Fassung nur zusammen mit `.btn`. */
+.btn.btn-primary { background: linear-gradient(180deg, color-mix(in srgb, var(--graphite) 84%, #fff), var(--graphite)); color: #fff; }
+.btn.btn-primary:hover { filter: brightness(1.12); }
+.btn.btn-emerald { background: linear-gradient(180deg, var(--emerald-bright), var(--emerald-deep)); color: #fff; }
+.btn.btn-emerald:hover { filter: brightness(1.06); }
+.btn.btn-ghost {
+    background: linear-gradient(180deg, #fff, #F3F1EA); border: 1px solid var(--line); color: var(--ink);
+    box-shadow: 0 1px 0 rgba(255,255,255,.95) inset, 0 2px 0 rgba(22,33,28,.09), 0 3px 8px rgba(22,33,28,.06);
+}
+.btn.btn-ghost:hover {
+    border-color: var(--ink-soft);
+    box-shadow: 0 1px 0 rgba(255,255,255,.95) inset, 0 3px 0 rgba(22,33,28,.09), 0 6px 14px rgba(22,33,28,.09);
+}
+.btn.btn-ghost:active { box-shadow: 0 1px 3px rgba(22,33,28,.16) inset; }
+.btn.btn-danger {
+    background: linear-gradient(180deg, #FCEEEE, #F6DCDC); color: #A32D2D; border: 1px solid #F0A0A0;
+    box-shadow: 0 1px 0 rgba(255,255,255,.8) inset, 0 2px 0 rgba(163,45,45,.14), 0 3px 8px rgba(163,45,45,.08);
+}
+.btn-sm { padding: 6px 12px; font-size: 12.5px; border-radius: 8px; }
 
 /* --- Statusmarken --------------------------------------------------
  * Bewusst KEINE Markenfarben ausser dort, wo "aktiv/genehmigt" gemeint
