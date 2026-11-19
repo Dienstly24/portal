@@ -111,11 +111,28 @@ class MetaOnboardingClient
      */
     public function subscribeWaba(string $wabaId, string $token): void
     {
+        if (! $this->subscribeWabaAntwort($wabaId, $token)['ok']) {
+            throw new OnboardingFailed('Das Webhook-Abonnement wurde von Meta nicht bestaetigt.');
+        }
+    }
+
+    /**
+     * Dasselbe Abonnement, aber mit der Antwort von Meta - fuer die
+     * Kommandozeile, wo der Betreiber den Grund eines Fehlschlags lesen
+     * muss (die Oberflaeche zeigt ihn bewusst nicht). Die Antwort traegt
+     * nie das Token: es geht nur im Kopf hinaus.
+     *
+     * @return array{ok: bool, status: int, antwort: array<mixed>}
+     */
+    public function subscribeWabaAntwort(string $wabaId, string $token): array
+    {
         $antwort = $this->http()->withToken($token)
             ->post($this->base().'/'.$wabaId.'/subscribed_apps');
 
-        if (! $antwort->successful() || $antwort->json('success') !== true) {
-            throw new OnboardingFailed('Das Webhook-Abonnement wurde von Meta nicht bestaetigt.');
-        }
+        return [
+            'ok' => $antwort->successful() && $antwort->json('success') === true,
+            'status' => $antwort->status(),
+            'antwort' => (array) ($antwort->json() ?? []),
+        ];
     }
 }

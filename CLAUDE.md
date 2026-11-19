@@ -937,6 +937,17 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   einem Secret-Wechsel stand am Konto die alte Kopie und JEDE Zustellung
   endete still mit 403). Signierte Zustellungen ohne Rufnummern-Kennung
   werden quittiert (200), nicht abgewiesen. Test: `WhatsAppWebhookProtokollTest`.
+- **WhatsApp-Nummer OHNE Embedded Signup anbinden** (19.11.2026,
+  Testnummer fuer das App Review): `php artisan whatsapp:add-account
+  --phone-number-id=... --waba-id=...` (`WhatsAppKontoAnlegen`). Das
+  Access Token wird NUR unsichtbar abgefragt (nie Option, nie Ausgabe,
+  nie ActivityLog), App-Secret aus `META_APP_SECRET`. Erst prueft der
+  Befehl, ob das Token die Nummer liest - sonst wird NICHTS angelegt.
+  Danach dasselbe Konto wie beim Embedded Signup (`firstOrNew` ueber
+  Kanal + Phone Number ID, zweiter Lauf aktualisiert), schaltet den
+  Kanal `whatsapp` ein (ohne aktiven Kanal ist er kein Versandweg) und
+  abonniert den WABA (`MetaOnboardingClient::subscribeWabaAntwort`,
+  Antwort von Meta wird ausgegeben). Test: `WhatsAppKontoAnlegenTest`.
 - **FIN ohne I/O/Q** (Betreiber-Meldung 18.11.2026, KI-108): bei der
   Erfassung wurde "O" statt der Ziffer "0" getippt. Eine FIN (ISO 3779)
   enthaelt NIE I, O oder Q - `App\Rules\Fahrgestellnummer` lehnt solche
