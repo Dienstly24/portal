@@ -157,11 +157,12 @@ und PHPStan) auf `main` gruen ist.
 - **Discovered** 12.11.2026
 
 ### KI-109 - WhatsApp-Webhook: Zustellungen ohne Spur abgewiesen
-
-- **Gemeldet 19.11.2026**: Zustellmeldungen von Meta ("statuses", "failed") waren im Portal nicht auffindbar.
-- **Ursache**: (1) `/webhooks/whatsapp` protokollierte nichts - eine abgewiesene Zustellung hinterliess keine Spur. (2) Die Signatur wurde NUR mit der beim Embedded Signup kopierten `app_secret` des Kontos geprueft; wird das Secret bei Meta neu erzeugt und nur in der `.env` nachgezogen, endet jede Zustellung mit 403. (3) Signierte Zustellungen ohne `phone_number_id` (account_update u. a.) endeten immer mit 403 - Meta kann den Webhook bei anhaltenden Fehlern abschalten.
-- **Fix**: eigener Log-Kanal `whatsapp_webhook` (`storage/logs/whatsapp-webhook-*.log`, 14 Tage) fuer jede Zustellung samt Abweisungsgrund und je fehlgeschlagener Zustellmeldung (code/title/message/details/recipient_id); Signatur gilt mit Konto- ODER Server-App-Secret derselben Meta-App; signierte Zustellungen ohne Kennung werden quittiert. Test: `WhatsAppWebhookProtokollTest`.
-- **Status**: FIXED
+- **Category** correctness · **Severity** HIGH · **Status** FIXED
+- **Location** `Webhooks\WhatsAppWebhookController::handle`, `WhatsAppAdapter::verifyWebhook`, `config/logging.php`
+- **Description** Betreiber-Meldung 19.11.2026: Zustellmeldungen von Meta ("statuses", "failed") waren im Portal nicht auffindbar. (1) `/webhooks/whatsapp` protokollierte nichts - eine abgewiesene Zustellung hinterliess keine Spur. (2) Die Signatur wurde NUR mit der beim Embedded Signup kopierten `app_secret` des Kontos geprueft; wird das Secret bei Meta neu erzeugt und nur in der `.env` nachgezogen, endet jede Zustellung mit 403. (3) Signierte Zustellungen ohne `phone_number_id` (account_update u. a.) endeten immer mit 403 - Meta kann den Webhook bei anhaltenden Fehlern abschalten.
+- **Fix (19.11.2026)**: eigener Log-Kanal `whatsapp_webhook` (`storage/logs/whatsapp-webhook-*.log`, 14 Tage) fuer jede Zustellung samt Abweisungsgrund und je fehlgeschlagener Zustellmeldung (code/title/message/details/recipient_id); Signatur gilt mit Konto- ODER Server-App-Secret derselben Meta-App; signierte Zustellungen ohne Kennung werden quittiert.
+- **Test** `WhatsAppWebhookProtokollTest`
+- **Discovered** 19.11.2026 (Betreiber)
 
 ### KI-108 - FIN mit Buchstabe O statt Ziffer 0 angenommen
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED

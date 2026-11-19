@@ -3,6 +3,7 @@
 namespace Tests\Feature\Messaging;
 
 use App\Http\Controllers\Webhooks\WhatsAppWebhookController;
+use App\Jobs\Messaging\ProcessWhatsAppWebhookJob;
 use App\Models\Channel;
 use App\Models\ChannelAccount;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -98,7 +99,7 @@ class WhatsAppWebhookProtokollTest extends TestCase
 
         $this->senden($this->fehlgeschlagen(), self::NEU)->assertOk();
 
-        Queue::assertPushed(\App\Jobs\Messaging\ProcessWhatsAppWebhookJob::class);
+        Queue::assertPushed(ProcessWhatsAppWebhookJob::class);
     }
 
     /** Gegenprobe Angreifer: ein drittes Secret bleibt abgewiesen. */
