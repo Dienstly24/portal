@@ -1094,6 +1094,14 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   bewusst abweichenden MASSE (Kundenportal = Telefon-Oberflaeche) als
   Tokens im jeweiligen Layout - dadurch pixelgleich wie zuvor. Details:
   `docs/DESIGN_SYSTEM_FARBEN_UND_BAUSTEINE.md`. Tests: `DesignSystemTest`.
+  **Knoepfe mit leichter Tiefe (19.11.2026, Betreiber-Wunsch)**: `.btn`
+  traegt Schatten mit Unterkante, hebt sich beim Ueberfahren an und sinkt
+  beim Druecken ein; die Varianten haben einen Verlauf - aber NUR als
+  `.btn.btn-primary/-emerald/-ghost/-danger`. Die blossen Klassen bleiben
+  flach, weil die Anmeldeseiten `btn-ghost` OHNE `.btn` auf dunklem Glas
+  benutzen (ein weisser Verlauf machte den Text dort unsichtbar). Farben
+  nur aus Tokens (`color-mix`/`filter` statt neuer Hex-Werte). Test:
+  `Knoepfe3dTest`.
 - **Logo-Assets** (alle aus `logo.png` per GD generiert, `public/images/`):
   `logo-white.png` (weisse Wortmarke, für dunkle Flächen: Login, Sidebars),
   `logo-transparent.png` (farbige Wortmarke, für helle Flächen),
