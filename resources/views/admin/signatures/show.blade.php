@@ -219,7 +219,7 @@ window.__h["sigInternShow"] = function () {
                 {{-- LINK OHNE E-MAIL (Betreiber-Meldung 19.11.2026): fuer
                      WhatsApp oder das Tablet im Buero. Nur fuer den, der laut
                      Reihenfolge dran ist - sonst liefe der Link ins Leere. --}}
-                @php $amZug = !$signature->isSequential() || optional($signature->currentSigner())->id === $signer->id; @endphp
+                @php($amZug = !$signature->isSequential() || optional($signature->currentSigner())->id === $signer->id)
                 @if($signature->acceptsSignatures() && $signer->isPending() && $amZug)
                     @can('send', $signature)
                     <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;">
@@ -374,7 +374,7 @@ window.__h["sigInternShow"] = function () {
              unterschrieben, abgelaufen, abgelehnt, storniert. Der Vorgang
              hier bleibt als Nachweis stehen; die neue Anfrage entsteht aus
              demselben ORIGINAL mit denselben Unterzeichnern und Feldern. --}}
-        @php $ersatz = $signature->replacedBy; @endphp
+        @php($ersatz = $signature->replacedBy)
         @if($ersatz && $ersatz->status !== 'cancelled')
             <a href="{{ route('admin.signatures.show', $ersatz->id) }}" class="btn btn-sm btn-ghost">→ Neue Anfrage öffnen ({{ $ersatz->statusLabel() }})</a>
         @else
