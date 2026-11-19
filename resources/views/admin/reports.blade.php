@@ -288,9 +288,10 @@
 
 <style>
 /* Reiter der Berichtsseite - eine Seite, deshalb hier statt in components.css. */
-.rep-tab { padding:8px 16px; border-radius:999px; border:1px solid var(--line); background:var(--surface); font-size:13px; font-weight:600; color:var(--ink); text-decoration:none; white-space:nowrap; }
-.rep-tab:hover { background:var(--surface-soft); }
-.rep-tab-active { background:var(--graphite); color:#fff; border-color:var(--graphite); }
+.rep-tab { padding:8px 16px; border-radius:999px; border:1px solid var(--line); background:var(--tiefe-hell);box-shadow:var(--tiefe-schatten);transition:transform .08s,box-shadow .12s,border-color .15s; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none; white-space:nowrap; }
+.rep-tab:hover{transform:translateY(-1px);box-shadow:var(--tiefe-schatten-hover);border-color:var(--ink-soft);}
+.rep-tab:active{transform:translateY(1px);box-shadow:var(--tiefe-gedrueckt);}
+.rep-tab-active{background:var(--tiefe-graphit);color:#fff;border-color:transparent;box-shadow:var(--tiefe-schatten-aktiv);}
 </style>
 
 <script @cspNonce>

@@ -1100,8 +1100,15 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   `.btn.btn-primary/-emerald/-ghost/-danger`. Die blossen Klassen bleiben
   flach, weil die Anmeldeseiten `btn-ghost` OHNE `.btn` auf dunklem Glas
   benutzen (ein weisser Verlauf machte den Text dort unsichtbar). Farben
-  nur aus Tokens (`color-mix`/`filter` statt neuer Hex-Werte). Test:
-  `Knoepfe3dTest`.
+  nur aus Tokens (`color-mix`/`filter` statt neuer Hex-Werte). Seit dem
+  Nachtrag 19.11.2026 tragen auch Reiter und Chips dieselbe Tiefe aus
+  EINER Quelle: Tokens `--tiefe-hell/-graphit/-smaragd/-schatten/
+  -schatten-hover/-schatten-aktiv/-gedrueckt` in `components.css`, benutzt
+  von `.tab-row .tab` (Layout), Kunden-Chips + Buchstaben-Leiste, `.rep-tab`
+  (Berichte/Provisionen/E-Mail), Kundenakte-Reiter, Chat-Filter,
+  Vorlagen-Chips, Tarifrechner, Kfz-Auswahl, Signaturen-Liste. Die
+  Vertragsliste benutzt jetzt die gemeinsame `tab-row`. Neue Reiter/Chips
+  nehmen diese Tokens, keine eigenen Schatten. Test: `Knoepfe3dTest`.
 - **Logo-Assets** (alle aus `logo.png` per GD generiert, `public/images/`):
   `logo-white.png` (weisse Wortmarke, für dunkle Flächen: Login, Sidebars),
   `logo-transparent.png` (farbige Wortmarke, für helle Flächen),

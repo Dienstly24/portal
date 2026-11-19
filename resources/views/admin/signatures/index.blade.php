@@ -204,8 +204,8 @@
    leichter Tiefe (heller Verlauf, Unterkante, beim Druecken eingesunken). */
 .sigl-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .sigl-tab{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;font-size:13.5px;font-weight:600;
-  color:var(--ink);text-decoration:none;background:linear-gradient(180deg,#fff,#F3F1EA);border:1px solid var(--line);
-  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 2px 0 rgba(22,33,28,.08),0 3px 8px rgba(22,33,28,.06);transition:transform .08s,box-shadow .08s;}
+  color:var(--ink);text-decoration:none;background:var(--tiefe-hell);border:1px solid var(--line);
+  box-shadow:var(--tiefe-schatten);transition:transform .08s,box-shadow .08s;}
 .sigl-tab:hover{transform:translateY(-1px);box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 3px 0 rgba(22,33,28,.08),0 6px 14px rgba(22,33,28,.08);}
 .sigl-tab.aktiv{background:linear-gradient(180deg,var(--emerald-bright),var(--emerald-deep));color:#fff;border-color:transparent;
   box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 2px 0 rgba(0,0,0,.18),0 4px 12px rgba(23,166,91,.28);}

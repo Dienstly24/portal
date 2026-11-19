@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 19.11.2026 - Tiefe (3D) auch fuer Reiter, Filter-Chips und Buchstaben-Leiste
+
+- **Task**: Betreiber-Wunsch: die Knopf-Optik ueberall, auch Kunden-Chips (Alle/Strom/Gas ...) und A-Z.
+- **Files Changed**: `resources/css/components.css` (Tokens `--tiefe-*`), `layouts/admin.blade.php` (`.tab-row .tab`), Views `customers`, `contracts` (gemeinsame `tab-row` statt Unterstreichung), `customer_show`, `customer_chat`, `compose_email`, `tarifrechner`, `commissions`, `reports`, `reports_neukunden`, `signatures/index`, Partials `email_tabs`, `provision_styles`, `contract_kfz_fields`; `tests/Feature/Knoepfe3dTest.php`; `CLAUDE.md`, `FRONTEND_MAP.md`.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: rein optisch; Zaehlerformat der Vertragsreiter "(N)" bleibt (Tests).
+- **Tests Performed**: `Knoepfe3dTest` erweitert; Musterseite in Chromium.
+- **Result**: erledigt.
+
 ## 19.11.2026 - Knoepfe mit leichter Tiefe (3D) in der ganzen Anwendung
 
 - **Task**: Betreiber-Wunsch: die Knopf-Optik der neuen Signaturen-Liste ueberall.

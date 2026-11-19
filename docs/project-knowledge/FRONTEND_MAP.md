@@ -20,7 +20,7 @@ Stand: 23.09.2026. Serverseitiges Rendering mit Blade; kein SPA-Framework.
 | Datei | Inhalt |
 |---|---|
 | `resources/css/brand.css` | Farb-Tokens (`--emerald*`, `--gold*`, `--graphite*`, `--status-*`) - EINE Quelle |
-| `resources/css/components.css` | Bausteine `.card/.btn/.badge/.field/...` (einmal definiert); `.btn` mit leichter Tiefe, Verlauf nur bei `.btn.btn-*` (19.11.2026, `Knoepfe3dTest`) |
+| `resources/css/components.css` | Bausteine `.card/.btn/.badge/.field/...` (einmal definiert); `.btn` mit leichter Tiefe, Verlauf nur bei `.btn.btn-*`; Tokens `--tiefe-*` auch fuer Reiter/Chips (19.11.2026, `Knoepfe3dTest`) |
 | `resources/css/app.css` | `@import 'tailwindcss'`, `@config`, `[hidden]{display:none!important}` |
 | `resources/css/responsive.css` | Breakpoint-Regeln |
 | `resources/css/analytics.css` | nur Auswertungs-Dashboard |

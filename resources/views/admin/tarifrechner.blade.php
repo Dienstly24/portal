@@ -11,8 +11,8 @@
 .vp-strip{margin-bottom:22px;}
 .vp-strip-title{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
 .vp-chips{display:flex;flex-wrap:wrap;gap:8px;}
-.vp-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);text-decoration:none;color:var(--ink);font-size:13px;font-weight:600;transition:.15s;max-width:240px;}
-.vp-chip:hover{border-color:var(--emerald);box-shadow:0 2px 8px rgba(0,0,0,.06);transform:translateY(-1px);}
+.vp-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;text-decoration:none;color:var(--ink);font-size:13px;font-weight:600;max-width:240px;background:var(--tiefe-hell);box-shadow:var(--tiefe-schatten);transition:transform .08s,box-shadow .12s,border-color .15s;}
+.vp-chip:hover{border-color:var(--emerald);transform:translateY(-1px);box-shadow:var(--tiefe-schatten-hover);}
 .vp-chip .ico{font-size:14px;flex:none;}
 .vp-chip .txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 

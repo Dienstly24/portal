@@ -149,8 +149,9 @@
 .kfz-card-sub{font-size:12px;color:var(--ink-soft);margin:2px 0 12px;}
 .kfz-chip{position:relative;display:inline-flex;}
 .kfz-chip input{position:absolute;inset:0;opacity:0;cursor:pointer;margin:0;}
-.kfz-chip span{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:600;background:var(--surface);color:var(--ink);cursor:pointer;transition:.12s;user-select:none;width:100%;text-align:center;}
-.kfz-chip input:checked + span{border-color:var(--emerald);background:#E7F6EE;color:#0E7A41;box-shadow:inset 0 0 0 1px var(--emerald);}
+.kfz-chip span{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;user-select:none;width:100%;text-align:center;background:var(--tiefe-hell);box-shadow:var(--tiefe-schatten);transition:transform .08s,box-shadow .12s,border-color .15s;}
+.kfz-chip:hover span{transform:translateY(-1px);box-shadow:var(--tiefe-schatten-hover);}
+.kfz-chip input:checked + span{border-color:var(--emerald);background:#E7F6EE;color:#0E7A41;box-shadow:inset 0 0 0 1px var(--emerald),var(--tiefe-gedrueckt);transform:none;}
 .kfz-chip input:focus-visible + span{outline:2px solid var(--emerald);outline-offset:2px;}
 .kfz-chip input:disabled + span{opacity:.4;cursor:not-allowed;}
 .kfz-chip.big span{padding:13px 16px;font-size:13.5px;}

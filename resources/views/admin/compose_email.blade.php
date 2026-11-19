@@ -19,8 +19,8 @@
 .sc-result:hover{background:var(--canvas);border-color:var(--line);}
 .sc-star{border:none;background:none;cursor:pointer;font-size:15px;padding:2px 4px;flex:none;opacity:.85;}
 .sc-chip{font-size:11px;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--ink-soft);}
-.tpl-chip{font-size:12px;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer;transition:.15s;}
-.tpl-chip:hover,.tpl-chip.active{background:var(--graphite);color:#fff;border-color:var(--graphite);}
+.tpl-chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer;background:var(--tiefe-hell);box-shadow:var(--tiefe-schatten);transition:transform .08s,box-shadow .12s,border-color .15s;}
+.tpl-chip:hover,.tpl-chip.active{background:var(--tiefe-graphit);color:#fff;border-color:transparent;box-shadow:var(--tiefe-schatten-aktiv);}
 .tpl-item{display:block;width:100%;text-align:left;padding:8px 10px;border-radius:8px;border:1px solid transparent;background:none;cursor:pointer;font-size:13px;font-family:inherit;}
 .tpl-item:hover{background:var(--canvas);border-color:var(--line);}
 .hist-row{display:flex;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line);align-items:baseline;}

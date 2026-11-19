@@ -154,7 +154,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 .cust-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:20px;overflow-x:auto;}
 .cust-tab{flex:1;text-align:center;padding:10px 16px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;text-decoration:none;transition:.15s;border:none;background:none;}
 .cust-tab:hover{background:var(--canvas);color:var(--ink);}
-.cust-tab.active{background:var(--graphite);color:#fff;}
+.cust-tab.active{background:var(--tiefe-graphit);color:#fff;box-shadow:var(--tiefe-schatten-aktiv);}
 .chat-bubble{max-width:75%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;}
 .chat-row{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;}
 .chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
