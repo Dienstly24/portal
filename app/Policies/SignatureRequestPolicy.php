@@ -86,6 +86,16 @@ class SignatureRequestPolicy
         return $this->update($user, $request);
     }
 
+    /**
+     * "Erneut zur Unterschrift anfordern": aus jedem VERSANDTEN Vorgang
+     * (auch einem abgeschlossenen - falsch unterschrieben). Ein Entwurf
+     * wird einfach bearbeitet.
+     */
+    public function reissue(User $user, SignatureRequest $request): bool
+    {
+        return ! $request->isDraft() && $this->update($user, $request);
+    }
+
     public function download(User $user, SignatureRequest $request): bool
     {
         return $this->view($user, $request);

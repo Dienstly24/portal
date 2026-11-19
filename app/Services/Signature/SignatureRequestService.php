@@ -12,6 +12,7 @@ use App\Services\Notifications\NotificationService;
 use App\Services\Pdf\PdfDocument;
 use App\Services\Pdf\PdfEingangspruefung;
 use App\Services\Pdf\PdfException;
+use App\Support\LocalTime;
 use App\Support\SignatureFieldType;
 use App\Support\SignatureStatus;
 use Illuminate\Http\UploadedFile;
@@ -382,7 +383,7 @@ class SignatureRequestService
 
     public const ABGESCHLOSSEN = 'abgeschlossen';
 
-    public function send(SignatureRequest $request, ?User $durch = null): string
+    public function send(SignatureRequest $request, ?User $durch = null, bool $perMail = true): string
     {
         $blockers = $this->blockersForSending($request);
         if ($blockers !== []) {
@@ -446,10 +447,17 @@ class SignatureRequestService
             'last_activity_at' => now(),
         ])->save();
 
-        $this->audit->record($request, 'sent', description: $request->signers->count().' Unterzeichner');
+        $this->audit->record($request, 'sent', description: $request->signers->count().' Unterzeichner'
+            .($perMail ? '' : ' - ohne E-Mail, Link wird vom Mitarbeiter weitergegeben'));
 
-        foreach ($this->signersToInvite($request) as $signer) {
-            $this->invite($request, $signer);
+        // OHNE E-MAIL (Betreiber-Meldung 19.11.2026): der Kunde sitzt im
+        // Buero oder bekommt den Link per WhatsApp. Dann geht KEINE Mail
+        // raus - der Zugang entsteht erst mit "Link erzeugen" (linkFor),
+        // sonst laege ein zweiter, gleichwertiger Zugang im Postfach.
+        if ($perMail) {
+            foreach ($this->signersToInvite($request) as $signer) {
+                $this->invite($request, $signer);
+            }
         }
 
         // ZWEI STUFEN IM AKTIVITAETSCENTER (Betreiber-Vorgabe 13.09.2026):
@@ -527,6 +535,186 @@ class SignatureRequestService
         $this->audit->record($request, $isReminder ? 'reminder_sent' : 'sent', $signer, $signer->email);
 
         return true;
+    }
+
+    /**
+     * Ein Unterschrifts-Link OHNE E-Mail (Betreiber-Meldung 19.11.2026):
+     * zum Weitergeben per WhatsApp oder zum Oeffnen auf dem Tablet im Buero.
+     *
+     * Es ist DERSELBE Zugang wie in der Einladung (ein frisches Token), es
+     * gibt also keinen zweiten, schwaecheren Weg zum Dokument. Weil nur der
+     * Hash gespeichert wird, ersetzt der neue Link den bisherigen - genau
+     * wie bei einer Erinnerung.
+     *
+     * VOR ORT: bestaetigt ein Mitarbeiter, dass er die Person vor sich hat,
+     * entfaellt die Code-/Geburtsdatum-Abfrage. Das steht als EIGENES
+     * Ereignis mit seinem Namen im Protokoll - die Pruefung wird nicht
+     * uebersprungen, sie wird von einem Menschen geleistet, und im
+     * Streitfall muss erkennbar sein, von wem.
+     *
+     * @return string das Token im Klartext - nur fuer die eine Anzeige
+     */
+    public function linkFor(SignatureRequest $request, SignatureSigner $signer, User $durch, bool $vorOrt = false): string
+    {
+        if (! $request->acceptsSignatures()) {
+            throw new \RuntimeException('Diese Signaturanfrage ist nicht mehr offen.');
+        }
+        if ((string) $signer->signature_request_id !== (string) $request->id) {
+            throw new \RuntimeException('Der Unterzeichner gehört nicht zu dieser Anfrage.');
+        }
+        if (! $signer->isPending()) {
+            throw new \RuntimeException($signer->name.' hat bereits '.($signer->hasSigned() ? 'unterschrieben.' : 'abgelehnt.'));
+        }
+        $aktuell = $request->currentSigner();
+        if ($request->isSequential() && $aktuell !== null && (string) $aktuell->id !== (string) $signer->id) {
+            throw new \RuntimeException('Laut Reihenfolge ist zuerst '.$aktuell->name.' an der Reihe.');
+        }
+
+        $token = $this->tokens->issue($signer, $request->expires_at);
+
+        $signer->forceFill([
+            'status' => $signer->status === SignatureSigner::PENDING ? SignatureSigner::SENT : $signer->status,
+            'invited_at' => $signer->invited_at ?? now(),
+        ])->save();
+
+        $this->audit->record($request, 'link_created', $signer,
+            ($vorOrt ? 'Vor Ort' : 'Zum Weitergeben (z. B. WhatsApp)').' - erzeugt von '.$durch->name);
+
+        if ($vorOrt) {
+            $signer->forceFill([
+                'verified_at' => now(),
+                'dob_verified_at' => $request->requiresDob() ? now() : $signer->dob_verified_at,
+            ])->save();
+            $this->audit->record($request, 'onsite_identity_confirmed', $signer,
+                'Bestätigt von '.$durch->name, ['user_id' => $durch->id]);
+        }
+
+        $request->forceFill(['last_activity_at' => now()])->save();
+
+        return $token;
+    }
+
+    /**
+     * "Erneut zur Unterschrift anfordern" (Betreiber-Meldung 19.11.2026):
+     * der Kunde hat falsch unterschrieben, oder der Vorgang ist abgelaufen,
+     * abgelehnt oder storniert.
+     *
+     * Der alte Vorgang wird NIE geloescht oder veraendert - ein
+     * unterschriebenes Dokument ist der Nachweis einer Unterschrift, auch
+     * einer missratenen. Stattdessen entsteht ein ENTWURF aus demselben
+     * ORIGINAL (nicht aus dem unterschriebenen PDF - sonst stuende die
+     * falsche Unterschrift im neuen Dokument), mit denselben Unterzeichnern
+     * und Feldern, aber ohne jede Unterschrift. Ist der alte Vorgang noch
+     * offen, wird er storniert - zwei gueltige Links zu zwei Fassungen
+     * desselben Vertrags waeren die naechste Verwechslung.
+     */
+    public function reissue(SignatureRequest $alt, User $durch): SignatureRequest
+    {
+        if ($alt->isDraft()) {
+            throw new \RuntimeException('Ein Entwurf wurde noch nicht versendet - bitte einfach bearbeiten.');
+        }
+        $vorhanden = $alt->replacedBy()->first();
+        if ($vorhanden !== null && $vorhanden->status !== SignatureStatus::CANCELLED) {
+            throw new \RuntimeException('Für diesen Vorgang wurde bereits eine neue Anfrage angelegt.');
+        }
+        $original = $this->storage->read($alt->original_path);
+        if ($original === null) {
+            throw new \RuntimeException('Das Original-PDF ist nicht mehr vorhanden - bitte neu hochladen.');
+        }
+
+        $alt->loadMissing(['signers', 'fields']);
+
+        $neu = DB::transaction(function () use ($alt, $durch, $original) {
+            $neu = new SignatureRequest([
+                'title' => $alt->title,
+                'status' => SignatureStatus::DRAFT,
+                'customer_id' => $alt->customer_id,
+                'contract_id' => $alt->contract_id,
+                'created_by' => $durch->id,
+                'original_path' => 'wird-gesetzt',
+                'original_name' => $alt->original_name,
+                'original_hash' => hash('sha256', $original),
+                'original_size' => strlen($original),
+                'page_count' => $alt->page_count,
+                'feld_bezug' => $alt->feld_bezug,
+                'signing_order' => $alt->signing_order,
+                'identity_check' => $alt->identity_check,
+                'consent_text' => $alt->consent_text,
+                'document_type' => $alt->document_type,
+                'reference' => $alt->reference,
+                'note' => $alt->note,
+                // Eine abgelaufene Frist wuerde den neuen Vorgang sofort
+                // wieder ablaufen lassen - sie wird nicht uebernommen.
+                'expires_at' => $alt->expires_at !== null && $alt->expires_at->isFuture() ? $alt->expires_at : null,
+                'replaces_id' => $alt->id,
+                'last_activity_at' => now(),
+            ]);
+            $neu->id = (string) Str::uuid();
+            $neu->original_path = $this->storage->originalPath($neu);
+            $neu->save();
+
+            $zuordnung = [];
+            foreach ($alt->signers as $s) {
+                $kopie = new SignatureSigner([
+                    'signature_request_id' => $neu->id,
+                    'name' => $s->name,
+                    'email' => $s->email,
+                    'locale' => $s->locale,
+                    'signing_order' => $s->signing_order,
+                    'status' => SignatureSigner::PENDING,
+                ]);
+                // Das Geburtsdatum liegt verschluesselt vor und wird nur
+                // weitergereicht, nie gelesen oder ausgegeben.
+                $kopie->dob_check = $s->dob_check;
+                $kopie->save();
+                $zuordnung[(string) $s->id] = $kopie->id;
+            }
+
+            foreach ($alt->fields as $f) {
+                if ($f->signature_signer_id !== null && ! isset($zuordnung[(string) $f->signature_signer_id])) {
+                    continue;
+                }
+                SignatureField::create([
+                    'signature_request_id' => $neu->id,
+                    'signature_signer_id' => $f->signature_signer_id === null ? null : $zuordnung[(string) $f->signature_signer_id],
+                    'type' => $f->type,
+                    'page' => $f->page,
+                    'pos_x' => $f->pos_x,
+                    'pos_y' => $f->pos_y,
+                    'width' => $f->width,
+                    'height' => $f->height,
+                    'required' => $f->required,
+                    'label' => $f->label,
+                    'sort' => $f->sort,
+                    // Firmenbild bleibt zugewiesen (es wartet auf niemanden);
+                    // interne Felder bleiben dem Mitarbeiter zugeordnet, die
+                    // Unterschrift selbst wird NICHT uebernommen.
+                    'company_asset_id' => $f->company_asset_id,
+                    'internal_user_id' => $f->internal_user_id,
+                    'intern_beschriftung' => $f->intern_beschriftung,
+                ]);
+            }
+
+            return $neu;
+        });
+
+        $this->storage->disk()->put($neu->original_path, $original);
+
+        // Wird der alte noch unterschrieben, waeren zwei Fassungen im Umlauf.
+        if ($alt->isOpen() || $alt->status === SignatureStatus::COMPLETION_FAILED) {
+            $this->cancel($alt->load('signers'), 'Ersetzt durch eine neue Anfrage');
+        }
+
+        $this->audit->record($alt, 'reissued', description: 'Neue Anfrage angelegt von '.$durch->name, meta: ['neu' => $neu->id]);
+        $this->audit->record($neu, 'created', description: 'Erneut angefordert - ersetzt "'.$alt->title.'" vom '
+            .LocalTime::for($alt->created_at)?->format('d.m.Y'), meta: ['ersetzt' => $alt->id]);
+        $this->audit->record($neu, 'document_uploaded', description: $neu->original_name.' (Original übernommen)', meta: [
+            'sha256' => $neu->original_hash,
+            'seiten' => $neu->page_count,
+            'bytes' => $neu->original_size,
+        ]);
+
+        return $neu;
     }
 
     /**

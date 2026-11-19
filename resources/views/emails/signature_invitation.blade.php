@@ -4,6 +4,14 @@
     $sprache = app()->getLocale();
     $rtl = in_array($sprache, \App\Models\SignatureSigner::RTL, true);
     $seite = $rtl ? 'right' : 'left';
+    // VERTRAUEN (Betreiber-Meldung 19.11.2026): Kunden hielten die Einladung
+    // fuer Betrug. Die Mail sagt deshalb, WOHER sie kommt (das
+    // WhatsApp-Gespraech), WER sie schickt (Ansprechpartner), WOZU sie dient
+    // und WIE man nachfragt (WhatsApp-Knopf) - und auf welcher Adresse
+    // unterschrieben wird.
+    $ansprechpartner = $ansprechpartner ?? null;
+    $waNummer = preg_replace('/\D+/', '', (string) config('website.whatsapp'));
+    $host = (string) parse_url($signUrl, PHP_URL_HOST);
 @endphp
 <!DOCTYPE html>
 <html lang="{{ $sprache }}" dir="{{ $rtl ? 'rtl' : 'ltr' }}">
@@ -40,6 +48,14 @@
     @endif
 </td></tr></table>
 
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#EEF8F2;border-radius:8px;margin:0 0 15px;"><tr><td style="padding:14px 18px;text-align:{{ $seite }};">
+    <p style="font-size:14px;font-weight:bold;color:#128A4B;margin:0 0 4px;">{{ __('signing.mail_why_head') }}</p>
+    <p style="font-size:14px;color:#333;margin:0;">{{ __('signing.mail_why_body') }}</p>
+    @if($ansprechpartner)
+    <p style="font-size:14px;color:#333;margin:8px 0 0;">👤 {{ __('signing.mail_contact_person', ['name' => $ansprechpartner]) }}</p>
+    @endif
+</td></tr></table>
+
 <p style="font-size:15px;color:#333;">{{ __('signing.mail_no_account') }}</p>
 
 <p style="text-align:center;margin:26px 0;">
@@ -56,6 +72,18 @@
          Adresse ist unbrauchbar. --}}
     <span dir="ltr" style="color:#17A65B;word-break:break-all;display:inline-block;text-align:left;">{{ $signUrl }}</span>
 </p>
+
+@if($waNummer !== '')
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #BFE8CE;border-radius:8px;margin:18px 0;"><tr><td style="padding:14px 18px;text-align:{{ $seite }};">
+    <p style="font-size:14px;color:#333;margin:0 0 10px;">💬 {{ __('signing.mail_whatsapp_hint') }}</p>
+    <a href="https://wa.me/{{ $waNummer }}" style="background:#25D366;color:#ffffff;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:bold;display:inline-block;">{{ __('signing.mail_whatsapp_button') }}</a>
+    <span dir="ltr" style="font-size:13px;color:#555;display:inline-block;margin:6px 8px;">+{{ $waNummer }}</span>
+</td></tr></table>
+@endif
+
+@if($host !== '')
+<p style="font-size:13px;color:#666;">🔒 {{ __('signing.mail_safe_hint', ['host' => $host]) }}</p>
+@endif
 
 <p style="font-size:13px;color:#666;">{{ __('signing.mail_not_expected') }}</p>
 

@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 19.11.2026 - E-Signatur: Neu anfordern, Link fuer WhatsApp / Unterschrift im Buero, Einladung mit WhatsApp-Bezug (KI-110)
+
+- **Task**: Betreiber-Meldung: falsch Unterschriebenes nicht neu anforderbar, kein WhatsApp-/Vor-Ort-Weg, Einladungs-Mail wirkt auf Kunden wie Betrug; arabische Mail fuer arabische Kunden.
+- **Files Changed**: `app/Http/Controllers/Admin/SignatureController.php`, `app/Services/Signature/SignatureRequestService.php`, `app/Policies/SignatureRequestPolicy.php`, `app/Models/{SignatureRequest,SignatureEvent}.php`, `routes/web.php`, Views `admin/signatures/{index,show}` + neu `admin/signatures/link`, `emails/signature_invitation`, `lang/{de,ar,en}/signing.php`, neu `tests/Feature/SignaturNeuAnfordernUndLinkTest.php`, `tests/Feature/SignatureLocalizationTest.php`; `CLAUDE.md`, Wissensbasis, `docs/ANLEITUNG_SIGNATUREN_AR.md`.
+- **Database Changes**: `signature_requests.replaces_id` (nullable, Index) - rein additiv.
+- **API Changes**: neue Routen `admin.signatures.link`, `admin.signatures.reissue`; `admin.signatures.send` nimmt `ohne_mail`. `ROUTES_INVENTORY.md` muss mit `scripts/wissensbasis-routen.php` neu erzeugt werden (in der Arbeitsumgebung nicht ausfuehrbar).
+- **Potential Side Effects**: Betreff und Text der Einladung/Erinnerung sind geaendert (alle Sprachen) und nennen ausdruecklich WhatsApp. Ein neuer Link ersetzt einen frueher versendeten (nur der Hash wird gespeichert - wie bei der Erinnerung).
+- **Tests Performed**: in der Arbeitsumgebung NICHT ausfuehrbar (Composer-Downloads von GitHub blockiert) - nur `php -l`; Testlauf in CI.
+
 ## 19.11.2026 - WhatsApp-Nummer manuell anbinden (whatsapp:add-account)
 
 - **Task**: Betreiber-Auftrag: Testnummer von Meta ohne Embedded Signup anbinden (Video fuer das App Review).

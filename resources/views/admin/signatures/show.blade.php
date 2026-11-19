@@ -214,7 +214,28 @@ window.__h["sigInternShow"] = function () {
                     {{ $signer->statusLabel() }}
                 </span>
                 @if($signer->verified_at)
-                <div class="muted-sm" style="margin-top:5px;">E-Mail bestätigt</div>
+                <div class="muted-sm" style="margin-top:5px;">Identität bestätigt</div>
+                @endif
+                {{-- LINK OHNE E-MAIL (Betreiber-Meldung 19.11.2026): fuer
+                     WhatsApp oder das Tablet im Buero. Nur fuer den, der laut
+                     Reihenfolge dran ist - sonst liefe der Link ins Leere. --}}
+                @php($amZug = !$signature->isSequential() || optional($signature->currentSigner())->id === $signer->id)
+                @if($signature->acceptsSignatures() && $signer->isPending() && $amZug)
+                    @can('send', $signature)
+                    <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;">
+                        <form method="POST" action="{{ route('admin.signatures.link', [$signature->id, $signer->id]) }}"
+                              data-confirm="Neuen Link für {{ $signer->name }} erzeugen? Ein früher versendeter Link wird damit ungültig.">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-ghost">📱 Link für WhatsApp</button>
+                        </form>
+                        <form method="POST" action="{{ route('admin.signatures.link', [$signature->id, $signer->id]) }}"
+                              data-confirm="Jetzt im Büro unterschreiben lassen? Damit bestätigen Sie, dass {{ $signer->name }} vor Ihnen sitzt und Sie die Identität geprüft haben (z. B. Ausweis). Das wird mit Ihrem Namen protokolliert.">
+                            @csrf
+                            <input type="hidden" name="vor_ort" value="1">
+                            <button type="submit" class="btn btn-sm btn-emerald">🖊 Jetzt im Büro unterschreiben</button>
+                        </form>
+                    </div>
+                    @endcan
                 @endif
             </div>
         </div>
@@ -316,6 +337,14 @@ window.__h["sigInternShow"] = function () {
                 @csrf
                 <button type="submit" class="btn btn-emerald" style="width:100%;" @disabled((bool) $blockers)>Zur Unterschrift senden</button>
             </form>
+            {{-- OHNE E-MAIL (Betreiber-Meldung 19.11.2026): der Kunde sitzt im
+                 Buero oder bekommt den Link per WhatsApp. --}}
+            <form method="POST" action="{{ route('admin.signatures.send', $signature->id) }}"
+                  data-confirm="Ohne E-Mail bereitstellen? Es geht keine E-Mail raus - danach beim Unterzeichner einen Link für WhatsApp erzeugen oder direkt im Büro unterschreiben lassen.">
+                @csrf
+                <input type="hidden" name="ohne_mail" value="1">
+                <button type="submit" class="btn btn-sm btn-ghost" style="width:100%;" @disabled((bool) $blockers)>📱 Ohne E-Mail bereitstellen (WhatsApp / vor Ort)</button>
+            </form>
         @endif
 
         @if($signature->acceptsSignatures())
@@ -340,6 +369,28 @@ window.__h["sigInternShow"] = function () {
         @endif
         <a href="{{ route('admin.signatures.download', [$signature->id, 'original']) }}" class="btn btn-sm btn-ghost">Original-PDF</a>
         <a href="{{ route('admin.signatures.audit', $signature->id) }}" class="btn btn-sm btn-ghost">Audit-Protokoll</a>
+
+        {{-- ERNEUT ANFORDERN (Betreiber-Meldung 19.11.2026): falsch
+             unterschrieben, abgelaufen, abgelehnt, storniert. Der Vorgang
+             hier bleibt als Nachweis stehen; die neue Anfrage entsteht aus
+             demselben ORIGINAL mit denselben Unterzeichnern und Feldern. --}}
+        @php($ersatz = $signature->replacedBy)
+        @if($ersatz && $ersatz->status !== 'cancelled')
+            <a href="{{ route('admin.signatures.show', $ersatz->id) }}" class="btn btn-sm btn-ghost">→ Neue Anfrage öffnen ({{ $ersatz->statusLabel() }})</a>
+        @else
+            @can('reissue', $signature)
+            <form method="POST" action="{{ route('admin.signatures.reissue', $signature->id) }}"
+                  data-confirm="{{ $signature->isOpen() ? 'Neue Anfrage anlegen? Dieser Vorgang wird dabei storniert, der bisherige Link funktioniert nicht mehr.' : 'Neue Anfrage aus demselben Original anlegen? Dieser Vorgang bleibt als Nachweis unverändert erhalten.' }}">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-ghost" style="width:100%;">🔁 Erneut zur Unterschrift anfordern</button>
+            </form>
+            @endcan
+        @endif
+        @if($signature->replaces)
+            <div class="muted-sm">Ersetzt die frühere Anfrage
+                <a href="{{ route('admin.signatures.show', $signature->replaces->id) }}">vom {{ $signature->replaces->created_at?->lokal()->format('d.m.Y') }}</a>.
+            </div>
+        @endif
 
         {{-- ZWEI VERSCHIEDENE DINGE, bewusst nicht ein Knopf:
              LOESCHEN gibt es nur fuer den Entwurf - dort hat noch niemand

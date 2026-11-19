@@ -142,8 +142,8 @@ class SignatureLocalizationTest extends TestCase
             $gerendert = $mail->render();
 
             return str_contains($gerendert, 'dir="rtl"')
-                && str_contains($gerendert, 'مستند للتوقيع')
-                && ! str_contains($gerendert, 'Dokument zur Unterschrift');
+                && str_contains($gerendert, 'عقدك جاهز للتوقيع')
+                && ! str_contains($gerendert, 'Ihr Vertrag ist bereit zur Unterschrift');
         });
     }
 
