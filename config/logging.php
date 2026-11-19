@@ -75,6 +75,17 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Jede Zustellung an /webhooks/whatsapp (KI-109). Eigene Datei,
+        // kurze Aufbewahrung: die Nutzlasten enthalten Rufnummern und
+        // Nachrichtentexte (DSGVO, Datenminimierung).
+        'whatsapp_webhook' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/whatsapp-webhook.log'),
+            'level' => 'debug',
+            'days' => env('WHATSAPP_WEBHOOK_LOG_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

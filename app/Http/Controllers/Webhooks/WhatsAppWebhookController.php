@@ -10,6 +10,7 @@ use App\Services\Messaging\Channels\WhatsAppAdapter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Webhook-Endpunkt fuer WhatsApp (Auftrag Abschnitt 21).
@@ -78,27 +79,84 @@ class WhatsAppWebhookController extends Controller
     {
         $roh = $request->getContent();
         $payload = json_decode($roh, true);
+        $hatSignatur = $request->headers->has('X-Hub-Signature-256');
+
+        // JEDE Zustellung wird protokolliert (19.11.2026, KI-109) - bevor
+        // irgendetwas geprueft wird. Vorher hinterliess ein abgewiesener
+        // Aufruf KEINE Spur: Meta meldete "fehlgeschlagen", im Portal stand
+        // nichts, und der Fehlercode einer Zustellmeldung war nirgends
+        // nachzulesen. Eigener Kanal mit kurzer Aufbewahrung (Inhalte sind
+        // personenbezogen).
+        $this->protokoll('info', 'Zustellung eingegangen', [
+            'ip' => $request->ip(),
+            'signatur' => $hatSignatur ? 'vorhanden' : 'fehlt',
+            'laenge' => strlen($roh),
+            'payload' => is_array($payload) ? $payload : mb_substr($roh, 0, 2000),
+        ]);
 
         if (! is_array($payload)) {
             return response('', 200);
         }
 
-        // Das Konto steht IN der Nutzlast (Rufnummern-Kennung) - so findet
-        // auch bei mehreren Nummern jede Zustellung ihr Konto. Eine
-        // Zustellung kann Ereignisse MEHRERER eigener Nummern tragen; jede
-        // Nummer bekommt ihren eigenen Teil (KI-031), sonst landeten alle
-        // beim Konto der ersten.
+        // Fehlgeschlagene Zustellmeldungen als eigene, lesbare Zeile:
+        // Fehlercode, Titel, Meldung, Details, Empfaenger.
+        foreach (self::fehlgeschlageneStatus($payload) as $fehler) {
+            $this->protokoll('warning', 'Zustellmeldung failed', $fehler);
+        }
+
         $konten = $this->accounts();
+        $teile = WhatsAppAdapter::splitByPhoneNumberId($payload);
+
+        // Zustellungen OHNE Rufnummern-Kennung (z. B. account_update,
+        // message_template_status_update) hatten bisher kein Konto und
+        // endeten deshalb mit 403 - Meta wiederholt solche Zustellungen
+        // und kann den Webhook bei anhaltenden Fehlern abschalten. Sie
+        // werden nur quittiert, wenn die Signatur stimmt; verarbeitet wird
+        // daraus nichts.
+        if ($teile === []) {
+            $quelle = $adapter->signaturPruefung($roh, $request->headers->all(), $konten->first());
+            $this->protokoll($quelle ? 'info' : 'warning', 'Zustellung ohne Rufnummern-Kennung', [
+                'signatur_gueltig' => $quelle !== null,
+            ]);
+
+            return response('', $quelle ? 200 : 403);
+        }
+
         $angenommen = false;
 
-        foreach (WhatsAppAdapter::splitByPhoneNumberId($payload) as $phoneId => $teil) {
+        foreach ($teile as $phoneId => $teil) {
             $account = $konten->firstWhere(fn (ChannelAccount $a) => $a->credential('phone_number_id') === (string) $phoneId);
 
             // ERST PRUEFEN, DANN SPEICHERN: eine gefaelschte Nachricht darf
             // nie in einer Kundenakte landen. Ohne passendes Konto gibt es
-            // kein App-Secret - also keine Pruefung und damit keine Annahme.
-            if (! $account || ! $adapter->verifyWebhook($roh, $request->headers->all(), $account)) {
+            // keine Zuordnung - also keine Annahme.
+            if (! $account) {
+                $this->protokoll('warning', 'Abgewiesen: kein aktives Konto fuer diese Rufnummern-Kennung', [
+                    'phone_number_id' => (string) $phoneId,
+                    'bekannte_kennungen' => $konten->map(fn (ChannelAccount $a) => $a->credential('phone_number_id'))->values()->all(),
+                ]);
+
                 continue;
+            }
+
+            $quelle = $adapter->signaturPruefung($roh, $request->headers->all(), $account);
+            if ($quelle === null) {
+                $this->protokoll('warning', 'Abgewiesen: Signatur ungueltig', [
+                    'phone_number_id' => (string) $phoneId,
+                    'konto_id' => $account->id,
+                    'signatur' => $hatSignatur ? 'vorhanden, passt weder zum Konto- noch zum Server-App-Secret' : 'fehlt',
+                    'konto_hat_app_secret' => (bool) $account->credential('app_secret'),
+                    'server_hat_app_secret' => (string) config('services.meta.app_secret') !== '',
+                ]);
+
+                continue;
+            }
+
+            if ($quelle === 'server') {
+                // Nur ein Hinweis: das Konto traegt ein veraltetes Secret.
+                $this->protokoll('warning', 'Signatur passt nur zum Server-App-Secret - App-Secret am Konto ist veraltet', [
+                    'konto_id' => $account->id,
+                ]);
             }
 
             // Die eigentliche Arbeit laeuft asynchron.
@@ -107,6 +165,49 @@ class WhatsAppWebhookController extends Controller
         }
 
         return response('', $angenommen ? 200 : 403);
+    }
+
+    /**
+     * Alle Zustellmeldungen mit status "failed", reduziert auf das, was
+     * zur Fehlersuche gebraucht wird.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public static function fehlgeschlageneStatus(array $payload): array
+    {
+        $ergebnis = [];
+        foreach (($payload['entry'] ?? []) as $entry) {
+            foreach (($entry['changes'] ?? []) as $change) {
+                foreach (($change['value']['statuses'] ?? []) as $status) {
+                    if (($status['status'] ?? null) !== 'failed') {
+                        continue;
+                    }
+                    $ergebnis[] = [
+                        'message_id' => $status['id'] ?? null,
+                        'recipient_id' => $status['recipient_id'] ?? null,
+                        'timestamp' => $status['timestamp'] ?? null,
+                        'errors' => array_map(fn ($e) => [
+                            'code' => $e['code'] ?? null,
+                            'title' => $e['title'] ?? null,
+                            'message' => $e['message'] ?? null,
+                            'details' => $e['error_data']['details'] ?? null,
+                        ], is_array($status['errors'] ?? null) ? $status['errors'] : []),
+                    ];
+                }
+            }
+        }
+
+        return $ergebnis;
+    }
+
+    /** Das Protokollieren darf die Annahme NIE scheitern lassen. */
+    private function protokoll(string $stufe, string $text, array $kontext): void
+    {
+        try {
+            Log::channel('whatsapp_webhook')->log($stufe, '[WhatsApp-Webhook] '.$text, $kontext);
+        } catch (\Throwable) {
+            // bewusst geschluckt
+        }
     }
 
     /** @return Collection<int,ChannelAccount> */
