@@ -3796,6 +3796,21 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   entfernt). Ein vom MITARBEITER vorgegebener Text (Vermerk im Vertrag)
   ist noch NICHT gebaut - das Textfeld fuellt der Unterzeichner.
   Tests: `SignaturErgaenzenTest`.
+- **Mehrere Personen, EINE E-Mail-Adresse** (Nachtrag 19.11.2026, KI-112):
+  Ehepaar mit einem Postfach - zwei gleich aussehende Einladungen, und auf
+  der Unterschreiben-Seite stand nicht, WER unterschreibt und wo die andere
+  Person unterschreibt. `SignatureSigner::teiltAdresseMit()` (Gross-/
+  Kleinschreibung egal) ist die EINE Pruefung. Bei mehr als einem
+  Unterzeichner: Kasten "Sie unterschreiben als: NAME" mit Liste aller
+  Personen und Zustand; die Stellen der ANDEREN erscheinen grau mit Namen
+  ("Hier unterschreibt X", nicht anklickbar - geliefert werden nur Name,
+  Zustand, Position). Bei geteilter Adresse zusaetzlich: Name im BETREFF
+  (schon in der Postfach-Liste unterscheidbar), Warnhinweis "dieser Link
+  ist NUR fuer NAME", auf der Fertig-Seite "als Naechstes unterschreibt X -
+  eigene E-Mail an dieselbe Adresse", in der Beraterwelt "Gleiche E-Mail
+  wie X". Jede Person behaelt ihren EIGENEN Link - es gibt bewusst keinen
+  "weiter zur naechsten Person"-Knopf, sonst unterschriebe eine Person fuer
+  beide. Tests: `SignaturMehrerePersonenTest`.
 
 ### Die Unternehmenssignatur ist eine Signatur, kein Logo (Betreiber-Meldung 14.09.2026)
 

@@ -150,6 +150,25 @@ class SignatureSigner extends Model
         return $this->status === self::DECLINED;
     }
 
+    /**
+     * Die ANDEREN Unterzeichner derselben Anfrage, die dieselbe E-Mail-
+     * Adresse tragen (Betreiber-Meldung 19.11.2026: Ehepaar mit einem
+     * Postfach). Dann landen zwei fast gleiche Einladungen im selben
+     * Postfach, und ohne Hinweis unterschreibt eine Person beide Male oder
+     * an den Stellen der anderen. Gross-/Kleinschreibung zaehlt nicht.
+     *
+     * @param  iterable<SignatureSigner>  $alle  alle Unterzeichner der Anfrage
+     * @return \Illuminate\Support\Collection<int, SignatureSigner>
+     */
+    public function teiltAdresseMit(iterable $alle): \Illuminate\Support\Collection
+    {
+        $adresse = mb_strtolower(trim((string) $this->email));
+
+        return collect($alle)->filter(fn (SignatureSigner $s) => (string) $s->id !== (string) $this->id
+            && $adresse !== ''
+            && mb_strtolower(trim((string) $s->email)) === $adresse)->values();
+    }
+
     /** Steht noch aus (weder unterschrieben noch abgelehnt)? */
     public function isPending(): bool
     {

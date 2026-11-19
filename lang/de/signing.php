@@ -196,4 +196,16 @@ return [
     'mail_whatsapp_hint' => 'Haben Sie eine Frage oder ist etwas unklar? Schreiben Sie uns einfach per WhatsApp - wir erklären Ihnen gern jedes Detail.',
     'mail_whatsapp_button' => 'Frage per WhatsApp stellen',
     'whatsapp_link_text' => "Hallo :name, wie besprochen hier Ihr Vertrag „:title“ zur Unterschrift:\n:url\n\nSie können direkt auf dem Handy mit dem Finger unterschreiben. Bei Fragen schreiben Sie uns einfach hier. Ihr Dienstly24 Team",
+    // Mehrere Personen, eine E-Mail-Adresse (Betreiber-Meldung 19.11.2026)
+    'you_sign_as' => 'Sie unterschreiben als: :name',
+    'several_signers' => 'Dieses Dokument unterschreiben :count Personen. Ihre Stellen sind grün markiert, die Stellen der anderen Personen grau mit deren Namen - dort unterschreiben Sie bitte nicht.',
+    'signer_you' => 'Sie',
+    'signer_state_signed' => 'hat unterschrieben',
+    'signer_state_open' => 'noch offen',
+    'shared_email_warning' => 'Wichtig: An Ihre E-Mail-Adresse gehen mehrere Einladungen - je Person eine eigene. Dieser Link ist NUR für :name. Bitte lassen Sie jede Person selbst über ihre eigene E-Mail unterschreiben.',
+    'other_signs_here' => 'Hier unterschreibt :name',
+    'mail_for_person' => 'Diese Einladung ist für: :name',
+    'mail_shared_hint' => 'An diese E-Mail-Adresse gehen mehrere Einladungen zum selben Dokument - je Person eine eigene. Bitte öffnen Sie für jede Person ihre eigene E-Mail, damit jede nur an ihren eigenen Stellen unterschreibt.',
+    'mail_subject_for' => ':subject – für :name',
+    'done_next_same_email' => 'Als Nächstes unterschreibt :name. Dafür kommt gleich eine eigene E-Mail an dieselbe Adresse - bitte diese öffnen und :name selbst unterschreiben lassen.',
 ];

@@ -42,11 +42,23 @@ class SignatureInvitationMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: (string) ($this->isReminder
-                ? __('signing.mail_subject_reminder')
-                : __('signing.mail_subject_invitation')),
-        );
+        $betreff = (string) ($this->isReminder
+            ? __('signing.mail_subject_reminder')
+            : __('signing.mail_subject_invitation'));
+        // GLEICHE ADRESSE, MEHRERE PERSONEN (Betreiber-Meldung 19.11.2026):
+        // zwei sonst gleichlautende Mails im selben Postfach unterscheiden
+        // sich erst am Namen im Betreff - schon in der Postfach-Liste.
+        if ($this->teiltAdresse()) {
+            $betreff = (string) __('signing.mail_subject_for', ['subject' => $betreff, 'name' => $this->signer->name]);
+        }
+
+        return new Envelope(subject: $betreff);
+    }
+
+    /** Gehen an diese Adresse weitere Einladungen zum selben Dokument? */
+    private function teiltAdresse(): bool
+    {
+        return $this->signer->teiltAdresseMit($this->signatureRequest->signers()->get())->isNotEmpty();
     }
 
     public function content(): Content
@@ -56,6 +68,8 @@ class SignatureInvitationMail extends Mailable
             // Der Ansprechpartner (Betreiber-Meldung 19.11.2026): ein Name
             // macht die Mail einordenbar. Per Abfrage statt Relation - die
             // Anfrage kommt aus Schleifen, in denen nichts vorgeladen ist.
+            'mehrerePersonen' => $this->signatureRequest->signers()->count() > 1,
+            'teiltAdresse' => $this->teiltAdresse(),
             'ansprechpartner' => $this->signatureRequest->created_by === null
                 ? null
                 : $this->signatureRequest->creator()->value('name'),

@@ -192,6 +192,10 @@ window.__h["sigInternShow"] = function () {
                     {{ $signer->hasSigned() ? '✓' : ($signer->hasDeclined() ? '✕' : '⏳') }} {{ $signer->name }}
                 </div>
                 <div class="muted-sm">{{ $signer->email }} · Position {{ $signer->signing_order }} · {{ $signer->localeLabel() }}</div>
+                @php($gleicheAdresse = $signer->teiltAdresseMit($signers))
+                @if($gleicheAdresse->isNotEmpty())
+                <div class="muted-sm" style="color:#8A5D00;">✉ Gleiche E-Mail wie {{ $gleicheAdresse->pluck('name')->implode(', ') }} - jede Person bekommt eine eigene Einladung mit ihrem Namen im Betreff.</div>
+                @endif
                 <div class="muted-sm">
                     @if($signer->signed_at)
                         Unterschrieben {{ $signer->signed_at->lokal()->format('d.m.Y H:i') }} Uhr

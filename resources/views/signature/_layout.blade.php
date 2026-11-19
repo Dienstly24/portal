@@ -65,6 +65,11 @@ html[dir="rtl"] .fortschritt{text-align:right;}
            display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--emerald-ink);
            font-weight:700;cursor:pointer;text-align:center;overflow:hidden;padding:1px;}
 .feldmarke.fertig{border-style:solid;background:rgba(23,166,91,.22);}
+.feldmarke.fremd{border:2px dashed #9AA3A0;background:rgba(120,128,125,.14);color:var(--ink-soft);cursor:default;pointer-events:none;}
+.personenkarte .ich-bin{font-size:18px;font-weight:700;color:var(--emerald);}
+.personenliste{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;font-size:14px;}
+.personenliste li.ich{font-weight:600;}
+.personenliste .muted{color:var(--ink-soft);font-weight:400;}
 .zeichenflaeche{width:100%;height:clamp(200px,38vh,320px);border:2px dashed var(--line);border-radius:12px;background:#fff;
                 touch-action:none;display:block;}
 /* --- Betrachter: Miniaturen + Dokument ------------------------------

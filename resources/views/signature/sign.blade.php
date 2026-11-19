@@ -34,8 +34,39 @@
         'z_offen' => __('signing.state_pending'),
         'z_teilweise' => __('signing.state_in_progress'),
         'z_fertig' => __('signing.state_completed'),
+        'fremd' => __('signing.other_signs_here', ['name' => ':name']),
+        'fremd_fertig' => ':name – '.__('signing.signer_state_signed'),
     ];
 @endphp
+
+{{-- MEHRERE PERSONEN (Betreiber-Meldung 19.11.2026): zuerst WER hier
+     unterschreibt - bei zwei Personen mit derselben E-Mail sehen beide
+     Einladungen fast gleich aus, und ohne diesen Kasten unterschreibt eine
+     Person an den Stellen der anderen. --}}
+@if(($mitunterzeichner ?? collect())->count() > 1)
+<div class="karte personenkarte">
+    <div class="ich-bin">✍ {{ __('signing.you_sign_as', ['name' => $signer->name]) }}</div>
+    @if(($teiltAdresse ?? collect())->isNotEmpty())
+    <div class="hinweis hinweis-warn" style="margin:10px 0 0;">{{ __('signing.shared_email_warning', ['name' => $signer->name]) }}</div>
+    @endif
+    <p class="lead" style="margin-top:10px;">{{ __('signing.several_signers', ['count' => $mitunterzeichner->count()]) }}</p>
+    <ul class="personenliste">
+        @foreach($mitunterzeichner as $person)
+        <li class="{{ (string) $person->id === (string) $signer->id ? 'ich' : '' }}">
+            <span>{{ $person->hasSigned() ? '✓' : ((string) $person->id === (string) $signer->id ? '✍' : '⏳') }}</span>
+            <strong>{{ $person->name }}</strong>
+            <span class="muted">
+                @if((string) $person->id === (string) $signer->id)
+                    ({{ __('signing.signer_you') }})
+                @else
+                    – {{ $person->hasSigned() ? __('signing.signer_state_signed') : __('signing.signer_state_open') }}
+                @endif
+            </span>
+        </li>
+        @endforeach
+    </ul>
+</div>
+@endif
 
 <div class="karte">
     <h1>{{ $signature->title }}</h1>
@@ -440,6 +471,7 @@ window.__h = window.__h || {};
     // wird. Sie sind anteilig gespeichert und liegen deshalb auf jedem
     // Bildschirm an derselben Stelle des Dokuments.
     var felder = @json($feldDaten);
+    var fremdeFelder = @json($fremdeFelder ?? []);
 
     function markiereFelder() {
         var alte = document.querySelectorAll('.feldmarke');
@@ -464,6 +496,21 @@ window.__h = window.__h || {};
                 var karte = ziel ? ziel.closest('.karte') : null;
                 if (karte) { karte.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
             });
+            seite.appendChild(marke);
+        });
+        // Stellen ANDERER Personen: grau, mit Namen, nicht anklickbar. Sie
+        // sagen "hier nicht" - ohne sie haelt der Kunde jede Linie im
+        // Dokument fuer seine.
+        fremdeFelder.forEach(function (feld) {
+            var seite = document.querySelector('[data-seite="' + feld.page + '"]');
+            if (!seite) { return; }
+            var marke = document.createElement('div');
+            marke.className = 'feldmarke fremd';
+            marke.style.left = (feld.x * 100) + '%';
+            marke.style.top = (feld.y * 100) + '%';
+            marke.style.width = (feld.width * 100) + '%';
+            marke.style.height = (feld.height * 100) + '%';
+            marke.textContent = (feld.signed ? texte.fremd_fertig : texte.fremd).replace(':name', feld.name);
             seite.appendChild(marke);
         });
     }

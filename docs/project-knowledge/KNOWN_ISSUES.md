@@ -24,6 +24,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-104 | LOW | security | "Ersatzcodes erneuern" pruefte den 2FA-Code ohne die gemeinsame Sperre und ohne Protokoll | FIXED |
 | KI-105 | LOW | security | Seiten mit Kundendaten ohne `no-store`: nach dem Abmelden per Zurueck-Taste wieder sichtbar | FIXED |
 | KI-106 | MEDIUM | ops/security | CI: Fremd-Actions mit Zugriff auf den SSH-Schluessel nur per Tag gepinnt (`appleboy/ssh-action@v1.2.5`), nicht per Commit-SHA | OPEN |
+| KI-112 | MEDIUM | usability | E-Signatur: bei zwei Unterzeichnern mit derselben E-Mail war nicht erkennbar, welche Einladung wem gehoert und wo welche Person unterschreibt | FIXED |
 | KI-111 | MEDIUM | usability | E-Signatur: ein fertig unterschriebenes Dokument liess sich nicht ergaenzen (zweiter Unterzeichner, vergessene Stelle, Textfeld) | FIXED |
 | KI-110 | MEDIUM | usability | E-Signatur: kein Weg, falsch Unterschriebenes neu anzufordern; Unterschrift nur ueber E-Mail-Link (kein WhatsApp-/Vor-Ort-Weg); Einladung wurde von Kunden fuer Betrug gehalten | FIXED |
 | KI-109 | HIGH | correctness | WhatsApp-Webhook: jede Zustellung lautlos 403, sobald das App-Secret am Konto vom aktuellen META_APP_SECRET abweicht; keine Protokollierung der Zustellungen | FIXED |
@@ -157,6 +158,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-112 - E-Signatur: mehrere Personen mit derselben E-Mail
+- **Category** usability · **Severity** MEDIUM · **Status** FIXED
+- **Location** `SignatureSigner::teiltAdresseMit`, `SignatureSigningController::{show,done}`, `SignatureInvitationMail`, Views `signature/{sign,done,_layout}`, `emails/signature_invitation`, `admin/signatures/show`, `lang/{de,ar,en}/signing.php`
+- **Description** Betreiber-Meldung 19.11.2026 (Vertrag mit zwei Personen, ein Postfach): beide Einladungen sahen gleich aus, die Unterschreiben-Seite nannte nur im Fliesstext den Namen und zeigte die Stellen der anderen Person gar nicht - der Kunde wusste nicht, wo er unterschreiben soll.
+- **Fix** Kasten "Sie unterschreiben als" mit allen Personen und Zustand, fremde Stellen grau mit Namen, Name im Betreff und Hinweis bei geteilter Adresse, Hinweis auf die naechste Person auf der Fertig-Seite, Vermerk in der Beraterwelt.
+- **Test** `SignaturMehrerePersonenTest`
 
 ### KI-111 - E-Signatur: unterschriebenes Dokument ergaenzen
 - **Category** usability · **Severity** MEDIUM · **Status** FIXED
