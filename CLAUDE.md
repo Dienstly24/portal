@@ -3778,6 +3778,24 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   beendet -> Neu anfordern (Loeschen eines unterschriebenen Vorgangs bleibt
   ausgeschlossen).
 - Tests: `SignaturNeuAnfordernUndLinkTest`.
+- **Ergaenzen** (Nachtrag 19.11.2026, KI-111; `SignatureRequestService::
+  ergaenzen`, Route `admin.signatures.supplement`, Policy `supplement` =
+  nur ABGESCHLOSSEN): zweiter Kunde auf demselben Papier, vergessene
+  Stelle, fehlendes Textfeld. Das unterschriebene PDF wird NIE veraendert;
+  es wird BASIS eines neuen Entwurfs (`signature_requests.ergaenzt_id`,
+  bewusst NICHT `replaces_id` - der alte Vorgang wird nicht ersetzt, er
+  bleibt gueltig und steckt im neuen Dokument). Das Ergebnis ist wieder
+  eine Fortschreibung: Original -> erste Unterschriften -> Ergaenzung, die
+  ersten Bytes des neuen PDF sind das bisher unterschriebene (Test).
+  Unterzeichner werden uebernommen (nichts neu tippen), FELDER nicht - wer
+  nicht noch einmal unterschreibt, wird im Editor entfernt (sonst blockiert
+  "kein Feld gesetzt"). Eine weitere Ergaenzung erst, wenn die offene
+  abgeschlossen/storniert ist. ABGRENZUNG: eine FALSCH gesetzte
+  Unterschrift laesst sich nicht "loeschen" - dafuer ist "Neu anfordern"
+  (vom ORIGINAL, Felder werden uebernommen und im Editor verschoben/
+  entfernt). Ein vom MITARBEITER vorgegebener Text (Vermerk im Vertrag)
+  ist noch NICHT gebaut - das Textfeld fuellt der Unterzeichner.
+  Tests: `SignaturErgaenzenTest`.
 
 ### Die Unternehmenssignatur ist eine Signatur, kein Logo (Betreiber-Meldung 14.09.2026)
 

@@ -41,7 +41,7 @@ class SignatureRequest extends Model
         'signing_order', 'identity_check', 'consent_text',
         'document_type', 'reference', 'note',
         'sent_at', 'completed_at', 'cancelled_at', 'cancel_reason', 'expires_at', 'last_activity_at',
-        'replaces_id',
+        'replaces_id', 'ergaenzt_id',
     ];
 
     protected $casts = [
@@ -179,6 +179,27 @@ class SignatureRequest extends Model
     public function replacedBy(): HasOne
     {
         return $this->hasOne(self::class, 'replaces_id')->latest('created_at');
+    }
+
+    /**
+     * Der unterschriebene Vorgang, den diese Anfrage fortschreibt
+     * ("Ergaenzen"): seine Unterschriften stehen bereits im Dokument.
+     *
+     * @return BelongsTo<SignatureRequest, $this>
+     */
+    public function ergaenzt(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'ergaenzt_id');
+    }
+
+    /**
+     * Die Ergaenzungen dieses Vorgangs, juengste zuerst.
+     *
+     * @return HasMany<SignatureRequest, $this>
+     */
+    public function ergaenzungen(): HasMany
+    {
+        return $this->hasMany(self::class, 'ergaenzt_id')->latest('created_at');
     }
 
     /** @return BelongsTo<Customer, $this> */

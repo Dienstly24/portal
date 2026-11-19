@@ -600,6 +600,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->middleware('throttle:60,10')->name('signatures.link');
     Route::post('/signaturen/{id}/neu-anfordern', [AdminSignatureController::class, 'reissue'])
         ->middleware('throttle:30,10')->name('signatures.reissue');
+    Route::post('/signaturen/{id}/ergaenzen', [AdminSignatureController::class, 'supplement'])
+        ->middleware('throttle:30,10')->name('signatures.supplement');
     Route::post('/signaturen/{id}/neu-erzeugen', [AdminSignatureController::class, 'regenerate'])
         ->middleware('throttle:20,10')->name('signatures.regenerate');
     // Loeschen gibt es NUR fuer Entwuerfe - alles Versandte wird storniert,

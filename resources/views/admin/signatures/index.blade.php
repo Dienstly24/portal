@@ -126,6 +126,13 @@
                     @endcan
                 @elseif($signature->isCompleted())
                     <a href="{{ route('admin.signatures.download', [$signature->id, 'signed']) }}" class="btn btn-sm btn-ghost">PDF öffnen</a>
+                    @can('supplement', $signature)
+                    <form method="POST" action="{{ route('admin.signatures.supplement', $signature->id) }}"
+                          style="display:inline;" data-confirm="Ergänzung anlegen? Die vorhandenen Unterschriften bleiben im Dokument; danach können Sie einen weiteren Unterzeichner, eine vergessene Stelle oder ein Textfeld hinzufügen.">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-ghost" title="Weitere Unterschrift oder vergessene Stelle hinzufügen">➕ Ergänzen</button>
+                    </form>
+                    @endcan
                 @elseif($signature->acceptsSignatures())
                     <form method="POST" action="{{ route('admin.signatures.remind', $signature->id) }}"
                           style="display:inline;" data-confirm="Erinnerung an die offenen Unterzeichner senden?">

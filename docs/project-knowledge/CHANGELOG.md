@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 19.11.2026 - E-Signatur: unterschriebenes Dokument ergaenzen (KI-111)
+
+- **Task**: Betreiber-Meldung: nach dem Abschluss weiteren Kunden unterschreiben lassen, vergessene Stelle nachholen, Textfeld ergaenzen.
+- **Files Changed**: `app/Services/Signature/SignatureRequestService.php`, `app/Http/Controllers/Admin/SignatureController.php`, `app/Policies/SignatureRequestPolicy.php`, `app/Models/{SignatureRequest,SignatureEvent}.php`, `routes/web.php`, Views `admin/signatures/{index,show}`, neu `tests/Feature/SignaturErgaenzenTest.php`; `CLAUDE.md`, Wissensbasis, `docs/ANLEITUNG_SIGNATUREN_AR.md`.
+- **Database Changes**: `signature_requests.ergaenzt_id` (nullable, Index) - rein additiv.
+- **API Changes**: neue Route `admin.signatures.supplement`. `ROUTES_INVENTORY.md` muss mit `scripts/wissensbasis-routen.php` neu erzeugt werden.
+- **Potential Side Effects**: keine an bestehenden Vorgaengen - das unterschriebene PDF wird nur gelesen.
+- **Tests Performed**: in der Arbeitsumgebung NICHT ausfuehrbar (Composer-Downloads von GitHub blockiert) - nur `php -l`; Testlauf in CI.
+
 ## 19.11.2026 - E-Signatur: Neu anfordern, Link fuer WhatsApp / Unterschrift im Buero, Einladung mit WhatsApp-Bezug (KI-110)
 
 - **Task**: Betreiber-Meldung: falsch Unterschriebenes nicht neu anforderbar, kein WhatsApp-/Vor-Ort-Weg, Einladungs-Mail wirkt auf Kunden wie Betrug; arabische Mail fuer arabische Kunden.

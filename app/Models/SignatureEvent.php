@@ -93,6 +93,7 @@ class SignatureEvent extends Model
         'reissued' => 'Erneut zur Unterschrift angefordert',
         'link_created' => 'Unterschrifts-Link erzeugt (ohne E-Mail)',
         'onsite_identity_confirmed' => 'Identität vor Ort durch Mitarbeiter bestätigt',
+        'supplemented' => 'Ergänzung angelegt (weitere Unterschrift / weiteres Feld)',
     ];
 
     protected static function boot()
