@@ -44,7 +44,7 @@ class SignedPdfBuilder
      *                                            (signaturen:neu-erzeugen) - das
      *                                            Protokoll sagt es dann ausdruecklich
      */
-    public function build(SignatureRequest $request, ?\DateTimeInterface $neuErzeugt = null): array
+    public function build(SignatureRequest $request, ?\DateTimeInterface $neuErzeugt = null, bool $mitProtokoll = true): array
     {
         // Gestempelt wird auf der BASIS: dem Original, oder - wenn intern
         // unterschrieben wurde - dem Zwischenstand, der die internen
@@ -136,7 +136,11 @@ class SignedPdfBuilder
             ));
         }
 
-        $stamper->withProtocolPage('Signaturprotokoll', $this->protocolSections($request, $neuErzeugt));
+        // Die VORSCHAU eines laufenden Vorgangs (Beraterwelt) traegt KEINE
+        // Protokollseite: ein Protokoll gehoert nur an das fertige Dokument.
+        if ($mitProtokoll) {
+            $stamper->withProtocolPage('Signaturprotokoll', $this->protocolSections($request, $neuErzeugt));
+        }
 
         $pdf = $stamper->build();
 

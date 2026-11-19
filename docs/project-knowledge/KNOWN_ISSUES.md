@@ -24,6 +24,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-104 | LOW | security | "Ersatzcodes erneuern" pruefte den 2FA-Code ohne die gemeinsame Sperre und ohne Protokoll | FIXED |
 | KI-105 | LOW | security | Seiten mit Kundendaten ohne `no-store`: nach dem Abmelden per Zurueck-Taste wieder sichtbar | FIXED |
 | KI-106 | MEDIUM | ops/security | CI: Fremd-Actions mit Zugriff auf den SSH-Schluessel nur per Tag gepinnt (`appleboy/ssh-action@v1.2.5`), nicht per Commit-SHA | OPEN |
+| KI-113 | LOW | usability | E-Signatur-Liste: Aktionen-Spalte zu breit (Dokument abgeschnitten), Stil wich vom Rest ab, keine Vorschau beim Ueberfahren | FIXED |
 | KI-111 | MEDIUM | usability | E-Signatur: ein fertig unterschriebenes Dokument liess sich nicht ergaenzen (zweiter Unterzeichner, vergessene Stelle, Textfeld) | FIXED |
 | KI-110 | MEDIUM | usability | E-Signatur: kein Weg, falsch Unterschriebenes neu anzufordern; Unterschrift nur ueber E-Mail-Link (kein WhatsApp-/Vor-Ort-Weg); Einladung wurde von Kunden fuer Betrug gehalten | FIXED |
 | KI-109 | HIGH | correctness | WhatsApp-Webhook: jede Zustellung lautlos 403, sobald das App-Secret am Konto vom aktuellen META_APP_SECRET abweicht; keine Protokollierung der Zustellungen | FIXED |
@@ -157,6 +158,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-113 - E-Signatur-Liste: Darstellung und Vorschau
+- **Category** usability · **Severity** LOW · **Status** FIXED
+- **Location** `resources/views/admin/signatures/index.blade.php`, `Admin\SignatureController::preview`, `SignedPdfBuilder::build`, Route `admin.signatures.preview`
+- **Description** Betreiber-Meldung 19.11.2026 (Screenshot): bis zu fuenf flache Knoepfe je Zeile draengten die Dokumentspalte aus dem Bild; anders als in Kunden/Tickets kein •••-Menue; "Anzeigen" ohne Schnellvorschau wie im Rest des Systems.
+- **Fix** Neu gestaltete Liste (erhabene Knoepfe/Reiter, Chips, •••-Menue), Schnellvorschau beim Ueberfahren mit dem AKTUELLEN Stand (auch teilweise unterschrieben, im Speicher gestempelt, ohne Protokollseite).
+- **Test** `SignaturListeVorschauTest`
 
 ### KI-111 - E-Signatur: unterschriebenes Dokument ergaenzen
 - **Category** usability · **Severity** MEDIUM · **Status** FIXED

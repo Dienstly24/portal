@@ -20,6 +20,7 @@ use App\Services\Signature\SignaturePageRenderer;
 use App\Services\Signature\SignatureRequestService;
 use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureStorage;
+use App\Services\Signature\SignedPdfBuilder;
 use App\Support\Bildverarbeitung;
 use App\Support\Firmensignatur;
 use App\Support\QrCode;
@@ -27,6 +28,7 @@ use App\Support\SignatureFieldType;
 use App\Support\SignatureStatus;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
@@ -698,6 +700,49 @@ class SignatureController extends Controller
         return response($binary, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$name.'"',
+        ]);
+    }
+
+    /**
+     * VORSCHAU fuer die Liste (Betreiber-Meldung 19.11.2026: "beim
+     * Ueberfahren von Anzeigen sehen, was der Kunde wo unterschrieben hat").
+     *
+     * Fertig -> das unterschriebene PDF. Laufend und schon teilweise
+     * unterschrieben -> der aktuelle Stand, im SPEICHER gestempelt und ohne
+     * Protokollseite (gespeichert wird nichts, der Vorgang bleibt
+     * unberuehrt). Sonst die Basis (Original bzw. Zwischenstand mit internen
+     * Unterschriften). Inline, nie im Zwischenspeicher. Im Protokoll steht
+     * die Ansicht hoechstens einmal je Mitarbeiter und 10 Minuten - jedes
+     * Ueberfahren einzeln zu vermerken wuerde das Protokoll unlesbar machen.
+     */
+    public function preview(string $id)
+    {
+        $signature = $this->find($id);
+        Gate::authorize('download', $signature);
+        $signature->load(['fields', 'signers']);
+
+        $pdf = null;
+        if ($signature->isCompleted() && $signature->signed_path) {
+            $pdf = $this->storage->read($signature->signed_path);
+        } elseif ($signature->fields->contains(fn ($f) => $f->signature_signer_id !== null && $f->isFilled())) {
+            try {
+                $pdf = app(SignedPdfBuilder::class)->build($signature, null, mitProtokoll: false)['pdf'];
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+        $pdf ??= $this->storage->read($signature->basisPfad());
+        abort_if($pdf === null, 404, 'Die Datei ist nicht (mehr) vorhanden.');
+
+        if (Cache::add('signatur-vorschau:'.$signature->id.':'.auth()->id(), true, now()->addMinutes(10))) {
+            app(SignatureAuditService::class)->record($signature, 'downloaded', description: 'Vorschau in der Beraterwelt');
+        }
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Vorschau-'.Str::slug($signature->title).'.pdf"',
+            'Cache-Control' => 'no-store, private',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

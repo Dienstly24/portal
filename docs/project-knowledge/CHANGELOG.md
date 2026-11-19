@@ -8,6 +8,14 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 19.11.2026 - E-Signatur: Liste neu gestaltet + Vorschau beim Ueberfahren (KI-113)
+
+- **Task**: Betreiber-Meldung: Liste unprofessionell (abgeschnitten, zu viele Knoepfe), Vorschau beim Ueberfahren von "Anzeigen" wie im Rest des Systems.
+- **Files Changed**: `resources/views/admin/signatures/index.blade.php`, `app/Http/Controllers/Admin/SignatureController.php`, `app/Services/Signature/SignedPdfBuilder.php`, `routes/web.php`, neu `tests/Feature/SignaturListeVorschauTest.php`; `CLAUDE.md`, Wissensbasis, `docs/ANLEITUNG_SIGNATUREN_AR.md`.
+- **Database Changes**: keine. **API Changes**: neue Route `admin.signatures.preview` (`ROUTES_INVENTORY.md` neu erzeugen).
+- **Potential Side Effects**: Vorschau eines laufenden Vorgangs stempelt im Speicher (Rechenzeit wie ein Abschluss ohne Protokoll); gedrosselt 120/min.
+- **Tests Performed**: in der Arbeitsumgebung NICHT ausfuehrbar (Composer-Downloads von GitHub blockiert) - nur `php -l`; Testlauf in CI.
+
 ## 19.11.2026 - E-Signatur: unterschriebenes Dokument ergaenzen (KI-111)
 
 - **Task**: Betreiber-Meldung: nach dem Abschluss weiteren Kunden unterschreiben lassen, vergessene Stelle nachholen, Textfeld ergaenzen.
