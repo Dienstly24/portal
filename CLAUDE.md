@@ -936,7 +936,8 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   App-Secret des Kontos ODER `META_APP_SECRET` (dieselbe Meta-App; nach
   einem Secret-Wechsel stand am Konto die alte Kopie und JEDE Zustellung
   endete still mit 403). Signierte Zustellungen ohne Rufnummern-Kennung
-  werden quittiert (200), nicht abgewiesen. Test: `WhatsAppWebhookProtokollTest`.
+  oder fuer eine im Portal NICHT angebundene Nummer werden protokolliert
+  und quittiert (200), aber nicht verarbeitet. Test: `WhatsAppWebhookProtokollTest`.
 - **FIN ohne I/O/Q** (Betreiber-Meldung 18.11.2026, KI-108): bei der
   Erfassung wurde "O" statt der Ziffer "0" getippt. Eine FIN (ISO 3779)
   enthaelt NIE I, O oder Q - `App\Rules\Fahrgestellnummer` lehnt solche

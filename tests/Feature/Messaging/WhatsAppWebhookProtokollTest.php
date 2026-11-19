@@ -159,6 +159,25 @@ class WhatsAppWebhookProtokollTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    /**
+     * Nummer nicht im Portal angebunden (kein Konto): signierte Zustellung
+     * wird protokolliert und quittiert, aber NICHT verarbeitet; unsigniert 403.
+     */
+    public function test_ohne_konto_wird_signierte_zustellung_protokolliert_und_quittiert(): void
+    {
+        Queue::fake();
+        config(['services.meta.app_secret' => self::NEU]);
+        $datei = $this->protokollDatei();
+
+        $this->senden($this->fehlgeschlagen(), self::NEU)->assertOk();
+        $this->senden($this->fehlgeschlagen(), 'angreifer')->assertStatus(403);
+
+        Queue::assertNothingPushed();
+        $inhalt = (string) file_get_contents($datei);
+        $this->assertStringContainsString('Kein aktives Konto', $inhalt);
+        $this->assertStringContainsString('"code":131047', $inhalt);
+    }
+
     public function test_fehlgeschlagene_status_werden_herausgezogen(): void
     {
         $liste = WhatsAppWebhookController::fehlgeschlageneStatus($this->fehlgeschlagen());

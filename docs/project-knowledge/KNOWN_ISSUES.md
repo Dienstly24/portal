@@ -160,7 +160,7 @@ und PHPStan) auf `main` gruen ist.
 
 - **Gemeldet 19.11.2026**: Zustellmeldungen von Meta ("statuses", "failed") waren im Portal nicht auffindbar.
 - **Ursache**: (1) `/webhooks/whatsapp` protokollierte nichts - eine abgewiesene Zustellung hinterliess keine Spur. (2) Die Signatur wurde NUR mit der beim Embedded Signup kopierten `app_secret` des Kontos geprueft; wird das Secret bei Meta neu erzeugt und nur in der `.env` nachgezogen, endet jede Zustellung mit 403. (3) Signierte Zustellungen ohne `phone_number_id` (account_update u. a.) endeten immer mit 403 - Meta kann den Webhook bei anhaltenden Fehlern abschalten.
-- **Fix**: eigener Log-Kanal `whatsapp_webhook` (`storage/logs/whatsapp-webhook-*.log`, 14 Tage) fuer jede Zustellung samt Abweisungsgrund und je fehlgeschlagener Zustellmeldung (code/title/message/details/recipient_id); Signatur gilt mit Konto- ODER Server-App-Secret derselben Meta-App; signierte Zustellungen ohne Kennung werden quittiert. Test: `WhatsAppWebhookProtokollTest`.
+- **Fix**: eigener Log-Kanal `whatsapp_webhook` (`storage/logs/whatsapp-webhook-*.log`, 14 Tage) fuer jede Zustellung samt Abweisungsgrund und je fehlgeschlagener Zustellmeldung (code/title/message/details/recipient_id); Signatur gilt mit Konto- ODER Server-App-Secret derselben Meta-App; signierte Zustellungen ohne Kennung oder ohne angebundenes Konto werden protokolliert und quittiert (nicht verarbeitet). Befund Produktion 19.11.2026: KEIN ChannelAccount vorhanden, keine POST-Zustellung im nginx-Log 10-12 UTC. Test: `WhatsAppWebhookProtokollTest`.
 - **Status**: FIXED
 
 ### KI-108 - FIN mit Buchstabe O statt Ziffer 0 angenommen

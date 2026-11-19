@@ -131,10 +131,17 @@ class WhatsAppWebhookController extends Controller
             // nie in einer Kundenakte landen. Ohne passendes Konto gibt es
             // keine Zuordnung - also keine Annahme.
             if (! $account) {
-                $this->protokoll('warning', 'Abgewiesen: kein aktives Konto fuer diese Rufnummern-Kennung', [
+                // Echt von Meta (Server-App-Secret), aber im Portal ist diese
+                // Nummer nicht angebunden: protokolliert ist die Nutzlast
+                // bereits; quittieren, damit Meta nicht endlos wiederholt und
+                // den Webhook nicht abschaltet. Verarbeitet wird NICHTS.
+                $echt = $adapter->signaturPruefung($roh, $request->headers->all(), null) !== null;
+                $this->protokoll('warning', 'Kein aktives Konto fuer diese Rufnummern-Kennung - nicht verarbeitet', [
                     'phone_number_id' => (string) $phoneId,
+                    'signatur_gueltig' => $echt,
                     'bekannte_kennungen' => $konten->map(fn (ChannelAccount $a) => $a->credential('phone_number_id'))->values()->all(),
                 ]);
+                $angenommen = $angenommen || $echt;
 
                 continue;
             }
