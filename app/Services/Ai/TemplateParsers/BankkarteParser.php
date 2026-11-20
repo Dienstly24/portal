@@ -33,6 +33,15 @@ class BankkarteParser implements DocumentTemplateParser
 
     private const KARTEN_MERKMALE = '/\b(girocard|giro\s*card|debit(?:karte)?|maestro|v\s?pay|visa|mastercard|bankcard|sparkassen?card|banking\s*card)\b/iu';
 
+    /**
+     * Aufdruck der Kartenrueckseite/-vorderseite "IBAN ... Gueltig bis":
+     * genau diese zwei Beschriftungen stehen auf jeder girocard. Am Foto der
+     * Berliner-Sparkasse-Karte (20.11.2026) fehlte im OCR-Text jedes
+     * Logo-Wort ("girocard"/"V PAY" sind Grafiken) - nur die Beschriftungen
+     * kamen an.
+     */
+    private const KARTEN_BESCHRIFTUNG = '/\bIBAN\b.{0,40}\b(?:G(?:[üu]|ue)ltig\s+bis|valid\s+thru)\b/iu';
+
     /** Woerter, die ein Schreiben/Formular verraten - dann ist es keine Karte. */
     private const DOKUMENT_WOERTER = [
         'sehr geehrte', 'mandat', 'lastschrift', 'rechnung', 'antrag', 'vertrag',
@@ -44,7 +53,8 @@ class BankkarteParser implements DocumentTemplateParser
 
     public function parse(string $text): ?array
     {
-        if (mb_strlen($text) > self::MAX_CHARS || ! preg_match(self::KARTEN_MERKMALE, $text)) {
+        if (mb_strlen($text) > self::MAX_CHARS
+            || (! preg_match(self::KARTEN_MERKMALE, $text) && ! preg_match(self::KARTEN_BESCHRIFTUNG, $text))) {
             return null;
         }
         $lower = mb_strtolower($text);
@@ -105,26 +115,41 @@ class BankkarteParser implements DocumentTemplateParser
     private function karteninhaber(string $text): ?string
     {
         $kandidaten = [];
+        $vorIban = null;
+        $letzte = null;
         foreach (preg_split('/\R/u', $text) ?: [] as $zeile) {
             $zeile = trim((string) preg_replace('/\s+/u', ' ', $zeile), " \t|.,");
-            if ($zeile === '' || preg_match(self::KEIN_NAME, $zeile)) {
+            if ($zeile === '') {
                 continue;
             }
-            if (! preg_match('/^\p{Lu}[\p{L}\'-]+(?: \p{Lu}[\p{L}\'-]+){1,3}$/u', $zeile)) {
-                continue;
+            // Die Karte druckt den Inhaber DIREKT ueber die Beschriftung
+            // "IBAN" - diese Stelle schlaegt jedes Rauschen weiter oben
+            // (Berliner-Sparkasse-Foto: "NER TR" aus dem Kartenmotiv).
+            if ($vorIban === null && preg_match('/^IBAN\b/iu', $zeile) && $letzte !== null) {
+                $vorIban = $letzte;
             }
-            // Jedes Wort mind. 2 Buchstaben (einzelne Buchstaben sind OCR-Rauschen).
-            if (preg_match('/(^| )\p{L}( |$)/u', $zeile)) {
-                continue;
+            $letzte = $this->namenskandidat($zeile);
+            if ($letzte !== null) {
+                $kandidaten[] = $letzte;
             }
-            $kandidaten[] = $zeile;
         }
         $kandidaten = array_values(array_unique($kandidaten));
-        if (count($kandidaten) !== 1) {
+        $name = $vorIban ?? (count($kandidaten) === 1 ? $kandidaten[0] : null);
+
+        return $name === null ? null : mb_convert_case(mb_strtolower($name), MB_CASE_TITLE);
+    }
+
+    /** Die Zeile als Name (2-4 Woerter, nur Buchstaben, kein Bankwort) - sonst null. */
+    private function namenskandidat(string $zeile): ?string
+    {
+        if (preg_match(self::KEIN_NAME, $zeile)
+            || ! preg_match('/^\p{Lu}[\p{L}\'-]+(?: \p{Lu}[\p{L}\'-]+){1,3}$/u', $zeile)
+            // Jedes Wort mind. 2 Buchstaben (einzelne Buchstaben sind OCR-Rauschen).
+            || preg_match('/(^| )\p{L}( |$)/u', $zeile)) {
             return null;
         }
 
-        return mb_convert_case(mb_strtolower($kandidaten[0]), MB_CASE_TITLE);
+        return $zeile;
     }
 
     private function bankName(string $text): ?string

@@ -97,6 +97,33 @@
     </div>
 </div>
 
+{{-- KI-Kosten (Betreiber-Vorgabe 20.11.2026): bezahlte KI nur nach Freigabe.
+     Eigener Marker (ki_kosten_form). --}}
+<div class="card">
+    <div class="card-title" style="margin-bottom:8px;">&#128176; KI-Kosten</div>
+    <input type="hidden" name="ki_kosten_form" value="1">
+    <label class="ki-toggle">
+        <input type="checkbox" name="{{ \App\Services\Ai\DocumentAnalyzer::SETTING_NUR_NACH_FREIGABE }}" value="1"
+               @checked(($settings[\App\Services\Ai\DocumentAnalyzer::SETTING_NUR_NACH_FREIGABE] ?? '1') === '1')>
+        <span><strong>Dokumente: KI-Analyse nur nach Freigabe</strong></span>
+    </label>
+    <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin:6px 0 12px;">
+        Dokumente werden immer zuerst kostenlos gelesen (Vorlagen, PDF-Text, OCR). Reicht das nicht,
+        ruft das System die kostenpflichtige KI <strong>nicht</strong> selbst auf, sondern markiert das
+        Dokument im Eingang mit „KI empfohlen – wartet auf Freigabe". Die KI läuft erst mit dem Knopf
+        „🤖 Mit KI analysieren" (nur Admin/Manager, mit Tageslimit). Ausgeschaltet: KI wie früher automatisch.
+    </div>
+    <label class="ki-toggle">
+        <input type="checkbox" name="{{ \App\Services\Ai\AiEmailClassifier::SETTING_AUTOMATISCH }}" value="1"
+               @checked(($settings[\App\Services\Ai\AiEmailClassifier::SETTING_AUTOMATISCH] ?? '0') === '1')>
+        <span><strong>E-Mail-Eingang: automatischer KI-Kategorievorschlag</strong></span>
+    </label>
+    <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-top:6px;">
+        Kostet bei jeder Mail, die die kostenlosen Regeln nicht einordnen, einen KI-Aufruf – und liefert nur einen
+        Vorschlag. Standard: aus.
+    </div>
+</div>
+
 {{-- Sicherheit: Zwei-Faktor-Pflicht fuer die Beraterwelt. Eigener
      Marker (security_form), damit ein anderes Formular die Schutzschicht
      nicht versehentlich abschaltet. --}}

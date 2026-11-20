@@ -34,6 +34,8 @@
                         @if($doc->ai_confidence !== null)<span class="badge" style="background:#EEF0F3;color:var(--ink-soft);">{{ $doc->ai_confidence }}% sicher</span>@endif
                         @if($doc->ai_source === 'ocr')<span class="badge" style="background:#FEF3C7;color:#92400E;" title="Ohne KI-Anbieter erkannt (Tesseract-OCR) - Ergebnis bitte besonders sorgfaeltig pruefen.">OCR, ohne KI</span>@endif
                         @if($doc->ai_source === 'template')<span class="badge" style="background:#E6F1FB;color:#185FA5;" title="Bekanntes Formular per fester Regel gelesen - gratis, ohne KI.">📄 Vorlage, gratis</span>@endif
+                        @if($doc->ai_source === 'ai')<span class="badge" style="background:#F3E8FF;color:#6B21A8;" title="Mit dem KI-Anbieter (Claude) gelesen - kostenpflichtig.">🤖 KI, kostenpflichtig</span>@endif
+                        @if($doc->ki_freigabe_offen)<span class="badge" style="background:#FEF6E7;color:#8A5A00;border:1px solid #E4A11B;" title="Kostenlos nicht vollstaendig gelesen. Die KI wurde NICHT automatisch aufgerufen - Freigabe ueber den Knopf 'Mit KI analysieren'.">💰 KI empfohlen – wartet auf Freigabe</span>@endif
                     @elseif($doc->ai_status === 'failed')
                         <span class="badge" style="background:#FBE9E9;color:#B3261E;">Analyse fehlgeschlagen</span>
                     @else
@@ -151,7 +153,7 @@
             {{-- Erzwingt bewusst die kostenpflichtige KI-Stufe (ueberspringt die
                  kostenlose OCR-Vorstufe). Nur Verwaltung (Kostenbremse) - der
                  Server prueft die Rolle und ein Tageslimit zusaetzlich. --}}
-            <button type="button" class="btn btn-ghost btn-sm" data-h-click="inbox-ki-analyse" data-doc="{{ $doc->id }}" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
+            <button type="button" class="btn {{ $doc->ki_freigabe_offen ? 'btn-emerald' : 'btn-ghost' }} btn-sm" data-h-click="inbox-ki-analyse" data-doc="{{ $doc->id }}" title="Kostenpflichtige KI-Analyse (Claude) - nur auf Ihre Freigabe">🤖 Mit KI analysieren</button>
             @endif
             @endif
             @if(in_array(auth()->user()->role, ['admin','manager'], true))
@@ -186,7 +188,7 @@ window.__h["8d1cd8c00a"] = function (event) { return confirm('Diese Datei als Ve
 window.__h["inbox-zuordnen"] = function (event) { docReview.open(this.dataset.doc, 'assign', null, null) };
 window.__h["inbox-neu"] = function (event) { docReview.open(this.dataset.doc, 'create', null, null) };
 window.__h["inbox-neu-analyse"] = function (event) { docReview.reanalyze(this.dataset.doc, this, false) };
-window.__h["inbox-ki-analyse"] = function (event) { docReview.reanalyze(this.dataset.doc, this, true) };
+window.__h["inbox-ki-analyse"] = function (event) { if (!window.confirm('Kostenpflichtige KI-Analyse (Claude) fuer dieses Dokument starten?\n\nDie kostenlose Erkennung ist bereits gelaufen. Nur fortfahren, wenn deren Ergebnis nicht reicht.')) { return; } docReview.reanalyze(this.dataset.doc, this, true) };
 window.__h["inbox-ocr-text"] = function (event) { docReview.showOcrText(this.dataset.doc, this) };
 </script>
 @endPushOnce

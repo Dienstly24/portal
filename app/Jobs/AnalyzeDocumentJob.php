@@ -90,7 +90,7 @@ class AnalyzeDocumentJob implements ShouldQueue
         // sonst ein ungueltiges ai_type schreiben und beim Kategorie-Zugriff
         // (AI_TYPES[$type]['category']) sogar den Job werfen. Unbekannt ->
         // 'sonstiges', der Mitarbeiter korrigiert den Typ, die Felder bleiben.
-        if (! isset(Document::AI_TYPES[$result['type'] ?? ''])) {
+        if (! isset(Document::AI_TYPES[$result['type']])) {
             $result['type'] = 'sonstiges';
         }
 
@@ -118,7 +118,11 @@ class AnalyzeDocumentJob implements ShouldQueue
                 'ai_status' => 'done',
                 'ai_type' => $result['type'],
                 'ai_confidence' => $result['confidence'],
-                'ai_source' => $result['source'] ?? 'ai',
+                'ai_source' => $result['source'],
+                // Nur nach Freigabe: die KI haette mehr lesen koennen, wurde
+                // aber bewusst NICHT aufgerufen. Eine erzwungene KI-Analyse
+                // (Freigabe) erledigt den Vermerk.
+                'ki_freigabe_offen' => ! empty($result['ki_empfohlen']),
                 'ai_summary' => $result['summary'],
                 'ai_extracted' => $extracted,
                 'ai_error' => null,
@@ -177,7 +181,7 @@ class AnalyzeDocumentJob implements ShouldQueue
                     $intake->linkMatchingContract($document, $customer);
                 }
             } elseif ($match && $match['tier'] === 'auto'
-                && ! in_array($result['type'] ?? null, Document::NEW_BUSINESS_TYPES, true)) {
+                && ! in_array($result['type'], Document::NEW_BUSINESS_TYPES, true)) {
                 // Reine Ablage-Dokumente (Ausweis, SEPA, Gesundheitskarte ...)
                 // duerfen bei eindeutigem Treffer automatisch zugeordnet werden.
                 // NEUES Geschaeft (Beratungsprotokoll, Vertrag, Auftrag) NICHT:

@@ -4,7 +4,9 @@ namespace App\Http\Requests\Admin;
 
 use App\Http\Controllers\LegalPageController;
 use App\Models\Contract;
+use App\Services\Ai\AiEmailClassifier;
 use App\Services\Ai\Assistant\AssistantSettings;
+use App\Services\Ai\DocumentAnalyzer;
 use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\Kfz\SfReferenceValidator;
 use App\Services\Messaging\ChannelRoutingService;
@@ -130,6 +132,9 @@ class UpdateSettingsRequest extends FormRequest
 
             // Marker-Felder der Teilformulare (siehe Controller).
             'security_form' => ['sometimes'],
+            'ki_kosten_form' => ['sometimes'],
+            DocumentAnalyzer::SETTING_NUR_NACH_FREIGABE => ['sometimes'],
+            AiEmailClassifier::SETTING_AUTOMATISCH => ['sometimes'],
             'ai_assistant_form' => ['sometimes'],
             'two_factor_required' => ['sometimes'],
             'kfz_form' => ['sometimes'],

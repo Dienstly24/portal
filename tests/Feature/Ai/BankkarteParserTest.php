@@ -62,6 +62,45 @@ class BankkarteParserTest extends TestCase
         $this->assertSame([], $r['data']['person']);
     }
 
+    /**
+     * Gemessener OCR-Text der Karte (20.11.2026, Daten ersetzt): Logos sind
+     * Grafiken und kommen NICHT als "girocard" an; Rauschen aus dem
+     * Kartenmotiv ("NER TR") sieht aus wie ein zweiter Name. Massgeblich ist
+     * die Zeile direkt ueber "IBAN".
+     */
+    public function test_gemessener_ocr_text_ohne_logo_wort_mit_motiv_rauschen(): void
+    {
+        $text = implode("\n", [
+            '5 Musterstadt A| IV!',
+            '- ——~ ae — ‏ام‎',
+            'u (a a ar -. |',
+            'ee ca',
+            'NER TR',
+            'Max Jonas Mustermann',
+            'IBAN - Gültig bis',
+            'DE89 3704 0044 0532 0130 00. 12/28',
+        ]);
+
+        $r = (new BankkarteParser)->parse($text);
+
+        $this->assertNotNull($r);
+        $this->assertSame('DE89370400440532013000', $r['data']['bank']['iban']);
+        $this->assertSame('Max Jonas Mustermann', $r['data']['bank']['account_holder']);
+    }
+
+    /** Der Server-Text: Name verstuemmelt, "8" als "B" gelesen - IBAN ja, Name NIE geraten. */
+    public function test_verstuemmelter_name_wird_nicht_uebernommen(): void
+    {
+        $text = "Jonas Mustermann 9 شفع ورور\n\nIBAN = Gültig bis\n\nDEB9 3704 0044 0532 0130 00. 12/23";
+
+        $r = (new BankkarteParser)->parse($text);
+
+        $this->assertNotNull($r);
+        $this->assertSame('DE89370400440532013000', $r['data']['bank']['iban']);
+        $this->assertArrayNotHasKey('account_holder', $r['data']['bank']);
+        $this->assertSame([], $r['data']['person']);
+    }
+
     public function test_echte_kette_aus_dem_container_liest_die_karte_gratis(): void
     {
         $r = app(DocumentTemplateParser::class)->parse($this->karte());

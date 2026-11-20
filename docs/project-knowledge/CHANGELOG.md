@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 20.11.2026 - KI nur nach Freigabe, Karten gratis lesen (KI-116, KI-117, KI-118, Nachtrag KI-115)
+
+- **Task**: Betreiber: "erst fragen, dann KI - Kosten sehr stark senken"; BIG-Gesundheitskarte und Berliner-Sparkasse-girocard liefen zur KI.
+- **Files Changed**: `DocumentAnalyzer`, `AnalyzeDocumentJob`, `Document` (Spalte `ki_freigabe_offen`), neue Migration `2026_11_20_100000_dokumente_ki_freigabe`, `TesseractTextExtractor`, `config/services.php` (`ocr.zweiter_lauf_unter_zeichen`), `GesundheitskarteParser`, `BankkarteParser`, `AiEmailClassifier`, `EmailWorkflowService`, `SettingsController`, `UpdateSettingsRequest`, Views `admin/settings`, `admin/partials/inbox_doc_row`; Tests `KiNurNachFreigabeTest`, `OcrKartenNachlesenTest`, `GesundheitskarteEhicOcrTest`, `BankkarteParserTest` (erweitert), fuenf Eskalations-Testklassen stellen den automatischen Betrieb ausdruecklich ein; `phpstan-baseline.neon` (-3, Ursache behoben); `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: `documents.ki_freigabe_offen` (boolean, Standard false). **API Changes**: keine Route.
+- **Potential Side Effects**: Dokumente, die bisher automatisch per KI gelesen wurden, bleiben beim kostenlosen Ergebnis und tragen "KI empfohlen – wartet auf Freigabe". Automatische Zuordnung haengt damit an der kostenlosen Erkennung. E-Mail-Kategorievorschlaege per KI entfallen, bis sie eingeschaltet werden. Kartenfotos kosten einen zweiten Tesseract-Lauf (nur bei < 600 Zeichen).
+- **Tests Performed**: neue Tests scheitern ohne den Fix (16 von 23); an den eingesandten Kartenfotos mit Tesseract 5.3 nachgemessen (Bild -> PDF -> OCR -> Parser, beide Karten vollstaendig gratis); volle Suite, `phpstan`, `pint`.
+- **Result**: erledigt.
+
 ## 20.11.2026 - Dokumenten-Eingang: Vorgang einem Bestandskunden zuordnen + Bankkarte gratis (KI-114, KI-115)
 
 - **Task**: Betreiber-Meldung: Unterlagen eines vorhandenen Kunden lassen sich nicht als ein Vorgang zuordnen ("Es existiert bereits ein aehnlicher Kunde ... Bitte stattdessen zuordnen" ohne Weg dorthin); pruefen, dass Dokumente gratis gelesen werden.

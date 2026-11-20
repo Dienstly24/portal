@@ -4,6 +4,7 @@ namespace App\Services\Ai;
 
 use App\Models\AiDecision;
 use App\Models\EmailMessage;
+use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -33,6 +34,14 @@ class AiEmailClassifier
     }
 
     /** @return AiDecision|null der protokollierte Vorschlag (nie direkt angewendet) */
+    /** Einstellung: automatischer KI-Kategorievorschlag fuer Mails ('1' an). Voreinstellung AUS. */
+    public const SETTING_AUTOMATISCH = 'email_ki_vorschlag_automatisch';
+
+    public static function automatischAktiv(): bool
+    {
+        return (string) SystemSetting::get(self::SETTING_AUTOMATISCH, '0') === '1';
+    }
+
     public function suggestCategory(EmailMessage $message): ?AiDecision
     {
         if (! $this->isEnabled() || $message->category !== 'sonstige') {

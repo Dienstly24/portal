@@ -96,6 +96,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - C `SmartDocumentUploadController` (Admin + Portal); S `Ai/DocumentAnalyzer`, `HeuristicDocumentClassifier`, `Ocr/*`, `DocumentIntake/DocumentIntakeService`; Job `AnalyzeDocumentJob`; Planer `documents:analyze-pending`, `documents:prune-unassigned`
 - V `admin/documents_inbox` (1636 Z.), `portal/documents`; T `documents`, `ai_decisions`
 - Tests `SmartDocumentUploadTest`, `DocumentIntake/*`, `DuplicateDetectionTest`, `DocumentCostOptimizationTest`, `HausnummerTrennungTest`, `OcrCheckCommandTest`
+- KI nur nach Freigabe (Einstellung `dokumente_ki_nur_nach_freigabe`, Standard AN): statt Eskalation Vermerk `documents.ki_freigabe_offen`, Freigabe per "Mit KI analysieren". KI-116, Test `KiNurNachFreigabeTest`
+- OCR-Kartenlauf: duenne Seite -> zweiter Tesseract-Lauf PSM 6 (`TesseractTextExtractor::kartenNachlesen`). KI-117, Test `OcrKartenNachlesenTest`
 - Vorgang/Mehrfachauswahl einem BESTEHENDEN Kunden zuordnen: `assignDocumentsToCustomer` (Route `admin.documents.assign_batch`); die Dubletten-Meldung der Neuanlage liefert den gefundenen Kunden mit (`duplicateResponse`, nur im Portfolio). KI-114, Test `BestandskundeStapelZuordnungTest`
 - Status **ACTIVE**
 

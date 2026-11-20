@@ -337,6 +337,9 @@ return [
         // UNTERHALB dieser Kantenlaenge werden vor der OCR verdoppelt -
         // gratis und deutlich genauer. 0 schaltet das Vergroessern ab.
         'upscale_below_px' => env('OCR_UPSCALE_BELOW_PX', 2600),
+        // Duenne Seite (Karte): zweiter Lauf als EIN Textblock (PSM 6), der
+        // Lauf mit mehr lesbaren Woertern gewinnt. 0 = aus.
+        'zweiter_lauf_unter_zeichen' => env('OCR_ZWEITER_LAUF_UNTER_ZEICHEN', 600),
         'text_layer' => env('OCR_TEXT_LAYER', env('OCR_ENABLED', false)),
         'text_layer_max_pages' => env('OCR_TEXT_LAYER_MAX_PAGES', 15),
         // Oberhalb dieser Zeichenzahl ist ein Dokument fuer die einfache

@@ -102,7 +102,10 @@ class EmailWorkflowService
         // KI-Stufe (Phase 3, Plan Abschnitt 12): nur wenn die Regeln
         // 'sonstige' liefern. Erzeugt ausschließlich einen VORSCHLAG in
         // ai_decisions (Freigabe-Gateway) - wendet nie selbst etwas an.
-        if ($category === 'sonstige') {
+        // Kostenbremse (Betreiber-Vorgabe 20.11.2026): der Aufruf kostet bei
+        // JEDER nicht erkannten Mail Geld - er laeuft nur noch, wenn der
+        // Betreiber ihn ausdruecklich einschaltet (Voreinstellung AUS).
+        if ($category === 'sonstige' && AiEmailClassifier::automatischAktiv()) {
             $this->aiClassifier->suggestCategory($message->fresh());
         }
     }

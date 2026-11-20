@@ -27,6 +27,9 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-113 | LOW | usability | E-Signatur-Liste: Aktionen-Spalte zu breit (Dokument abgeschnitten), Stil wich vom Rest ab, keine Vorschau beim Ueberfahren | FIXED |
 | KI-114 | HIGH | usability | Dokumenten-Eingang: Vorgang/Auswahl nicht einem Bestandskunden zuordenbar (Dubletten-Meldung ohne Weg), Name ausserhalb des Portfolios genannt | FIXED |
 | KI-115 | MEDIUM | cost | Bankkarte (girocard) lief mangels Vorlagen-Parser immer in die kostenpflichtige KI | FIXED |
+| KI-116 | HIGH | cost | Dokument-KI lief ungefragt bei jedem nicht vollstaendig kostenlos gelesenen Dokument; E-Mail-KI-Vorschlag ungefragt je unbekannter Mail; kostenpflichtige Analysen ohne Kennzeichen im Eingang | FIXED |
+| KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
+| KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-112 | MEDIUM | usability | E-Signatur: bei zwei Unterzeichnern mit derselben E-Mail war nicht erkennbar, welche Einladung wem gehoert und wo welche Person unterschreibt | FIXED |
 | KI-111 | MEDIUM | usability | E-Signatur: ein fertig unterschriebenes Dokument liess sich nicht ergaenzen (zweiter Unterzeichner, vergessene Stelle, Textfeld) | FIXED |
 | KI-110 | MEDIUM | usability | E-Signatur: kein Weg, falsch Unterschriebenes neu anzufordern; Unterschrift nur ueber E-Mail-Link (kein WhatsApp-/Vor-Ort-Weg); Einladung wurde von Kunden fuer Betrug gehalten | FIXED |
@@ -170,11 +173,36 @@ und PHPStan) auf `main` gruen ist.
 - **Test** `BestandskundeStapelZuordnungTest` (6 Faelle, alle scheitern ohne den Fix); in Chromium nachgestellt
 - **Discovered** 20.11.2026 (Betreiber)
 
+### KI-116 - KI-Analyse lief ungefragt (Kosten)
+- **Category** cost · **Severity** HIGH · **Status** FIXED
+- **Location** `DocumentAnalyzer::analyze`/`acceptTemplateOrEscalate`, `EmailWorkflowService::process`, `inbox_doc_row.blade.php`
+- **Description** Betreiber-Meldung 20.11.2026: "die Dateien werden automatisch mit KI analysiert - das System soll mich zuerst fragen, die Kosten sollen sehr stark sinken". Jedes Dokument, das die kostenlose Stufe nicht vollstaendig las (Heuristik nicht ausreichend, Vorlage ohne Vertragskern/Pflichtangabe), eskalierte still zu Claude. Zusaetzlich rief der E-Mail-Eingang fuer JEDE Mail der Kategorie "sonstige" die KI fuer einen blossen Kategorie-Vorschlag. Im Eingang trugen KI-Ergebnisse kein Kennzeichen - man sah nicht, was Geld gekostet hatte.
+- **Fix (20.11.2026)**: Einstellung `dokumente_ki_nur_nach_freigabe` (Standard AN): statt zu eskalieren bleibt das kostenlose Ergebnis, `documents.ki_freigabe_offen` + Abzeichen "💰 KI empfohlen – wartet auf Freigabe"; Freigabe = Knopf "Mit KI analysieren" (admin/manager, Tageslimit, jetzt mit Kostenrueckfrage). `email_ki_vorschlag_automatisch` (Standard AUS). Abzeichen "🤖 KI, kostenpflichtig". Einstellungen -> "KI-Kosten".
+- **Test** `KiNurNachFreigabeTest` (8 Faelle, alle scheitern ohne den Fix)
+- **Discovered** 20.11.2026 (Betreiber)
+
+### KI-117 - OCR verlor auf Kartenfotos fast alle Felder
+- **Category** cost/correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** `TesseractTextExtractor::extract`
+- **Description** An der eingesandten BIG-Gesundheitskarte (EHIC) und der girocard GEMESSEN (Tesseract 5.3, deu+eng+ara, Bild->PDF->pdftoppm wie im Eingang): die Seitenanalyse PSM 3 stuft die hellen Feldkaesten einer Karte auf farbigem Grund als Bild ein - von der EHIC kamen nur Kopfzeile und Kartennummer (147-187 Zeichen), Name/Geburtsdatum/Versichertennummer fehlten. Als EIN Block gelesen (PSM 6) kamen alle Felder an.
+- **Fix (20.11.2026)**: liefert der erste Lauf weniger als `OCR_ZWEITER_LAUF_UNTER_ZEICHEN` (600) Zeichen, folgt ein zweiter Lauf mit PSM 6; der Lauf mit mehr lesbaren Woertern gewinnt (keine Mischung, Gleichstand = erster Lauf). Briefe/Formulare (viel Text) sind nicht betroffen.
+- **Test** `OcrKartenNachlesenTest` (Ersatz-Tesseract je PSM)
+- **Discovered** 20.11.2026 (Betreiber)
+
+### KI-118 - Gesundheitskarten-Parser an OCR-Text der EHIC gescheitert
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** `GesundheitskarteParser`
+- **Description** Selbst mit gutem OCR-Text griff der Parser nicht: (1) Gatter verlangte die exakte Ueberschrift, sie kam als "KRANKENVERSICRERUNGSKARTE"; (2) hinter "3. Name" haengte Rauschen ("Bane ee |"), das VOR dem echten Namen der Folgezeile gewann; (3) Vornamen und Geburtsdatum stehen in EINER Zeile ("Max 01/02/1990") und fielen durch die Namenspruefung.
+- **Fix (20.11.2026)**: Gatter auch ueber verlesene Ueberschrift (KRANKENVERS...KARTE) oder die genormten Felder (Traeger-Kennnummer + Geburtsdatum); Wert = zuerst die Folgezeile, dann der Rest der Beschriftungszeile, jeweils nur wenn er zur Feldart passt; Namensteil = alles vor einem Datum.
+- **Test** `GesundheitskarteEhicOcrTest` (gemessener Text, Daten ersetzt)
+- **Discovered** 20.11.2026 (Betreiber)
+
 ### KI-115 - Bankkarte (girocard) lief immer in die kostenpflichtige KI
 - **Category** cost · **Severity** MEDIUM · **Status** FIXED
 - **Location** `app/Services/Ai/TemplateParsers` (fehlender Parser)
 - **Description** Betreiber-Meldung 20.11.2026: eine Bankkarte stand im Eingang ohne "Vorlage, gratis" - die Karte wurde per KI gelesen. Es gab keinen Vorlagen-Parser; `KontaktdatenBlockParser` verlangt zwei Signale (IBAN allein reicht nicht), die Heuristik kennt keine Bankkarte.
 - **Fix (20.11.2026)**: `BankkarteParser` (vor `KontaktdatenBlockParser`): kurzer Text, Kartenmerkmal (girocard/Debit/Maestro/V PAY/Visa/Mastercard), keine Formularwoerter, deutsche IBAN mit gueltiger Pruefziffer (OCR-Verwechslungen ueber `RepairsOcrText`). Karteninhaber nur bei GENAU einem Namenskandidaten. Typ `sepa_mandat` wie bisher.
+- **Nachtrag (20.11.2026, am Kartenfoto gemessen)**: Logos ("girocard", "V PAY") sind Grafiken und fehlen im OCR-Text - als Kartenmerkmal genuegen jetzt auch die Beschriftungen "IBAN ... Gueltig bis"; der Karteninhaber ist die Zeile DIREKT ueber "IBAN" (Rauschen aus dem Motiv wie "NER TR" galt sonst als zweiter Name). Ein verstuemmelter Name wird nie uebernommen.
 - **Test** `BankkarteParserTest` (inkl. echter Kette aus dem Container)
 - **Discovered** 20.11.2026 (Betreiber)
 

@@ -3,6 +3,7 @@
 namespace App\Services\Ai;
 
 use App\Models\Document;
+use App\Models\SystemSetting;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 use App\Services\Ocr\PdfTextLayerExtractor;
@@ -83,9 +84,54 @@ class DocumentAnalyzer
      *                      die Datei wirklich neu lesen - sonst kaeme nach
      *                      einer Parser-Verbesserung immer wieder das alte
      *                      Ergebnis zurueck.
-     * @return array{type: string, confidence: int, summary: string, title: ?string, data: array, source: string}|null
+     * @return array{type: string, confidence: int, summary: string, title: ?string, data: array, source: string, ki_empfohlen?: bool}|null
      * @throws \RuntimeException bei nicht analysierbarer Datei oder KI-Dienstfehler
      */
+    /**
+     * Einstellung (Betreiber-Vorgabe 20.11.2026, "Kosten sehr stark
+     * senken"): '1' = die KI laeuft NUR nach ausdruecklicher Freigabe
+     * ("Mit KI analysieren"); '0' = wie frueher automatisch eskalieren.
+     * VOREINSTELLUNG: nur nach Freigabe.
+     */
+    public const SETTING_NUR_NACH_FREIGABE = 'dokumente_ki_nur_nach_freigabe';
+
+    public static function kiNurNachFreigabe(): bool
+    {
+        // Ist die Einstellung nicht lesbar, gilt die SICHERE Seite: kein
+        // bezahlter Aufruf ohne Freigabe.
+        try {
+            return (string) SystemSetting::get(self::SETTING_NUR_NACH_FREIGABE, '1') !== '0';
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
+    /**
+     * Statt die KI aufzurufen: das kostenlose Ergebnis behalten und
+     * vermerken, dass die KI mehr lesen koennte. Ohne kostenloses Ergebnis
+     * entsteht ein ehrliches "nicht gelesen" - nie ein geratenes.
+     *
+     * @param array{type: string, confidence: int, summary: ?string, title: ?string, data: array, source: string}|null $frei
+     * @return array{type: string, confidence: int, summary: string, title: ?string, data: array, source: string, ki_empfohlen: bool}
+     */
+    private function wartetAufFreigabe(?array $frei): array
+    {
+        $hinweis = ' KI-Analyse empfohlen - wartet auf Freigabe (kostenpflichtig, Knopf "Mit KI analysieren").';
+        if ($frei === null) {
+            return [
+                'type' => 'sonstiges',
+                'confidence' => 0,
+                'summary' => 'Kostenlos nicht lesbar.'.$hinweis,
+                'title' => null,
+                'data' => ['person' => [], 'versicherung' => [], 'kfz' => [], 'gesundheit' => [], 'bank' => [], 'energie' => []],
+                'source' => 'ocr',
+                'ki_empfohlen' => true,
+            ];
+        }
+
+        return [...$frei, 'summary' => trim(($frei['summary'] ?? '').$hinweis), 'ki_empfohlen' => true];
+    }
+
     public function analyze(Document $document, bool $forceAi = false, bool $fresh = false): ?array
     {
         // Duplikat-Wiederverwendung (identischer Inhalts-Hash -> duplicate_of):
@@ -206,6 +252,11 @@ class DocumentAnalyzer
             return [...$ocrResult, 'source' => 'ocr'];
         }
 
+        // Nur nach Freigabe: nicht eskalieren, sondern vermerken.
+        if ($this->provider->isEnabled() && self::kiNurNachFreigabe()) {
+            return $this->wartetAufFreigabe($ocrResult !== null ? [...$ocrResult, 'source' => 'ocr'] : null);
+        }
+
         // Sonst zur KI eskalieren (falls konfiguriert). Bei sauberer
         // Textebene bekommt die KI den TEXT (billig) statt der Bild-/PDF-
         // Seiten - gleiche Genauigkeit, ein Bruchteil der Kosten.
@@ -290,6 +341,11 @@ class DocumentAnalyzer
         // bewusste Neu-Analyse (fresh) bzw. Erst-Uploads zahlen.
         if ($reuse !== null && ($reused = $reuse()) !== null) {
             return $kernDa($reused) ? $reused : $template;
+        }
+
+        // Nur nach Freigabe: das Vorlagen-Ergebnis bleibt, die KI wartet.
+        if (self::kiNurNachFreigabe()) {
+            return $this->wartetAufFreigabe($template);
         }
 
         // Textweg nur bei ZUVERLAESSIGEM Text: einer echten, nicht kaputt

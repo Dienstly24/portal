@@ -9,6 +9,7 @@ use App\Models\Contract;
 use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\Ai\ClaudeDocumentAiProvider;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
@@ -35,6 +36,17 @@ use Tests\TestCase;
 class SmartDocumentUploadTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Diese Klasse prueft die AUTOMATISCHE KI-Eskalation. Seit 20.11.2026
+     * laeuft die KI standardmaessig nur nach Freigabe - hier wird der
+     * automatische Betrieb (Schalter aus) ausdruecklich eingestellt.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        SystemSetting::set(DocumentAnalyzer::SETTING_NUR_NACH_FREIGABE, '0');
+    }
 
     private function makeCustomer(array $customerAttributes = [], array $userAttributes = []): Customer
     {
