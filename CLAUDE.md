@@ -1456,6 +1456,14 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Felder, die WIRKLICH gelesen wurden, und die Konfidenz sinkt (58 statt 70),
   wenn ein Signal fehlt - der Mitarbeiter sieht im Review, dass er
   hinschauen soll. Tests: `KontaktdatenBlockParserTest`.
+- **Bankkarte/girocard gratis** (`BankkarteParser`, 20.11.2026, KI-115):
+  die Karte lief mangels Parser IMMER in die KI. Greift nur bei KURZEM Text
+  + Kartenmerkmal (girocard/Debit/Maestro/V PAY/Visa/Mastercard) + deutscher
+  IBAN mit gueltiger Pruefziffer (OCR-Verwechslungen via `RepairsOcrText`);
+  Formularwoerter (Mandat, Lastschrift, Antrag ...) sperren ihn. Der
+  Karteninhaber wird Kontoinhaber + Person NUR bei genau einem
+  Namenskandidaten. Typ bleibt `sepa_mandat`. Steht vor
+  `KontaktdatenBlockParser`. Test `BankkarteParserTest`.
 - **eAT-Rueckseite + Arbeitsvertrag im Dokumenten-Eingang** (Betreiber-
   Vorgabe 29.07.2026): Der `AufenthaltstitelParser` liest jetzt auch die
   RUECKSEITE der Aufenthaltstitel-Karte - sie traegt keine Vorderseiten-
@@ -1793,6 +1801,22 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Liste als Dubletten-Warnung und wechselt per Klick in die Zuordnung.
   Portfolio-Scope wie ueberall: fremde Kunden werden nur als Anzahl
   gemeldet, nie mit Namen. Tests in `SmartDocumentUploadTest`.
+  **BESTANDSKUNDE BRINGT NEUE UNTERLAGEN** (Betreiber-Meldung 20.11.2026,
+  KI-114): ein Vorgang bzw. eine Mehrfachauswahl kannte nur "Neuen Kunden
+  anlegen" - das scheiterte am Dubletten-Schutz mit "Bitte stattdessen
+  zuordnen", ohne Weg dorthin (Vorschlaege im Vorgang waren nicht klickbar).
+  Jetzt: `assignDocumentsToCustomer` (Route `admin.documents.assign_batch`)
+  ordnet ALLE Dokumente in einem Schritt einem vorhandenen Kunden zu -
+  dieselbe Zusammenfuehrung wie die Neuanlage, Felder nur angekreuzt,
+  Vertrag nur auf Wunsch, sonst `linkMatchingContract` je Dokument.
+  Abbruch OHNE Teilzuordnung bei Namenskonflikt oder einem fremd
+  zugeordneten Dokument. Einstiege: Knopf "Alle N bestehendem Kunden
+  zuordnen" am Vorgang, "Bestehendem Kunden zuordnen" in der Auswahlleiste
+  (ab 1 Dokument), Klick auf einen Vorschlag im Vorgang. Die 422 der
+  Neuanlage (`duplicateResponse`) traegt den gefundenen Kunden als
+  `duplicate` mit, die Oberflaeche bietet "Alle Dokumente ... zuordnen"
+  an - liegt er ausserhalb des Portfolios, nennt die Meldung weder Name
+  noch ID (vorher stand der Name drin). Test `BestandskundeStapelZuordnungTest`.
 - **Vertrags-Duplikat-Schutz + Version History** (`DocumentIntakeService`,
   Betreiber-Vorgabe 23.07.2026): Ein neu importiertes Dokument fuer ein
   bereits erfasstes Fahrzeug/eine Police erzeugt KEIN Duplikat mehr.

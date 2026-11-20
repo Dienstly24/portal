@@ -96,6 +96,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - C `SmartDocumentUploadController` (Admin + Portal); S `Ai/DocumentAnalyzer`, `HeuristicDocumentClassifier`, `Ocr/*`, `DocumentIntake/DocumentIntakeService`; Job `AnalyzeDocumentJob`; Planer `documents:analyze-pending`, `documents:prune-unassigned`
 - V `admin/documents_inbox` (1636 Z.), `portal/documents`; T `documents`, `ai_decisions`
 - Tests `SmartDocumentUploadTest`, `DocumentIntake/*`, `DuplicateDetectionTest`, `DocumentCostOptimizationTest`, `HausnummerTrennungTest`, `OcrCheckCommandTest`
+- Vorgang/Mehrfachauswahl einem BESTEHENDEN Kunden zuordnen: `assignDocumentsToCustomer` (Route `admin.documents.assign_batch`); die Dubletten-Meldung der Neuanlage liefert den gefundenen Kunden mit (`duplicateResponse`, nur im Portfolio). KI-114, Test `BestandskundeStapelZuordnungTest`
 - Status **ACTIVE**
 
 ### F-021 Vorlagen-Parser (~44)
@@ -106,6 +107,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Krankenkassen-Bestaetigung (`MitgliedsbescheinigungParser`): Empfaenger ist der ARBEITGEBER, der Kunde steht im Fliesstext - die UMKEHRUNG der sonstigen Regel. Test `MitgliedsbescheinigungParserTest`
 - Familienversicherung (`FamilienversicherungParser`): ZWEI Bauformen in EINEM Parser (aelterer Fragebogen + KKH-Vordruck 0765 mit dreispaltiger Angehoerigen-Tabelle). Die Rolle kommt aus der Spalten-Kopfzeile, nie aus dem Nachnamen; Verknuepfung ueber `DocumentIntakeService::linkFamilienversicherungAngehoerige()`. Tests `FamilienversicherungFaveParserTest`, `FamilienversicherungAnlageTest`
 - Erkennung braucht mehr als EIN Stichwort: `GeburtsurkundeParser` verlangt zusaetzlich einen Standesamts-Beleg - das Wort "Geburtsurkunde" steht im Kleingedruckten vieler Formulare (KI-054)
+- Bankkarte/girocard (`BankkarteParser`, vor `KontaktdatenBlockParser`): kurzer Text + Kartenmerkmal + IBAN mit gueltiger Pruefziffer, sonst greift er nicht. Test `BankkarteParserTest`
 - DEVK-Kfz-Police (`DevkKfzPoliceParser`, Neuvertrag + Anpassung): steht VOR `Check24KfzProtocolParser` - die Police nennt CHECK24 als Vermittler und "Beratungsprotokoll" im Kleingedruckten (KI-102). Test `DevkKfzPoliceParserTest`
 - Status **ACTIVE** · Regel `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`
 

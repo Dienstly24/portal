@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 20.11.2026 - Dokumenten-Eingang: Vorgang einem Bestandskunden zuordnen + Bankkarte gratis (KI-114, KI-115)
+
+- **Task**: Betreiber-Meldung: Unterlagen eines vorhandenen Kunden lassen sich nicht als ein Vorgang zuordnen ("Es existiert bereits ein aehnlicher Kunde ... Bitte stattdessen zuordnen" ohne Weg dorthin); pruefen, dass Dokumente gratis gelesen werden.
+- **Files Changed**: `app/Http/Controllers/SmartDocumentUploadController.php`, `routes/web.php`, `resources/views/admin/documents_inbox.blade.php`, neu `app/Services/Ai/TemplateParsers/BankkarteParser.php`, `app/Providers/AppServiceProvider.php`, neu `tests/Feature/DocumentIntake/BestandskundeStapelZuordnungTest.php`, `tests/Feature/Ai/BankkarteParserTest.php`; `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine. **API Changes**: neue Route `admin.documents.assign_batch` (`ROUTES_INVENTORY.md` neu erzeugt); 422 der Neuanlage traegt bei einer Dublette zusaetzlich `duplicate`.
+- **Potential Side Effects**: Dubletten-Meldung nennt einen Kunden ausserhalb des Portfolios nicht mehr beim Namen. Ein Bankkarten-Foto, das vorher per KI gelesen wurde, wird jetzt gratis gelesen (Typ unveraendert `sepa_mandat`).
+- **Tests Performed**: beide neuen Testdateien (scheitern ohne den Fix), volle Suite, `phpstan`, `pint`; Ablauf in Chromium (Dublette -> Knopf -> 3 Dokumente zugeordnet; Auswahlleiste -> Suche -> 2 Dokumente zugeordnet).
+- **Result**: erledigt.
+
 ## 19.11.2026 - Tiefe (3D) auch fuer Reiter, Filter-Chips und Buchstaben-Leiste
 
 - **Task**: Betreiber-Wunsch: die Knopf-Optik ueberall, auch Kunden-Chips (Alle/Strom/Gas ...) und A-Z.

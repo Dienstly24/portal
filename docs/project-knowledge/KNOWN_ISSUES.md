@@ -25,6 +25,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-105 | LOW | security | Seiten mit Kundendaten ohne `no-store`: nach dem Abmelden per Zurueck-Taste wieder sichtbar | FIXED |
 | KI-106 | MEDIUM | ops/security | CI: Fremd-Actions mit Zugriff auf den SSH-Schluessel nur per Tag gepinnt (`appleboy/ssh-action@v1.2.5`), nicht per Commit-SHA | OPEN |
 | KI-113 | LOW | usability | E-Signatur-Liste: Aktionen-Spalte zu breit (Dokument abgeschnitten), Stil wich vom Rest ab, keine Vorschau beim Ueberfahren | FIXED |
+| KI-114 | HIGH | usability | Dokumenten-Eingang: Vorgang/Auswahl nicht einem Bestandskunden zuordenbar (Dubletten-Meldung ohne Weg), Name ausserhalb des Portfolios genannt | FIXED |
+| KI-115 | MEDIUM | cost | Bankkarte (girocard) lief mangels Vorlagen-Parser immer in die kostenpflichtige KI | FIXED |
 | KI-112 | MEDIUM | usability | E-Signatur: bei zwei Unterzeichnern mit derselben E-Mail war nicht erkennbar, welche Einladung wem gehoert und wo welche Person unterschreibt | FIXED |
 | KI-111 | MEDIUM | usability | E-Signatur: ein fertig unterschriebenes Dokument liess sich nicht ergaenzen (zweiter Unterzeichner, vergessene Stelle, Textfeld) | FIXED |
 | KI-110 | MEDIUM | usability | E-Signatur: kein Weg, falsch Unterschriebenes neu anzufordern; Unterschrift nur ueber E-Mail-Link (kein WhatsApp-/Vor-Ort-Weg); Einladung wurde von Kunden fuer Betrug gehalten | FIXED |
@@ -159,6 +161,22 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-114 - Dokumenten-Eingang: Vorgang nicht einem Bestandskunden zuordenbar
+- **Category** usability/correctness · **Severity** HIGH · **Status** FIXED
+- **Location** `SmartDocumentUploadController::createCustomerFromDocuments`/`createCustomer`, `admin/documents_inbox.blade.php`
+- **Description** Betreiber-Meldung 20.11.2026: Bringt ein Bestandskunde neue Unterlagen (neuer Vertrag, Gesundheitskarte, Bankkarte ...), bot der Eingang fuer einen Vorgang bzw. eine Mehrfachauswahl nur "Neuen Kunden anlegen". Das scheiterte am Dubletten-Schutz mit "Es existiert bereits ein aehnlicher Kunde ... Bitte stattdessen zuordnen" - ohne Weg zur Zuordnung; die Vorschlagsliste im Vorgang war bewusst nicht klickbar. Jedes Dokument musste einzeln zugeordnet werden. Nebenbefund: die Meldung nannte den Namen auch dann, wenn der Kunde AUSSERHALB des Portfolios des Mitarbeiters lag. Nebenbefund 2: "Loeschen"/"Aufheben" in der dunklen Auswahlleiste waren seit den 3D-Knoepfen (19.11.2026) weiss auf weiss.
+- **Fix (20.11.2026)**: neuer Endpunkt `admin.documents.assign_batch` (alle Dokumente in EINEM Schritt, dieselbe Zusammenfuehrung wie die Neuanlage, Abbruch bei Namenskonflikt oder fremd zugeordnetem Dokument); Knoepfe "Alle N bestehendem Kunden zuordnen" am Vorgang und "Bestehendem Kunden zuordnen" in der Auswahlleiste; Vorschlaege im Vorgang klickbar; die Dubletten-Meldung liefert den gefundenen Kunden mit und bietet "Alle Dokumente ... zuordnen" an - ausserhalb des Portfolios ohne Name/ID. Auswahlleiste: Ghost-Knoepfe mit transparentem Hintergrund.
+- **Test** `BestandskundeStapelZuordnungTest` (6 Faelle, alle scheitern ohne den Fix); in Chromium nachgestellt
+- **Discovered** 20.11.2026 (Betreiber)
+
+### KI-115 - Bankkarte (girocard) lief immer in die kostenpflichtige KI
+- **Category** cost · **Severity** MEDIUM · **Status** FIXED
+- **Location** `app/Services/Ai/TemplateParsers` (fehlender Parser)
+- **Description** Betreiber-Meldung 20.11.2026: eine Bankkarte stand im Eingang ohne "Vorlage, gratis" - die Karte wurde per KI gelesen. Es gab keinen Vorlagen-Parser; `KontaktdatenBlockParser` verlangt zwei Signale (IBAN allein reicht nicht), die Heuristik kennt keine Bankkarte.
+- **Fix (20.11.2026)**: `BankkarteParser` (vor `KontaktdatenBlockParser`): kurzer Text, Kartenmerkmal (girocard/Debit/Maestro/V PAY/Visa/Mastercard), keine Formularwoerter, deutsche IBAN mit gueltiger Pruefziffer (OCR-Verwechslungen ueber `RepairsOcrText`). Karteninhaber nur bei GENAU einem Namenskandidaten. Typ `sepa_mandat` wie bisher.
+- **Test** `BankkarteParserTest` (inkl. echter Kette aus dem Container)
+- **Discovered** 20.11.2026 (Betreiber)
 
 ### KI-113 - E-Signatur-Liste: Darstellung und Vorschau
 - **Category** usability · **Severity** LOW · **Status** FIXED
