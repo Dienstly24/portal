@@ -59,7 +59,7 @@ class KurzreferenzNotieren
             $body = 'Kurzreferenz '.$referenz.' genannt - zu dieser Referenz gibt es keine Erinnerung (Tippfehler?).';
         } else {
             $sparte = ErinnerungsSparte::fuer($vertrag->type)['name_de'] ?? $vertrag->type;
-            $body = implode("\n", array_filter([
+            $body = implode("\n", [
                 'Kurzreferenz '.$referenz.' aus einer Vertrags-Erinnerung'
                     .' (versandt am '.(LocalTime::for($erinnerung->sent_at)?->format('d.m.Y') ?? '-').'):',
                 'Kunde '.($vertrag->customer?->customer_number ?: '(ohne Kundennummer)')
@@ -68,7 +68,7 @@ class KurzreferenzNotieren
                     .($vertrag->contract_number ? ', Vertrag '.$vertrag->contract_number : ''),
                 'NICHT automatisch zugeordnet - die Referenz belegt nicht, wer schreibt. '
                     .'Bitte Identitaet pruefen, bevor Vertragsdaten genannt werden.',
-            ]));
+            ]);
         }
 
         ConversationNote::create([

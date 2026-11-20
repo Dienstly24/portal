@@ -16,11 +16,11 @@ final class ErinnerungsAnrede
 {
     public static function fuer(?Customer $kunde, string $sprache = 'de'): string
     {
-        $name = trim((string) ($kunde?->user?->name ?? ''));
+        $name = trim((string) ($kunde->user->name ?? ''));
         $name = preg_replace('/\s+/u', ' ', $name) ?? '';
 
         if ($name === '' || strcasecmp($name, 'null') === 0) {
-            $firma = trim((string) ($kunde?->company_name ?? ''));
+            $firma = trim((string) ($kunde->company_name ?? ''));
 
             return $firma;
         }

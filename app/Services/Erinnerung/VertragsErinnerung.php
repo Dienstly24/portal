@@ -77,7 +77,7 @@ final class VertragsErinnerung
         }
 
         $kunde = $vertrag->customer;
-        $sprache = ($kunde?->preferred_lang ?? 'de') === 'ar' ? 'ar' : 'de';
+        $sprache = ($kunde->preferred_lang ?? 'de') === 'ar' ? 'ar' : 'de';
         $rahmen = ErinnerungsTexte::rahmen($sprache);
         $partner = trim((string) $vertrag->insurer);
         $nummer = trim((string) $vertrag->contract_number);
