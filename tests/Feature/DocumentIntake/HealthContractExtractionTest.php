@@ -77,10 +77,14 @@ class HealthContractExtractionTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-12-01'));
         $this->assertCount(0, array_filter($service->due(), fn ($t) => $t[0]->id === $contract->id));
 
-        // Ab Mitgliedsbeginn + 12 Monate (01.04.2027): faellig.
+        // Ab Mitgliedsbeginn + 12 Monate (01.04.2027) waere er faellig - die
+        // GKV-Erinnerung ist aber PAUSIERT (Betreiber-Vorgabe 20.11.2026),
+        // bis ein freigegebener Text existiert. Wird sie freigegeben
+        // (ErinnerungsSparte + ERINNERUNG_SPARTEN_AKTIV), gehoert hier
+        // wieder assertCount(1) hin.
         Carbon::setTestNow(Carbon::parse('2027-04-02'));
         $due = array_filter($service->due(), fn ($t) => $t[0]->id === $contract->id);
-        $this->assertCount(1, $due);
+        $this->assertCount(0, $due);
 
         Carbon::setTestNow();
     }

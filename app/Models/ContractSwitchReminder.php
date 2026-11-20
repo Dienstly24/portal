@@ -15,7 +15,7 @@ class ContractSwitchReminder extends Model
 {
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['contract_id', 'stage', 'anchor', 'sent_at', 'responded_at'];
+    protected $fillable = ['contract_id', 'stage', 'anchor', 'sent_at', 'responded_at', 'kurzreferenz'];
     protected $casts = ['anchor' => 'date', 'sent_at' => 'datetime', 'responded_at' => 'datetime'];
     protected static function boot() {
         parent::boot();
@@ -23,4 +23,20 @@ class ContractSwitchReminder extends Model
     }
     /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+
+    /** Ohne leicht verwechselbare Zeichen (0/O, 1/I/L) - wird abgetippt. */
+    private const ZEICHEN = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+    /** Kurze, nicht sprechende Referenz fuer WhatsApp ("R-7K3Q9X"). */
+    public static function neueKurzreferenz(): string
+    {
+        do {
+            $code = 'R-';
+            for ($i = 0; $i < 6; $i++) {
+                $code .= self::ZEICHEN[random_int(0, strlen(self::ZEICHEN) - 1)];
+            }
+        } while (static::where('kurzreferenz', $code)->exists());
+
+        return $code;
+    }
 }

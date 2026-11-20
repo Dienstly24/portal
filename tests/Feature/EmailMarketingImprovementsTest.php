@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\SendCampaignJob;
 use App\Mail\CampaignMail;
 use App\Mail\ContractSwitchMail;
+use App\Mail\VertragsErinnerungMail;
 use App\Models\Contract;
 use App\Models\ContractSwitchReminder;
 use App\Models\Customer;
@@ -346,7 +347,7 @@ class EmailMarketingImprovementsTest extends TestCase
         $sent = app(ContractSwitchReminderService::class)->run();
 
         $this->assertEquals(1, $sent);
-        Mail::assertQueued(ContractSwitchMail::class, fn ($m) => $m->stage === 'first');
+        Mail::assertQueued(VertragsErinnerungMail::class, fn ($m) => $m->erinnerung->variante === 'a');
         $this->assertDatabaseHas('contract_switch_reminders', ['contract_id' => $contract->id, 'stage' => 'first']);
         $this->assertDatabaseHas('email_logs', ['type' => 'contract_switch', 'status' => 'sent']);
 
@@ -354,18 +355,35 @@ class EmailMarketingImprovementsTest extends TestCase
         $this->assertEquals(0, app(ContractSwitchReminderService::class)->run());
     }
 
-    public function test_kfz_after_cancellation_deadline_gets_no_reminder(): void
+    public function test_kfz_after_cancellation_deadline_gets_template_b_only_without_earlier_reminder(): void
     {
+        // Betreiber-Entscheidung 20.11.2026: nach der Frist, vor der
+        // Verlaengerung -> Vorlage B, aber nur ohne bisherige Erinnerung.
         Mail::fake();
         $this->contract($this->customer(), ['type' => 'kfz', 'end_date' => now()->addDays(20)->toDateString()]);
+        $this->assertEquals(1, app(ContractSwitchReminderService::class)->run());
+        Mail::assertQueued(VertragsErinnerungMail::class, fn ($m) => $m->erinnerung->variante === 'b');
+        $this->assertEquals(0, app(ContractSwitchReminderService::class)->run());
+    }
+
+    public function test_kfz_with_earlier_reminder_gets_nothing_after_deadline(): void
+    {
+        Mail::fake();
+        $contract = $this->contract($this->customer(), ['type' => 'kfz', 'end_date' => now()->addDays(20)->toDateString()]);
+        ContractSwitchReminder::create([
+            'contract_id' => $contract->id, 'stage' => 'first',
+            'anchor' => $contract->end_date, 'sent_at' => now()->subDays(25),
+        ]);
+
         $this->assertEquals(0, app(ContractSwitchReminderService::class)->run());
         Mail::assertNothingSent();
     }
 
-    public function test_internet_followup_only_after_gap_and_without_response(): void
+    public function test_kfz_followup_only_after_gap_and_without_response(): void
     {
         Mail::fake();
-        $contract = $this->contract($this->customer(), ['type' => 'internet', 'end_date' => now()->addMonths(2)->toDateString()]);
+        // 40 Tage vor Ablauf: im Followup-Fenster (6 Wochen), Frist noch offen.
+        $contract = $this->contract($this->customer(), ['type' => 'kfz', 'end_date' => now()->addDays(40)->toDateString()]);
 
         // Erster Lauf im Followup-Fenster ohne bisherige Erinnerung -> "first"
         $this->assertEquals(1, app(ContractSwitchReminderService::class)->run());
@@ -374,14 +392,35 @@ class EmailMarketingImprovementsTest extends TestCase
 
         ContractSwitchReminder::query()->update(['sent_at' => now()->subDays(15)]);
         $this->assertEquals(1, app(ContractSwitchReminderService::class)->run());
-        Mail::assertQueued(ContractSwitchMail::class, fn ($m) => $m->stage === 'followup');
+        Mail::assertQueued(VertragsErinnerungMail::class, 2);
         $this->assertEquals(2, $contract->switchReminders()->count());
+        $this->assertTrue($contract->switchReminders()->where('stage', 'followup')->exists());
+    }
+
+    public function test_paused_sparten_get_no_reminder(): void
+    {
+        // Strom, Gas, Internet, GKV pausiert (Betreiber-Vorgabe 20.11.2026) -
+        // auch wenn der Schalter versehentlich an ist: ohne freigegebene
+        // Vorlage geht nichts raus.
+        config(['erinnerung.sparten_aktiv' => ['kfz', 'strom', 'gas', 'internet', 'krankenversicherung']]);
+        Mail::fake();
+        foreach (['internet', 'strom', 'gas', 'strom_gas'] as $typ) {
+            $this->contract($this->customer(), ['type' => $typ, 'end_date' => now()->addMonths(2)->toDateString()]);
+        }
+        $this->contract($this->customer(), [
+            'type' => 'krankenversicherung', 'subtype' => 'gkv', 'insurer' => 'AOK',
+            'start_date' => now()->subMonths(13)->toDateString(),
+        ]);
+
+        $this->assertEquals(0, app(ContractSwitchReminderService::class)->run());
+        $this->assertSame([], app(ContractSwitchReminderService::class)->due());
+        Mail::assertNothingSent();
     }
 
     public function test_customer_response_cancels_followup(): void
     {
         Mail::fake();
-        $contract = $this->contract($this->customer(), ['type' => 'strom_gas', 'insurer' => 'Vattenfall', 'end_date' => now()->addMonths(2)->toDateString()]);
+        $contract = $this->contract($this->customer(), ['type' => 'kfz', 'insurer' => 'HUK', 'end_date' => now()->addDays(40)->toDateString()]);
 
         app(ContractSwitchReminderService::class)->run();
         ContractSwitchReminder::query()->update(['sent_at' => now()->subDays(15)]);
@@ -408,8 +447,10 @@ class EmailMarketingImprovementsTest extends TestCase
             'type' => 'krankenversicherung', 'subtype' => 'gkv', 'insurer' => 'AOK',
             'start_date' => now()->subMonths(13)->toDateString(),
         ]);
-        $this->assertEquals(1, app(ContractSwitchReminderService::class)->run());
-        $this->assertDatabaseHas('contract_switch_reminders', ['contract_id' => $eligible->id, 'stage' => 'first']);
+        // GKV ist pausiert (Betreiber-Vorgabe 20.11.2026): keine Erinnerung,
+        // bis ein freigegebener Text existiert.
+        $this->assertEquals(0, app(ContractSwitchReminderService::class)->run());
+        $this->assertDatabaseMissing('contract_switch_reminders', ['contract_id' => $eligible->id]);
 
         // PKV bzw. ohne subtype: nie
         $this->contract($this->customer(), [
@@ -443,11 +484,11 @@ class EmailMarketingImprovementsTest extends TestCase
     public function test_manual_reminder_button_uses_same_engine(): void
     {
         Mail::fake();
-        $this->contract($this->customer(), ['type' => 'internet', 'end_date' => now()->addMonths(4)->toDateString()]);
+        $this->contract($this->customer(), ['type' => 'kfz', 'insurer' => 'HUK', 'end_date' => now()->addDays(50)->toDateString()]);
 
         $this->actingAs($this->admin)->post(route('admin.email_marketing.reminders'))
             ->assertSessionHas('success', '1 Wechsel-Erinnerungen gesendet.');
-        Mail::assertQueued(ContractSwitchMail::class, 1);
+        Mail::assertQueued(VertragsErinnerungMail::class, 1);
 
         // Button direkt nochmal: kein Doppelversand
         $this->actingAs($this->admin)->post(route('admin.email_marketing.reminders'))

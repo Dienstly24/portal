@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Events\Messaging\InboundMessageReceived;
+use App\Listeners\Messaging\KurzreferenzNotieren;
 use App\Listeners\Messaging\TriggerAiAssistant;
 use App\Models\ScheduledTaskRun;
 use App\Models\User;
@@ -435,6 +436,9 @@ class AppServiceProvider extends ServiceProvider
         | nichts: der Kunde schreibt, und es passiert einfach nichts.
         */
         Event::listen(InboundMessageReceived::class, TriggerAiAssistant::class);
+        // Kurzreferenz aus einer Vertrags-Erinnerung -> interne Notiz
+        // (nie automatische Kundenzuordnung, 20.11.2026).
+        Event::listen(InboundMessageReceived::class, KurzreferenzNotieren::class);
 
         /*
         | ARCH-7: strenge Eloquent-Regeln - aber NUR ausserhalb der Produktion.

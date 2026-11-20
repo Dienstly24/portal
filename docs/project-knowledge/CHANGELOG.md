@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 20.11.2026 - Vertrags-Erinnerungen im Tippgeber-Rahmen (KI-120)
+
+- **Task**: Erinnerungstexte ohne 34d-Erlaubnis zulaessig formulieren (Vorlage A/B, DE+AR), Fristfehler beheben, Strom/Gas/Internet/GKV pausieren, Kurzreferenz fuer WhatsApp, Tippgeber-Hinweis im Abwesenheitstext.
+- **Files Changed**: neu `config/erinnerung.php`, `app/Support/{Kuendigungsfrist,ErinnerungsSparte,ErinnerungsTexte,ErinnerungsAnrede}.php`, `app/Services/Erinnerung/VertragsErinnerung.php`, `app/Mail/VertragsErinnerungMail.php`, `app/Listeners/Messaging/KurzreferenzNotieren.php`, Views `emails/erinnerung/vertrag(_text)`, Migration `2026_11_20_130000_kurzreferenz_an_wechsel_erinnerungen`, Tests `VertragsErinnerungTest`, `tests/Unit/KuendigungsfristTest.php`, Doku `docs/ERINNERUNG_TEXTENTWUERFE.md`, `docs/TIPPGEBER_TEXTKONFLIKTE.md`, `docs/vorschau-erinnerung/`; geaendert `ContractSwitchReminderService`, `ContractSwitchReminder`, `AssistantTexts`, `TriggerAiAssistant`, `AppServiceProvider`, `.env.example`, Tests `EmailMarketingImprovementsTest`, `HealthContractExtractionTest`, `KundenportalSperreTest`; `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: `contract_switch_reminders.kurzreferenz` (nullbar, unique). **API Changes**: keine Route.
+- **Potential Side Effects**: Strom/Gas/Internet/GKV bekommen keine Erinnerung mehr, bis Texte freigegeben sind. Kfz-Erinnerungen enden am Fristtag (30.11. statt 01.12.); Vertraege ohne bisherige Erinnerung bekommen nach der Frist einmal Vorlage B.
+- **Tests Performed**: neue Tests (Frist-Grenzfaelle, A/B/keine, leere Zeilen, Anrede, Arabisch, keine Portal-Links, Abmeldung, verbotene Woerter, Kurzreferenz-Notiz), volle Suite, `pint`; Vorschau in Chromium (DE A, DE B, AR A).
+- **Result**: erledigt.
+
 ## 20.11.2026 - Kundenportal gesperrt (keine Erlaubnis nach 34d GewO), Gast-Chat (KI-119)
 
 - **Task**: Betreiber-Vorgabe: Kundenportal systemweit sperren, Kunden erreichen uns weiter ohne Anmeldung (Chat, WhatsApp, Telefon, E-Mail); Erinnerungen laufen weiter.

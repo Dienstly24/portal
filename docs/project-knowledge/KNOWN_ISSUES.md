@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-120 | HIGH | legal/correctness | Wechsel-Erinnerung: Beratungs-/Spar-Formulierungen ohne 34d-Erlaubnis und Versand nach Fristablauf | FIXED |
 | KI-112 | MEDIUM | usability | E-Signatur: bei zwei Unterzeichnern mit derselben E-Mail war nicht erkennbar, welche Einladung wem gehoert und wo welche Person unterschreibt | FIXED |
 | KI-111 | MEDIUM | usability | E-Signatur: ein fertig unterschriebenes Dokument liess sich nicht ergaenzen (zweiter Unterzeichner, vergessene Stelle, Textfeld) | FIXED |
 | KI-110 | MEDIUM | usability | E-Signatur: kein Weg, falsch Unterschriebenes neu anzufordern; Unterschrift nur ueber E-Mail-Link (kein WhatsApp-/Vor-Ort-Weg); Einladung wurde von Kunden fuer Betrug gehalten | FIXED |
@@ -165,6 +166,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-120 - Wechsel-Erinnerung: Formulierungen und Fristfehler
+- **Category** legal/correctness · **Severity** HIGH · **Status** FIXED
+- **Location** `ContractSwitchReminderService`, `emails/contract_switch`, neu `VertragsErinnerung`, `ErinnerungsTexte`, `Kuendigungsfrist`
+- **Description** Die Erinnerung versprach "Sparchance", "guenstigeren Tarif", "das beste Angebot sichern" und "Beratung" - unzulaessig ohne Erlaubnis nach 34d GewO. Ausserdem lief das Kfz-Fenster bis "Ende minus 1 Monat" (01.12. statt 30.11.): am Tag nach Fristablauf ging noch eine Wechsel-Mail raus.
+- **Fix** Neue Vorlagen A/B im Tippgeber-Rahmen (DE/AR, HTML + Klartext), eine Fristregel, Job-Schalter je Sparte (nur Kfz aktiv), Kurzreferenz statt Vertragsnummer in WhatsApp.
+- **Test** `VertragsErinnerungTest`, `KuendigungsfristTest`
 
 ### KI-119 - Kundenportal offen ohne Erlaubnis nach 34d GewO
 - **Category** legal/security · **Severity** HIGH · **Status** FIXED

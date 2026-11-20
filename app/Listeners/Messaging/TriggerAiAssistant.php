@@ -113,7 +113,10 @@ class TriggerAiAssistant
         CustomerMessage::create([
             'conversation_id' => $conversation->id,
             'customer_id' => $conversation->customer_id,
-            'body' => $this->texts->get(AssistantTexts::OUT_OF_OFFICE, $sprache),
+            // Abwesenheitshinweis traegt den Tippgeber-Hinweis (20.11.2026).
+            'body' => AssistantTexts::mitTippgeberHinweis(
+                $this->texts->get(AssistantTexts::OUT_OF_OFFICE, $sprache), $sprache
+            ),
             'from_staff' => true,
             'ai_generated' => true,
             // Als SYSTEM-Nachricht gekennzeichnet: sie stammt nicht vom
