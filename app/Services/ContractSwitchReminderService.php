@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
-use App\Mail\ContractSwitchMail;
+use App\Mail\VertragsErinnerungMail;
 use App\Models\Contract;
 use App\Models\ContractSwitchReminder;
 use App\Models\EmailLog;
+use App\Services\Erinnerung\VertragsErinnerung;
+use App\Support\ErinnerungsSparte;
+use App\Support\Kuendigungsfrist;
 use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
@@ -86,21 +89,41 @@ class ContractSwitchReminderService
             ->get();
 
         foreach ($contracts as $contract) {
+            // Job-Schalter je Sparte (Betreiber-Vorgabe 20.11.2026): nur
+            // Sparten mit freigegebener Vorlage UND eingeschaltetem
+            // Schalter. Pausierte Sparten erscheinen auch nicht in der
+            // Kennzahl - "faellig" heisst "wird verschickt".
+            if (! ErinnerungsSparte::versandbereit($contract->type)) continue;
+
             $rule = self::END_DATE_RULES[$contract->type];
             $end = Carbon::parse($contract->end_date)->startOfDay();
             $anchor = $end->toDateString();
             $firstStart = $end->copy()->sub($rule['first']);
             $followupStart = $end->copy()->sub($rule['followup']);
-            // Kfz: nach dem Kündigungs-Stichtag (1 Monat vor Ablauf, z.B.
-            // 30.11.) ist der Zug abgefahren - nicht mehr erinnern.
-            // Internet/Energie bleiben bis zum Ablauf (danach ohnehin
-            // monatlich kündbar, neue Periode = neuer Anchor).
-            $deadline = $contract->type === 'kfz' ? $end->copy()->subMonth() : $end;
+            // Letzter Tag, an dem die Kuendigung beim Versicherer EINGEGANGEN
+            // sein muss (Kuendigungsfrist, Standard je Sparte). Frueher stand
+            // hier "Ende minus 1 Monat" - fuer den 01.01. also der 01.12., und
+            // am 01.12. ging noch eine "jetzt wechseln"-Mail raus, obwohl die
+            // Frist am 30.11. abgelaufen war.
+            $deadline = Carbon::instance(Kuendigungsfrist::eingangBis(
+                $end, ErinnerungsSparte::kuendigungsfristMonate($contract->type)
+            ));
 
-            if ($today->lt($firstStart) || $today->gt($deadline)) continue;
+            if ($today->lt($firstStart) || $today->gte($end)) continue;
 
             $first = $contract->switchReminders->first(fn ($r) => $r->stage === 'first' && $r->anchor->toDateString() === $anchor);
             $followup = $contract->switchReminders->first(fn ($r) => $r->stage === 'followup' && $r->anchor->toDateString() === $anchor);
+
+            // Frist abgelaufen, Verlaengerung noch nicht erreicht -> Vorlage B,
+            // aber NUR fuer Vertraege, die in dieser Periode noch GAR KEINE
+            // Erinnerung bekommen haben. Wer A bekommen hat, bekommt nichts
+            // mehr (Betreiber-Entscheidung 20.11.2026).
+            if ($today->gt($deadline)) {
+                if ($first === null && $followup === null) {
+                    $due[] = [$contract, 'first', $anchor];
+                }
+                continue;
+            }
 
             if ($first === null) {
                 $due[] = [$contract, 'first', $anchor];
@@ -124,6 +147,7 @@ class ContractSwitchReminderService
             ->get();
 
         foreach ($gkv as $contract) {
+            if (! ErinnerungsSparte::versandbereit('krankenversicherung')) break;
             $eligible = Carbon::parse($contract->start_date)->startOfDay()->addMonths(12);
             if ($today->lt($eligible)) continue;
             $anchor = $eligible->toDateString();
@@ -169,17 +193,23 @@ class ContractSwitchReminderService
                 'stage' => $stage,
                 'anchor' => $anchor,
                 'sent_at' => now(),
+                'kurzreferenz' => ContractSwitchReminder::neueKurzreferenz(),
             ]);
         } catch (UniqueConstraintViolationException) {
             return false;
         }
 
         try {
-            Mail::to($customer->user->email)->send(new ContractSwitchMail(
-                $contract,
-                $stage,
-                route('unsubscribe', $customer->unsubscribeToken()),
-            ));
+            $abmelden = route('unsubscribe', $customer->unsubscribeToken());
+            $erinnerung = VertragsErinnerung::bauen($contract, $reminder->kurzreferenz, $abmelden);
+            if ($erinnerung === null) {
+                // Ohne freigegebene Vorlage oder ausserhalb des Fensters
+                // wird NICHTS verschickt - nie der alte Text.
+                $reminder->delete();
+
+                return false;
+            }
+            Mail::to($customer->user->email)->send(new VertragsErinnerungMail($erinnerung));
             $status = 'sent';
         } catch (\Throwable $e) {
             // Protokoll zurücknehmen, damit der nächste Lauf es erneut versucht.

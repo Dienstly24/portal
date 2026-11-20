@@ -3,12 +3,12 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\SupportFormController;
-use App\Mail\ContractSwitchMail;
 use App\Mail\CustomerMessageMail;
 use App\Mail\CustomerWelcomeMail;
 use App\Mail\DocumentRequestMail;
 use App\Mail\PasswordResetMail;
 use App\Mail\TicketReplyMail;
+use App\Mail\VertragsErinnerungMail;
 use App\Models\Channel;
 use App\Models\Contract;
 use App\Models\Conversation;
@@ -410,7 +410,7 @@ class KundenportalSperreTest extends TestCase
 
         $this->assertSame(1, app(ContractSwitchReminderService::class)->run());
 
-        Mail::assertQueued(ContractSwitchMail::class, function (ContractSwitchMail $m) {
+        Mail::assertQueued(VertragsErinnerungMail::class, function (VertragsErinnerungMail $m) {
             $html = $m->render();
             $this->assertDoesNotMatchRegularExpression('~https?://[^/"\s]+/(portal|login)~', $html);
 

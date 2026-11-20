@@ -5245,6 +5245,47 @@ neue Seitenfassung derselben Idee.
   "unveraendert"; `KundenportalSperreTest` prueft die Sperre (u.a. JEDE
   `portal*`-Route einzeln) und den Schalter AN.
 
+## Vertrags-Erinnerungen im Tippgeber-Rahmen (Betreiber-Vorgabe 20.11.2026, KI-120)
+
+- **Rolle**: Erinnerungen erinnern, nennen die Wechselmoeglichkeit und
+  bieten Kontakt zu einem zugelassenen Partner an - NIE beraten,
+  empfehlen, vermitteln oder Ersparnis versprechen.
+  `VertragsErinnerungTest` prueft die freigegebenen Texte auf verbotene
+  Woerter.
+- **EINE Fristregel** `App\Support\Kuendigungsfrist::eingangBis()`:
+  (Verlaengerungstag - 1 Tag) minus Kuendigungsfrist, ohne Monatsueberlauf
+  (01.01.2027 -> 30.11.2026; 31.03.2028 -> 29.02.2028). Frist je Sparte
+  als Standard in `ErinnerungsSparte` (Kfz 1 Monat) - kein Feld am Vertrag.
+  Vorher galt "Ende minus 1 Monat": am 01.12. ging noch eine
+  "jetzt wechseln"-Mail raus, obwohl die Frist am 30.11. ablief.
+- **Vorlagen** (`App\Services\Erinnerung\VertragsErinnerung`): A = Frist
+  offen, B = Frist abgelaufen und Verlaengerung noch nicht erreicht, ab
+  Verlaengerung nichts. B NUR fuer Vertraege OHNE bisherige Erinnerung in
+  der Periode - wer A bekam, bekommt nichts mehr. Texte DE + AR
+  (Hocharabisch) an EINER Stelle (`ErinnerungsTexte`), HTML und Klartext
+  lesen beide daraus. Sprache = `customers.preferred_lang`. Anrede
+  `ErinnerungsAnrede` (Herr/Frau Nachname, sonst voller Name, sonst nur
+  "Guten Tag,"). Leere Zeilen (z.B. Vertragsnummer) erscheinen nie.
+- **Kontaktwege**: Chat-Link mit `ChatReferenz` (30 Tage, nur interne
+  Notiz), WhatsApp mit vorbefuelltem Text und KURZREFERENZ
+  (`contract_switch_reminders.kurzreferenz`, "R-XXXXXX", nie die
+  Vertragsnummer). Nennt jemand die Kurzreferenz in einer eingehenden
+  Nachricht, schreibt `KurzreferenzNotieren` eine INTERNE Notiz - nie eine
+  automatische Kundenzuordnung. Abmeldung im Fuss + List-Unsubscribe-Header.
+- **Job-Schalter je Sparte** `ERINNERUNG_SPARTEN_AKTIV` (Standard `kfz`)
+  UND freigegebene Vorlage (`ErinnerungsSparte::versandbereit`). Strom,
+  Gas, Internet, GKV sind PAUSIERT; Entwuerfe zur Vorlage
+  `docs/ERINNERUNG_TEXTENTWUERFE.md` (dort auch, wie eine Sparte
+  eingesteckt wird). `ContractSwitchMail` (alter Text) wird nicht mehr
+  verschickt.
+- Der Abwesenheitshinweis (WhatsApp/Chat) traegt den Tippgeber-Hinweis
+  (`AssistantTexts::mitTippgeberHinweis`, auch an eigenen Texten, nie
+  doppelt).
+- Kollidierende Texte an anderen Stellen (Website, Seeder, KI-Prompts):
+  Rohliste `docs/TIPPGEBER_TEXTKONFLIKTE.md` - Umbau in PR 3.
+- Tests: `VertragsErinnerungTest`, `tests/Unit/KuendigungsfristTest.php`,
+  nachgezogen `EmailMarketingImprovementsTest`, `HealthContractExtractionTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

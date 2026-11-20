@@ -76,6 +76,33 @@ class AssistantTexts
         ];
     }
 
+    /**
+     * Tippgeber-Hinweis (Betreiber-Vorgabe 20.11.2026): Dienstly24 haelt
+     * keine Erlaubnis nach Paragraph 34d GewO. Wortgleich mit der
+     * Begruessung im Website-Chat.
+     */
+    public const TIPPGEBER_HINWEIS = [
+        'de' => 'Hinweis: Wir sind kein Versicherungsvermittler und geben keine Tarifempfehlungen; '
+            .'auf Wunsch stellen wir den Kontakt zu einem zugelassenen Partner her.',
+        'en' => 'Please note: we are not an insurance intermediary and do not give tariff '
+            .'recommendations; on request we can put you in touch with a licensed partner.',
+        'ar' => 'ملاحظة: لسنا وسيط تأمين ولا نقدّم توصيات بشأن التعرفات؛ وعند الطلب نضعكم على تواصل مع شريك مرخّص.',
+    ];
+
+    /**
+     * Haengt den Tippgeber-Hinweis an - auch an einen vom Betreiber selbst
+     * formulierten Text, und nie doppelt.
+     */
+    public static function mitTippgeberHinweis(string $text, string $language): string
+    {
+        $hinweis = self::TIPPGEBER_HINWEIS[$language] ?? self::TIPPGEBER_HINWEIS['de'];
+        if (str_contains($text, $hinweis)) {
+            return $text;
+        }
+
+        return rtrim($text)."\n\n".$hinweis;
+    }
+
     /** Der geltende Text in der erkannten Sprache. */
     public function get(string $key, string $language = 'de'): string
     {

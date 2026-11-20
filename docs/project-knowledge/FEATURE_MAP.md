@@ -298,6 +298,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Config `config/portal.php` (`CUSTOMER_PORTAL_ENABLED`, Standard AUS); MW `KundenportalSperre`; Support `Kundenportal`, `ChatReferenz`; C `WebChatController` (`/chat`, `/chat/verlauf`); Adapter `WebChatAdapter` (Kanal `webchat`); V `errors/portal-gesperrt`, `support/chat`, `emails/_kontaktwege`; Log-Kanal `portal_sperre`
 - Tests `KundenportalSperreTest` · Status **ACTIVE** (20.11.2026) · Issues KI-119
 
+### F-102 Vertrags-Erinnerungen (Tippgeber-Rahmen)
+- S `ContractSwitchReminderService`, `Erinnerung\VertragsErinnerung`; Support `Kuendigungsfrist`, `ErinnerungsSparte`, `ErinnerungsTexte`, `ErinnerungsAnrede`; Mail `VertragsErinnerungMail`; V `emails/erinnerung/vertrag(_text)`; Listener `KurzreferenzNotieren`; Config `config/erinnerung.php`
+- Tests `VertragsErinnerungTest`, `KuendigungsfristTest` · Status **ACTIVE** (20.11.2026, nur Kfz) · Issues KI-120
+
 ## J. Entfernt / tot
 
 ### F-099 AI-Workflow-Engine
