@@ -275,7 +275,11 @@ class KundenportalSperreTest extends TestCase
         $this->assertStringContainsString('UNGEPRUEFT', $notiz->body);
 
         // Folgenachricht ohne erneute Angaben, Antwort des Teams erscheint.
+        // Je Nachricht eine Sekunde spaeter: created_at hat keine
+        // Sekundenbruchteile, und MySQL ordnet Gleichstaende beliebig.
+        $this->travel(1)->seconds();
         $this->postJson('/chat', ['nachricht' => 'Noch etwas.'])->assertOk();
+        $this->travel(1)->seconds();
         CustomerMessage::create([
             'conversation_id' => $unterhaltung->id, 'channel_id' => $unterhaltung->channel_id,
             'direction' => CustomerMessage::DIRECTION_OUTGOING, 'body' => 'Antwort vom Team', 'from_staff' => true,

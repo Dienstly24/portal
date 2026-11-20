@@ -140,7 +140,10 @@ class WebChatController extends Controller
         }
 
         $nachrichten = CustomerMessage::where('conversation_id', $unterhaltung->id)
-            ->latest('created_at')->limit(100)->get(['id', 'direction', 'body', 'created_at'])
+            // Zweiter Schluessel, damit die Reihenfolge bei gleicher Sekunde
+            // wenigstens STABIL ist (MySQL liefert Gleichstaende sonst in
+            // beliebiger Reihenfolge, CLAUDE.md "Antwortweg").
+            ->orderByDesc('created_at')->orderByDesc('id')->limit(100)->get(['id', 'direction', 'body', 'created_at'])
             ->reverse()->values()
             ->map(fn (CustomerMessage $m) => [
                 'id' => $m->id,
