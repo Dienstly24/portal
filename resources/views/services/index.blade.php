@@ -10,8 +10,8 @@
      also aus Ueberschriften ohne Satzbau. Genau diese Seite ist aber der
      Einstieg in alle 22 Leistungen. --}}
 <meta name="description" content="{{ $rtl
-    ? 'خدمات Dienstly24 بلمحة: التأمين وتسجيل السيارات والكهرباء والغاز. استشارة مستقلة عن الشركات، مجاناً وبالعربية والألمانية، في جميع أنحاء ألمانيا.'
-    : 'Alle Leistungen von Dienstly24 im Überblick: Versicherungen, Kfz-Zulassung sowie Strom & Gas. Anbieterunabhängige Beratung – kostenlos, deutschlandweit, auf Deutsch und Arabisch.' }}">
+    ? 'خدمات Dienstly24 بلمحة: التأمين وتسجيل السيارات والكهرباء والغاز. تواصل مجاني بالعربية والألمانية في جميع أنحاء ألمانيا.'
+    : 'Alle Leistungen von Dienstly24 im Überblick: Versicherungen, Kfz-Zulassung sowie Strom & Gas. Kostenloser Kontakt – deutschlandweit, auf Deutsch und Arabisch.' }}">
 <meta name="robots" content="index, follow">
 <meta name="author" content="Dienstly24">
 {{-- Canonical/hreflang auf dem Website-Host (P1-3/P1-4) --}}

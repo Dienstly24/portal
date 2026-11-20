@@ -18,7 +18,7 @@
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:30px 0;"><tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
 <tr><td style="background:#17191d;padding:25px 30px;">
-<h1 style="color:#ffffff;margin:0;font-size:22px;">{{ $lang === 'ar' ? '💡 فرصة للتوفير' : '💡 Ihre Sparchance' }}</h1>
+<h1 style="color:#ffffff;margin:0;font-size:22px;">{{ $lang === 'ar' ? '🔔 تذكير بعقدك' : '🔔 Erinnerung zu Ihrem Vertrag' }}</h1>
 </td></tr>
 <tr><td style="padding:30px;">
 
@@ -26,11 +26,11 @@
 <p style="font-size:15px;color:#333;">عزيزنا <strong>{{ $contract->customer?->user?->name }}</strong>،</p>
 @if($isGkv)
 <p style="font-size:15px;color:#333;">مرّت أكثر من 12 شهر على عضويتك الحالية في التأمين الصحي الحكومي — يعني صار من حقك قانونياً تبديل الصندوق الصحي (§175 SGB V).</p>
-<p style="font-size:15px;color:#333;">إذا قدّمنا الطلب خلال هذا الشهر، يصير التأمين الجديد فعّالاً اعتباراً من <strong>{{ $gkvActiveFrom->locale('ar')->translatedFormat('d F Y') }}</strong>.</p>
+<p style="font-size:15px;color:#333;">وتبقى قواعد صندوقك الصحي هي المرجع.</p>
 @elseif($stage === 'first')
-<p style="font-size:15px;color:#333;">عقدك ({{ $label }}) ينتهي بتاريخ <strong>{{ $endDate }}</strong> — هذا هو الوقت المثالي لمقارنة العروض والتبديل لعقد أوفر.</p>
+<p style="font-size:15px;color:#333;">عقدك ({{ $label }}) ينتهي بتاريخ <strong>{{ $endDate }}</strong> .</p>
 @else
-<p style="font-size:15px;color:#333;">تذكير: عقدك ({{ $label }}) ينتهي بتاريخ <strong>{{ $endDate }}</strong> والوقت المتاح للتبديل بدأ يضيق. تواصل معنا اليوم لنؤمّن لك أفضل عرض قبل فوات المهلة.</p>
+<p style="font-size:15px;color:#333;">تذكير: عقدك ({{ $label }}) ينتهي بتاريخ <strong>{{ $endDate }}</strong> .</p>
 @endif
 @if($contract->type === 'kfz')
 <p style="font-size:15px;color:#333;">ملاحظة: مهلة فسخ تأمين السيارة شهر واحد قبل نهاية العقد — بعدها يتمدد تلقائياً سنة كاملة.</p>
@@ -39,11 +39,11 @@
 @include('emails._greeting', ['greetingCustomer' => $contract->customer])
 @if($isGkv)
 <p style="font-size:15px;color:#333;">Ihre Mitgliedschaft in Ihrer gesetzlichen Krankenkasse besteht seit über 12 Monaten – damit sind Sie gesetzlich wechselberechtigt (§175 SGB V).</p>
-<p style="font-size:15px;color:#333;">Stellen wir den Antrag noch in diesem Monat, ist Ihre neue Kasse ab dem <strong>{{ $gkvActiveFrom->format('d.m.Y') }}</strong> aktiv.</p>
+<p style="font-size:15px;color:#333;">Maßgeblich sind die Regeln Ihrer Krankenkasse.</p>
 @elseif($stage === 'first')
-<p style="font-size:15px;color:#333;">Ihr {{ $label }} läuft am <strong>{{ $endDate }}</strong> aus – jetzt ist der ideale Zeitpunkt, Angebote zu vergleichen und in einen günstigeren Tarif zu wechseln.</p>
+<p style="font-size:15px;color:#333;">Ihr {{ $label }} läuft am <strong>{{ $endDate }}</strong> aus.</p>
 @else
-<p style="font-size:15px;color:#333;">Erinnerung: Ihr {{ $label }} läuft am <strong>{{ $endDate }}</strong> aus und das Zeitfenster für einen Wechsel wird knapp. Melden Sie sich am besten heute bei uns, damit wir rechtzeitig das beste Angebot für Sie sichern.</p>
+<p style="font-size:15px;color:#333;">Erinnerung: Ihr {{ $label }} läuft am <strong>{{ $endDate }}</strong> aus.</p>
 @endif
 @if($contract->type === 'kfz')
 <p style="font-size:15px;color:#333;">Hinweis: Die Kündigungsfrist Ihrer Kfz-Versicherung beträgt einen Monat zum Vertragsende – danach verlängert sich der Vertrag automatisch um ein weiteres Jahr.</p>
@@ -59,10 +59,10 @@
 </td></tr></table>
 
 @if($lang === 'ar')
-<p style="font-size:15px;color:#333;">رد على هذا الإيميل أو اتصل فينا — المقارنة والاستشارة مجانية بالكامل.</p>
+<p style="font-size:15px;color:#333;">لأي سؤال رد على هذا الإيميل أو اتصل بنا. ملاحظة: لسنا وسيط تأمين ولا نقدّم توصيات.</p>
 <p style="font-size:15px;color:#333;">مع أطيب التحيات،<br>فريق Dienstly24</p>
 @else
-<p style="font-size:15px;color:#333;">Antworten Sie einfach auf diese E-Mail oder rufen Sie uns an – Vergleich und Beratung sind für Sie kostenlos.</p>
+<p style="font-size:15px;color:#333;">Bei Fragen antworten Sie auf diese E-Mail oder rufen Sie uns an. Hinweis: Wir sind kein Versicherungsvermittler und geben keine Empfehlungen.</p>
 <p style="font-size:15px;color:#333;">Mit freundlichen Grüßen<br>Ihr Dienstly24 Team</p>
 @endif
 

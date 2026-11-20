@@ -24,10 +24,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script @cspNonce>document.documentElement.className='js';</script>
-<title>@yield('title', 'Dienstly24 – Versicherung, Kfz-Zulassung & Energie | Beratung DE & AR')</title>
+<title>@yield('title', 'Dienstly24 – Versicherung, Kfz-Zulassung & Energie | Service DE & AR')</title>
 <meta name="description" content="@yield('description', $isAr
-    ? 'Dienstly24 من هامبورغ: استشارة مستقلة عن شركات التأمين حول التأمين وتسجيل السيارات والكهرباء والغاز – مجاناً وبالعربية والألمانية.'
-    : 'Dienstly24 aus Hamburg: anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Strom & Gas – kostenlos, persönlich und auf Deutsch & Arabisch. Jetzt Angebot anfordern.')">
+    ? 'Dienstly24 من هامبورغ: منصّة خدمة وتواصل في التأمين وتسجيل السيارات والكهرباء والغاز – مجاناً وبالعربية والألمانية.'
+    : 'Dienstly24 aus Hamburg: Service- und Kontaktplattform für Versicherungen, Kfz-Zulassung und Strom & Gas – kostenlos, persönlich und auf Deutsch & Arabisch. Jetzt Anfrage stellen.')">
 <meta name="robots" content="@yield('robots', 'index, follow')">
 <meta name="author" content="Dienstly24">
 <meta name="theme-color" content="#0F1512">
@@ -43,8 +43,8 @@
 <meta property="og:url" content="{{ $canonicalUrl }}">
 <meta property="og:title" content="@yield('og-title', 'Dienstly24 – Versicherung, Kfz-Zulassung & Energie')">
 <meta property="og:description" content="@yield('description', $isAr
-    ? 'استشارة مستقلة حول التأمين وتسجيل السيارات والطاقة – مجاناً وبالعربية والألمانية.'
-    : 'Anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, persönlich und auf Deutsch & Arabisch.')">
+    ? 'منصّة خدمة وتواصل في التأمين وتسجيل السيارات والطاقة – مجاناً وبالعربية والألمانية.'
+    : 'Service- und Kontaktplattform für Versicherungen, Kfz-Zulassung und Energie – kostenlos, persönlich und auf Deutsch & Arabisch.')">
 <meta property="og:image" content="{{ $ogImageUrl }}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -79,7 +79,7 @@
 {{-- Top bar --}}
 <div class="topbar"><div class="container">
   <span class="telnum"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.27a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg> {{ $phoneDisplay }}</span><span class="sep">·</span>
-  <span><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> {{ $isAr ? 'استشارة مجانية' : 'Kostenlose Beratung' }}</span><span class="sep">·</span>
+  <span><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> {{ $isAr ? 'تواصل مجاني' : 'Kostenloser Kontakt' }}</span><span class="sep">·</span>
   <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> {{ $isAr ? 'الألمانية والعربية' : 'Deutsch & Arabisch' }}</span>
 </div></div>
 
@@ -133,7 +133,7 @@
       <li><a href="{{ $anchor('ueber') }}">{{ $isAr ? 'من نحن' : 'Über uns' }}</a></li>
       <li><a href="{{ $anchor('ablauf') }}">{{ $isAr ? 'آلية العمل' : 'Ablauf' }}</a></li>
       <li><a href="{{ $anchor('stimmen') }}">{{ $isAr ? 'آراء العملاء' : 'Kundenstimmen' }}</a></li>
-      <li><a href="{{ ($isAr ? '/ar/' : '/') . 'versicherungsmakler-hamburg' }}">{{ $isAr ? 'هامبورغ' : 'Hamburg' }}</a></li>
+      <li><a href="{{ ($isAr ? '/ar/' : '/') . 'dienstly24-hamburg' }}">{{ $isAr ? 'هامبورغ' : 'Hamburg' }}</a></li>
       @if(\App\Support\Kundenportal::aktiv())
       <li><a href="https://portal.dienstly24.de/login" data-cta="portal" data-cta-seite="fuss">{{ $isAr ? 'بوابة العملاء' : 'Kundenportal' }}</a></li>
       @else
@@ -148,8 +148,8 @@
     </ul></div>
   </div>
   <p class="compliance">{{ $isAr
-      ? 'تتم وساطة التأمين عبر وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف الألماني (GewO). تجدون بيانات الوسيط ورقم السجل وجهة الرقابة في صفحة بيانات الناشر (Impressum) وصفحة المعلومات الأولى (Erstinformation).'
-      : 'Die Versicherungsvermittlung erfolgt über einen zugelassenen Versicherungsmakler gem. § 34d Abs. 1 GewO. Angaben zum Vermittler, Registernummer und Aufsichtsbehörde finden Sie im Impressum und in der Erstinformation.' }}</p>
+      ? 'Dienstly24 ليست وسيط تأمين، بل نضعكم على تواصل فقط. تتم وساطة التأمين حصراً عبر وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف الألماني (GewO). تجدون بيانات الوسيط ورقم السجل وجهة الرقابة في صفحة بيانات الناشر (Impressum) وصفحة المعلومات الأولى (Erstinformation).'
+      : 'Dienstly24 ist kein Versicherungsvermittler, sondern stellt nur den Kontakt her. Die Versicherungsvermittlung erfolgt ausschließlich über einen zugelassenen Versicherungsmakler gem. § 34d Abs. 1 GewO. Angaben zum Vermittler, Registernummer und Aufsichtsbehörde finden Sie im Impressum und in der Erstinformation.' }}</p>
   <div class="fbottom">
     <span>© {{ date('Y') }} Dienstly24</span>
     <div class="fl">

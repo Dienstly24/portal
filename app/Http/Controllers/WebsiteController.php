@@ -34,7 +34,15 @@ class WebsiteController extends Controller
      * getippte Zeichenketten laufen auseinander, und dann fehlt die
      * Seite still in der Sitemap.
      */
-    public const HAMBURG_SLUG = 'versicherungsmakler-hamburg';
+    public const HAMBURG_SLUG = 'dienstly24-hamburg';
+
+    /**
+     * Frueherer Pfad (bis 20.11.2026). Dienstly24 ist Tippgeber, kein
+     * Makler - "versicherungsmakler" in der eigenen Adresse waere eine
+     * falsche Angabe. Er leitet dauerhaft (301) auf HAMBURG_SLUG um, damit
+     * Links und Suchergebnisse nicht ins Leere laufen.
+     */
+    public const ALT_HAMBURG_SLUG = 'versicherungsmakler-hamburg';
 
     /** Rechtsseiten der Website (aus der statischen Website uebernommen). */
     public const LEGAL_PAGES = [

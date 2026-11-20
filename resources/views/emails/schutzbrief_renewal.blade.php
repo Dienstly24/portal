@@ -76,7 +76,7 @@ Antworten Sie einfach <strong>auf diese E-Mail</strong> – wir uebernehmen die 
 <p style="font-size:15px;color:#333;">في أي سؤال؟ رد على هالإيميل أو اتصل فينا — نحنا جاهزين لمساعدتك.</p>
 <p style="font-size:15px;color:#333;">مع أطيب التحيات،<br>فريق Dienstly24</p>
 @else
-<p style="font-size:15px;color:#333;">Bei Fragen antworten Sie auf diese E-Mail oder rufen Sie uns an – wir beraten Sie gerne.</p>
+<p style="font-size:15px;color:#333;">Bei Fragen antworten Sie auf diese E-Mail oder rufen Sie uns an – wir helfen Ihnen gerne weiter.</p>
 <p style="font-size:15px;color:#333;">Mit freundlichen Grüßen<br>Ihr Dienstly24 Team</p>
 @endif
 

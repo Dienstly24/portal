@@ -5,13 +5,13 @@
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:30px 0;"><tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
 <tr><td style="background:#17191d;padding:25px 30px;">
-<h1 style="color:#ffffff;margin:0;font-size:22px;">{{ $lang === 'ar' ? '💬 رسالة جديدة من مستشارك' : '💬 Neue Nachricht von Ihrem Berater' }}</h1>
+<h1 style="color:#ffffff;margin:0;font-size:22px;">{{ $lang === 'ar' ? '💬 رسالة جديدة من فريق Dienstly24' : '💬 Neue Nachricht von Ihrem Dienstly24-Team' }}</h1>
 </td></tr>
 <tr><td style="padding:30px;">
 @if($lang === 'ar')
 <p style="font-size:15px;color:#333;">عزيزنا <strong>{{ $customerName }}</strong>،</p>
 @if($mode === 'full')
-<p style="font-size:15px;color:#333;">أرسل لك مستشارك في Dienstly24 الرسالة التالية:</p>
+<p style="font-size:15px;color:#333;">أرسل لك فريق Dienstly24 الرسالة التالية:</p>
 <table width="100%" cellpadding="0" cellspacing="0"><tr>
 <td style="background:#f4f5f7;border-right:3px solid #17A65B;border-radius:8px;padding:16px 18px;font-size:14.5px;color:#333;line-height:1.7;">{!! nl2br(e(trim($customerMessage->body))) !!}</td>
 </tr></table>
@@ -20,12 +20,12 @@
 @endif
 <p style="font-size:15px;color:#333;margin-top:18px;">{{ \App\Support\Kundenportal::aktiv() ? 'يمكنك الرد مباشرة عبر بوابة العملاء:' : 'يمكنك الرد علينا مباشرة:' }}</p>
 @else
-<p style="font-size:15px;color:#333;">لديك رسالة جديدة من مستشارك في بوابة العملاء. يرجى تسجيل الدخول للاطلاع عليها والرد.</p>
+<p style="font-size:15px;color:#333;">لديك رسالة جديدة من فريق Dienstly24 في بوابة العملاء. يرجى تسجيل الدخول للاطلاع عليها والرد.</p>
 @endif
 @else
 @include('emails._greeting', ['greetingCustomer' => $customerMessage->customer])
 @if($mode === 'full')
-<p style="font-size:15px;color:#333;">Ihr Berater bei Dienstly24 hat Ihnen folgende Nachricht geschickt:</p>
+<p style="font-size:15px;color:#333;">Ihr Dienstly24-Team hat Ihnen folgende Nachricht geschickt:</p>
 <table width="100%" cellpadding="0" cellspacing="0"><tr>
 <td style="background:#f4f5f7;border-left:3px solid #17A65B;border-radius:8px;padding:16px 18px;font-size:14.5px;color:#333;line-height:1.7;">{!! nl2br(e(trim($customerMessage->body))) !!}</td>
 </tr></table>
@@ -34,7 +34,7 @@
 @endif
 <p style="font-size:15px;color:#333;margin-top:18px;">{{ \App\Support\Kundenportal::aktiv() ? 'Sie können direkt im Kundenportal antworten:' : 'Sie können uns direkt antworten:' }}</p>
 @else
-<p style="font-size:15px;color:#333;">Sie haben eine neue Nachricht von Ihrem Berater im Kundenportal. Bitte melden Sie sich an, um sie zu lesen und zu antworten.</p>
+<p style="font-size:15px;color:#333;">Sie haben eine neue Nachricht von Ihrem Dienstly24-Team im Kundenportal. Bitte melden Sie sich an, um sie zu lesen und zu antworten.</p>
 @endif
 @endif
 @if(\App\Support\Kundenportal::aktiv())

@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-121 | HIGH | legal | Website, Leistungsseiten, Mails und KI-Prompts stellten Dienstly24 als Berater/Makler dar | FIXED |
 | KI-120 | HIGH | legal/correctness | Wechsel-Erinnerung: Beratungs-/Spar-Formulierungen ohne 34d-Erlaubnis und Versand nach Fristablauf | FIXED |
 | KI-112 | MEDIUM | usability | E-Signatur: bei zwei Unterzeichnern mit derselben E-Mail war nicht erkennbar, welche Einladung wem gehoert und wo welche Person unterschreibt | FIXED |
 | KI-111 | MEDIUM | usability | E-Signatur: ein fertig unterschriebenes Dokument liess sich nicht ergaenzen (zweiter Unterzeichner, vergessene Stelle, Textfeld) | FIXED |
@@ -166,6 +167,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-121 - Beratungs-/Makler-Wortlaut ohne Erlaubnis nach 34d GewO
+- **Category** legal · **Severity** HIGH · **Status** FIXED
+- **Location** `website/home`, `website/layout`, `website/hamburg`, `services/index`/`show`, Leistungsseiten (DB + `ServicePageSeeder`), `StructuredData`, Mails `customer_message`/`schutzbrief_renewal`/`registration_verification`/`contract_switch`, `legal/page`, `website/legal/agb`, `auth/login`, `portal/messages`, `CustomerMessageNotifier`, `AssistantPrompt`, `WebsitePrompt`, `lang/ar.json`
+- **Description** Betreiber-Vorgabe 20.11.2026: Dienstly24 ist Tippgeber. Website und Mails sprachen von "anbieterunabhaengiger Beratung", "wir vergleichen", "persoenliches Angebot", "Ihr Berater", eine eigene Seite "Versicherungsmakler" und die Adresse `/versicherungsmakler-hamburg`; das Schema nannte den Betrieb `InsuranceAgency`; die KI-Prompts stellten Dienstly24 als "Versicherungs- und Energiemakler" vor.
+- **Fix** Neutraler Wortlaut DE/AR ("Service- und Kontaktplattform", "Kontakt zu unserem zugelassenen Partner"), Hinweis "kein Versicherungsvermittler" auf jeder Seite mit Versicherungsbezug, Seite `so-arbeiten-wir` statt `versicherungsmakler`, `/dienstly24-hamburg` statt `/versicherungsmakler-hamburg` (beide alt -> 301), Schema `LocalBusiness`, Maklerpool-Abschnitt und zwei Kundenzitate mit Beratungsbezug entfernt, TIPPGEBER-REGEL in beiden KI-Prompts. Leistungsseiten in der DB per Ersetzungsliste `ServiceSeitenTexte` (Migration + `website:tippgeber-texte`, mit Sicherung; selbst gepflegter Text bleibt und wird gemeldet). Rechtsseiten (Impressum, Erstinformation, Datenschutz) bewusst unveraendert: dort steht, dass Beratung und Vermittlung ausschliesslich der Partner uebernimmt.
+- **Test** `TippgeberTexteTest` (sichtbarer Text aller oeffentlichen Seiten DE+AR gegen die Wortliste)
 
 ### KI-120 - Wechsel-Erinnerung: Formulierungen und Fristfehler
 - **Category** legal/correctness · **Severity** HIGH · **Status** FIXED

@@ -29,8 +29,21 @@ class ServicePageController extends Controller
         return view('services.index', compact('pages'));
     }
 
+    /**
+     * Fruehere Adressen -> neue (301). "versicherungsmakler" als eigene
+     * Leistung war eine falsche Angabe: Dienstly24 ist Tippgeber, kein
+     * Makler (Betreiber-Vorgabe 20.11.2026).
+     */
+    public const ALTE_SLUGS = ['versicherungsmakler' => 'so-arbeiten-wir'];
+
     public function show(string $slug)
     {
+        if (isset(self::ALTE_SLUGS[$slug])) {
+            $prefix = request()->is('ar/*') ? '/ar' : '';
+
+            return redirect($prefix.'/leistungen/'.self::ALTE_SLUGS[$slug], 301);
+        }
+
         $page = ServicePage::active()->where('slug', $slug)->firstOrFail();
 
         return view('services.show', [

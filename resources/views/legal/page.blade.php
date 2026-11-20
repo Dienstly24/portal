@@ -59,7 +59,7 @@ a{color:#185FA5;}
     @if($custom)
     <div class="custom">{{ $custom }}</div>
     @else
-    <p>Für die Nutzung des Kundenportals von {{ $company['name'] }} gelten die zwischen Ihnen und uns vereinbarten Bedingungen aus Ihrem Betreuungs-/Maklervertrag.</p>
+    <p>Für die Nutzung des Kundenportals von {{ $company['name'] }} gelten die zwischen Ihnen und uns vereinbarten Bedingungen aus Ihrer Vereinbarung mit uns.</p>
     <h2>Portal-Nutzung in Kürze</h2>
     <ul>
         <li>Das Kundenportal dient der Einsicht in Ihre Verträge und Dokumente sowie der Kommunikation mit uns.</li>
@@ -84,7 +84,7 @@ a{color:#185FA5;}
     </ul>
 
     <h2>Zweck und Rechtsgrundlage</h2>
-    <p>Die Verarbeitung erfolgt zur Erfüllung des Betreuungs-/Maklervertrags (Art. 6 Abs. 1 lit. b DSGVO) sowie zur Wahrung rechtlicher Pflichten. Ihre Daten geben wir nicht unbefugt an Dritte weiter.</p>
+    <p>Die Verarbeitung erfolgt zur Erfüllung unserer Vereinbarung mit Ihnen (Art. 6 Abs. 1 lit. b DSGVO) sowie zur Wahrung rechtlicher Pflichten. Ihre Daten geben wir nicht unbefugt an Dritte weiter.</p>
 
     <h2>Sicherheit</h2>
     <p>Sensible Daten (z. B. Bankverbindung, Versicherungsnummern) speichern wir verschlüsselt. Die Übertragung erfolgt ausschließlich über verschlüsselte Verbindungen (TLS).</p>

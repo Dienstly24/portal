@@ -62,7 +62,7 @@ class EinwilligungUndHamburgTest extends TestCase
     {
         $this->seed(ServicePageSeeder::class);
 
-        return ['/website', '/leistungen', '/leistungen/kfz-versicherung', '/versicherungsmakler-hamburg'];
+        return ['/website', '/leistungen', '/leistungen/kfz-versicherung', '/dienstly24-hamburg'];
     }
 
     // ---------------------------------------------------------------
@@ -335,7 +335,7 @@ class EinwilligungUndHamburgTest extends TestCase
 
     public function test_die_hamburg_seite_gibt_es_in_beiden_sprachen(): void
     {
-        foreach (['/versicherungsmakler-hamburg', '/ar/versicherungsmakler-hamburg'] as $pfad) {
+        foreach (['/dienstly24-hamburg', '/ar/dienstly24-hamburg'] as $pfad) {
             $html = $this->get($pfad)->assertOk()->getContent();
 
             $this->assertMatchesRegularExpression('#<h1[^>]*>.*Hamburg|هامبورغ#u', $html, $pfad);
@@ -353,15 +353,15 @@ class EinwilligungUndHamburgTest extends TestCase
     {
         $this->seed(ServicePageSeeder::class);
 
-        $hamburg = $this->get('/versicherungsmakler-hamburg')->assertOk()->getContent();
-        $makler = $this->get('/leistungen/versicherungsmakler')->assertOk()->getContent();
+        $hamburg = $this->get('/dienstly24-hamburg')->assertOk()->getContent();
+        $makler = $this->get('/leistungen/so-arbeiten-wir')->assertOk()->getContent();
 
         // Der ausfuehrliche Fachtext der nationalen Seite steht NICHT hier.
-        $this->assertStringContainsString('Makler, Vertreter oder Vergleichsportal', $makler);
-        $this->assertStringNotContainsString('Makler, Vertreter oder Vergleichsportal', $hamburg);
+        $this->assertStringContainsString('Was Dienstly24 nicht macht', $makler);
+        $this->assertStringNotContainsString('Was Dienstly24 nicht macht', $hamburg);
 
         // Stattdessen Verweise auf die Leistungsseiten.
-        foreach (['kfz-versicherung', 'kfz-zulassung', 'krankenversicherung', 'strom-gas', 'versicherungsmakler'] as $slug) {
+        foreach (['kfz-versicherung', 'kfz-zulassung', 'krankenversicherung', 'strom-gas', 'so-arbeiten-wir'] as $slug) {
             $this->assertStringContainsString('/leistungen/'.$slug, $hamburg, $slug);
         }
     }
@@ -374,7 +374,7 @@ class EinwilligungUndHamburgTest extends TestCase
      */
     public function test_die_hamburg_seite_bleibt_bei_der_wahrheit(): void
     {
-        $html = $this->get('/versicherungsmakler-hamburg')->assertOk()->getContent();
+        $html = $this->get('/dienstly24-hamburg')->assertOk()->getContent();
 
         $this->assertStringContainsString('in eigener Verantwortung', $html);
         $this->assertStringNotContainsString('vertraglich gebundener Vermittler', $html);
@@ -385,7 +385,7 @@ class EinwilligungUndHamburgTest extends TestCase
     /** Der Standort steht genau einmal - die Seite ist keine zweite Filiale. */
     public function test_die_hamburg_seite_traegt_den_standort_und_den_pfad(): void
     {
-        $html = $this->get('/versicherungsmakler-hamburg')->assertOk()->getContent();
+        $html = $this->get('/dienstly24-hamburg')->assertOk()->getContent();
 
         preg_match_all(
             '#<script type="application/ld\+json"[^>]*>(.*?)</script>#s',
@@ -397,9 +397,9 @@ class EinwilligungUndHamburgTest extends TestCase
             $treffer[1]
         );
 
-        $this->assertContains('InsuranceAgency', $typen);
+        $this->assertContains('LocalBusiness', $typen);
         $this->assertContains('BreadcrumbList', $typen);
-        $this->assertSame(1, count(array_filter($typen, fn ($t) => $t === 'InsuranceAgency')));
+        $this->assertSame(1, count(array_filter($typen, fn ($t) => $t === 'LocalBusiness')));
     }
 
     public function test_die_hamburg_seite_steht_in_der_sitemap(): void
@@ -407,9 +407,9 @@ class EinwilligungUndHamburgTest extends TestCase
         $xml = $this->get('/sitemap.xml')->assertOk()->getContent();
 
         $this->assertStringContainsString(
-            '<loc>https://www.dienstly24.de/versicherungsmakler-hamburg</loc>', $xml);
+            '<loc>https://www.dienstly24.de/dienstly24-hamburg</loc>', $xml);
         $this->assertStringContainsString(
-            '<loc>https://www.dienstly24.de/ar/versicherungsmakler-hamburg</loc>', $xml);
+            '<loc>https://www.dienstly24.de/ar/dienstly24-hamburg</loc>', $xml);
     }
 
     /** Eine Seite, die von nirgends verlinkt ist, findet auch Google spaet. */
@@ -417,13 +417,13 @@ class EinwilligungUndHamburgTest extends TestCase
     {
         $html = $this->get('/website')->assertOk()->getContent();
 
-        $this->assertStringContainsString('/versicherungsmakler-hamburg', $html);
+        $this->assertStringContainsString('/dienstly24-hamburg', $html);
     }
 
     /** Auch die Kontaktwege der Ortsseite werden gezaehlt. */
     public function test_die_hamburg_seite_kennzeichnet_ihre_kontaktwege(): void
     {
-        $html = $this->get('/versicherungsmakler-hamburg')->assertOk()->getContent();
+        $html = $this->get('/dienstly24-hamburg')->assertOk()->getContent();
 
         $this->assertStringContainsString('data-cta="telefon" data-cta-seite="hamburg"', $html);
         $this->assertStringContainsString('data-cta="whatsapp" data-cta-seite="hamburg"', $html);
@@ -548,7 +548,7 @@ class EinwilligungUndHamburgTest extends TestCase
      * OEFFNUNGSZEITEN HABEN EINE QUELLE.
      *
      * Bis 19.09.2026 standen sie doppelt: als Text auf der Seite und
-     * fest verdrahtet im `InsuranceAgency`-Schema. Beide sahen fuer sich
+     * fest verdrahtet im `LocalBusiness`-Schema. Beide sahen fuer sich
      * richtig aus - wer eine davon aendert, erzeugt genau den
      * Widerspruch, den Google beim Abgleich mit dem Unternehmensprofil
      * bemaengelt, und niemand sieht ihn.
@@ -564,7 +564,7 @@ class EinwilligungUndHamburgTest extends TestCase
             'bis' => '17:15',
         ]]);
 
-        $html = $this->get('https://www.dienstly24.de/versicherungsmakler-hamburg')
+        $html = $this->get('https://www.dienstly24.de/dienstly24-hamburg')
             ->assertOk()->getContent();
 
         // Die Seite zeigt die neuen Zeiten ...
@@ -573,7 +573,7 @@ class EinwilligungUndHamburgTest extends TestCase
         $this->assertStringNotContainsString('09:00', $html);
 
         // ... und das Schema nennt dieselben.
-        $daten = StructuredData::insuranceAgency();
+        $daten = StructuredData::unternehmen();
         $this->assertSame('08:30', $daten['openingHoursSpecification'][0]['opens']);
         $this->assertSame('17:15', $daten['openingHoursSpecification'][0]['closes']);
     }
@@ -588,7 +588,7 @@ class EinwilligungUndHamburgTest extends TestCase
     {
         config(['website.google_business' => null]);
 
-        $html = $this->get('https://www.dienstly24.de/versicherungsmakler-hamburg')
+        $html = $this->get('https://www.dienstly24.de/dienstly24-hamburg')
             ->assertOk()->getContent();
 
         $this->assertStringNotContainsString('data-cta="google-profil"', $html);
@@ -603,7 +603,7 @@ class EinwilligungUndHamburgTest extends TestCase
             'website.social' => ['https://www.facebook.com/Dienstly24', $profil],
         ]);
 
-        foreach (['/versicherungsmakler-hamburg', '/ar/versicherungsmakler-hamburg'] as $pfad) {
+        foreach (['/dienstly24-hamburg', '/ar/dienstly24-hamburg'] as $pfad) {
             $html = $this->get('https://www.dienstly24.de'.$pfad)->assertOk()->getContent();
 
             // Sichtbar auf der Seite ...
@@ -633,7 +633,7 @@ class EinwilligungUndHamburgTest extends TestCase
     public function test_die_hamburg_seite_verspricht_keinen_termin_vor_ort(): void
     {
         $verboten = [
-            '/versicherungsmakler-hamburg' => [
+            '/dienstly24-hamburg' => [
                 'Beratung vor Ort',
                 'Termin vor Ort',
                 'persönlich vorbei',
@@ -642,7 +642,7 @@ class EinwilligungUndHamburgTest extends TestCase
                 'Unterschriften im Büro',
                 'Unser Büro',
             ],
-            '/ar/versicherungsmakler-hamburg' => [
+            '/ar/dienstly24-hamburg' => [
                 'استشارة حضورية',
                 'تعالوا شخصياً',
                 'الموعد الحضوري',
@@ -680,7 +680,7 @@ class EinwilligungUndHamburgTest extends TestCase
      */
     public function test_die_hamburg_seite_sagt_dass_alles_online_laeuft(): void
     {
-        $html = $this->get('/versicherungsmakler-hamburg')->assertOk()->getContent();
+        $html = $this->get('/dienstly24-hamburg')->assertOk()->getContent();
 
         $this->assertStringContainsString('komplett online', $html);
         $this->assertStringContainsString('Muss ich zu Ihnen ins Büro kommen?', $html);
@@ -688,7 +688,7 @@ class EinwilligungUndHamburgTest extends TestCase
         // Der ausdruecklich genannte Fall des Betreibers.
         $this->assertStringContainsString('Kfz-Zulassung übernehmen wir komplett', $html);
 
-        $ar = $this->get('/ar/versicherungsmakler-hamburg')->assertOk()->getContent();
+        $ar = $this->get('/ar/dienstly24-hamburg')->assertOk()->getContent();
         $this->assertStringContainsString('أونلاين', $ar);
         $this->assertStringContainsString('لا يوجد استقبال للزوار', $ar);
     }

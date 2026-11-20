@@ -218,26 +218,28 @@ class SeoSichtbarkeitTest extends TestCase
     }
 
     /**
-     * Die wichtigste kommerzielle Suchabsicht des Betriebs hatte bis zum
-     * SEO-Auftrag keine eigene Seite.
+     * Die fruehere Seite "Versicherungsmakler" ist seit 20.11.2026 "So
+     * arbeiten wir" (Tippgeber-Rolle): sie sagt, dass Dienstly24 KEIN
+     * Vermittler ist, und die alte Adresse leitet dauerhaft um.
      */
-    public function test_versicherungsmakler_seite_existiert_und_bleibt_bei_der_wahrheit(): void
+    public function test_so_arbeiten_wir_seite_existiert_und_bleibt_bei_der_wahrheit(): void
     {
         $this->seed(ServicePageSeeder::class);
 
-        $html = $this->get('/leistungen/versicherungsmakler')->assertOk()->getContent();
+        $html = $this->get('/leistungen/so-arbeiten-wir')->assertOk()->getContent();
 
-        $this->assertStringContainsString('Versicherungsmakler', $html);
-
-        // KERNPUNKT: Dienstly24 haelt die Erlaubnis nach Paragraph 34d NICHT
-        // selbst (siehe /erstinformation) - die Seite darf das nie behaupten.
-        $this->assertStringNotContainsString('Wir sind Ihr Versicherungsmakler mit Erlaubnis', $html);
+        $this->assertStringContainsString('kein Versicherungsvermittler', $html);
+        $this->assertStringNotContainsString('Wir sind Ihr Versicherungsmakler', $html);
         $this->assertStringContainsString('in eigener Verantwortung', $html);
-        $this->assertStringNotContainsString('vertraglich gebundener Vermittler', $html);
         $this->assertStringContainsString(url('/erstinformation'), $html);
+
+        $this->get('/leistungen/versicherungsmakler')->assertStatus(301)
+            ->assertRedirect('/leistungen/so-arbeiten-wir');
+        $this->get('/ar/leistungen/versicherungsmakler')->assertStatus(301)
+            ->assertRedirect('/ar/leistungen/so-arbeiten-wir');
     }
 
-    /** Die neue Seite muss auch in der Sitemap stehen, sonst findet Google sie spaet. */
+    /** Die Seite muss auch in der Sitemap stehen - die alte Adresse nicht mehr. */
     public function test_sitemap_enthaelt_die_neue_landingpage_in_beiden_sprachen(): void
     {
         $this->seed(ServicePageSeeder::class);
@@ -245,9 +247,10 @@ class SeoSichtbarkeitTest extends TestCase
         $xml = $this->get('/sitemap.xml')->assertOk()->getContent();
 
         $this->assertStringContainsString(
-            '<loc>https://www.dienstly24.de/leistungen/versicherungsmakler</loc>', $xml);
+            '<loc>https://www.dienstly24.de/leistungen/so-arbeiten-wir</loc>', $xml);
         $this->assertStringContainsString(
-            '<loc>https://www.dienstly24.de/ar/leistungen/versicherungsmakler</loc>', $xml);
+            '<loc>https://www.dienstly24.de/ar/leistungen/so-arbeiten-wir</loc>', $xml);
+        $this->assertStringNotContainsString('versicherungsmakler', $xml);
     }
 
     /**
@@ -286,7 +289,7 @@ class SeoSichtbarkeitTest extends TestCase
             $this->get('/website')->assertOk()->getContent()
         )), '@type');
         $this->assertContains('WebSite', $start);
-        $this->assertContains('InsuranceAgency', $start);
+        $this->assertContains('LocalBusiness', $start);
 
         $unterseite = array_column(array_filter($this->schemata(
             $this->get('/leistungen/kfz-versicherung')->assertOk()->getContent()
@@ -294,9 +297,9 @@ class SeoSichtbarkeitTest extends TestCase
         $this->assertNotContains('WebSite', $unterseite);
 
         // Eine Unterseite ist auch kein zweiter Standort: sie traegt die
-        // schlanke Organization, nie eine weitere InsuranceAgency mit
+        // schlanke Organization, nie eine weitere LocalBusiness mit
         // Anschrift und Oeffnungszeiten.
         $this->assertContains('Organization', $unterseite);
-        $this->assertNotContains('InsuranceAgency', $unterseite);
+        $this->assertNotContains('LocalBusiness', $unterseite);
     }
 }

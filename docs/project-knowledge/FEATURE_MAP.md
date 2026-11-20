@@ -302,6 +302,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - S `ContractSwitchReminderService`, `Erinnerung\VertragsErinnerung`; Support `Kuendigungsfrist`, `ErinnerungsSparte`, `ErinnerungsTexte`, `ErinnerungsAnrede`; Mail `VertragsErinnerungMail`; V `emails/erinnerung/vertrag(_text)`; Listener `KurzreferenzNotieren`; Config `config/erinnerung.php`
 - Tests `VertragsErinnerungTest`, `KuendigungsfristTest` · Status **ACTIVE** (20.11.2026, nur Kfz) · Issues KI-120
 
+### F-103 Tippgeber-Wortlaut (Website, Leistungsseiten, Mails, KI)
+- Support `Tippgeber\ServiceSeitenTexte` (Ersetzungsliste + Wortliste); Command `website:tippgeber-texte`; Migration `2026_11_20_140000_leistungsseiten_tippgeber_texte`; Seeder `ServicePageSeeder::neutral()`; Routen `/dienstly24-hamburg` (alt `/versicherungsmakler-hamburg` 301), `/leistungen/so-arbeiten-wir` (alt `/leistungen/versicherungsmakler` 301)
+- Tests `TippgeberTexteTest` · Status **ACTIVE** (20.11.2026) · Issues KI-121
+
 ## J. Entfernt / tot
 
 ### F-099 AI-Workflow-Engine

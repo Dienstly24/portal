@@ -22,30 +22,30 @@
 @endphp
 
 @section('title', $isAr
-    ? 'Dienstly24 – التأمين وتسجيل السيارات والطاقة | استشارة بالألمانية والعربية'
-    : 'Dienstly24 – Versicherung, Kfz-Zulassung & Energie | Beratung DE & AR')
+    ? 'Dienstly24 – التأمين وتسجيل السيارات والطاقة | خدمة بالألمانية والعربية'
+    : 'Dienstly24 – Versicherung, Kfz-Zulassung & Energie | Service DE & AR')
 
 @section('head-extra')
 {{-- Strukturierte Daten: Aufbau in App\Services\Seo\StructuredData.
      Sie duerfen NICHT als Array in dieser Vorlage stehen - Blade macht aus
      dem Schluessel "at-context" sonst seine eigene Direktive und schreibt
      PHP-Quelltext ins HTML (Audit 15.09.2026). --}}
-{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::insuranceAgency()) !!}
+{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::unternehmen()) !!}
 {{-- WebSite (Abschnitt 21/33): benennt die Adresse als Website der Marke
      Dienstly24 und nennt ihre Sprachen. BEWUSST NUR auf der Startseite -
      eine Website gibt es einmal, nicht 22-mal. Die Organisation selbst
-     steckt bereits im InsuranceAgency-Block darueber (er IST eine
+     steckt bereits im LocalBusiness-Block darueber (er IST eine
      Organization mit Anschrift und Oeffnungszeiten); ein zweiter
      Organization-Block waere dieselbe Aussage ein zweites Mal. --}}
 {!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::webSite()) !!}
 {!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::faqPage($isAr ? [
-    ['هل الاستشارة مجانية فعلاً؟', 'نعم، الاستشارة الأولى مجانية تماماً وغير ملزمة.'],
-    ['هل تتحدثون العربية أيضاً؟', 'نعم، فريقنا يقدم الاستشارة بالألمانية والعربية – كما هو أنسب لكم.'],
+    ['هل الخدمة مجانية فعلاً؟', 'نعم، التواصل معنا مجاني تماماً وغير ملزم.'],
+    ['هل تتحدثون العربية أيضاً؟', 'نعم، فريقنا يتحدث الألمانية والعربية – كما هو أنسب لكم.'],
     ['كم تستغرق معالجة طلبي؟', 'عادةً نتواصل معكم خلال 24 ساعة.'],
     ['كيف يمكنني إرسال طلب؟', 'أسهل طريقة هي نموذج الاتصال، أو واتساب، أو الهاتف على الرقم ‎+49 179 9673909.'],
 ] : [
-    ['Ist die Beratung wirklich kostenlos?', 'Ja. Die Kontaktaufnahme und die Beratung durch unseren Partnermakler sind für Sie kostenlos und unverbindlich.'],
-    ['Sprechen Sie auch Arabisch?', 'Ja, unser Team berät Sie auf Deutsch und auf Arabisch – ganz wie es für Sie bequemer ist.'],
+    ['Ist der Service wirklich kostenlos?', 'Ja. Die Kontaktaufnahme ist für Sie kostenlos und unverbindlich.'],
+    ['Sprechen Sie auch Arabisch?', 'Ja, unser Team spricht Deutsch und Arabisch – ganz wie es für Sie bequemer ist.'],
     ['Wie lange dauert die Bearbeitung meiner Anfrage?', 'In der Regel melden wir uns innerhalb von 24 Stunden bei Ihnen.'],
     ['Wie kann ich eine Anfrage stellen?', 'Am einfachsten über das Kontaktformular, per WhatsApp oder telefonisch unter +49 179 9673909.'],
 ])) !!}
@@ -57,10 +57,10 @@
   <div class="hero-grid">
     <div>
       <span class="eyebrow"><span class="dot"></span><span>{{ $isAr ? 'خدماتكم من هامبورغ – وفي جميع أنحاء ألمانيا' : 'Ihr Service aus Hamburg – deutschlandweit' }}</span></span>
-      <h1 class="display"><span>{{ $isAr ? 'جميع أنواع التأمين.' : 'Alle Versicherungen.' }}</span><br><span class="gold">{{ $isAr ? 'جهة اتصال واحدة.' : 'Ein Ansprechpartner.' }}</span></h1>
+      <h1 class="display"><span>{{ $isAr ? 'التأمين والتسجيل والطاقة.' : 'Versicherung, Zulassung, Energie.' }}</span><br><span class="gold">{{ $isAr ? 'جهة اتصال واحدة.' : 'Ein Ansprechpartner.' }}</span></h1>
       <p class="lead">{{ $isAr
-          ? 'استشارة مستقلة عن شركات التأمين حول التأمين وتسجيل السيارات والطاقة – مجاناً وبلغة واضحة وبالألمانية والعربية.'
-          : 'Anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, verständlich und auf Deutsch & Arabisch.' }}</p>
+          ? 'منصّتكم للخدمة والتواصل في التأمين وتسجيل السيارات والطاقة – مجاناً وبلغة واضحة وبالألمانية والعربية. وفي ما يخص التأمين نضعكم على تواصل مع شريكنا المرخّص.'
+          : 'Ihre Service- und Kontaktplattform für Versicherungen, Kfz-Zulassung und Energie – kostenlos, verständlich und auf Deutsch & Arabisch. Für Versicherungen stellen wir den Kontakt zu unserem zugelassenen Partner her.' }}</p>
       <div class="hero-actions">
         <a href="#leistungen" class="btn btn-primary">{{ $isAr ? 'اختاروا الخدمة وأرسلوا طلبكم' : 'Leistung wählen & anfragen' }}</a>
         <a href="tel:{{ config('website.phone_e164') }}" class="btn btn-ghost">{{ $isAr ? 'اتصلوا بنا مباشرة' : 'Direkt anrufen' }}</a>
@@ -117,7 +117,7 @@
 
 {{-- Zahlenband --}}
 <section class="band"><div class="container band-grid">
-  <div class="band-item"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M4 26c0-5 4-7.5 8-7.5s8 2.5 8 7.5"/><circle cx="22.5" cy="13" r="3.2"/><path d="M21 18.6c3.5.2 7 2.4 7 6.9"/></svg><div><b>100 %</b><span>{{ $isAr ? 'استشارة مستقلة' : 'Unabhängige Beratung' }}</span></div></div>
+  <div class="band-item"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M4 26c0-5 4-7.5 8-7.5s8 2.5 8 7.5"/><circle cx="22.5" cy="13" r="3.2"/><path d="M21 18.6c3.5.2 7 2.4 7 6.9"/></svg><div><b>{{ $isAr ? 'أونلاين' : 'Online' }}</b><span>{{ $isAr ? 'كل شيء رقمياً' : 'Alles digital erledigt' }}</span></div></div>
   <div class="band-item"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M16 4 L19.6 11.6 L28 12.7 L21.8 18.4 L23.4 26.6 L16 22.6 L8.6 26.6 L10.2 18.4 L4 12.7 L12.4 11.6 Z"/></svg><div><b>3.000+</b><span>{{ $isAr ? 'عميل راضٍ' : 'Zufriedene Kunden' }}</span></div></div>
   <div class="band-item"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3 C10.5 3 6.5 7.2 6.5 12 C6.5 19 16 28 16 28 S25.5 19 25.5 12 C25.5 7.2 21.5 3 16 3 Z"/><circle cx="16" cy="12" r="3.6"/></svg><div><b>{{ $isAr ? 'هامبورغ' : 'Hamburg' }}</b><span>{{ $isAr ? 'وفي جميع أنحاء ألمانيا' : '& deutschlandweit' }}</span></div></div>
   <div class="band-item"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="24" height="16" rx="4"/><path d="M12 22 L15 27 L18 22"/><path d="M10 12 h12 M10 16 h8"/></svg><div><b>{{ $isAr ? 'الألمانية والعربية' : 'Deutsch & Arabisch' }}</b><span>{{ $isAr ? 'في خدمتكم دائماً' : 'Für Sie da' }}</span></div></div>
@@ -135,19 +135,19 @@
       @include('website.partials.picture', ['asset' => $svcImgs['kfz-versicherung'], 'imgClass' => 'svc-bild', 'sizes' => $svcSizes])
       @unless($svcImgs['kfz-versicherung'])<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h18M5 15v-3l2-4h10l2 4v3M6 15v2.5M18 15v2.5"/><circle cx="8.2" cy="15" r="0.4"/><circle cx="15.8" cy="15" r="0.4"/></svg></div>@endunless
       <h3>{{ $isAr ? 'تأمين السيارات' : 'Kfz-Versicherung' }}</h3>
-      <p>{{ $isAr ? 'نشرح لكم بوضوح تأمين المسؤولية والتأمين الجزئي والشامل – ونجد لكم التغطية المناسبة.' : 'Haftpflicht, Teil- und Vollkasko verständlich erklärt – wir finden den passenden Schutz.' }}</p>
+      <p>{{ $isAr ? 'شرح مبسّط لتأمين المسؤولية والتأمين الجزئي والشامل – ونضعكم على تواصل مع شريكنا بخصوص طلبكم.' : 'Haftpflicht, Teil- und Vollkasko kurz erklärt – für Ihr Anliegen stellen wir den Kontakt zu unserem Partner her.' }}</p>
       <span class="go">{{ $go }}</span></a>
     <a class="svc reveal" href="{{ $lPrefix }}krankenversicherung">
       @include('website.partials.picture', ['asset' => $svcImgs['krankenversicherung'], 'imgClass' => 'svc-bild', 'sizes' => $svcSizes])
       @unless($svcImgs['krankenversicherung'])<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6Z"/></svg></div>@endunless
       <h3>{{ $isAr ? 'التأمين الصحي' : 'Krankenversicherung' }}</h3>
-      <p>{{ $isAr ? 'قانوني أو خاص – شريكنا الوسيط المرخّص ينصحكم بالأنسب لوضعكم.' : 'Gesetzlich oder privat – unser Partnermakler berät Sie zu den Optionen, die zu Ihrer Situation passen.' }}</p>
+      <p>{{ $isAr ? 'قانوني أو خاص – لأسئلتكم بهذا الخصوص نضعكم على تواصل مع شريكنا المرخّص.' : 'Gesetzlich oder privat – für Ihre Fragen dazu stellen wir den Kontakt zu unserem zugelassenen Partner her.' }}</p>
       <span class="go">{{ $go }}</span></a>
     <a class="svc reveal" href="{{ $lPrefix }}zahnzusatzversicherung">
       @include('website.partials.picture', ['asset' => $svcImgs['zahnzusatzversicherung'], 'imgClass' => 'svc-bild', 'sizes' => $svcSizes])
       @unless($svcImgs['zahnzusatzversicherung'])<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.2C9.6 3.4 5.6 4 5.6 7.8c0 2.6 1.7 3.6 2.1 6 .3 1.9.7 4.4 1.5 5.6h1.1l.9-5.6c.5-.7 1.1-.7 1.6 0l.9 5.6h1.1c.8-1.2 1.2-3.7 1.5-5.6.4-2.4 2.1-3.4 2.1-6 0-3.8-4-4.4-6.4-2.6Z"/></svg></div>@endunless
       <h3>{{ $isAr ? 'التأمين التكميلي للأسنان' : 'Zahnzusatzversicherung' }}</h3>
-      <p>{{ $isAr ? 'تعويض أعلى لتركيبات الأسنان والعلاجات – نوضح لكم ما يستحق فعلاً.' : 'Höhere Erstattung bei Zahnersatz und Behandlungen – wir zeigen, was sich lohnt.' }}</p>
+      <p>{{ $isAr ? 'تعويض تركيبات الأسنان والعلاجات – ونضعكم على تواصل مع شريكنا.' : 'Erstattung bei Zahnersatz und Behandlungen – wir stellen den Kontakt zu unserem Partner her.' }}</p>
       <span class="go">{{ $go }}</span></a>
     <a class="svc reveal" href="{{ $lPrefix }}kfz-zulassung">
       @include('website.partials.picture', ['asset' => $svcImgs['kfz-zulassung'], 'imgClass' => 'svc-bild', 'sizes' => $svcSizes])
@@ -165,22 +165,22 @@
       @include('website.partials.picture', ['asset' => $svcImgs['strom-gas'], 'imgClass' => 'svc-bild', 'sizes' => $svcSizes])
       @unless($svcImgs['strom-gas'])<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M13 3 6 13.5h5L10 21l8-11h-5l0-7Z"/></svg></div>@endunless
       <h3>{{ $isAr ? 'الكهرباء والغاز' : 'Strom & Gas' }}</h3>
-      <p>{{ $isAr ? 'نفحص التعرفة ونوفر لكم عند تغيير المزوّد – ونتولى عنكم إجراءات الإلغاء والتسجيل.' : 'Tarif prüfen und beim Anbieterwechsel sparen – Kündigung und Anmeldung übernehmen wir.' }}</p>
+      <p>{{ $isAr ? 'تغيير مزوّد الكهرباء والغاز – ونتولى عنكم إجراءات الإلغاء والتسجيل.' : 'Anbieterwechsel bei Strom und Gas – Kündigung und Anmeldung übernehmen wir.' }}</p>
       <span class="go">{{ $go }}</span></a>
   </div>
-  <p style="text-align:center;margin-top:26px;color:var(--muted);font-size:.9rem;">{{ $isAr ? '… والعديد من أنواع التأمين الأخرى. لا تترددوا في سؤالنا.' : '… und viele weitere Versicherungen. Fragen Sie einfach an.' }}</p>
+  <p style="text-align:center;margin-top:26px;color:var(--muted);font-size:.9rem;">{{ $isAr ? '… وطلبات أخرى تخص التأمين – راسلونا ببساطة.' : '… und weitere Anliegen rund um Versicherungen – schreiben Sie uns einfach.' }}</p>
 </div></section>
 
 {{-- Ablauf --}}
 <section id="ablauf" class="ablauf"><div class="container">
   <div class="section-head center reveal">
     <span class="kicker">{{ $isAr ? 'بهذه البساطة' : "So einfach geht's" }}</span>
-    <h2 class="title display">{{ $isAr ? 'ثلاث خطوات تفصلكم عن عرضكم' : 'In drei Schritten zu Ihrem Angebot' }}</h2>
+    <h2 class="title display">{{ $isAr ? 'ثلاث خطوات فقط' : 'In drei Schritten erledigt' }}</h2>
   </div>
   <div class="steps">
     <div class="step reveal"><div class="n">1</div><h3>{{ $isAr ? 'أرسلوا طلبكم' : 'Anfrage stellen' }}</h3><p>{{ $isAr ? 'أخبرونا باختصار بما تحتاجونه – عبر الموقع أو واتساب أو الهاتف.' : 'Sagen Sie uns kurz, was Sie brauchen – online, per WhatsApp oder telefonisch.' }}</p></div>
-    <div class="step reveal"><div class="n">2</div><h3>{{ $isAr ? 'نقارن العروض لكم' : 'Wir vergleichen für Sie' }}</h3><p>{{ $isAr ? 'نفحص التعرفات المناسبة باستقلالية تامة عن الشركات ونشرح لكم الفروق.' : 'Anbieterunabhängig prüfen wir passende Tarife und erklären die Unterschiede.' }}</p></div>
-    <div class="step reveal"><div class="n">3</div><h3>{{ $isAr ? 'عرضكم الشخصي' : 'Persönliches Angebot' }}</h3><p>{{ $isAr ? 'تحصلون على عرضكم مشروحاً بوضوح – مع جهة اتصال شخصية ثابتة.' : 'Sie erhalten Ihr Angebot verständlich erklärt – und einen festen Ansprechpartner.' }}</p></div>
+    <div class="step reveal"><div class="n">2</div><h3>{{ $isAr ? 'نتولى الأمر' : 'Wir kümmern uns' }}</h3><p>{{ $isAr ? 'نسجّل طلبكم ونحوّله إلى الجهة المناسبة – وفي ما يخص التأمين إلى شريكنا المرخّص.' : 'Wir nehmen Ihr Anliegen auf und leiten es an die richtige Stelle weiter – bei Versicherungen an unseren zugelassenen Partner.' }}</p></div>
+    <div class="step reveal"><div class="n">3</div><h3>{{ $isAr ? 'جهة اتصال ثابتة' : 'Fester Ansprechpartner' }}</h3><p>{{ $isAr ? 'تعرفون دائماً ما هي الخطوة التالية – مع جهة اتصال ثابتة لدينا.' : 'Sie wissen jederzeit, wie es weitergeht – mit einem festen Ansprechpartner bei uns.' }}</p></div>
   </div>
 </div></section>
 
@@ -199,44 +199,20 @@
       <span class="kicker">{{ $isAr ? 'لماذا Dienstly24؟' : 'Warum Dienstly24?' }}</span>
       <h2 class="title display">{{ $isAr ? 'ميزتكم – وعدنا' : 'Ihr Vorteil – Unser Versprechen' }}</h2>
       <p class="promise-lead">{{ $isAr
-          ? 'نقدم استشارة واضحة وصادقة حول التأمين وتسجيل السيارات والطاقة – بدلاً من المصطلحات المعقدة تحصلون على إجابات واضحة.'
-          : 'Wir bieten verständliche, ehrliche Beratung rund um Versicherungen, Kfz-Zulassung und Energie – statt Fachbegriffen bekommen Sie klare Antworten.' }}</p>
+          ? 'نحن جهة تواصلكم الواضحة والصادقة في كل ما يخص التأمين وتسجيل السيارات والطاقة – بدلاً من المصطلحات المعقدة تحصلون على إجابات واضحة حول الإجراءات.'
+          : 'Wir sind Ihr verständlicher, ehrlicher Kontakt rund um Versicherungen, Kfz-Zulassung und Energie – statt Fachbegriffen bekommen Sie klare Antworten zum Ablauf.' }}</p>
       <ul class="plist">
-        <li><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div><b>{{ $isAr ? 'مستقلون وموضوعيون' : 'Unabhängig & objektiv' }}</b><p>{{ $isAr ? 'مستقلون عن شركات التأمين – ولا نلزمكم بأي شركة.' : 'Anbieterunabhängig – wir binden Sie an keine Gesellschaft.' }}</p></div></li>
-        <li><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div><b>{{ $isAr ? 'وفروا الوقت والمال' : 'Zeit & Geld sparen' }}</b><p>{{ $isAr ? 'جهة اتصال واحدة لكل شيء – نجعل الأمور سهلة عليكم.' : 'Ein Ansprechpartner für alles – wir machen es Ihnen einfach.' }}</p></div></li>
-        <li><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div><b>{{ $isAr ? 'بوضوح وقربٍ منكم' : 'Verständlich & nah' }}</b><p>{{ $isAr ? 'استشارة بالألمانية والعربية – ومتابعة شخصية من البداية إلى النهاية.' : 'Beratung auf Deutsch und Arabisch – persönlich betreut von Anfang bis Ende.' }}</p></div></li>
+        <li><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div><b>{{ $isAr ? 'بوضوح وصدق' : 'Klar & ehrlich' }}</b><p>{{ $isAr ? 'نقول بصراحة ما نقوم به – وما يتولاه شريكنا المرخّص.' : 'Wir sagen offen, was wir tun – und was unser zugelassener Partner übernimmt.' }}</p></div></li>
+        <li><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div><b>{{ $isAr ? 'وفّروا وقتكم' : 'Zeit sparen' }}</b><p>{{ $isAr ? 'جهة اتصال واحدة لكل شيء – نجعل الأمور سهلة عليكم.' : 'Ein Ansprechpartner für alles – wir machen es Ihnen einfach.' }}</p></div></li>
+        <li><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div><b>{{ $isAr ? 'بوضوح وقربٍ منكم' : 'Verständlich & nah' }}</b><p>{{ $isAr ? 'خدمة بالألمانية والعربية – ومتابعة شخصية من البداية إلى النهاية.' : 'Service auf Deutsch und Arabisch – persönlich betreut von Anfang bis Ende.' }}</p></div></li>
       </ul>
     </div>
   </div>
 </div></section>
 
-{{-- Kooperationen --}}
-<section id="partner" class="partner"><div class="container">
-  <div class="section-head center reveal">
-    <span class="kicker">{{ $isAr ? 'شراكاتنا' : 'Kooperationen' }}</span>
-    <h2 class="title display">{{ $isAr ? 'تحالفات قوية – وصول إلى عروض كثيرة' : 'Starke Pools – Zugang zu vielen Tarifen' }}</h2>
-    <p>{{ $isAr
-        ? 'من خلال تعاوننا مع تجمعات الوسطاء ومنصات المقارنة نقارن لكم عروض عدد كبير من الشركات باستقلالية تامة.'
-        : 'Über unsere Kooperationen mit Maklerpools und Plattformen vergleichen wir anbieterunabhängig die Tarife zahlreicher Anbieter.' }}</p>
-  </div>
-  <p class="pool-label">{{ $isAr ? 'تجمعاتنا ومنصاتنا' : 'Unsere Pools & Plattformen' }}</p>
-  <div class="strip reveal">
-    <span class="chip">Fonds Finanz<small>Maklerpool</small></span>
-    <span class="chip">tarifcheck<small>Vergleichsplattform</small></span>
-    <span class="chip">TeamGermany<small>Maklerpool</small></span>
-    <span class="chip">Stromkreis<small>Energie-Plattform</small></span>
-    <span class="chip">CHECK24<small>Vergleichsportal</small></span>
-  </div>
-  <p class="pool-label" style="margin-top:32px;">{{ $isAr ? 'وصول إلى عروض شركات منها' : 'Zugang zu Tarifen u. a. von' }}</p>
-  <div class="strip reveal">
-    <span class="chip">Allianz<small>Versicherung</small></span>
-    <span class="chip">AXA<small>Versicherung</small></span>
-    <span class="chip">Telekom<small>Internet & Mobilfunk</small></span>
-    <span class="chip">Vattenfall<small>Energie</small></span>
-    <span class="chip">LichtBlick<small>Energie</small></span>
-  </div>
-</div></section>
-
+{{-- Kooperationen (Maklerpools/Vergleichsplattformen) am 20.11.2026 entfernt:
+     Dienstly24 ist Tippgeber, kein Makler - "Zugang zu vielen Tarifen"
+     und "wir vergleichen anbieterunabhaengig" waeren eine falsche Angabe. --}}
 {{-- Kundenstimmen --}}
 <section class="stimmen on-dark" id="stimmen"><div class="container">
   <div class="section-head center reveal">
@@ -244,8 +220,9 @@
     <h2 class="title display">{{ $isAr ? 'ماذا يقول عملاؤنا عنا' : 'Was Kunden über uns sagen' }}</h2>
   </div>
   <div class="tgrid">
-    <div class="tcard reveal"><p class="q">{{ $isAr ? '«أخيراً وجدت من يشرح لي الفروق بين تعرفات تأمين السيارات بوضوح – دون مصطلحات معقدة.»' : '„Endlich jemand, der mir die Unterschiede zwischen den Kfz-Tarifen wirklich erklärt hat – ohne Fachchinesisch.“' }}</p><div class="who"><div class="av">Y</div><div><b>Yasmin H.</b><span>Frankfurt</span></div></div></div>
-    <div class="tcard reveal"><p class="q">{{ $isAr ? '«الاستشارة باللغة العربية ساعدتني كثيراً، لأنني لا أفهم بعد كل شيء بالألمانية.»' : '„Die Beratung auf Arabisch hat mir sehr geholfen, weil ich noch nicht alles auf Deutsch verstehe.“' }}</p><div class="who"><div class="av">O</div><div><b>Omar S.</b><span>Köln</span></div></div></div>
+    {{-- Zwei Zitate ("Tarife erklaert", "Beratung auf Arabisch") am 20.11.2026
+         entfernt: ein Kundenzitat wird nie umformuliert, und beide beschrieben
+         eine Beratung, die Dienstly24 nicht erbringt. --}}
     <div class="tcard reveal"><p class="q">{{ $isAr ? '«كانت لدي جهة اتصال ثابتة طوال العملية، وهذا منحني شعوراً بالأمان.»' : '„Ich hatte einen festen Ansprechpartner während des ganzen Prozesses. Das hat mir Sicherheit gegeben.“' }}</p><div class="who"><div class="av">L</div><div><b>Laila M.</b><span>München</span></div></div></div>
   </div>
   <p style="text-align:center;margin-top:28px;"><a href="{{ config('website.facebook') }}" target="_blank" rel="noopener" class="btn btn-ghost">{{ $isAr ? 'شاهدوا جميع التقييمات على فيسبوك' : 'Alle Bewertungen auf Facebook ansehen' }}</a></p>
@@ -258,8 +235,8 @@
     <h2 class="title display">{{ $isAr ? 'معلومات مفيدة' : 'Gut zu wissen' }}</h2>
   </div>
   <div class="faq reveal" style="max-width:760px;margin:0 auto;">
-    <details open><summary>{{ $isAr ? 'هل الاستشارة مجانية فعلاً؟' : 'Ist die Beratung wirklich kostenlos?' }}</summary><p>{{ $isAr ? 'نعم، التواصل والاستشارة عند شريكنا الوسيط مجانية تماماً وغير ملزمة.' : 'Ja. Die Kontaktaufnahme und die Beratung durch unseren Partnermakler sind für Sie kostenlos und unverbindlich.' }}</p></details>
-    <details><summary>{{ $isAr ? 'هل تتحدثون العربية أيضاً؟' : 'Sprechen Sie auch Arabisch?' }}</summary><p>{{ $isAr ? 'نعم، فريقنا يقدم الاستشارة بالألمانية والعربية – كما هو أنسب لكم.' : 'Ja, unser Team berät Sie auf Deutsch und auf Arabisch – ganz wie es für Sie bequemer ist.' }}</p></details>
+    <details open><summary>{{ $isAr ? 'هل الخدمة مجانية فعلاً؟' : 'Ist der Service wirklich kostenlos?' }}</summary><p>{{ $isAr ? 'نعم، التواصل معنا مجاني تماماً وغير ملزم.' : 'Ja. Die Kontaktaufnahme ist für Sie kostenlos und unverbindlich.' }}</p></details>
+    <details><summary>{{ $isAr ? 'هل تتحدثون العربية أيضاً؟' : 'Sprechen Sie auch Arabisch?' }}</summary><p>{{ $isAr ? 'نعم، فريقنا يتحدث الألمانية والعربية – كما هو أنسب لكم.' : 'Ja, unser Team spricht Deutsch und Arabisch – ganz wie es für Sie bequemer ist.' }}</p></details>
     <details><summary>{{ $isAr ? 'كم تستغرق معالجة طلبي؟' : 'Wie lange dauert die Bearbeitung meiner Anfrage?' }}</summary><p>{{ $isAr ? 'عادةً نتواصل معكم خلال 24 ساعة.' : 'In der Regel melden wir uns innerhalb von 24 Stunden bei Ihnen.' }}</p></details>
     <details><summary>{{ $isAr ? 'كيف يمكنني إرسال طلب؟' : 'Wie kann ich eine Anfrage stellen?' }}</summary><p>{{ $isAr ? 'أسهل طريقة هي نموذج الاتصال أدناه، أو واتساب، أو الهاتف.' : 'Am einfachsten über das Kontaktformular unten, per WhatsApp oder telefonisch.' }}</p></details>
   </div>

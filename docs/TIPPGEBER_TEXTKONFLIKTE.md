@@ -1,6 +1,6 @@
 # Tippgeber-Rolle: kollidierende Kundentexte (Rohliste, 20.11.2026)
 
-Grundlage fuer PR 3. NICHTS davon ist geaendert. Maschinell gesucht nach Beratung/beraten/vermitteln/Makler/anbieterunabhaengig/Angebot/sparen/guenstiger/empfehlen/begleiten (DE) und استشارة/مستشار/توفير/نوفر/وسيط (AR); enthaelt auch Fehltreffer (Kommentare, CSS, ausdrueckliche Tippgeber-Hinweise) - jede Zeile wird in PR 3 einzeln geprueft.
+Grundlage fuer PR 3. STAND 20.11.2026: umgesetzt (KI-121, `TippgeberTexteTest`) - diese Liste ist die historische Rohliste; Rechtsseiten bewusst unveraendert. Maschinell gesucht nach Beratung/beraten/vermitteln/Makler/anbieterunabhaengig/Angebot/sparen/guenstiger/empfehlen/begleiten (DE) und استشارة/مستشار/توفير/نوفر/وسيط (AR); enthaelt auch Fehltreffer (Kommentare, CSS, ausdrueckliche Tippgeber-Hinweise) - jede Zeile wird in PR 3 einzeln geprueft.
 
 Besonders wichtig (nicht nur Website):
 - KI-Verkaufsassistent und Website-Assistent (app/Services/Ai/Assistant/...): Prompts und Ablauf sind auf Angebote/Abschluss ausgelegt - fachlich mit der Tippgeber-Rolle zu klaeren, bevor der Assistent eingeschaltet wird.

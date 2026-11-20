@@ -35,7 +35,7 @@ class GoogleBewertungTest extends TestCase
 
     private function seiten(): array
     {
-        return ['/', '/versicherungsmakler-hamburg', '/ar', '/ar/versicherungsmakler-hamburg'];
+        return ['/', '/dienstly24-hamburg', '/ar', '/ar/dienstly24-hamburg'];
     }
 
     private function html(string $pfad): string
@@ -108,7 +108,7 @@ class GoogleBewertungTest extends TestCase
     /** Profil ja, Zahlen nein: Karte ohne Bewertung - nie eine geratene. */
     public function test_ohne_abgerufene_zahlen_keine_bewertung(): void
     {
-        $html = $this->html('/versicherungsmakler-hamburg');
+        $html = $this->html('/dienstly24-hamburg');
 
         $this->assertStringContainsString('data-cta="google-profil"', $html);
         $this->assertStringNotContainsString('class="gtrust-sterne"', $html);
@@ -127,7 +127,7 @@ class GoogleBewertungTest extends TestCase
         ]);
 
         $this->assertNull(GoogleBewertung::stand());
-        $this->assertStringNotContainsString('class="gtrust-sterne"', $this->html('/versicherungsmakler-hamburg'));
+        $this->assertStringNotContainsString('class="gtrust-sterne"', $this->html('/dienstly24-hamburg'));
     }
 
     /** Mit Zahlen: Wert, Anzahl und Quellenangabe stehen auf der Seite. */
@@ -137,7 +137,7 @@ class GoogleBewertungTest extends TestCase
             'rating' => 4.75, 'anzahl' => 12, 'stand' => now()->toDateTimeString(),
         ]);
 
-        $html = $this->html('/versicherungsmakler-hamburg');
+        $html = $this->html('/dienstly24-hamburg');
 
         $this->assertStringContainsString('4,8', $html);
         $this->assertStringContainsString('12 Bewertungen', $html);
@@ -151,7 +151,7 @@ class GoogleBewertungTest extends TestCase
             'rating' => 5.0, 'anzahl' => 1, 'stand' => now()->toDateTimeString(),
         ]);
 
-        $html = $this->html('/versicherungsmakler-hamburg');
+        $html = $this->html('/dienstly24-hamburg');
 
         $this->assertStringContainsString('(1 Bewertung)', $html);
         $this->assertStringNotContainsString('(1 Bewertungen)', $html);
@@ -174,7 +174,7 @@ class GoogleBewertungTest extends TestCase
         $this->travel(GoogleBewertung::MAX_ALTER_TAGE + 1)->days();
 
         $this->assertNull(GoogleBewertung::stand());
-        $this->assertStringNotContainsString('class="gtrust-sterne"', $this->html('/versicherungsmakler-hamburg'));
+        $this->assertStringNotContainsString('class="gtrust-sterne"', $this->html('/dienstly24-hamburg'));
     }
 
     /** Sternreihe folgt rechnerisch der Zahl - keine zweite Quelle. */
@@ -209,7 +209,7 @@ class GoogleBewertungTest extends TestCase
             'rating' => 4.8, 'anzahl' => 37, 'stand' => now()->toDateTimeString(),
         ]);
 
-        $html = $this->html('/versicherungsmakler-hamburg');
+        $html = $this->html('/dienstly24-hamburg');
 
         $this->assertStringContainsString('Sie müssen nirgendwo hinkommen', $html);
         $this->assertStringNotContainsString('Anfahrt', $html);
@@ -223,7 +223,7 @@ class GoogleBewertungTest extends TestCase
             'rating' => 4.8, 'anzahl' => 37, 'stand' => now()->toDateTimeString(),
         ]);
 
-        $html = $this->html('/ar/versicherungsmakler-hamburg');
+        $html = $this->html('/ar/dienstly24-hamburg');
 
         $this->assertStringContainsString('أونلاين', $html);
         $this->assertStringContainsString('37', $html);
@@ -235,7 +235,7 @@ class GoogleBewertungTest extends TestCase
     /** Die Karte erscheint dort, wo Vertrauen gebraucht wird. */
     public function test_die_karte_steht_auf_startseite_und_ortsseite(): void
     {
-        foreach (['/' => 'startseite', '/versicherungsmakler-hamburg' => 'hamburg'] as $pfad => $seite) {
+        foreach (['/' => 'startseite', '/dienstly24-hamburg' => 'hamburg'] as $pfad => $seite) {
             $this->assertStringContainsString(
                 'data-cta="google-profil" data-cta-seite="'.$seite.'"',
                 $this->html($pfad),
@@ -327,7 +327,7 @@ class GoogleBewertungTest extends TestCase
             'bis' => '16:45',
         ]]);
 
-        foreach (['/', '/versicherungsmakler-hamburg'] as $pfad) {
+        foreach (['/', '/dienstly24-hamburg'] as $pfad) {
             $html = $this->html($pfad);
 
             $this->assertStringContainsString('08:15', $html, $pfad);
@@ -372,7 +372,7 @@ class GoogleBewertungTest extends TestCase
      */
     public function test_helle_abschnitte_nutzen_den_hellen_ghost_knopf(): void
     {
-        foreach (['/versicherungsmakler-hamburg', '/ar/versicherungsmakler-hamburg'] as $pfad) {
+        foreach (['/dienstly24-hamburg', '/ar/dienstly24-hamburg'] as $pfad) {
             $html = $this->html($pfad);
 
             $this->assertStringNotContainsString('class="btn btn-ghost"', $html, $pfad);
