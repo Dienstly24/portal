@@ -100,7 +100,12 @@
       <a href="{{ $deUrl }}" @class(['active' => ! $isAr]) lang="de" hreflang="de">DE</a>
       <a href="{{ $arUrl }}" @class(['active' => $isAr]) lang="ar" hreflang="ar">AR</a>
     </div>
+    @if(\App\Support\Kundenportal::aktiv())
     <a href="https://portal.dienstly24.de/login" class="btn btn-ghost btn-login-text" data-cta="portal" data-cta-seite="kopfzeile" style="padding:9px 18px;font-size:.86rem;">{{ $isAr ? 'تسجيل الدخول' : 'Login' }}</a>
+    @else
+    {{-- Kundenportal gesperrt: statt "Login" der Chat (Betreiber-Vorgabe 20.11.2026). --}}
+    <a href="/chat" class="btn btn-ghost btn-login-text" data-cta="chat" data-cta-seite="kopfzeile" style="padding:9px 18px;font-size:.86rem;">{{ $isAr ? 'المحادثة' : 'Chat' }}</a>
+    @endif
     <button class="burger" id="burger" aria-label="{{ $isAr ? 'القائمة' : 'Menü' }}" aria-expanded="false"><span></span><span></span><span></span></button>
   </div>
 </div></header>
@@ -129,7 +134,11 @@
       <li><a href="{{ $anchor('ablauf') }}">{{ $isAr ? 'آلية العمل' : 'Ablauf' }}</a></li>
       <li><a href="{{ $anchor('stimmen') }}">{{ $isAr ? 'آراء العملاء' : 'Kundenstimmen' }}</a></li>
       <li><a href="{{ ($isAr ? '/ar/' : '/') . 'versicherungsmakler-hamburg' }}">{{ $isAr ? 'هامبورغ' : 'Hamburg' }}</a></li>
+      @if(\App\Support\Kundenportal::aktiv())
       <li><a href="https://portal.dienstly24.de/login" data-cta="portal" data-cta-seite="fuss">{{ $isAr ? 'بوابة العملاء' : 'Kundenportal' }}</a></li>
+      @else
+      <li><a href="/chat" data-cta="chat" data-cta-seite="fuss">{{ $isAr ? 'اكتب لنا في المحادثة' : 'Im Chat schreiben' }}</a></li>
+      @endif
     </ul></div>
     <div><h3 class="ftitle">{{ $isAr ? 'اتصل بنا' : 'Kontakt' }}</h3><ul>
       <li><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.27a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg><a href="tel:{{ $phoneE164 }}" class="telnum" data-cta="telefon" data-cta-seite="fuss">{{ $phoneDisplay }}</a></li>

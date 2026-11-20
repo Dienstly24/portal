@@ -25,8 +25,13 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;col
     <h1>{{ __('Vielen Dank – Ihre Anfrage ist bei uns!') }}</h1>
     <p>{{ __('Unser Team kümmert sich schnellstmöglich um Ihr Anliegen.') }}</p>
     @if(!empty($ticketRef))<div class="ref">{{ __('Vorgangsnummer') }}: {{ $ticketRef }}</div>@endif
+    @if(\App\Support\Kundenportal::aktiv())
     <p>@if($customer){{ __('Sie können den Status jederzeit im Kundenportal unter „Anfragen" verfolgen.') }}@else{{ __('Wir melden uns per E-Mail bei Ihnen.') }}@endif</p>
     <a class="btn" href="{{ route('login') }}">{{ __('Zum Kundenportal') }}</a>
+    @else
+    <p>{{ __('Wir melden uns per E-Mail bei Ihnen.') }}</p>
+    <a class="btn" href="/chat">{{ __('Im Chat schreiben') }}</a>
+    @endif
 </div>
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
 @stack('cspScripts')

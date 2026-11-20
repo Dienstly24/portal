@@ -19,6 +19,8 @@ class DesignSystemTest extends TestCase
     private const OHNE_BUNDLE = [
         'errors/404.blade.php',
         'errors/500.blade.php',
+        // Wartungsseite des gesperrten Kundenportals (wie 404/500).
+        'errors/portal-gesperrt.blade.php',
         'legal/page.blade.php',
         'admin/provision_report_print.blade.php',
         // Ein HTML-Attribut kann kein var() aufloesen (theme-color, Favicon).

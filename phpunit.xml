@@ -32,5 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Die Suite prueft das Portal-Verhalten bei OFFENEM Portal; die
+             Sperre prueft KundenportalSperreTest ausdruecklich. -->
+        <env name="CUSTOMER_PORTAL_ENABLED" value="true"/>
     </php>
 </phpunit>

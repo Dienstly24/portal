@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\PasswordSetupController;
 use App\Mail\CustomerWelcomeMail;
 use App\Models\ActivityLog;
 use App\Models\Customer;
+use App\Support\Kundenportal;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
@@ -54,6 +55,12 @@ class PortalAccessService
      */
     public function sendInvitation(Customer $customer, ?int $actorId = null): string
     {
+        // Kundenportal gesperrt (CUSTOMER_PORTAL_ENABLED=false): keine Mail
+        // mit Portal-Zugang verschicken - sie fuehrte auf eine gesperrte
+        // Seite (Betreiber-Vorgabe 20.11.2026).
+        if (Kundenportal::gesperrt()) {
+            throw new \RuntimeException('Das Kundenportal ist derzeit gesperrt - es werden keine Zugangsdaten verschickt.');
+        }
         // KI-096: ein abhaengiges Kind hat kein eigenes Portal - erst ab dem
         // Selbststaendigkeitsalter und mit eigener Kundennummer.
         if (($grund = $customer->eigenstaendigkeitsSperre()) !== null) {
@@ -142,6 +149,9 @@ class PortalAccessService
      */
     public function autoInvite(Customer $customer, ?int $actorId = null): bool
     {
+        if (Kundenportal::gesperrt()) {
+            return false; // Portal gesperrt: keine automatische Einladung
+        }
         if ($customer->eigenstaendigkeitsSperre() !== null) {
             return false; // abhaengiges Kind: kein eigenes Portal (KI-096)
         }
@@ -172,6 +182,12 @@ class PortalAccessService
     /** Passwort-Reset-Link senden (Admin-Aktion, gleiche Mail wie Self-Service). */
     public function sendResetLink(Customer $customer, ?int $actorId = null): void
     {
+        // Kundenportal gesperrt (CUSTOMER_PORTAL_ENABLED=false): keine Mail
+        // mit Portal-Zugang verschicken - sie fuehrte auf eine gesperrte
+        // Seite (Betreiber-Vorgabe 20.11.2026).
+        if (Kundenportal::gesperrt()) {
+            throw new \RuntimeException('Das Kundenportal ist derzeit gesperrt - es werden keine Zugangsdaten verschickt.');
+        }
         $user = $customer->user;
         if ($user === null || ! $user->hasRealEmail()) {
             throw new \RuntimeException('Kunde hat keine echte E-Mail-Adresse – Reset-Link nicht möglich.');
@@ -197,6 +213,12 @@ class PortalAccessService
      */
     public function resetPortal(Customer $customer, ?int $actorId = null): string
     {
+        // Kundenportal gesperrt (CUSTOMER_PORTAL_ENABLED=false): keine Mail
+        // mit Portal-Zugang verschicken - sie fuehrte auf eine gesperrte
+        // Seite (Betreiber-Vorgabe 20.11.2026).
+        if (Kundenportal::gesperrt()) {
+            throw new \RuntimeException('Das Kundenportal ist derzeit gesperrt - es werden keine Zugangsdaten verschickt.');
+        }
         if (($grund = $customer->eigenstaendigkeitsSperre()) !== null) {
             throw new \RuntimeException('Kein Portal-Zugang: '.$grund);
         }

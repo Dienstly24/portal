@@ -5188,6 +5188,63 @@ neue Seitenfassung derselben Idee.
 - Tests: `Security/HostHeaderVergiftungTest`,
   `ZweiFaktorEinrichtungUmgehungTest`, `ContentSecurityPolicyTest`.
 
+## Kundenportal GESPERRT + Gast-Chat (Betreiber-Vorgabe 20.11.2026, KI-119)
+
+- **Warum**: Dienstly24 haelt KEINE Erlaubnis nach Paragraph 34d GewO
+  (siehe "ROLLE TIPPGEBER"). Kunden duerfen deshalb keinen Portalzugang
+  haben. Kontakt bleibt moeglich - ohne Anmeldung.
+- **EIN Schalter**: `CUSTOMER_PORTAL_ENABLED` (`config/portal.php`),
+  **Voreinstellung AUS**. `true` stellt das bisherige Verhalten
+  vollstaendig wieder her. Abfrage NUR ueber `App\Support\Kundenportal`
+  (`aktiv()`/`gesperrt()`, Kontaktwege: WhatsApp `CUSTOMER_PORTAL_WHATSAPP`
+  sonst `website.whatsapp`, nur Ziffern; Chat-Basis
+  `CUSTOMER_CHAT_BASE_URL` sonst `portal_url`).
+- **SERVERSEITIG** (`KundenportalSperre`, Web-Gruppe, in der
+  Prioritaetsliste VOR `auth` - sonst leitete `auth` einen Gast still zur
+  Anmeldung um): beendet jede Kundensitzung (abmelden, Sitzung verwerfen,
+  "angemeldet bleiben" vergessen - geloescht wird nichts), sperrt
+  `/portal*`, `/magic-login/*`, `/register*`, auf dem PORTAL-Host auch
+  `/`, `/login`, `/forgot-password*`, und Passwort-/Einladungslinks eines
+  KUNDENKONTOS (am Konto erkannt, nicht am Host - das Personal braucht
+  dieselben Wege). Seiten -> `errors/portal-gesperrt` (503, `no-store`),
+  JSON -> 503. **Nachlauf**: meldet sich in einer Anfrage doch ein Kunde
+  an (Anmeldeformular auf dem Admin-Host, ein kuenftiger Weg), wird er
+  sofort wieder abgemeldet - die Rueckfallebene fuer jeden Weg, den die
+  Liste nicht kennt. Ein Gast auf dem Admin-Host landet bei der Anmeldung
+  (`HomeController`).
+- **Keine Mail mit Portal-Zugang**: `PortalAccessService` (Einladung,
+  Reset-Link, Portal-Reset) lehnt mit Meldung ab, `autoInvite` und
+  `portal:send-invitations` tun nichts, die 09:00-Erinnerung "bitte
+  einloggen" laeuft leer; "Passwort vergessen" verschickt an Kundenkonten
+  nichts (gleiche Antwort, keine Enumeration). Erinnerungs-JOBS
+  (Wechsel, E-Scooter, Schutzbrief, Dokumente) laufen unveraendert.
+- **Mails statt Portal-Link**: `ticket_reply`, `document_request`,
+  `customer_message` tragen bei Sperre den TEXT in der Mail (sie ist der
+  einzige Weg, ihn zu lesen) und den Baustein `emails/_kontaktwege`
+  (tabellenbasierte Knoepfe Chat + WhatsApp, Telefon). Website-Kopf/-Fuss,
+  Leistungsseiten, `legal/page`, `support/*`: Chat statt Login.
+- **Gast-Chat `/chat`** (`WebChatController`, Kanal `webchat` /
+  `WebChatAdapter`, Migration `2026_11_20_120000_webchat_kanal`): Name +
+  Telefon ODER E-Mail + Einwilligung, Unterhaltung haengt an einer
+  Zufallskennung der SERVER-Sitzung, landet im Postfach. Die Gastangaben
+  sind UNGEPRUEFT und stehen nur als interne Notiz da - sie gehen NIE in
+  den Kundenabgleich (sonst uebernaehme ein Fremder mit einer fremden
+  Nummer die Akte, und der KI-Assistent antwortete mit Kundendaten; ohne
+  Kundenakte antwortet er nie). `?ref=` (`ChatReferenz`: verschluesselt,
+  Zweck `chat`, 30 Tage) erzeugt NUR eine interne Notiz "kam ueber Link an
+  Kunde X / Vertrag Y" - keine Zuordnung, keine Daten fuer den Besucher,
+  kein Portal. Gedrosselt je IP (8/min) und je Sitzung (20/10 min);
+  Honeypot + `SpamFilter`. Fehler antworten immer als JSON (die App
+  rendert JSON-Fehler sonst nur unter `api/*`). Antworten sieht der Gast,
+  solange seine Sitzung lebt; danach meldet sich das Team ueber die
+  angegebene Nummer/Adresse.
+- **Protokoll** Kanal `portal_sperre` (`storage/logs/portal-sperre-*.log`,
+  30 Tage): Grund, Methode, Pfad OHNE Query, Route, Konto-ID - keine IP,
+  keine Formulardaten.
+- Die Testsuite laeuft mit Schalter AN (`phpunit.xml`) und belegt so
+  "unveraendert"; `KundenportalSperreTest` prueft die Sperre (u.a. JEDE
+  `portal*`-Route einzeln) und den Schalter AN.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

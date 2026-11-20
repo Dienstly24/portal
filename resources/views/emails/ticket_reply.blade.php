@@ -8,6 +8,7 @@
 <h1 style="color:#ffffff;margin:0;font-size:22px;">{{ $lang === 'ar' ? '💬 رد جديد على طلبك' : '💬 Neue Antwort auf Ihre Anfrage' }}</h1>
 </td></tr>
 <tr><td style="padding:30px;">
+@if(\App\Support\Kundenportal::aktiv())
 @if($lang === 'ar')
 <p style="font-size:15px;color:#333;">عزيزنا <strong>{{ $ticket->customer?->user?->name }}</strong>،</p>
 <p style="font-size:15px;color:#333;">لديك رسالة جديدة في بوابة العملاء. يرجى تسجيل الدخول للاطلاع عليها.</p>
@@ -19,6 +20,23 @@
 <p style="text-align:center;margin:25px 0;">
 <a href="{{ route('portal.tickets.show', $ticket->id) }}" style="background:#17A65B;color:#ffffff;padding:12px 30px;border-radius:8px;text-decoration:none;font-size:15px;">{{ $lang === 'ar' ? 'فتح الطلب والرد' : 'Anfrage öffnen & antworten' }}</a>
 </p>
+@else
+{{-- Kundenportal gesperrt: die Antwort steht IN der Mail - sie ist der
+     einzige Weg, sie zu lesen. Statt des Portal-Links: Kontaktwege. --}}
+@if($lang === 'ar')
+<p style="font-size:15px;color:#333;">عزيزنا <strong>{{ $ticket->customer?->user?->name }}</strong>،</p>
+<p style="font-size:15px;color:#333;">لقد رددنا على طلبك:</p>
+@else
+@include('emails._greeting', ['greetingCustomer' => $ticket->customer])
+<p style="font-size:15px;color:#333;">wir haben Ihnen auf Ihre Anfrage geantwortet:</p>
+@endif
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td style="background:#f4f5f7;border-left:3px solid #17A65B;border-radius:8px;padding:16px 18px;font-size:14.5px;color:#333;line-height:1.7;">{!! nl2br(e(trim($replyBody))) !!}</td>
+</tr></table>
+@include('emails._kontaktwege', ['lang' => $lang, 'chatUrl' => $ticket->customer
+    ? \App\Support\Kundenportal::chatUrl(\App\Support\ChatReferenz::erzeugen($ticket->customer))
+    : \App\Support\Kundenportal::chatUrl()])
+@endif
 <p style="font-size:15px;color:#333;">{{ $lang === 'ar' ? 'مع أطيب التحيات،' : 'Mit freundlichen Grüßen' }}<br>{{ $lang === 'ar' ? 'فريق Dienstly24' : 'Ihr Dienstly24 Team' }}</p>
 </td></tr>
 </table>

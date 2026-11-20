@@ -4,6 +4,8 @@ namespace App\Mail;
 
 use App\Models\CustomerMessage;
 use App\Models\SystemSetting;
+use App\Support\ChatReferenz;
+use App\Support\Kundenportal;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -36,6 +38,18 @@ class CustomerMessageMail extends Mailable implements ShouldQueue
         $this->lang = $customer?->preferred_lang ?? 'de';
         $this->customerName = (string) ($customer?->user?->name ?? '');
         $this->attachmentCount = $customerMessage->attachments()->count();
+
+        // Kundenportal gesperrt: der Text steht IMMER in der Mail (sie ist
+        // der einzige Weg, ihn zu lesen), und statt des Portal-Links fuehrt
+        // der Knopf in den Chat - mit signiertem Bezug nur fuer das Team.
+        if (Kundenportal::gesperrt()) {
+            $this->mode = 'full';
+            $this->messagesUrl = $customer
+                ? Kundenportal::chatUrl(ChatReferenz::erzeugen($customer))
+                : Kundenportal::chatUrl();
+
+            return;
+        }
 
         $portalBase = rtrim(SystemSetting::get('portal_url', 'https://portal.dienstly24.de'), '/');
         $previousRoot = URL::to('/');

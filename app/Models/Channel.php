@@ -17,6 +17,8 @@ class Channel extends Model
 {
     public const INTERNAL = 'internal';
     public const PORTAL = 'portal';
+    /** Gast-Chat ohne Portal-Anmeldung (/chat, 20.11.2026). */
+    public const WEBCHAT = 'webchat';
 
     protected $fillable = ['key', 'name', 'driver', 'is_active', 'ai_mode', 'capabilities', 'sort'];
     protected $casts = ['is_active' => 'boolean', 'capabilities' => 'array'];

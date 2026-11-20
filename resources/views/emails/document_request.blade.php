@@ -39,8 +39,14 @@
 @if($documentRequest->status === 'rejected' && $documentRequest->rejection_note)
 <p style="font-size:14px;color:#B3261E;">{{ $ar ? 'ملاحظة على آخر رفع لك' : 'Hinweis zu Ihrem letzten Upload' }}: {{ $documentRequest->rejection_note }}</p>
 @endif
+@if(\App\Support\Kundenportal::aktiv())
 <p style="font-size:15px;color:#333;">{{ $ar ? 'يمكنك رفع المستند بسهولة عبر بوابة العملاء:' : 'Sie können das Dokument bequem über Ihr Kundenportal hochladen:' }}</p>
 <p style="text-align:center;margin:25px 0;"><a href="{{ route('portal.documents') }}" style="background:#17A65B;color:#ffffff;padding:12px 30px;border-radius:8px;text-decoration:none;font-size:15px;">{{ $ar ? 'ارفع المستند الآن' : 'Dokument jetzt hochladen' }}</a></p>
+@else
+{{-- Kundenportal gesperrt: Dokument per Antwort-Mail, Chat oder WhatsApp. --}}
+<p style="font-size:15px;color:#333;">{{ $ar ? 'يمكنك إرسال المستند إلينا بالرد على هذا البريد الإلكتروني أو عبر واتساب.' : 'Sie können uns das Dokument einfach als Antwort auf diese E-Mail oder per WhatsApp schicken.' }}</p>
+@include('emails._kontaktwege', ['lang' => $ar ? 'ar' : 'de', 'chatUrl' => \App\Support\Kundenportal::chatUrl(\App\Support\ChatReferenz::erzeugen($customer))])
+@endif
 <p style="font-size:15px;color:#333;">{{ $ar ? 'مع أطيب التحيات،' : 'Mit freundlichen Grüßen' }}<br>{{ $ar ? 'فريق Dienstly24' : 'Ihr Dienstly24 Team' }}</p>
 </td></tr>
 </table></td></tr></table>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Kundenportal;
 use App\Support\WebsiteHosts;
 use Illuminate\Http\Request;
 
@@ -27,6 +28,13 @@ class HomeController extends Controller
         }
         if ($user && $user->role === 'partner') {
             return redirect()->route('partner.dashboard');
+        }
+        // Kundenportal gesperrt: ein Gast auf dem Host der Beraterwelt ist
+        // Personal - er gehoert zur Anmeldung, nicht auf die Wartungsseite
+        // des Portals. (Auf dem Portal-Host faengt KundenportalSperre '/'
+        // vorher ab.)
+        if (! $user && Kundenportal::gesperrt()) {
+            return redirect()->route('login');
         }
         return redirect()->route('portal.dashboard');
     }

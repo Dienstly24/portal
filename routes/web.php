@@ -69,6 +69,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UnsubscribeController;
 use App\Http\Controllers\VermittlerAbrechnungController;
+use App\Http\Controllers\WebChatController;
 use App\Http\Controllers\Webhooks\WhatsAppWebhookController;
 use App\Http\Controllers\WebsiteAssistantController;
 use App\Http\Controllers\WebsiteContactController;
@@ -253,6 +254,13 @@ Route::get('/hilfe', [SupportFormController::class, 'show'])->name('support.form
 Route::post('/hilfe', [SupportFormController::class, 'submit'])
     ->middleware('throttle:8,1')
     ->name('support.submit');
+
+// Gast-Chat ohne Portal-Anmeldung (Kundenportal gesperrt, 20.11.2026).
+// Oeffentlich, gedrosselt je IP; die Unterhaltung haengt an der
+// Server-Sitzung. Details im WebChatController.
+Route::get('/chat', [WebChatController::class, 'show'])->middleware('throttle:60,1')->name('chat');
+Route::post('/chat', [WebChatController::class, 'send'])->middleware('throttle:8,1')->name('chat.send');
+Route::get('/chat/verlauf', [WebChatController::class, 'verlauf'])->middleware('throttle:60,1')->name('chat.verlauf');
 
 /*
 |--------------------------------------------------------------------------

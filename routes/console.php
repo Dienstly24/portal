@@ -8,6 +8,7 @@ use App\Models\CustomerFamily;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\ContractSwitchReminderService;
+use App\Support\Kundenportal;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schedule;
 
@@ -209,6 +210,12 @@ Schedule::call(fn () => SendCampaignJob::dispatchDueScheduled())
 
 // 09:00 — Portal-Erinnerung nach 3 Tagen ohne Login
 Schedule::call(function () {
+    // Kundenportal gesperrt: keine "Bitte einloggen"-Mail (sie fuehrte auf
+    // eine gesperrte Seite). Der Zeitstempel bleibt unberuehrt - nach dem
+    // Oeffnen des Portals wird regulaer erinnert.
+    if (Kundenportal::gesperrt()) {
+        return;
+    }
     // Nur Kunden erinnern, die sich auch WIRKLICH einloggen können:
     // ohne nutzbares Passwort (portal_password_set_at) wäre die
     // "Bitte einloggen"-Mail eine Sackgasse (Kundenproblem-Fix).
