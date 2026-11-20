@@ -12,6 +12,7 @@ use App\Services\Messaging\ConversationEngine;
 use App\Services\Messaging\Dto\InboundMessage;
 use App\Services\SpamFilter;
 use App\Support\ChatReferenz;
+use App\Support\LocalTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -145,7 +146,7 @@ class WebChatController extends Controller
                 'id' => $m->id,
                 'von' => $m->direction === CustomerMessage::DIRECTION_OUTGOING ? 'team' : 'sie',
                 'text' => (string) $m->body,
-                'zeit' => $m->created_at?->lokal()->format('d.m.Y H:i'),
+                'zeit' => LocalTime::for($m->created_at)?->format('d.m.Y H:i'),
             ]);
 
         return response()->json(['nachrichten' => $nachrichten]);
@@ -181,7 +182,7 @@ class WebChatController extends Controller
             'Website-Chat (Gast, Angaben UNGEPRUEFT):',
             'Name: '.trim($daten['name']),
             'Kontakt: '.trim($daten['kontakt']),
-            'Datenschutzhinweis bestaetigt: '.now()->lokal()->format('d.m.Y H:i'),
+            'Datenschutzhinweis bestaetigt: '.LocalTime::for(now())?->format('d.m.Y H:i'),
         ];
 
         $ref = $request->session()->get(self::SESSION_REF);
