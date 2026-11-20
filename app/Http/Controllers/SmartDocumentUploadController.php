@@ -23,6 +23,7 @@ use App\Services\Portal\PortalAccessService;
 use App\Support\Facades\Notify;
 use App\Support\UploadRules;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -482,10 +483,7 @@ class SmartDocumentUploadController extends Controller
                 auth()->id(),
             );
         } catch (DuplicateCustomerException $e) {
-            return response()->json([
-                'message' => 'Es existiert bereits ein aehnlicher Kunde ('.($e->matchResult->customer?->user?->name ?? '?').', '
-                    .$e->matchResult->score.' Punkte). Bitte stattdessen zuordnen.',
-            ], 422);
+            return $this->duplicateResponse($e);
         }
 
         $this->applyWerber($request, $customer);
@@ -728,10 +726,7 @@ class SmartDocumentUploadController extends Controller
         try {
             $customer = app(CustomerAutoCreationService::class)->createFromUnmatched($criteria, 'manual', auth()->id());
         } catch (DuplicateCustomerException $e) {
-            return response()->json([
-                'message' => 'Es existiert bereits ein aehnlicher Kunde ('.($e->matchResult->customer?->user?->name ?? '?').', '
-                    .$e->matchResult->score.' Punkte). Bitte stattdessen zuordnen.',
-            ], 422);
+            return $this->duplicateResponse($e);
         }
 
         $this->applyWerber($request, $customer);
@@ -785,6 +780,134 @@ class SmartDocumentUploadController extends Controller
             'documents' => $documents->count(),
             'health' => $health,
         ]);
+    }
+
+    /**
+     * Mehrere Eingangs-Dokumente auf einmal einem BESTEHENDEN Kunden zuordnen
+     * (Betreiber-Meldung 20.11.2026): Bestandskunde bringt neue Unterlagen /
+     * einen neuen Vertrag. Bisher gab es fuer einen Vorgang bzw. eine
+     * Mehrfachauswahl nur "Neuen Kunden anlegen" - das scheiterte am
+     * Dubletten-Schutz ("Es existiert bereits ein aehnlicher Kunde ...
+     * Bitte stattdessen zuordnen"), ohne dass es dort einen Weg zum Zuordnen
+     * gab; der Mitarbeiter musste jedes Dokument einzeln zuordnen.
+     *
+     * Dieselbe Zusammenfuehrung wie bei der Neuanlage
+     * (createCustomerFromDocuments), aber ohne Kundenanlage: alle Dokumente
+     * gehen an den gewaehlten Kunden, die angekreuzten Felder kommen aus dem
+     * zusammengefuehrten Ergebnis, ein Vertrag entsteht nur auf Wunsch.
+     * Ist EIN Dokument schon einem anderen Kunden zugeordnet oder zeigen die
+     * Dokumente verschiedene Personen, wird nichts zugeordnet.
+     */
+    public function assignDocumentsToCustomer(Request $request)
+    {
+        $this->validateJson($request, [
+            'document_ids' => 'required|array|min:1|max:10',
+            'document_ids.*' => 'uuid',
+            'customer_id' => 'required|uuid',
+            'apply_fields' => 'nullable|array',
+            'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,marital_status,gender,email2,health_insurance,iban,occupation,employer',
+            'create_contract' => 'nullable|boolean',
+            'visibility' => 'nullable|in:customer,internal',
+        ]);
+
+        $customer = Customer::find($request->customer_id);
+        if (! $customer) {
+            return response()->json(['message' => 'Dieser Kunde existiert nicht (mehr).'], 404);
+        }
+        abort_unless(auth()->user()->canAccessCustomer($customer->id), 403);
+
+        $ids = array_values(array_unique($request->input('document_ids')));
+        $documents = Document::whereIn('id', $ids)->get();
+        if ($documents->count() !== count($ids)) {
+            return response()->json(['message' => 'Mindestens ein Dokument wurde nicht gefunden.'], 404);
+        }
+        foreach ($documents as $document) {
+            $this->authorizeDocument($document);
+            if ($document->customer_id && (string) $document->customer_id !== (string) $customer->id) {
+                return response()->json(['message' => 'Bereits einem anderen Kunden zugeordnet: '.$document->file_name], 422);
+            }
+        }
+
+        // Verschiedene Personen in der Auswahl -> nicht blind an EINEN Kunden.
+        $merged = $this->intake->mergeExtractions($documents);
+        if (! empty($merged['_conflicts'])) {
+            return response()->json([
+                'message' => implode(' ', $merged['_conflicts']).' Bitte die Dokumente einzeln zuordnen.',
+                'conflicts' => $merged['_conflicts'],
+            ], 422);
+        }
+
+        foreach ($documents as $document) {
+            if (! $document->customer_id && ! $this->intake->assignToCustomer($document, $customer, auth()->id())) {
+                return response()->json(['message' => 'Dokument wurde soeben einem anderen Kunden zugeordnet: '.$document->file_name], 422);
+            }
+        }
+        if ($request->filled('visibility')) {
+            Document::whereIn('id', $documents->pluck('id'))->update(['visibility' => $request->visibility, 'updated_by' => auth()->id()]);
+        }
+
+        $primary = $documents->first();
+        $applied = $this->intake->applyExtractedToCustomer($primary, $customer, $request->input('apply_fields', []), auth()->id(), $merged);
+
+        $contract = null;
+        if ($request->boolean('create_contract')) {
+            $contract = $this->intake->createContractFromExtraction($primary, $customer, auth()->id(), $merged);
+        }
+        // Jedes Dokument an einen vorhandenen Vertrag des Kunden haengen
+        // (Identitaet: Vertrags-Nr./FIN/MaLo ...), Zaehlerfotos in die
+        // Verbrauchshistorie - wie bei der Einzel-Zuordnung.
+        foreach ($documents as $document) {
+            $linked = $this->intake->linkMatchingContract($document->fresh(), $customer);
+            $contract ??= $linked;
+        }
+
+        $invited = $contract !== null && $this->portal->autoInvite($customer, auth()->id());
+
+        foreach ($documents as $document) {
+            $this->markDecision($document, 'accepted');
+        }
+
+        return response()->json([
+            'ok' => true,
+            'customer_id' => $customer->id,
+            'customer_url' => route('admin.customer', $customer->id).'#tab-dokumente',
+            'customer_name' => $customer->user?->name ?? $customer->customer_number,
+            'customer_number' => $customer->customer_number,
+            'applied_fields' => $applied,
+            'contract_id' => $contract?->id,
+            'invited' => $invited,
+            'documents' => $documents->count(),
+        ]);
+    }
+
+    /**
+     * Antwort, wenn die Neuanlage am Dubletten-Schutz scheitert. Statt nur
+     * "Bitte stattdessen zuordnen" zu sagen, liefert sie den gefundenen
+     * Kunden mit - die Oberflaeche bietet damit sofort "Diesem Kunden
+     * zuordnen" an. Liegt der Kunde ausserhalb des Portfolios des
+     * Mitarbeiters, werden weder Name noch ID genannt (wie bei den
+     * Zuordnungs-Vorschlaegen; vorher stand der Name in der Meldung).
+     */
+    private function duplicateResponse(DuplicateCustomerException $e): JsonResponse
+    {
+        $found = $e->matchResult->customer;
+        $score = $e->matchResult->score;
+        if ($found === null || ! auth()->user()->canAccessCustomer($found->id)) {
+            return response()->json([
+                'message' => 'Es existiert bereits ein aehnlicher Kunde ('.$score.' Punkte) ausserhalb Ihres Portfolios. Bitte an Admin/Manager uebergeben.',
+            ], 422);
+        }
+        $name = $found->user?->name ?? $found->customer_number;
+
+        return response()->json([
+            'message' => 'Es existiert bereits ein aehnlicher Kunde ('.$name.', '.$score.' Punkte). Bitte stattdessen zuordnen.',
+            'duplicate' => [
+                'customer_id' => $found->id,
+                'name' => $name,
+                'customer_number' => $found->customer_number,
+                'score' => $score,
+            ],
+        ], 422);
     }
 
     /**

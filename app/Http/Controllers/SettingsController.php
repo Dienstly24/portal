@@ -6,8 +6,10 @@ use App\Http\Middleware\EnsureTwoFactor;
 use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Models\Contract;
 use App\Models\SystemSetting;
+use App\Services\Ai\AiEmailClassifier;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
+use App\Services\Ai\DocumentAnalyzer;
 use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\Kfz\SfReferenceValidator;
 use App\Services\Messaging\ChannelRoutingService;
@@ -51,6 +53,10 @@ class SettingsController extends Controller
             // AN - eine Schutzschicht, die man erst einschalten muss, ist
             // in der Praxis meistens aus.
             'two_factor_required' => SystemSetting::get('two_factor_required', EnsureTwoFactor::defaultSetting()),
+            // KI-Kosten (20.11.2026): Dokument-KI nur nach Freigabe (Standard
+            // AN), automatischer KI-Vorschlag fuer Mails (Standard AUS).
+            DocumentAnalyzer::SETTING_NUR_NACH_FREIGABE => DocumentAnalyzer::kiNurNachFreigabe() ? '1' : '0',
+            AiEmailClassifier::SETTING_AUTOMATISCH => AiEmailClassifier::automatischAktiv() ? '1' : '0',
             Contract::SETTING_PORTAL_EXTERNAL => SystemSetting::get(Contract::SETTING_PORTAL_EXTERNAL, 'getrennt'),
             // Postfach: kanaluebergreifende Unterhaltungen. Voreinstellung
             // AUS - eine Aenderung, die bestehende Unterhaltungen anders
@@ -110,6 +116,15 @@ class SettingsController extends Controller
         // Marker bleibt der bisherige Wert stehen.
         if ($request->has('security_form')) {
             SystemSetting::set('two_factor_required', $request->boolean('two_factor_required') ? '1' : '0');
+        }
+
+        // KI-Kosten: eigener Marker - ein anderes Formular darf die
+        // Kostenbremse weder ein- noch ausschalten.
+        if ($request->has('ki_kosten_form')) {
+            SystemSetting::set(DocumentAnalyzer::SETTING_NUR_NACH_FREIGABE,
+                $request->boolean(DocumentAnalyzer::SETTING_NUR_NACH_FREIGABE) ? '1' : '0');
+            SystemSetting::set(AiEmailClassifier::SETTING_AUTOMATISCH,
+                $request->boolean(AiEmailClassifier::SETTING_AUTOMATISCH) ? '1' : '0');
         }
 
         // KFZ: eigener Marker - ein anderes Formular darf die Bezugspflicht

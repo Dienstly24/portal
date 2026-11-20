@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 09.10.2026 aus `php artisan route:list --json` (544 Routen).
+Generiert am 20.11.2026 aus `php artisan route:list --json` (549 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -111,6 +111,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | GET | `admin/document-requests` | admin.document_requests | auth role:staff |
 | POST | `admin/document-requests/{id}/approve` | admin.document_requests.approve | auth role:staff |
 | POST | `admin/document-requests/{id}/reject` | admin.document_requests.reject | auth role:staff |
+| POST | `admin/documents/assign-batch` | admin.documents.assign_batch | auth role:staff throttle:300,10 |
 | POST | `admin/documents/batch-preview` | admin.documents.batch_preview | auth role:staff throttle:1200,1 |
 | POST | `admin/documents/bulk-delete` | admin.documents.bulk_delete | auth role:staff throttle:300,10 |
 | POST | `admin/documents/create-customer-batch` | admin.documents.create_customer_batch | auth role:staff throttle:300,10 |
@@ -349,9 +350,12 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | DELETE | `admin/signaturen/{id}` | admin.signatures.destroy | auth role:staff |
 | POST | `admin/signaturen/{id}/abbrechen` | admin.signatures.cancel | auth role:staff |
 | GET | `admin/signaturen/{id}/download/{which?}` | admin.signatures.download | auth role:staff |
+| POST | `admin/signaturen/{id}/ergaenzen` | admin.signatures.supplement | auth role:staff throttle:30,10 |
 | POST | `admin/signaturen/{id}/erinnern` | admin.signatures.remind | auth role:staff throttle:60,10 |
 | POST | `admin/signaturen/{id}/intern-unterschreiben` | admin.signatures.internal.sign | auth role:staff throttle:30,10 |
 | POST | `admin/signaturen/{id}/intern-zuruecknehmen` | admin.signatures.internal.reset | auth role:staff |
+| POST | `admin/signaturen/{id}/link/{signer}` | admin.signatures.link | auth role:staff throttle:60,10 |
+| POST | `admin/signaturen/{id}/neu-anfordern` | admin.signatures.reissue | auth role:staff throttle:30,10 |
 | POST | `admin/signaturen/{id}/neu-erzeugen` | admin.signatures.regenerate | auth role:staff throttle:20,10 |
 | GET | `admin/signaturen/{id}/protokoll` | admin.signatures.audit | auth role:staff |
 | POST | `admin/signaturen/{id}/qualitaet-neu-erzeugen` | admin.signatures.quality.regenerate | auth role:staff role:admin throttle:20,10 |
@@ -360,6 +364,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/signaturen/{id}/senden` | admin.signatures.send | auth role:staff throttle:60,10 |
 | GET | `admin/signaturen/{id}/vorbereiten` | admin.signatures.prepare | auth role:staff |
 | POST | `admin/signaturen/{id}/vorbereiten` | admin.signatures.prepare.save | auth role:staff throttle:300,10 |
+| GET | `admin/signaturen/{id}/vorschau` | admin.signatures.preview | auth role:staff throttle:120,1 |
 | POST | `admin/signaturen/{id}/zuordnen` | admin.signatures.assign | auth role:staff |
 | GET | `admin/systemzustand` | admin.system_health | auth role:staff role:admin,manager |
 | GET | `admin/systemzustand.json` | admin.system_health.json | auth role:staff role:admin,manager |

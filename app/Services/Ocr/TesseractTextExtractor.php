@@ -71,7 +71,7 @@ class TesseractTextExtractor implements TextExtractorInterface
                     Log::warning('OCR-Zeitbudget erschoepft - Teilergebnis nach '.count($pages).' Seiten.');
                     break;
                 }
-                $pages[] = trim($this->ocrImage($image));
+                $pages[] = trim($this->kartenNachlesen($this->ocrImage($image), $image, $deadline));
             }
 
             if ($mime !== 'application/pdf' && count($pages) === 1 && microtime(true) < $deadline) {
@@ -220,10 +220,44 @@ class TesseractTextExtractor implements TextExtractorInterface
         }
     }
 
-    private function ocrImage(string $path): string
+    /**
+     * KARTEN mit einem zweiten Lauf als EIN Textblock lesen (Betreiber-Meldung
+     * 20.11.2026, an der eingesandten BIG-Gesundheitskarte und der girocard
+     * gemessen): die Standard-Seitenanalyse (PSM 3) stuft die hellen
+     * Feldkaesten einer Karte auf farbigem Grund als BILD ein und gibt von
+     * der Gesundheitskarte nur Kopfzeile und Kartennummer aus - Name,
+     * Geburtsdatum und Versichertennummer fehlten, das Dokument lief zur
+     * bezahlten KI. Als ein Block gelesen (PSM 6) kamen alle Felder an.
+     *
+     * Bewusst nur bei DUENNEM Ergebnis (`ocr.zweiter_lauf_unter_zeichen`,
+     * Standard 600): ein Brief oder Formular liefert im ersten Lauf viel Text
+     * und bleibt unveraendert - die Parser sind darauf eingestellt. Gewonnen
+     * hat der Lauf mit MEHR lesbaren Woertern (lateinische Buchstaben und
+     * Ziffern, mind. 3 Zeichen) - nie eine Mischung aus beiden, sonst saehe
+     * eine Karte aus wie zwei. Bei Gleichstand bleibt der erste Lauf.
+     */
+    private function kartenNachlesen(string $text, string $path, float $deadline): string
+    {
+        $grenze = (int) config('services.ocr.zweiter_lauf_unter_zeichen', 600);
+        if ($grenze <= 0 || mb_strlen(trim($text)) >= $grenze || microtime(true) >= $deadline) {
+            return $text;
+        }
+        $block = $this->ocrImage($path, '6');
+
+        return self::lesbareWoerter($block) > self::lesbareWoerter($text) ? $block : $text;
+    }
+
+    /** Anzahl lesbarer Woerter (Latein/Ziffern, mind. 3 Zeichen) - Mass fuer "mehr gelesen". */
+    public static function lesbareWoerter(string $text): int
+    {
+        return (int) preg_match_all('/[A-Za-z\x{00C4}\x{00D6}\x{00DC}\x{00E4}\x{00F6}\x{00FC}\x{00DF}0-9]{3,}/u', $text);
+    }
+
+    private function ocrImage(string $path, ?string $psm = null): string
     {
         $process = new Process([
             $this->tesseractBinary(), $path, 'stdout', '-l', (string) config('services.ocr.languages', 'deu+eng'),
+            ...($psm !== null ? ['--psm', $psm] : []),
         ]);
         $process->setTimeout(max(5, (int) config('services.ocr.page_timeout', 20)));
         $process->run();

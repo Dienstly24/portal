@@ -3,6 +3,7 @@
 namespace Tests\Feature\Ai;
 
 use App\Models\Document;
+use App\Models\SystemSetting;
 use App\Services\Ai\ClaudeDocumentAiProvider;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ai\DocumentAnalyzer;
@@ -27,6 +28,17 @@ use Tests\TestCase;
 class DocumentCostOptimizationTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Diese Klasse prueft die AUTOMATISCHE KI-Eskalation. Seit 20.11.2026
+     * laeuft die KI standardmaessig nur nach Freigabe - hier wird der
+     * automatische Betrieb (Schalter aus) ausdruecklich eingestellt.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        SystemSetting::set(DocumentAnalyzer::SETTING_NUR_NACH_FREIGABE, '0');
+    }
 
     /** Fake der Textebene-Stufe (unabhaengig von poppler auf dem Runner). */
     private function fakePdfText(string $ret, bool $available = true): PdfTextLayerExtractor

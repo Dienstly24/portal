@@ -39,8 +39,7 @@ class GesundheitskarteParser implements DocumentTemplateParser
 
     public function parse(string $text): ?array
     {
-        if (mb_stripos($text, 'KRANKENVERSICHERUNGSKARTE') === false
-            && mb_stripos($text, 'GESUNDHEITSKARTE') === false) {
+        if (! $this->istGesundheitskarte($text)) {
             return null;
         }
 
@@ -161,14 +160,19 @@ class GesundheitskarteParser implements DocumentTemplateParser
 
         $raw = [];
         // Rueckseite (EHIC): Name und Vornamen stehen unter ihren Feldnummern.
-        $last = $this->valueBelow($lines, '/^\s*3[.\s]*Name\b/iu');
-        $first = $this->valueBelow($lines, '/Vornamen/iu');
-        $birth = $this->valueBelow($lines, '/Geburtsdatum/iu');
+        // Die Rueckseite steht in ZWEI Spalten (Vornamen | Geburtsdatum), die
+        // OCR setzt beide Werte in EINE Zeile ("Mohamad 01/01/1996") - der
+        // Namensteil ist deshalb das, was VOR dem Datum steht.
+        $istName = fn (string $v): ?string => $this->namensteil($v);
+        $istDatum = fn (string $v): ?string => preg_match('#\b\d{2}[./]\d{2}[./]\d{4}\b#', $v) ? $v : null;
+        $last = $this->valueBelow($lines, '/^\s*3[.\s]*Name\b/iu', $istName);
+        $first = $this->valueBelow($lines, '/Vornamen/iu', $istName);
+        $birth = $this->valueBelow($lines, '/Geburtsdatum/iu', $istDatum);
 
-        if ($last !== null && $this->looksLikeNamePart($last)) {
+        if ($last !== null) {
             $raw['last_name'] = $this->tidyName($last);
         }
-        if ($first !== null && $this->looksLikeNamePart($first)) {
+        if ($first !== null) {
             $raw['first_name'] = $this->tidyName($first);
         }
         // Vorderseite: "Vorname Nachname" in EINER Zeile ueber dem Kassennamen.
@@ -228,32 +232,64 @@ class GesundheitskarteParser implements DocumentTemplateParser
         return array_values($byNumber);
     }
 
-    /** Naechste nicht-leere Zeile UNTER der ersten Zeile, die $pattern trifft. */
-    private function valueBelow(array $lines, string $pattern): ?string
+    /**
+     * Wert zu einer Beschriftung: ZUERST die naechste nicht-leere Zeile, dann
+     * der Rest HINTER der Beschriftung ("4. Vornamen   Jana") - jeweils nur,
+     * wenn $pruefen ihn als passenden Wert erkennt (Rueckgabe = bereinigter
+     * Wert). Die Reihenfolge ist Absicht (Betreiber-Meldung 20.11.2026, BIG-
+     * Karte): die OCR haengt an die Beschriftung oft Rauschen an
+     * ("3. Name Bane ee |") - das sieht aus wie ein Wort und gewann frueher
+     * vor dem echten Namen in der Zeile darunter.
+     *
+     * @param callable(string): ?string $pruefen
+     */
+    private function valueBelow(array $lines, string $pattern, callable $pruefen): ?string
     {
         foreach ($lines as $i => $line) {
-            if (! preg_match($pattern, $line)) {
+            if (! preg_match($pattern, $line, $mm, PREG_OFFSET_CAPTURE)) {
                 continue;
-            }
-            // Steht der Wert in derselben Zeile HINTER der Beschriftung
-            // ("4. Vornamen   Jana"), gilt er ebenfalls. Die Feldnummer davor
-            // ("4.") ist kein Wert - der Rest muss ein Wort oder ein Datum
-            // sein, sonst zaehlt die naechste Zeile.
-            if (preg_match($pattern, $line, $mm, PREG_OFFSET_CAPTURE)) {
-                $inline = trim(mb_substr($line, (int) $mm[0][1] + mb_strlen($mm[0][0])));
-                if (preg_match('#\p{L}{2,}|\d{2}[./]\d{2}[./]\d{4}#u', $inline)) {
-                    return $inline;
-                }
             }
             for ($j = $i + 1; $j < count($lines); $j++) {
                 $v = trim($lines[$j]);
                 if ($v !== '') {
-                    return $v;
+                    if (($wert = $pruefen($v)) !== null) {
+                        return $wert;
+                    }
+                    break;
                 }
             }
-            return null;
+            $inline = trim(mb_substr($line, (int) $mm[0][1] + mb_strlen($mm[0][0])));
+
+            return $inline !== '' ? $pruefen($inline) : null;
         }
         return null;
+    }
+
+    /**
+     * Namensteil eines Feldwerts: alles VOR einem Datum bzw. einer Ziffer,
+     * und nur, wenn es wie ein Name aussieht. Sonst null - nie geraten.
+     */
+    private function namensteil(string $value): ?string
+    {
+        $teil = trim((string) preg_replace('/\s*\d.*$/u', '', trim($value)));
+
+        return $teil !== '' && $this->looksLikeNamePart($teil) ? $teil : null;
+    }
+
+    /**
+     * Erkennung der Karte. Die Ueberschrift allein genuegt nicht: auf dem
+     * Foto der BIG-Karte (20.11.2026) kam sie als "KRANKENVERSICRERUNGSKARTE"
+     * an - ein verlesener Buchstabe liess die ganze Karte zur KI laufen.
+     * Akzeptiert werden deshalb auch die verlesene Ueberschrift
+     * (KRANKENVERS...KARTE) und die genormten EHIC-Felder (Traeger-Kennnummer
+     * UND Geburtsdatum), die kein anderes Dokument zusammen traegt.
+     */
+    private function istGesundheitskarte(string $text): bool
+    {
+        return mb_stripos($text, 'KRANKENVERSICHERUNGSKARTE') !== false
+            || mb_stripos($text, 'GESUNDHEITSKARTE') !== false
+            || preg_match('/KRANKENVERS\p{L}{0,10}KARTE/iu', $text)
+            || (preg_match('/des\s+Tr(?:[äa]|ae)gers/iu', $text) && preg_match('/Geburtsdatum/iu', $text));
     }
 
     private function looksLikeNamePart(string $value): bool

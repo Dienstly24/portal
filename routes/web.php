@@ -642,6 +642,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Protokoll) zu EINEM neuen Kunden zusammenfuehren.
     Route::post('/documents/create-customer-batch', [SmartDocumentUploadController::class, 'createCustomerFromDocuments'])
         ->middleware('throttle:300,10')->name('documents.create_customer_batch');
+    // Mehrere Eingangs-Dokumente auf einmal einem BESTEHENDEN Kunden zuordnen
+    // (Bestandskunde bringt neue Unterlagen / neuen Vertrag).
+    Route::post('/documents/assign-batch', [SmartDocumentUploadController::class, 'assignDocumentsToCustomer'])
+        ->middleware('throttle:300,10')->name('documents.assign_batch');
     // Vorschau fuer eine manuelle Mehrfachauswahl (beliebige Dokumente zu EINEM
     // Kunden buendeln) - dieselbe Zusammenfuehrung wie ein Vorgang.
     Route::post('/documents/batch-preview', [SmartDocumentUploadController::class, 'batchPreview'])

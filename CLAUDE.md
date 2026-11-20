@@ -1378,6 +1378,39 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   genug fuer die einfache Heuristik - lange, mehrseitige Dokumente haben zu
   viele Abschnitte und erzeugen Falschtreffer, daher Eskalation - UND Typ
   erkannt UND mind. ein Feld), wird es OHNE KI-Aufruf uebernommen.
+  **SEIT 20.11.2026 NUR NACH FREIGABE** (Betreiber-Vorgabe "erst fragen,
+  dann KI - Kosten sehr stark senken", KI-116): Einstellung
+  `dokumente_ki_nur_nach_freigabe` (`DocumentAnalyzer::kiNurNachFreigabe()`,
+  Standard AN, Einstellungen -> "KI-Kosten"). Reicht die kostenlose Stufe
+  nicht, ruft das System die KI NICHT auf: das kostenlose Ergebnis bleibt
+  (ohne eines ein ehrliches "sonstiges / kostenlos nicht lesbar"), das
+  Dokument traegt `documents.ki_freigabe_offen` und im Eingang
+  "💰 KI empfohlen – wartet auf Freigabe". Die Freigabe ist der Knopf
+  "🤖 Mit KI analysieren" (forceAi, nur admin/manager, Tageslimit, mit
+  Kostenrueckfrage); sie loescht den Vermerk. Das gilt fuer JEDEN Weg
+  (Eingang, Portal, `documents:analyze-pending`) und fuer beide Stellen,
+  an denen frueher eskaliert wurde (Schritt 3 UND die Vorlagen-Eskalation
+  bei fehlendem Vertragskern/fehlender Pflichtangabe). Ist die Einstellung
+  nicht lesbar, gilt "nur nach Freigabe". Ein KI-Ergebnis traegt im
+  Eingang "🤖 KI, kostenpflichtig" - vorher sah man nicht, was Geld
+  gekostet hat. Die Schritte 3/4 unten beschreiben den Betrieb mit
+  ausgeschaltetem Schalter. Ebenso AUS (Standard) ist der automatische
+  KI-Kategorievorschlag im E-Mail-Eingang
+  (`AiEmailClassifier::SETTING_AUTOMATISCH`) - er kostete fuer JEDE nicht
+  erkannte Mail einen Aufruf. Testklassen, die die automatische
+  Eskalation pruefen, stellen den Schalter in `setUp()` ausdruecklich auf
+  '0'. Test: `KiNurNachFreigabeTest`.
+  **KARTENFOTOS: zweiter OCR-Lauf** (KI-117, an BIG-Karte und girocard
+  gemessen): PSM 3 stuft die hellen Feldkaesten einer Karte als Bild ein
+  (von der EHIC kamen nur Kopfzeile und Kartennummer). Liefert eine Seite
+  weniger als `OCR_ZWEITER_LAUF_UNTER_ZEICHEN` (600) Zeichen, liest
+  `TesseractTextExtractor::kartenNachlesen` sie zusaetzlich als EIN Block
+  (PSM 6); es gewinnt der Lauf mit mehr lesbaren Woertern, nie eine
+  Mischung. Briefe/Formulare bleiben beim ersten Lauf. Dazu liest der
+  `GesundheitskarteParser` (KI-118) die verlesene Ueberschrift, nimmt den
+  Wert aus der Folgezeile vor dem Beschriftungs-Rauschen und den Namensteil
+  vor einem Datum ("Max 01/02/1990"). Tests: `OcrKartenNachlesenTest`,
+  `GesundheitskarteEhicOcrTest`.
   3) **Sonst Eskalation an den KI-Anbieter**: bei vorhandener Textebene
   bekommt Claude den (auf `OCR_AI_TEXT_MAX_CHARS`, Default 12000, gekuerzten)
   **TEXT** statt der teuren Bild-/PDF-Seiten (ein 19-seitiges Protokoll als
@@ -1456,6 +1489,18 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Felder, die WIRKLICH gelesen wurden, und die Konfidenz sinkt (58 statt 70),
   wenn ein Signal fehlt - der Mitarbeiter sieht im Review, dass er
   hinschauen soll. Tests: `KontaktdatenBlockParserTest`.
+- **Bankkarte/girocard gratis** (`BankkarteParser`, 20.11.2026, KI-115):
+  die Karte lief mangels Parser IMMER in die KI. Greift nur bei KURZEM Text
+  + Kartenmerkmal (girocard/Debit/Maestro/V PAY/Visa/Mastercard) + deutscher
+  IBAN mit gueltiger Pruefziffer (OCR-Verwechslungen via `RepairsOcrText`);
+  Formularwoerter (Mandat, Lastschrift, Antrag ...) sperren ihn. Der
+  Karteninhaber wird Kontoinhaber + Person NUR bei genau einem
+  Namenskandidaten. Typ bleibt `sepa_mandat`. Steht vor
+  `KontaktdatenBlockParser`. Nachtrag (am Kartenfoto gemessen): Logos sind
+  Grafiken und fehlen im OCR-Text - Kartenmerkmal sind auch die
+  Beschriftungen "IBAN ... Gueltig bis"; Inhaber ist die Zeile DIREKT ueber
+  "IBAN" (Motiv-Rauschen wie "NER TR" galt sonst als zweiter Name).
+  Test `BankkarteParserTest`.
 - **eAT-Rueckseite + Arbeitsvertrag im Dokumenten-Eingang** (Betreiber-
   Vorgabe 29.07.2026): Der `AufenthaltstitelParser` liest jetzt auch die
   RUECKSEITE der Aufenthaltstitel-Karte - sie traegt keine Vorderseiten-
@@ -1793,6 +1838,22 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Liste als Dubletten-Warnung und wechselt per Klick in die Zuordnung.
   Portfolio-Scope wie ueberall: fremde Kunden werden nur als Anzahl
   gemeldet, nie mit Namen. Tests in `SmartDocumentUploadTest`.
+  **BESTANDSKUNDE BRINGT NEUE UNTERLAGEN** (Betreiber-Meldung 20.11.2026,
+  KI-114): ein Vorgang bzw. eine Mehrfachauswahl kannte nur "Neuen Kunden
+  anlegen" - das scheiterte am Dubletten-Schutz mit "Bitte stattdessen
+  zuordnen", ohne Weg dorthin (Vorschlaege im Vorgang waren nicht klickbar).
+  Jetzt: `assignDocumentsToCustomer` (Route `admin.documents.assign_batch`)
+  ordnet ALLE Dokumente in einem Schritt einem vorhandenen Kunden zu -
+  dieselbe Zusammenfuehrung wie die Neuanlage, Felder nur angekreuzt,
+  Vertrag nur auf Wunsch, sonst `linkMatchingContract` je Dokument.
+  Abbruch OHNE Teilzuordnung bei Namenskonflikt oder einem fremd
+  zugeordneten Dokument. Einstiege: Knopf "Alle N bestehendem Kunden
+  zuordnen" am Vorgang, "Bestehendem Kunden zuordnen" in der Auswahlleiste
+  (ab 1 Dokument), Klick auf einen Vorschlag im Vorgang. Die 422 der
+  Neuanlage (`duplicateResponse`) traegt den gefundenen Kunden als
+  `duplicate` mit, die Oberflaeche bietet "Alle Dokumente ... zuordnen"
+  an - liegt er ausserhalb des Portfolios, nennt die Meldung weder Name
+  noch ID (vorher stand der Name drin). Test `BestandskundeStapelZuordnungTest`.
 - **Vertrags-Duplikat-Schutz + Version History** (`DocumentIntakeService`,
   Betreiber-Vorgabe 23.07.2026): Ein neu importiertes Dokument fuer ein
   bereits erfasstes Fahrzeug/eine Police erzeugt KEIN Duplikat mehr.

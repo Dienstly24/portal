@@ -84,6 +84,13 @@
                 @elseif($meta && !$meta['ready'])
                     <span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ Analyse läuft noch…</span>
                 @endif
+                @if($meta && $meta['ready'] && empty($meta['conflicts']))
+                    {{-- Bestandskunde bringt neue Unterlagen: alle Dokumente des
+                         Vorgangs in EINEM Schritt einem vorhandenen Kunden zuordnen. --}}
+                    <button type="button" class="btn btn-ghost btn-sm" data-h-click="stapel-zuordnen" data-batch="{{ $batchId }}">
+                        👤 Alle {{ $groupDocs->count() }} bestehendem Kunden zuordnen
+                    </button>
+                @endif
             </div>
         </div>
         @foreach($groupDocs as $doc)
@@ -108,8 +115,9 @@
 <div id="inbox-selection-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:150;background:var(--graphite-deep);color:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);padding:11px 16px;align-items:center;gap:14px;flex-wrap:wrap;max-width:calc(100% - 32px);">
     <span style="font-size:13.5px;"><strong id="inbox-selection-count">0</strong>&nbsp;Dokumente ausgewaehlt</span>
     <button type="button" class="btn btn-emerald btn-sm" id="inbox-selection-merge" data-h-click="30707c1762">🗂 Zu EINEM Kunden zusammenfuehren</button>
-    <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,120,120,.55);" data-h-click="654337d4fb">🗑 Loeschen</button>
-    <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.35);" data-h-click="e29850ed68">Aufheben</button>
+    <button type="button" class="btn btn-ghost btn-sm" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.55);" id="inbox-selection-assign" data-h-click="auswahl-zuordnen">👤 Bestehendem Kunden zuordnen</button>
+    <button type="button" class="btn btn-ghost btn-sm" style="background:transparent;color:#fff;border-color:rgba(255,120,120,.55);" data-h-click="654337d4fb">🗑 Loeschen</button>
+    <button type="button" class="btn btn-ghost btn-sm" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35);" data-h-click="e29850ed68">Aufheben</button>
 </div>
 
 {{-- Schnellvorschau (Quick-Look): erscheint beim Ueberfahren eines Dokuments,
@@ -529,20 +537,20 @@ window.docReview = (function() {
     }
 
     // Vorgang-Modus: EIN neuer Kunde aus allen Dokumenten des Batches.
-    function openBatch(batchId) {
-        openBatchMeta(window.INBOX_BATCHES[batchId]);
+    function openBatch(batchId, startAssign) {
+        openBatchMeta(window.INBOX_BATCHES[batchId], startAssign);
     }
 
     // Kern des Vorgang-/Auswahl-Modus: nimmt die (server-berechneten)
     // Batch-Metadaten direkt entgegen - so nutzen automatisch gruppierte
     // Vorgaenge UND die manuelle Mehrfachauswahl exakt dieselbe Ansicht.
-    function openBatchMeta(batch) {
+    function openBatchMeta(batch, startAssign) {
         if (!batch) return;
         if (batch.conflicts && batch.conflicts.length) {
             alert('⚠ ' + batch.conflicts.join(' ') + '\n\nBitte die Dokumente einzeln pruefen.');
             return;
         }
-        current = { mode: 'batch', customerId: null, ids: batch.ids || [] };
+        current = { mode: 'batch', customerId: null, ids: batch.ids || [], batch: batch };
 
         el('review-title').textContent = 'Neuen Kunden aus ' + batch.ids.length + ' Dokumenten erstellen';
         el('review-doc-name').textContent = '🗂 ' + batch.file_names.join(' · ');
@@ -570,19 +578,38 @@ window.docReview = (function() {
 
         el('review-submit').textContent = 'Kunden anlegen & alle zuordnen';
         el('doc-review-modal').style.display = 'flex';
-        // Vorgang: die Vorschlaege dienen als Dubletten-Warnung. Zugeordnet
-        // wird ein Vorgang nicht per Klick (dafuer die Dokumente einzeln) -
-        // deshalb bewusst ohne Auswahl-Button.
+        // Vorgang: die Vorschlaege sind Dubletten-Warnung UND Ausweg - ein
+        // Klick ordnet ALLE Dokumente dem vorhandenen Kunden zu (Betreiber-
+        // Meldung 20.11.2026: vorher blieb nur die Fehlermeldung "Bitte
+        // stattdessen zuordnen" ohne Weg dorthin).
+        if (startAssign) switchBatchToAssign();
         loadSuggestions(batch.ids[0], 'batch', (batch.ids || []).slice(1));
+    }
+
+    // Vorgang/Auswahl: statt Neuanlage alle Dokumente einem BESTEHENDEN
+    // Kunden zuordnen. Kundensuche einblenden, Neuanlage-Teile ausblenden.
+    function switchBatchToAssign() {
+        if (!current || (current.mode !== 'batch' && current.mode !== 'batchAssign')) return;
+        current.mode = 'batchAssign';
+        var n = (current.ids || []).length;
+        el('review-title').textContent = 'Alle ' + n + ' Dokumente einem bestehenden Kunden zuordnen';
+        el('review-assign-block').style.display = '';
+        el('review-create-block').style.display = 'none';
+        el('review-name-block').style.display = 'none';
+        el('review-family-section').style.display = 'none';
+        el('review-submit').textContent = 'Alle ' + n + ' Dokumente zuordnen';
+        el('review-error').style.display = 'none';
     }
 
     // Manuelle Mehrfachauswahl -> Batch-Vorschau vom Server holen (gleiche
     // Zusammenfuehrung + Familien-Erkennung wie ein Vorgang) und oeffnen.
-    function openSelection() {
+    function openSelection(startAssign) {
         var ids = selectedIds();
-        if (ids.length < 2) { alert('Bitte mindestens zwei Dokumente auswaehlen.'); return; }
-        var btn = el('inbox-selection-merge');
-        if (btn) { btn.disabled = true; btn.textContent = 'Wird zusammengefuehrt…'; }
+        if (!startAssign && ids.length < 2) { alert('Bitte mindestens zwei Dokumente auswaehlen.'); return; }
+        if (!ids.length) { alert('Bitte mindestens ein Dokument auswaehlen.'); return; }
+        var btn = el(startAssign ? 'inbox-selection-assign' : 'inbox-selection-merge');
+        var btnText = btn ? btn.textContent : '';
+        if (btn) { btn.disabled = true; btn.textContent = 'Wird geladen…'; }
         fetch(@json(route('admin.documents.batch_preview')), {
             method: 'POST',
             credentials: 'same-origin',
@@ -594,11 +621,11 @@ window.docReview = (function() {
             body: JSON.stringify({ document_ids: ids }),
         }).then(readJsonOrStatus)
         .then(function(res) {
-            if (btn) { btn.disabled = false; btn.textContent = '🗂 Zu EINEM Kunden zusammenfuehren'; }
-            if (res.ok && res.json) { openBatchMeta(res.json); }
+            if (btn) { btn.disabled = false; btn.textContent = btnText; }
+            if (res.ok && res.json) { openBatchMeta(res.json, startAssign); }
             else { alert('⚠ ' + friendlyError(res)); }
         }).catch(function() {
-            if (btn) { btn.disabled = false; btn.textContent = '🗂 Zu EINEM Kunden zusammenfuehren'; }
+            if (btn) { btn.disabled = false; btn.textContent = btnText; }
             alert('⚠ Keine Verbindung zum Server. Bitte erneut versuchen.');
         });
     }
@@ -1011,13 +1038,15 @@ window.docReview = (function() {
 
         note.textContent = hidden
             ? 'Weitere ' + hidden + ' mögliche Kunden liegen außerhalb Ihres Portfolios.'
-            : (mode === 'assign' ? '' : 'Trifft keiner zu, unten wie geplant einen neuen Kunden anlegen.');
+            : (mode === 'assign' ? '' : (mode === 'batch'
+                ? 'Klick auf einen Kunden ordnet ALLE Dokumente ihm zu. Trifft keiner zu, unten einen neuen Kunden anlegen.'
+                : 'Trifft keiner zu, unten wie geplant einen neuen Kunden anlegen.'));
     }
 
     // Eine Vorschlagszeile. Alle Werte per textContent - nichts aus der
     // Analyse wird als HTML interpretiert.
     function suggestionRow(s, mode) {
-        var clickable = mode === 'assign' || mode === 'create';
+        var clickable = mode === 'assign' || mode === 'create' || mode === 'batch';
         var row = document.createElement(clickable ? 'button' : 'div');
         row.style.cssText = 'display:block;width:100%;text-align:start;border:1px solid ' + (s.score > 90 ? 'var(--emerald)' : 'var(--line)')
             + ';background:#fff;border-radius:8px;padding:9px 11px;font-size:13px;'
@@ -1044,7 +1073,9 @@ window.docReview = (function() {
         if (clickable) {
             var hint = document.createElement('div');
             hint.style.cssText = 'font-size:12px;color:var(--emerald-deep);font-weight:600;margin-top:5px;';
-            hint.textContent = 'Diesem Kunden zuordnen →';
+            hint.textContent = mode === 'batch'
+                ? 'Alle Dokumente diesem Kunden zuordnen →'
+                : 'Diesem Kunden zuordnen →';
             row.appendChild(hint);
             row.onclick = function() { pickSuggestion(s); };
         }
@@ -1055,6 +1086,9 @@ window.docReview = (function() {
     // den Zuordnungs-Modus gewechselt (statt eine Dublette anzulegen).
     function pickSuggestion(s) {
         var label = (s.name || '—') + ' (' + (s.customer_number || '') + ')';
+        if (current && current.mode === 'batch') {
+            switchBatchToAssign();
+        }
         if (current && current.mode === 'create') {
             current.mode = 'assign';
             el('review-title').textContent = 'Dokument zuordnen';
@@ -1100,6 +1134,7 @@ window.docReview = (function() {
 
     function submit() {
         if (!current) return;
+        var isBatchAssign = current.mode === 'batchAssign';
         var isBatch = current.mode === 'batch';
         var isCreate = current.mode === 'create' || isBatch;
         if (!isCreate && !current.customerId) {
@@ -1136,7 +1171,10 @@ window.docReview = (function() {
         }
 
         var url;
-        if (isBatch) {
+        if (isBatchAssign) {
+            payload.document_ids = current.ids || [];
+            url = @json(route('admin.documents.assign_batch'));
+        } else if (isBatch) {
             payload.document_ids = current.ids || [];
             url = @json(route('admin.documents.create_customer_batch'));
             // Krankenkassen-Fall mitschicken, wenn aktiviert.
@@ -1185,6 +1223,9 @@ window.docReview = (function() {
                 showSuccess(res.json, isBatch ? 'batch' : current.mode);
             } else {
                 showError(friendlyError(res)); // echte Ursache statt "Netzwerkfehler"
+                // Dubletten-Schutz hat einen vorhandenen Kunden gefunden:
+                // direkt den Weg zur Zuordnung anbieten statt Sackgasse.
+                if (res.json && res.json.duplicate) offerDuplicate(res.json.duplicate);
             }
         }).catch(function() {
             el('review-submit').disabled = false;
@@ -1233,7 +1274,10 @@ window.docReview = (function() {
         var name = data.customer_name || 'Kunde';
         var number = data.customer_number ? ' (' + data.customer_number + ')' : '';
         var msg, sub;
-        if (mode === 'assign') {
+        if (mode === 'batchAssign') {
+            msg = (data.documents || 0) + ' Dokumente zugeordnet';
+            sub = 'Alle Dokumente wurden ' + name + number + ' zugeordnet.';
+        } else if (mode === 'assign') {
             msg = 'Dokument zugeordnet';
             sub = 'Zugeordnet zu ' + name + number + '.';
         } else if (mode === 'batch') {
@@ -1273,6 +1317,23 @@ window.docReview = (function() {
         var box = el('review-error');
         box.textContent = '⚠ ' + msg;
         box.style.display = '';
+    }
+
+    // Knopf unter der Dubletten-Meldung: den gefundenen Kunden uebernehmen.
+    // Werte per textContent (Kundennamen sind Fremddaten).
+    function offerDuplicate(dup) {
+        var box = el('review-error');
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-emerald btn-sm';
+        btn.style.cssText = 'display:block;margin-top:8px;';
+        var many = current && (current.mode === 'batch' || current.mode === 'batchAssign');
+        btn.textContent = (many ? '👤 Alle Dokumente ' : '👤 Dokument ') + (dup.name || '—')
+            + (dup.customer_number ? ' (' + dup.customer_number + ')' : '') + ' zuordnen';
+        btn.onclick = function() {
+            pickSuggestion({ customer_id: dup.customer_id, name: dup.name, customer_number: dup.customer_number });
+        };
+        box.appendChild(btn);
     }
 
     function reanalyze(docId, btn, forceAi) {
@@ -1629,6 +1690,8 @@ window.__h["66dc0af444"] = function (event) { if(event.key==='Enter'||event.key=
 window.__h["3cd194d928"] = function (event) { docReview.selectAll(this.checked) };
 window.__h["stapel-oeffnen"] = function (event) { docReview.openBatch(this.dataset.batch) };
 window.__h["30707c1762"] = function (event) { docReview.openSelection() };
+window.__h["stapel-zuordnen"] = function (event) { docReview.openBatch(this.dataset.batch, true) };
+window.__h["auswahl-zuordnen"] = function (event) { docReview.openSelection(true) };
 window.__h["654337d4fb"] = function (event) { docReview.bulkDelete() };
 window.__h["e29850ed68"] = function (event) { docReview.clearSelection() };
 window.__h["466c2de1a6"] = function (event) { docReview.copyOcrText(this) };

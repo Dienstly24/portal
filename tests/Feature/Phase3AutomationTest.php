@@ -9,9 +9,11 @@ use App\Models\DocumentRequest;
 use App\Models\EmailAccount;
 use App\Models\EmailMessage;
 use App\Models\InternalNotification;
+use App\Models\SystemSetting;
 use App\Models\Task;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Ai\AiEmailClassifier;
 use App\Services\Workflow\EmailWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -33,6 +35,9 @@ class Phase3AutomationTest extends TestCase
     {
         parent::setUp();
         $this->admin = User::factory()->create(['role' => 'admin']);
+        // Prueft den KI-Kategorievorschlag selbst. Seit 20.11.2026 ist er
+        // standardmaessig AUS (Kostenbremse) - hier ausdruecklich an.
+        SystemSetting::set(AiEmailClassifier::SETTING_AUTOMATISCH, '1');
     }
 
     private function customer(string $name = 'Erika Musterfrau'): Customer

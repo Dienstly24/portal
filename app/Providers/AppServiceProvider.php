@@ -53,6 +53,7 @@ use App\Services\Ai\TemplateParsers\AndsafeGewerbePoliceParser;
 use App\Services\Ai\TemplateParsers\AntragBestaetigungParser;
 use App\Services\Ai\TemplateParsers\ArbeitsvertragParser;
 use App\Services\Ai\TemplateParsers\AufenthaltstitelParser;
+use App\Services\Ai\TemplateParsers\BankkarteParser;
 use App\Services\Ai\TemplateParsers\BayerischeEscooterParser;
 use App\Services\Ai\TemplateParsers\BigGesundParser;
 use App\Services\Ai\TemplateParsers\Check24KfzProtocolParser;
@@ -269,6 +270,9 @@ class AppServiceProvider extends ServiceProvider
                 // Kontakt-/SEPA-Ansicht eines Antragsportals (beschriftete
                 // Felder) - VOR dem generischen Kontaktdaten-Block.
                 $app->make(KontaktSepaDatenParser::class),
+                // Bankkarte (girocard/Debit): kurzer Text + Kartenmerkmal +
+                // IBAN mit gueltiger Pruefziffer - gratis statt KI.
+                $app->make(BankkarteParser::class),
                 // Zuletzt: kompakter Kontaktdaten-Block (nur wenn kein echtes
                 // Dokument passt - er triggert auf E-Mail+IBAN+PLZ in kurzem Text).
                 $app->make(KontaktdatenBlockParser::class),

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Ai;
 
 use App\Models\Document;
+use App\Models\SystemSetting;
 use App\Services\Ai\ClaudeDocumentAiProvider;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
@@ -36,6 +37,17 @@ use Tests\TestCase;
 class AusweiskartenRueckseiteTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Diese Klasse prueft die AUTOMATISCHE KI-Eskalation. Seit 20.11.2026
+     * laeuft die KI standardmaessig nur nach Freigabe - hier wird der
+     * automatische Betrieb (Schalter aus) ausdruecklich eingestellt.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        SystemSetting::set(DocumentAnalyzer::SETTING_NUR_NACH_FREIGABE, '0');
+    }
 
     /** Rueckseite Personalausweis, wie Tesseract sie am Foto lieferte. */
     private function personalausweisRueckseite(): string
