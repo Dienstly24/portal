@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 20.11.2026 - Nachtrag KI-121: statische Uebergangs-Website
+
+- **Task**: Betreiber-Meldung: die live erreichbare dienstly24.de (statische Site, nicht die App) zeigte weiter "Beratung", "Makler-Service", "Wir vergleichen", Maklerpools und einen Login-Link.
+- **Files Changed**: `website/index.html`, `website/agb.html`, `website/widerruf.html`, WhatsApp-Vorbelegung in allen `website/*.html`; Test `TippgeberTexteTest`; `CLAUDE.md`.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: wirkt erst nach dem Hochladen der Dateien auf das statische Hosting. Login-Knopf fuehrt jetzt zum Chat.
+- **Tests Performed**: `TippgeberTexteTest` (neu: statische Dateien), Seite in Chromium (DE/AR, keine Treffer, keine JS-Fehler).
+- **Result**: erledigt.
+
 ## 20.11.2026 - Kein Beratungs-/Makler-Wortlaut mehr (KI-121)
 
 - **Task**: Betreiber-Vorgabe: jede Formulierung, die Dienstly24 als Berater/Makler/Vergleicher darstellt, neutral umstellen (DE+AR, Titel/Meta, Leistungsseiten in der DB, Mails, KI-Prompts); `versicherungsmakler-hamburg` per 301 auf eine neutrale Adresse.

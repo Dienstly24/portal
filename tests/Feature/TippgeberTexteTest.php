@@ -170,6 +170,33 @@ class TippgeberTexteTest extends TestCase
             ->expectsOutputToContain('Geaendert: 0 Seite(n)')->assertSuccessful();
     }
 
+    /**
+     * Die STATISCHE Uebergangs-Website (website/*.html, bis zum DNS-Umzug
+     * live auf dienstly24.de) - sie wird von Hand hochgeladen und lief am
+     * 20.11.2026 noch mit dem alten Wortlaut, waehrend die App schon
+     * umgestellt war. Erstinformation/Impressum/Datenschutz sind die
+     * Pflichtangaben des Partners und bleiben ausgenommen.
+     */
+    public function test_statische_website_spricht_nicht_von_beratung(): void
+    {
+        $verstoesse = [];
+        foreach (glob(base_path('website/*.html')) as $datei) {
+            if (in_array(basename($datei), ['erstinformation.html', 'impressum.html', 'datenschutz.html'], true)) {
+                continue;
+            }
+            $funde = ServiceSeitenTexte::funde($this->sichtbar((string) file_get_contents($datei)));
+            if ($funde !== []) {
+                $verstoesse[] = basename($datei).': '.implode(', ', $funde);
+            }
+        }
+        $index = (string) file_get_contents(base_path('website/index.html'));
+        $this->assertStringNotContainsString('InsuranceAgency', $index);
+        $this->assertStringNotContainsString('portal.dienstly24.de/login', $index);
+        $this->assertStringContainsString('kein Versicherungsvermittler', $index);
+
+        $this->assertSame([], $verstoesse, implode("\n", $verstoesse));
+    }
+
     public function test_kunden_mails_nennen_keinen_berater(): void
     {
         $user = User::factory()->create(['role' => 'customer', 'name' => 'Max Muster']);

@@ -5326,6 +5326,12 @@ neue Seitenfassung derselben Idee.
   umformuliert). "Ihr Berater" in Mails/Glocke heisst jetzt "Ihr
   Dienstly24-Team". Beide KI-Prompts tragen die TIPPGEBER-REGEL
   (Versicherung: nie beraten/empfehlen/anbieten, an das Team uebergeben).
+- **Die STATISCHE Uebergangs-Site** (`website/*.html`, bis zum DNS-Umzug
+  live auf dienstly24.de, Upload von Hand) trug den alten Wortlaut weiter,
+  waehrend die App schon umgestellt war (Nachtrag 20.11.2026): dieselben
+  Aenderungen dort, "Login"/"Kundenportal" -> Chat, AGB/Widerruf ohne
+  "Beratung"; `TippgeberTexteTest` prueft auch diese Dateien. Wirksam
+  erst, wenn der Betreiber sie hochlaedt.
 - **Nicht angefasst**: Impressum, Erstinformation, Datenschutz (Pflicht-
   angaben des Partners); interne Begriffe ("Beraterwelt", Platzhalter
   `{{berater}}` in Mitarbeiter-Vorlagen).
