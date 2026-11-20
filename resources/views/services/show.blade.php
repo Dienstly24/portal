@@ -216,21 +216,21 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
 
     {{-- Direkte Kontaktwege VOR dem Formular (Abschnitt 24/25): Telefon und
          WhatsApp sind auf dem Telefon ein Fingertipp, ein Formular sind
-         acht Felder. Der Hinweis auf die deutschlandweite Beratung steht
+         acht Felder. Der Hinweis auf den deutschlandweiten Service steht
          genau hier, weil ein Besucher aus Koeln sonst aus der Hamburger
          Anschrift im Fuss schliesst, er sei nicht gemeint. --}}
     @php
         $telE164 = config('website.phone_e164');
         $telAnzeige = config('website.phone_display');
         $waLeistung = $rtl
-            ? 'مرحباً Dienstly24، أريد استشارة بخصوص: ' . $page->t('title')
+            ? 'مرحباً Dienstly24، لدي استفسار بخصوص: ' . $page->t('title')
             : 'Hallo Dienstly24, ich interessiere mich für: ' . $page->title_de;
         $waLink = 'https://wa.me/' . config('website.whatsapp') . '?text=' . rawurlencode($waLeistung);
     @endphp
     <div class="kontaktbox">
         <p>{{ $rtl
-            ? 'استشارة مجانية وغير ملزمة – بالعربية والألمانية، في جميع أنحاء ألمانيا عبر الهاتف أو الإنترنت.'
-            : 'Kostenlose, unverbindliche Beratung – auf Deutsch und Arabisch, deutschlandweit telefonisch und online.' }}</p>
+            ? 'تواصل مجاني وغير ملزم – بالعربية والألمانية، في جميع أنحاء ألمانيا عبر الهاتف أو الإنترنت.'
+            : 'Kostenloser, unverbindlicher Kontakt – auf Deutsch und Arabisch, deutschlandweit telefonisch und online.' }}</p>
         <div class="kontaktwege">
             <a class="k-tel" href="tel:{{ $telE164 }}" data-cta="telefon" data-cta-seite="{{ $page->slug }}">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.27a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg>
@@ -242,7 +242,7 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
                 <span dir="ltr">{{ $telAnzeige }}</span>
             </a>
             <a class="k-wa" href="{{ $waLink }}" target="_blank" rel="noopener" data-cta="whatsapp" data-cta-seite="{{ $page->slug }}">WhatsApp</a>
-            <a class="k-form" href="#anfrage" data-cta="formular" data-cta-seite="{{ $page->slug }}">{{ __('Beratung anfragen') }}</a>
+            <a class="k-form" href="#anfrage" data-cta="formular" data-cta-seite="{{ $page->slug }}">{{ __('Anfrage stellen') }}</a>
         </div>
     </div>
 
@@ -280,7 +280,7 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
         @endif
 
         <div class="card form-card" id="anfrage">
-            <h2>💬 {{ __('Beratung anfragen') }}</h2>
+            <h2>💬 {{ __('Anfrage stellen') }}</h2>
 
             @if(session('sent'))
                 <div class="ok">✓ {{ __('Vielen Dank! Wir melden uns schnellstmöglich bei Ihnen – in der Regel innerhalb von 24 Stunden.') }}</div>
@@ -390,11 +390,11 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
     <a href="#" data-consent-oeffnen>{{ __('Cookie-Einstellungen') }}</a>
 </div>
 <p class="foot" style="border-top:0;padding-top:0;max-width:780px;margin:0 auto 22px;text-align:center;line-height:1.6;">{{ $rtl
-    ? 'تتم وساطة التأمين عبر وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف الألماني (GewO). تجدون بيانات الوسيط ورقم السجل وجهة الرقابة في صفحة بيانات الناشر (Impressum) وصفحة المعلومات الأولى (Erstinformation).'
-    : 'Die Versicherungsvermittlung erfolgt über einen zugelassenen Versicherungsmakler gem. § 34d Abs. 1 GewO. Angaben zum Vermittler, Registernummer und Aufsichtsbehörde finden Sie im Impressum und in der Erstinformation.' }}</p>
+    ? 'Dienstly24 ليست وسيط تأمين، بل نضعكم على تواصل فقط. تتم وساطة التأمين حصراً عبر وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف الألماني (GewO). تجدون بيانات الوسيط ورقم السجل وجهة الرقابة في صفحة بيانات الناشر (Impressum) وصفحة المعلومات الأولى (Erstinformation).'
+    : 'Dienstly24 ist kein Versicherungsvermittler, sondern stellt nur den Kontakt her. Die Versicherungsvermittlung erfolgt ausschließlich über einen zugelassenen Versicherungsmakler gem. § 34d Abs. 1 GewO. Angaben zum Vermittler, Registernummer und Aufsichtsbehörde finden Sie im Impressum und in der Erstinformation.' }}</p>
 {{-- WhatsApp-Float mit leistungsspezifischem Text (P0-3) --}}
 @include('website.partials.whatsapp', ['waText' => $rtl
-    ? 'مرحباً Dienstly24، أريد استشارة بخصوص: ' . $page->t('title')
+    ? 'مرحباً Dienstly24، لدي استفسار بخصوص: ' . $page->t('title')
     : 'Hallo Dienstly24, ich interessiere mich für: ' . $page->title_de])
 @include('partials.cookie_consent')
 @include('partials.matomo')

@@ -80,7 +80,7 @@ class ExtraBasicAuthTest extends TestCase
             ->get('https://neu.dienstly24.de/')
             ->assertOk()
             ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
-            ->assertSee('Alle Versicherungen.');
+            ->assertSee('Versicherung, Zulassung, Energie.');
 
         // Staging-robots.txt sperrt alles - nur der kanonische Host ist offen.
         $this->withHeaders($this->basic('preview:pw'))

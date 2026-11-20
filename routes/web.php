@@ -145,6 +145,7 @@ Route::prefix('ar')->name('ar.')->middleware('forceLocale:ar')->group(function (
     Route::get('/leistungen/{slug}', [ServicePageController::class, 'show'])->name('services.show');
     Route::get('/'.WebsiteController::HAMBURG_SLUG, [WebsiteController::class, 'hamburg'])
         ->name('website.hamburg');
+    Route::permanentRedirect('/'.WebsiteController::ALT_HAMBURG_SLUG, '/ar/'.WebsiteController::HAMBURG_SLUG);
     Route::get('/{page}', [LegalPageController::class, 'show'])
         ->whereIn('page', array_merge(array_keys(WebsiteController::LEGAL_PAGES), ['kontakt']))
         ->name('legal');
@@ -156,6 +157,8 @@ Route::prefix('ar')->name('ar.')->middleware('forceLocale:ar')->group(function (
 // nicht durch, aber die Reihenfolge macht es unabhaengig von dieser Liste.
 Route::get('/'.WebsiteController::HAMBURG_SLUG, [WebsiteController::class, 'hamburg'])
     ->name('website.hamburg');
+// Alter Pfad mit "versicherungsmakler" (bis 20.11.2026): dauerhaft umleiten.
+Route::permanentRedirect('/'.WebsiteController::ALT_HAMBURG_SLUG, '/'.WebsiteController::HAMBURG_SLUG);
 
 // Öffentliche Leistungsseiten (Definition + Kurzinfos + FAQ je Leistung).
 // Das Anfrageformular erzeugt ein Ticket im System (source=website).

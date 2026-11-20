@@ -32,7 +32,7 @@ class CustomerMessageNotifier
             Notify::push($customer->user_id, [
                 'type' => NotificationService::TYPE_MESSAGE,
                 'title' => '💬 Neue Nachricht',
-                'body' => 'Ihr Berater hat Ihnen eine Nachricht geschickt: „'
+                'body' => 'Ihr Dienstly24-Team hat Ihnen eine Nachricht geschickt: „'
                     .Str::limit(trim($message->body), 60).'"',
                 'link' => route('portal.messages'),
                 'dedup_key' => 'cust-msg-'.$customer->id,

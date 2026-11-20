@@ -43,7 +43,7 @@
 </tr>
 <tr>
 <td style="background:#F6F3EA;padding:18px 30px;font-size:12px;color:#666;border-top:1px solid #E0DCD0;">
-    Dienstly24 &middot; Versicherungs- und Energiemakler<br>
+    Dienstly24 &middot; Service- und Kontaktplattform<br>
     Diese E-Mail wurde automatisch erzeugt.
 </td>
 </tr>

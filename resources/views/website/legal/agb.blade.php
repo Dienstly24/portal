@@ -11,8 +11,8 @@
 <p>Dienstly24 unterstützt Kunden bei folgenden Themen:</p>
 <ul>
 <li><strong>Versicherungen</strong> — Dienstly24 informiert allgemein und stellt auf Wunsch den Kontakt zu unserem Kooperationspartner NESA Versicherung und Finanzen (Nour Eddin Sheikh Alsouk) her, Versicherungsmakler mit Erlaubnis nach § 34d Abs. 1 GewO. Beratung und Vermittlung von Versicherungsverträgen erfolgen ausschließlich durch diesen Partner in eigener Verantwortung; Dienstly24 berät nicht zu Versicherungen und vermittelt keine Versicherungsverträge. Einzelheiten finden Sie in unserer <a href="/erstinformation">Erstinformation</a> und im <a href="/impressum">Impressum</a>.</li>
-<li>Beratung und Unterstützung bei der Kfz-Zulassung und dem Kennzeichenversand.</li>
-<li>Beratung zu Strom- und Gasanbietern.</li>
+<li>Unterstützung bei der Kfz-Zulassung und dem Kennzeichenversand.</li>
+<li>Unterstützung beim Wechsel von Strom- und Gasanbietern (Kündigung und Anmeldung); Dienstly24 gibt dabei keine Tarifempfehlung ab.</li>
 </ul>
 <p>Dienstly24 ist weder Partei des Versicherungsvertrags noch des Maklervertrags. Vertragspartner sind stets das jeweilige Versicherungsunternehmen bzw. NESA Versicherung und Finanzen.</p>
 <h2>3. Kosten</h2>
@@ -22,7 +22,7 @@
 <h2>5. Kontaktaufnahme und Kommunikation</h2>
 <p>Die Kommunikation erfolgt nach Wahl des Kunden auf Deutsch oder Arabisch, per Telefon, E-Mail, WhatsApp oder über das Kontaktformular dieser Website.</p>
 <h2>6. Haftung</h2>
-<p>Für Beratung und Vermittlung von Versicherungsverträgen haftet ausschließlich NESA Versicherung und Finanzen im Rahmen der gesetzlichen Vorschriften. Für die übrigen Leistungen (z.&nbsp;B. Kfz-Zulassung, Beratung zu Energieverträgen) haftet Dienstly24 nach den gesetzlichen Bestimmungen, wobei die Haftung für leichte Fahrlässigkeit auf vertragstypische, vorhersehbare Schäden beschränkt ist.</p>
+<p>Für Beratung und Vermittlung von Versicherungsverträgen haftet ausschließlich NESA Versicherung und Finanzen im Rahmen der gesetzlichen Vorschriften. Für die übrigen Leistungen (z.&nbsp;B. Kfz-Zulassung, Unterstützung beim Energieanbieterwechsel) haftet Dienstly24 nach den gesetzlichen Bestimmungen, wobei die Haftung für leichte Fahrlässigkeit auf vertragstypische, vorhersehbare Schäden beschränkt ist.</p>
 <!-- TODO: Haftungsformulierung juristisch prüfen lassen. -->
 <h2>7. Widerrufsrecht</h2>
 <p>Einzelheiten zum Widerrufsrecht bei vermittelten Versicherungsverträgen sowie bei etwaigen sonstigen Verträgen mit Dienstly24 finden Sie in unserer <a href="/widerruf">Widerrufsbelehrung</a>.</p>

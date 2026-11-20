@@ -4344,7 +4344,9 @@ Betreiber-Anleitung `docs/ANLEITUNG_SEO_AR.md`. Die Kurzfassung:
   Nutzer und Suchmaschinen Vertrauensbelege erwarten.
 - **Telefon und WhatsApp als Knoepfe** vor dem Formular: auf dem Telefon
   ist ein Anruf ein Fingertipp, das Formular sind acht Felder.
-- **Neue Landingpage `/leistungen/versicherungsmakler`** - das wichtigste
+- **Landingpage `/leistungen/versicherungsmakler`** (SEIT 20.11.2026
+  ERSETZT durch `/leistungen/so-arbeiten-wir`, alte Adresse 301 - siehe
+  "Kein Beratungs-/Makler-Wortlaut") - das wichtigste
   kommerzielle Suchwort des Betriebs hatte keine eigene Seite; keine der 21
   Spartenseiten beantwortet die Absicht "wer beraet mich?".
   **SIE BLEIBT HINTER DER BEQUEMEN FORMULIERUNG ZURUECK**: laut
@@ -4362,7 +4364,8 @@ Betreiber-Anleitung `docs/ANLEITUNG_SEO_AR.md`. Die Kurzfassung:
   Server-`.env` - erst wenn sie WIRKLICH existieren.
 - **`WebSite` nur auf der Startseite, `Organization` auf den Unterseiten.**
   Eine Website gibt es einmal, nicht 22-mal; und eine Unterseite ist kein
-  zweiter Standort - traegt sie den vollen `InsuranceAgency`-Block mit
+  zweiter Standort - traegt sie den vollen `LocalBusiness`-Block (bis
+  20.11.2026 `InsuranceAgency`) mit
   Anschrift und Oeffnungszeiten, behauptet jede Seite eine eigene Filiale.
 - **BEWUSST NICHT GEBAUT**: die lokale Hamburg-Seite (sie wirkt erst, wenn
   das Business-Profil vollstaendig ist - sonst ist sie eine Seite ohne
@@ -4466,7 +4469,8 @@ Betreiber-Anleitung in `docs/ANLEITUNG_MATOMO_AR.md` (Abschnitte 7/7a).
   nicht gibt, ist genauso falsch wie eine, die einen verschweigt, und
   eine, die von Hand nachgezogen werden muss, wird es irgendwann nicht
   mehr.
-- **Hamburg-Seite** `/versicherungsmakler-hamburg` (+ `/ar/...`): die im
+- **Hamburg-Seite** `/dienstly24-hamburg` (+ `/ar/...`; bis 20.11.2026
+  `/versicherungsmakler-hamburg`, leitet per 301 um): die im
   SEO-Auftrag zurueckgestellte Ortsseite. KEINE Doorway Page - eigene
   Inhalte (Erreichbarkeit, Ablauf der Online-Beratung, fuenf lokale
   Fragen), kein kopierter Spartentext (Test). EINE Ortsseite, weil es
@@ -4494,8 +4498,8 @@ Betreiber-Anleitung in `docs/ANLEITUNG_MATOMO_AR.md` (Abschnitte 7/7a).
   Ihnen ins Buero kommen?" - ein blosses Weglassen liesse die Frage
   offen, und der Besucher faehrt dann im Zweifel doch hin. Sie bleibt bei der Wahrheit zur Erlaubnis nach
   § 34d GewO (vertraglich gebundener Vermittler unter der Haftung von
-  NESA, Link auf die Erstinformation - ebenfalls Test). `InsuranceAgency`
-  steht hier ZU RECHT, weil dies die Standortseite IST; alle uebrigen
+  NESA, Link auf die Erstinformation - ebenfalls Test). Der volle
+  `LocalBusiness`-Block steht hier ZU RECHT, weil dies die Standortseite IST; alle uebrigen
   Unterseiten bleiben bei `Organization`, sonst behauptete jede Seite
   eine eigene Filiale. Wirksam wird sie erst mit dem vollstaendigen
   Google-Unternehmensprofil.
@@ -5285,6 +5289,46 @@ neue Seitenfassung derselben Idee.
   Rohliste `docs/TIPPGEBER_TEXTKONFLIKTE.md` - Umbau in PR 3.
 - Tests: `VertragsErinnerungTest`, `tests/Unit/KuendigungsfristTest.php`,
   nachgezogen `EmailMarketingImprovementsTest`, `HealthContractExtractionTest`.
+
+## Kein Beratungs-/Makler-Wortlaut (Betreiber-Vorgabe 20.11.2026, KI-121)
+
+- **Regel**: Dienstly24 ist Tippgeber (keine Erlaubnis nach Paragraph 34d
+  GewO). KEIN Kundentext (Website DE+AR inkl. Titel/Meta, Leistungsseiten,
+  Mails, KI-Prompts, Schema) darf sagen oder nahelegen, dass Dienstly24
+  beraet, Versicherungen vergleicht, empfiehlt, Angebote macht oder Makler
+  ist. Erlaubt: "Service- und Kontaktplattform", "Kontakt zu unserem
+  zugelassenen Partner herstellen", allgemeine Produktinfo. Jede Seite mit
+  Versicherungsbezug nennt "kein Versicherungsvermittler".
+- **Waechter** `TippgeberTexteTest`: rendert jede oeffentliche Seite (DE+AR,
+  alle Leistungsseiten) und prueft den SICHTBAREN Text plus Titel/Meta
+  gegen `ServiceSeitenTexte::VERBOTEN`. Rechtsseiten (Impressum,
+  Erstinformation, Datenschutz, AGB) sind ausgenommen - dort steht
+  ausdruecklich, dass Beratung und Vermittlung AUSSCHLIESSLICH der Partner
+  uebernimmt; genau diese Klarstellung ist der Schutz.
+- **Leistungsseiten liegen in der DB** (im Admin pflegbar). Deshalb KEIN
+  Ueberschreiben ganzer Felder, sondern die Ersetzungsliste
+  `App\Support\Tippgeber\ServiceSeitenTexte` (bekannte Saetze alt -> neu),
+  dieselbe Liste im Seeder (`ServicePageSeeder::neutral()`) und in der
+  Daten-Migration `2026_11_20_140000_...` (ruft
+  `website:tippgeber-texte --schreiben`; ohne Schalter Probelauf). Vorher
+  Sicherung nach `storage/app/private/backups/`. Selbst geschriebener Text
+  bleibt stehen und wird im Deploy-Log als Rest-Fund gemeldet - dann im
+  Admin anpassen. Aus Leistungsseiten uebernommene KI-Wissensbasis-
+  Eintraege (`source_key servicepage:*`) werden mit umgestellt. Neuer Text
+  im Admin: das Wort "Beratung" vermeiden.
+- **Adressen**: `/versicherungsmakler-hamburg` -> 301 `/dienstly24-hamburg`
+  (`WebsiteController::ALT_HAMBURG_SLUG`), `/leistungen/versicherungsmakler`
+  -> 301 `/leistungen/so-arbeiten-wir` (`ServicePageController::ALTE_SLUGS`,
+  auch `/ar/`). Schema: `StructuredData::unternehmen()` = `LocalBusiness`,
+  nie `InsuranceAgency`.
+- **Bewusst entfernt**: Maklerpool-/Vergleichsplattform-Abschnitt der
+  Startseite und zwei Kundenzitate mit Beratungsbezug (ein Zitat wird nie
+  umformuliert). "Ihr Berater" in Mails/Glocke heisst jetzt "Ihr
+  Dienstly24-Team". Beide KI-Prompts tragen die TIPPGEBER-REGEL
+  (Versicherung: nie beraten/empfehlen/anbieten, an das Team uebergeben).
+- **Nicht angefasst**: Impressum, Erstinformation, Datenschutz (Pflicht-
+  angaben des Partners); interne Begriffe ("Beraterwelt", Platzhalter
+  `{{berater}}` in Mitarbeiter-Vorlagen).
 
 ## Offene Themen / wartet auf den Betreiber
 

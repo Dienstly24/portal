@@ -16,7 +16,7 @@ use Illuminate\Support\HtmlString;
  * der Array-Schluessel `'@context'` wurde deshalb beim Kompilieren durch
  * PHP-QUELLTEXT ersetzt, und im ausgelieferten HTML stand statt
  *
- *     {"@context":"https://schema.org","@type":"InsuranceAgency", ...}
+ *     {"@context":"https://schema.org","@type":"LocalBusiness", ...}
  *
  * woertlich
  *
@@ -58,16 +58,18 @@ class StructuredData
      *
      * @return array<string, mixed>
      */
-    public static function insuranceAgency(): array
+    public static function unternehmen(): array
     {
         return [
             '@context' => 'https://schema.org',
-            '@type' => 'InsuranceAgency',
+            // LocalBusiness, NICHT InsuranceAgency: Dienstly24 ist Tippgeber,
+            // kein Versicherungsvermittler (Betreiber-Vorgabe 20.11.2026).
+            '@type' => 'LocalBusiness',
             'name' => 'Dienstly24',
             'url' => WebsiteHosts::url('/'),
             'image' => WebsiteHosts::url('/images/og-image.jpg'),
-            'description' => 'Anbieterunabhängige Beratung zu Versicherungen, '
-                .'Kfz-Zulassung und Energie – auf Deutsch und Arabisch.',
+            'description' => 'Service- und Kontaktplattform für Versicherungen, '
+                .'Kfz-Zulassung und Energie – auf Deutsch und Arabisch. Kein Versicherungsvermittler.',
             'telephone' => self::TELEFON,
             'email' => config('website.email'),
             'priceRange' => '€€',
@@ -82,8 +84,8 @@ class StructuredData
                 'itemListElement' => array_map(
                     fn (string $s) => ['@type' => 'Offer', 'itemOffered' => ['@type' => 'Service', 'name' => $s]],
                     [
-                        'Kfz-Versicherung', 'Krankenversicherung', 'Zahnzusatzversicherung',
-                        'Kfz-Zulassungsservice', 'Kennzeichen per Post', 'Strom- und Gasberatung',
+                        'Kontakt zu einem zugelassenen Versicherungsmakler',
+                        'Kfz-Zulassungsservice', 'Kennzeichen per Post', 'Hilfe beim Strom- und Gasanbieterwechsel',
                     ]
                 ),
             ],
@@ -105,7 +107,7 @@ class StructuredData
             'description' => $page->t('meta_description') ?: $page->t('subtitle'),
             'areaServed' => self::GEBIET,
             'provider' => [
-                '@type' => 'InsuranceAgency',
+                '@type' => 'Organization',
                 'name' => 'Dienstly24',
                 'url' => WebsiteHosts::url('/'),
                 'telephone' => self::TELEFON,
@@ -189,8 +191,8 @@ class StructuredData
     /**
      * Der Betrieb als Organisation - fuer JEDE Seite, nicht nur die Startseite.
      *
-     * WARUM ZUSAETZLICH ZU `insuranceAgency()`: die Startseite beschreibt sich
-     * als InsuranceAgency mit Anschrift und Oeffnungszeiten (das ist der
+     * WARUM ZUSAETZLICH ZU `unternehmen()`: die Startseite beschreibt sich
+     * als LocalBusiness mit Anschrift und Oeffnungszeiten (das ist der
      * LOKALE Eintrag, Grundlage fuer Google Maps). Eine Unterseite ist aber
      * kein zweiter Standort - traegt sie denselben Block, behauptet jede der
      * 22 Seiten eine eigene Filiale in der Furtweg 51a. Deshalb hier die

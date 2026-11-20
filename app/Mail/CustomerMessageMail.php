@@ -68,8 +68,8 @@ class CustomerMessageMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(subject: $this->lang === 'ar'
-            ? '💬 رسالة جديدة من مستشارك – Dienstly24'
-            : '💬 Neue Nachricht von Ihrem Berater – Dienstly24');
+            ? '💬 رسالة جديدة من فريق Dienstly24'
+            : '💬 Neue Nachricht von Ihrem Dienstly24-Team');
     }
 
     public function content(): Content

@@ -96,7 +96,7 @@ label{display:block;font-size:13px;margin-bottom:6px;color:#dde0e5;}
 
 <div class="main">
     <h1 class="rise d2">{{ __('Herzlich willkommen bei Dienstly24') }}</h1>
-    <p class="sub rise d2">{{ __('Ihr zuverlässiger Partner für professionelle Beratung, erstklassigen Service und persönliche Unterstützung in Deutschland.') }}</p>
+    <p class="sub rise d2">{{ __('Ihr zuverlässiger Partner für Service, Kfz-Zulassung und persönliche Unterstützung in Deutschland.') }}</p>
     <div class="chips rise d3">
         <span class="chip">⚡ {{ __('Verträge') }}</span>
         <span class="chip">📄 {{ __('Dokumente') }}</span>

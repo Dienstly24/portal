@@ -8,8 +8,8 @@
     $telE164 = config('website.phone_e164');
     $telAnzeige = config('website.phone_display');
     $waText = $isAr
-        ? 'مرحباً Dienstly24، أريد استشارة. أنا في هامبورغ.'
-        : 'Hallo Dienstly24, ich haette gern eine Beratung. Ich bin aus Hamburg.';
+        ? 'مرحباً Dienstly24، لدي طلب. أنا في هامبورغ.'
+        : 'Hallo Dienstly24, ich habe ein Anliegen. Ich bin aus Hamburg.';
     $waLink = 'https://wa.me/'.config('website.whatsapp').'?text='.rawurlencode($waText);
 
     /*
@@ -23,21 +23,21 @@
 @endphp
 
 @section('title', $isAr
-    ? 'وسيط تأمين في هامبورغ | كل شيء أونلاين بالعربية والألمانية | Dienstly24'
-    : 'Versicherungsmakler in Hamburg | komplett online | Dienstly24')
+    ? 'Dienstly24 في هامبورغ | كل شيء أونلاين بالعربية والألمانية'
+    : 'Dienstly24 in Hamburg | Service komplett online')
 
 @section('description', $isAr
-    ? 'وسيط تأمين مقرّه هامبورغ – كل شيء أونلاين، بالعربية والألمانية. تأمين السيارات والتأمين الصحي وتسجيل السيارات والكهرباء والغاز. لا داعي للحضور إلى أي مكتب. مجاناً وبدون التزام.'
-    : 'Versicherungen aus Hamburg – Beratung durch unseren zugelassenen Partnermakler, komplett online, auf Deutsch und Arabisch. Kfz, Krankenversicherung, Kfz-Zulassung sowie Strom & Gas. Sie müssen nirgendwo hinkommen. Kostenlos und unverbindlich.')
+    ? 'منصّة خدمة وتواصل مقرّها هامبورغ – كل شيء أونلاين، بالعربية والألمانية. التأمين وتسجيل السيارات والكهرباء والغاز. لا داعي للحضور إلى أي مكتب. مجاناً وبدون التزام.'
+    : 'Service- und Kontaktplattform aus Hamburg – komplett online, auf Deutsch und Arabisch. Versicherungen, Kfz-Zulassung sowie Strom & Gas. Sie müssen nirgendwo hinkommen. Kostenlos und unverbindlich.')
 
-@section('og-title', $isAr ? 'وسيط تأمين في هامبورغ – كل شيء أونلاين' : 'Versicherungsmakler in Hamburg – komplett online')
+@section('og-title', $isAr ? 'Dienstly24 في هامبورغ – كل شيء أونلاين' : 'Dienstly24 in Hamburg – komplett online')
 
 @section('head-extra')
 {{-- Strukturierte Daten: Aufbau in App\Services\Seo\StructuredData (nie
      als Array in der Vorlage - Blade macht aus "at-context" sonst eine
      eigene Direktive, Audit 15.09.2026).
 
-     HIER IST DER `InsuranceAgency`-BLOCK RICHTIG, waehrend er auf den
+     HIER IST DER `LocalBusiness`-BLOCK RICHTIG, waehrend er auf den
      Leistungsseiten bewusst fehlt: dies ist die Seite ueber den SITZ des
      Betriebs. Sie beschreibt denselben einen Betrieb wie die Startseite,
      nicht einen zweiten - es gibt weiterhin genau eine Anschrift im
@@ -46,10 +46,10 @@
      KEIN BESUCHSBETRIEB (Betreiber-Klarstellung 19.09.2026): gearbeitet
      wird ausschliesslich online. Die Zeiten sind ERREICHBARKEITS-Zeiten,
      keine Einladung vorbeizukommen; die Seite sagt das ausdruecklich. --}}
-{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::insuranceAgency()) !!}
+{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::unternehmen()) !!}
 {!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::breadcrumbList([
     [__('Startseite'), $isAr ? '/ar' : '/'],
-    [$isAr ? 'وسيط تأمين في هامبورغ' : 'Versicherungsmakler in Hamburg', ($isAr ? '/ar/' : '/').$hSlug],
+    [$isAr ? 'Dienstly24 في هامبورغ' : 'Dienstly24 in Hamburg', ($isAr ? '/ar/' : '/').$hSlug],
 ])) !!}
 @endsection
 
@@ -65,21 +65,21 @@
   <div class="section-head">
     <span class="kicker">{{ $isAr ? 'هامبورغ' : 'Hamburg' }}</span>
     <h1 class="title display">{{ $isAr
-        ? 'وسيط تأمين في هامبورغ – كل شيء أونلاين'
-        : 'Versicherungsmakler in Hamburg – komplett online' }}</h1>
+        ? 'Dienstly24 في هامبورغ – كل شيء أونلاين'
+        : 'Dienstly24 in Hamburg – komplett online' }}</h1>
     <p>{{ $isAr
-        ? 'مقرّنا في هامبورغ، والعمل كلّه أونلاين: هاتف، واتساب، وبوابة العملاء – بالعربية والألمانية. لا تحتاجون للحضور إلى أي مكتب، ولا حتى لتسجيل السيارة.'
-        : 'Unser Sitz ist in Hamburg, gearbeitet wird vollständig online: Telefon, WhatsApp und Kundenportal – auf Deutsch und auf Arabisch. Sie müssen zu keinem Termin erscheinen, auch nicht für die Kfz-Zulassung.' }}</p>
+        ? 'مقرّنا في هامبورغ، والعمل كلّه أونلاين: هاتف، واتساب، والدردشة – بالعربية والألمانية. لا تحتاجون للحضور إلى أي مكتب، ولا حتى لتسجيل السيارة.'
+        : 'Unser Sitz ist in Hamburg, gearbeitet wird vollständig online: Telefon, WhatsApp und Chat – auf Deutsch und auf Arabisch. Sie müssen zu keinem Termin erscheinen, auch nicht für die Kfz-Zulassung.' }}</p>
   </div>
 
   {{-- EHRLICH AN DER ERSTINFORMATION AUSGERICHTET, genau wie die
-       nationale Seite /leistungen/versicherungsmakler: Dienstly24 haelt
+       Seite /leistungen/so-arbeiten-wir: Dienstly24 haelt
        die Erlaubnis nach Paragraph 34d GewO NICHT selbst. Eine
        Ortsseite, die das verschweigt, waere die bequemere - und eine
        falsche Angabe ueber das eigene Unternehmen. --}}
   <p class="hh-hinweis">{{ $isAr
-      ? 'ملاحظة: الاستشارة ووساطة عقود التأمين يقدّمها شريكنا، وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف (GewO). أما Dienstly24 فتوصلكم به وتتابع معكم كل شيء أونلاين – التفاصيل الكاملة في صفحة المعلومات الأولى.'
-      : 'Hinweis: Beratung und Vermittlung von Versicherungsverträgen übernimmt unser Kooperationspartner, ein zugelassener Versicherungsmakler mit Erlaubnis nach § 34d Abs. 1 GewO, in eigener Verantwortung. Dienstly24 stellt den Kontakt her und begleitet Sie online – alle Angaben dazu stehen in der' }}
+      ? 'ملاحظة: Dienstly24 ليست وسيط تأمين ولا تقدّم توصيات. وساطة عقود التأمين يتولاها حصراً شريكنا، وهو وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف (GewO)، وعلى مسؤوليته. نحن نضعكم على تواصل معه فقط – التفاصيل الكاملة في صفحة المعلومات الأولى.'
+      : 'Hinweis: Dienstly24 ist kein Versicherungsvermittler und gibt keine Empfehlungen. Die Vermittlung von Versicherungsverträgen übernimmt ausschließlich unser Kooperationspartner, ein zugelassener Versicherungsmakler mit Erlaubnis nach § 34d Abs. 1 GewO, in eigener Verantwortung. Wir stellen nur den Kontakt her – alle Angaben dazu stehen in der' }}
       <a href="{{ url('/erstinformation') }}">{{ $isAr ? 'Erstinformation' : 'Erstinformation' }}</a>.</p>
 
   {{-- Der Standort: die einzigen Angaben, die es nur hier gibt. --}}
@@ -106,11 +106,11 @@
       <h2>{{ $isAr ? 'كيف تسير الأمور أونلاين' : 'So läuft es online ab' }}</h2>
       <ul class="hh-liste">
         <li>{{ $isAr
-            ? 'تصوّرون الأوراق بالهاتف وترسلونها عبر واتساب أو ترفعونها في بوابة العملاء – ونحفظها في ملفكم.'
-            : 'Unterlagen mit dem Handy abfotografieren – per WhatsApp schicken oder im Kundenportal hochladen. Wir legen sie in Ihrer Akte ab.' }}</li>
+            ? 'تصوّرون الأوراق بالهاتف وترسلونها عبر واتساب – ونحفظها في ملفكم.'
+            : 'Unterlagen mit dem Handy abfotografieren und per WhatsApp schicken. Wir legen sie in Ihrer Akte ab.' }}</li>
         <li>{{ $isAr
-            ? 'نراجع عقودكم القائمة ونشرح ما يغطّيه فعلاً وما لا يغطّيه – هاتفياً أو كتابةً.'
-            : 'Bestehende Verträge gehen wir durch und erklären, was wirklich gedeckt ist und was nicht – am Telefon oder schriftlich.' }}</li>
+            ? 'لأسئلة التأمين نضعكم على تواصل مع شريكنا المرخّص – هاتفياً أو كتابةً.'
+            : 'Für Fragen zu Versicherungen stellen wir den Kontakt zu unserem zugelassenen Partner her – am Telefon oder schriftlich.' }}</li>
         <li>{{ $isAr
             ? 'التوقيع رقمي: يصلكم رابط، وتوقّعون بإصبعكم على الهاتف.'
             : 'Unterschrieben wird digital: Sie bekommen einen Link und zeichnen mit dem Finger auf dem Telefon.' }}</li>
@@ -143,8 +143,8 @@
     <a href="{{ $lPrefix }}kfz-versicherung">
       <strong>{{ $isAr ? 'تأمين السيارات' : 'Kfz-Versicherung' }}</strong>
       <span>{{ $isAr
-          ? 'مقارنة التعرفات قبل تسجيل السيارة – ورقم eVB نتكفّل به ضمن الوساطة.'
-          : 'Tarife vergleichen, bevor das Auto zugelassen wird – die eVB-Nummer läuft über uns.' }}</span>
+          ? 'قبل تسجيل السيارة نضعكم على تواصل مع شريكنا بخصوص التأمين.'
+          : 'Vor der Zulassung stellen wir für die Versicherung den Kontakt zu unserem Partner her.' }}</span>
     </a>
     <a href="{{ $lPrefix }}kfz-zulassung">
       <strong>{{ $isAr ? 'تسجيل السيارات' : 'Kfz-Zulassung' }}</strong>
@@ -155,20 +155,20 @@
     <a href="{{ $lPrefix }}krankenversicherung">
       <strong>{{ $isAr ? 'التأمين الصحي' : 'Krankenversicherung' }}</strong>
       <span>{{ $isAr
-          ? 'قانوني أو خاص – نوضّح الفروق بلغة مفهومة.'
-          : 'Gesetzlich oder privat – wir erklären die Unterschiede in verständlicher Sprache.' }}</span>
+          ? 'قانوني أو خاص – لأسئلتكم نضعكم على تواصل مع شريكنا المرخّص.'
+          : 'Gesetzlich oder privat – für Ihre Fragen stellen wir den Kontakt zu unserem zugelassenen Partner her.' }}</span>
     </a>
     <a href="{{ $lPrefix }}strom-gas">
       <strong>{{ $isAr ? 'الكهرباء والغاز' : 'Strom & Gas' }}</strong>
       <span>{{ $isAr
-          ? 'مراجعة التعرفة عند الانتقال إلى سكن جديد – والإلغاء والتسجيل علينا.'
-          : 'Beim Umzug in eine neue Wohnung den Tarif prüfen – Kündigung und Anmeldung übernehmen wir.' }}</span>
+          ? 'عند الانتقال إلى سكن جديد – الإلغاء والتسجيل علينا.'
+          : 'Beim Umzug in eine neue Wohnung – Kündigung und Anmeldung übernehmen wir.' }}</span>
     </a>
-    <a href="{{ $lPrefix }}versicherungsmakler">
-      <strong>{{ $isAr ? 'كيف تعمل الوساطة' : 'Wie die Beratung funktioniert' }}</strong>
+    <a href="{{ $lPrefix }}so-arbeiten-wir">
+      <strong>{{ $isAr ? 'هكذا نعمل' : 'So arbeiten wir' }}</strong>
       <span>{{ $isAr
-          ? 'الفرق بين الوسيط والوكيل، ومعنى توكيل الوساطة، والتكلفة.'
-          : 'Makler, Vertreter, Maklervollmacht und was das kostet – ausführlich erklärt.' }}</span>
+          ? 'ما تقوم به Dienstly24، وما يتولاه شريكنا المرخّص.'
+          : 'Was Dienstly24 übernimmt – und was unser zugelassener Partner.' }}</span>
     </a>
   </div>
 </div></section>
@@ -182,32 +182,32 @@
     <details>
       <summary>{{ $isAr ? 'هل يجب أن آتي إلى المكتب؟' : 'Muss ich zu Ihnen ins Büro kommen?' }}</summary>
       <p>{{ $isAr
-          ? 'لا. نحن نعمل أونلاين بالكامل، ولا يوجد استقبال للزوار في المقرّ. كل شيء يتم بالهاتف أو واتساب أو بوابة العملاء – بما في ذلك تسجيل السيارة والتوقيع.'
-          : 'Nein. Wir arbeiten vollständig online, einen Besuchsbetrieb gibt es an unserem Sitz nicht. Alles läuft über Telefon, WhatsApp oder das Kundenportal – auch die Kfz-Zulassung und die Unterschrift.' }}</p>
+          ? 'لا. نحن نعمل أونلاين بالكامل، ولا يوجد استقبال للزوار في المقرّ. كل شيء يتم بالهاتف أو واتساب أو الدردشة – بما في ذلك تسجيل السيارة والتوقيع.'
+          : 'Nein. Wir arbeiten vollständig online, einen Besuchsbetrieb gibt es an unserem Sitz nicht. Alles läuft über Telefon, WhatsApp oder den Chat – auch die Kfz-Zulassung und die Unterschrift.' }}</p>
     </details>
     <details>
       <summary>{{ $isAr ? 'كيف أرسل أوراقي؟' : 'Wie schicke ich Ihnen meine Unterlagen?' }}</summary>
       <p>{{ $isAr
-          ? 'صورة بالهاتف تكفي – عبر واتساب أو رفعاً في بوابة العملاء. المفيد: البوالص الحالية أو أرقام العقود، إثبات الهوية، وحسب الموضوع أوراق السيارة أو بيانات المزوّد السابق. إذا نقص شيء نقول لكم ذلك – ولا نخمّن أي بيان.'
-          : 'Ein Handyfoto genügt – per WhatsApp oder als Upload im Kundenportal. Hilfreich sind: bestehende Policen oder Vertragsnummern, ein Ausweisdokument und – je nach Anliegen – Fahrzeugpapiere oder Angaben zum bisherigen Anbieter. Fehlt etwas, sagen wir Ihnen das; geraten wird nichts.' }}</p>
+          ? 'صورة بالهاتف تكفي – عبر واتساب. المفيد: البوالص الحالية أو أرقام العقود، إثبات الهوية، وحسب الموضوع أوراق السيارة أو بيانات المزوّد السابق. إذا نقص شيء نقول لكم ذلك – ولا نخمّن أي بيان.'
+          : 'Ein Handyfoto genügt – per WhatsApp. Hilfreich sind: bestehende Policen oder Vertragsnummern, ein Ausweisdokument und – je nach Anliegen – Fahrzeugpapiere oder Angaben zum bisherigen Anbieter. Fehlt etwas, sagen wir Ihnen das; geraten wird nichts.' }}</p>
     </details>
     <details>
-      <summary>{{ $isAr ? 'هل الاستشارة بالعربية متاحة فعلاً؟' : 'Gibt es die Beratung wirklich auch auf Arabisch?' }}</summary>
+      <summary>{{ $isAr ? 'هل التواصل بالعربية متاح فعلاً؟' : 'Kann ich wirklich auf Arabisch schreiben?' }}</summary>
       <p>{{ $isAr
-          ? 'نعم. التواصل معنا والاستشارة عند شريكنا متاحان بالألمانية وبالعربية، وأنتم تختارون اللغة الأسهل عليكم.'
-          : 'Ja. Der Kontakt mit uns und die Beratung durch unseren Partnermakler sind auf Deutsch und auf Arabisch möglich – Sie wählen, was Ihnen leichter fällt.' }}</p>
+          ? 'نعم. التواصل معنا متاح بالألمانية وبالعربية، وأنتم تختارون اللغة الأسهل عليكم.'
+          : 'Ja. Der Kontakt mit uns ist auf Deutsch und auf Arabisch möglich – Sie wählen, was Ihnen leichter fällt.' }}</p>
     </details>
     <details>
-      <summary>{{ $isAr ? 'هل تعملون خارج هامبورغ أيضاً؟' : 'Beraten Sie auch außerhalb von Hamburg?' }}</summary>
+      <summary>{{ $isAr ? 'هل تعملون خارج هامبورغ أيضاً؟' : 'Sind Sie auch außerhalb von Hamburg für mich da?' }}</summary>
       <p>{{ $isAr
           ? 'نعم، في كل ألمانيا. وبما أنّ كل شيء أونلاين، فالخدمة واحدة تماماً أينما كنتم؛ هامبورغ هي مقرّنا فقط.'
-          : 'Ja, deutschlandweit. Da ohnehin alles online läuft, ist die Beratung überall dieselbe – Hamburg ist unser Sitz, mehr nicht.' }}</p>
+          : 'Ja, deutschlandweit. Da ohnehin alles online läuft, ist der Service überall derselbe – Hamburg ist unser Sitz, mehr nicht.' }}</p>
     </details>
     <details>
-      <summary>{{ $isAr ? 'قديش بتكلّف الاستشارة؟' : 'Was kostet die Beratung?' }}</summary>
+      <summary>{{ $isAr ? 'هل يكلّفني التواصل معكم شيئاً؟' : 'Kostet mich der Kontakt etwas?' }}</summary>
       <p>{{ $isAr
-          ? 'لا شيء عليكم. أجر الوساطة (Courtage) تدفعه شركة التأمين وهو أصلاً ضمن القسط. التفاصيل في صفحة المعلومات الأولى.'
-          : 'Für Sie nichts. Die Vergütung erfolgt über eine Courtage, die die Versicherungsgesellschaft zahlt und die im Beitrag bereits enthalten ist. Einzelheiten stehen in der Erstinformation.' }}</p>
+          ? 'لا. التواصل معنا مجاني وغير ملزم. أما شروط شريكنا المرخّص فتجدونها في صفحة المعلومات الأولى.'
+          : 'Nein. Der Kontakt mit uns ist kostenlos und unverbindlich. Die Angaben unseres zugelassenen Partners stehen in der Erstinformation.' }}</p>
     </details>
   </div>
 </div></section>

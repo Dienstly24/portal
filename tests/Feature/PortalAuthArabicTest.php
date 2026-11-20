@@ -21,7 +21,7 @@ class PortalAuthArabicTest extends TestCase
         $response->assertOk()
             ->assertSee('images/logo-white.png') // Logo-Variante ohne weißen Hintergrund
             ->assertSee('Herzlich willkommen bei Dienstly24')
-            ->assertSee('Ihr zuverlässiger Partner für professionelle Beratung')
+            ->assertSee('Ihr zuverlässiger Partner für Service, Kfz-Zulassung')
             ->assertSee('Konto erstellen')
             ->assertSee('Impressum')
             ->assertSee('Datenschutzerklärung')

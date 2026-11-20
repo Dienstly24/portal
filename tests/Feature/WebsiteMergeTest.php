@@ -31,7 +31,7 @@ class WebsiteMergeTest extends TestCase
     {
         $this->get(self::HOME)
             ->assertOk()
-            ->assertSee('Alle Versicherungen.')
+            ->assertSee('Versicherung, Zulassung, Energie.')
             ->assertSee('Ein Ansprechpartner.')
             ->assertSee('wa.me/491799673909', false)
             ->assertSee('action="/kontakt"', false)
@@ -53,7 +53,7 @@ class WebsiteMergeTest extends TestCase
             ->assertOk()
             ->assertSee('lang="ar"', false)
             ->assertSee('dir="rtl"', false)
-            ->assertSee('جميع أنواع التأمين.')
+            ->assertSee('التأمين والتسجيل والطاقة.')
             ->assertSee('جهة اتصال واحدة.')
             ->assertSee('rel="canonical" href="https://www.dienstly24.de/ar"', false)
             ->assertSee('hreflang="de" href="https://www.dienstly24.de/"', false);

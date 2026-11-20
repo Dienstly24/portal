@@ -8,6 +8,16 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 20.11.2026 - Kein Beratungs-/Makler-Wortlaut mehr (KI-121)
+
+- **Task**: Betreiber-Vorgabe: jede Formulierung, die Dienstly24 als Berater/Makler/Vergleicher darstellt, neutral umstellen (DE+AR, Titel/Meta, Leistungsseiten in der DB, Mails, KI-Prompts); `versicherungsmakler-hamburg` per 301 auf eine neutrale Adresse.
+- **Files Changed**: neu `app/Support/Tippgeber/ServiceSeitenTexte.php`, `app/Console/Commands/WebsiteTippgeberTexte.php`, Migration `2026_11_20_140000_leistungsseiten_tippgeber_texte`, Test `TippgeberTexteTest`; geaendert Views `website/home`, `website/layout`, `website/hamburg`, `services/index`, `services/show`, `website/legal/agb`, `legal/page`, `auth/login`, `portal/messages`, Mails `customer_message`, `schutzbrief_renewal`, `registration_verification`, `contract_switch`; `ServicePageSeeder`, `StructuredData`, `WebsiteController`, `ServicePageController`, `routes/web.php`, `CustomerMessageMail`, `CustomerMessageNotifier`, `AssistantPrompt`, `WebsitePrompt`, `lang/ar.json`; Tests `SeoSichtbarkeitTest`, `EinwilligungUndHamburgTest`, `StructuredDataTest`, `WebsiteMergeTest`, `ExtraBasicAuthTest`, `PortalAuthArabicTest`, `GoogleBewertungTest`; `CLAUDE.md`, `docs/TIPPGEBER_TEXTKONFLIKTE.md`, Wissensbasis.
+- **Database Changes**: Daten-Migration: Leistungsseiten-Texte (bekannte Saetze) neutral, Seite `versicherungsmakler` -> `so-arbeiten-wir`, aus Leistungsseiten uebernommene KI-Wissensbasis-Eintraege ebenso; Sicherung unter `storage/app/private/backups/`. Keine Schema-Aenderung.
+- **API Changes**: Route `/dienstly24-hamburg` (+ `/ar/`), alte Adresse 301; `/leistungen/versicherungsmakler` -> 301 `/leistungen/so-arbeiten-wir` (`ROUTES_INVENTORY.md` neu erzeugt).
+- **Potential Side Effects**: Google sieht neue Titel/Adressen (301 erhaelt das Ranking weitgehend); das Suchwort "Versicherungsmakler" wird bewusst nicht mehr bedient. Selbst im Admin geschriebene Saetze mit "Beratung" bleiben stehen - die Migration nennt sie im Deploy-Log. Startseite ohne Maklerpool-Abschnitt und mit nur noch einem Kundenzitat.
+- **Tests Performed**: `TippgeberTexteTest` (alle oeffentlichen Seiten DE+AR), volle Suite, `pint`; Seiten in Chromium angesehen.
+- **Result**: erledigt.
+
 ## 20.11.2026 - Vertrags-Erinnerungen im Tippgeber-Rahmen (KI-120)
 
 - **Task**: Erinnerungstexte ohne 34d-Erlaubnis zulaessig formulieren (Vorlage A/B, DE+AR), Fristfehler beheben, Strom/Gas/Internet/GKV pausieren, Kurzreferenz fuer WhatsApp, Tippgeber-Hinweis im Abwesenheitstext.

@@ -111,12 +111,12 @@ class StructuredDataTest extends TestCase
             'Es wurden verdaechtig wenige JSON-LD-Bloecke gefunden - stehen sie noch in den Vorlagen?');
     }
 
-    /** Die Startseite fuehrt InsuranceAgency UND FAQPage. */
-    public function test_startseite_traegt_insurance_agency_und_faq(): void
+    /** Die Startseite fuehrt LocalBusiness UND FAQPage. */
+    public function test_startseite_traegt_local_business_und_faq(): void
     {
         $typen = $this->typenVon('/website');
 
-        $this->assertContains('InsuranceAgency', $typen);
+        $this->assertContains('LocalBusiness', $typen);
         $this->assertContains('FAQPage', $typen);
     }
 

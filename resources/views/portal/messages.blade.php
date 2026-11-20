@@ -17,7 +17,7 @@
                  Hinweis erscheint nur, wenn der Assistent wirklich aktiv
                  ist - sonst waere er eine falsche Behauptung. --}}
             @if($aiActive ?? false)
-                <div class="chatpage-status">🤖 {{ __('Unser KI-Assistent antwortet sofort – Ihr Berater übernimmt jederzeit.') }}</div>
+                <div class="chatpage-status">🤖 {{ __('Unser KI-Assistent antwortet sofort – unser Team übernimmt jederzeit.') }}</div>
             @else
                 <div class="chatpage-status">{{ __('Wir antworten schnellstmöglich') }}</div>
             @endif
