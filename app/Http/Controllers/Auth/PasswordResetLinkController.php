@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\User;
+use App\Support\Kundenportal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -82,6 +83,20 @@ class PasswordResetLinkController extends Controller
         }
 
         $email = $this->resolveEmail($identifier);
+
+        // Kundenportal gesperrt: einem KUNDENKONTO wird kein Reset-Link
+        // geschickt (er fuehrte auf eine gesperrte Seite). Die Antwort
+        // bleibt dieselbe wie sonst - keine Enumeration. Personal ist
+        // nicht betroffen.
+        if ($email !== null && Kundenportal::gesperrt()
+            && User::whereRaw('LOWER(email) = ?', [mb_strtolower($email)])->value('role') === 'customer') {
+            Log::channel('portal_sperre')->info('Kundenportal-Zugriff blockiert', [
+                'grund' => 'passwort_reset_versand_unterdrueckt',
+                'methode' => $request->method(),
+                'pfad' => '/'.ltrim($request->path(), '/'),
+            ]);
+            $email = null;
+        }
 
         // Kein Treffer: bewusst dieselbe Antwort wie im Erfolgsfall.
         if ($email !== null) {

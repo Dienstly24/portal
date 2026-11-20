@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 20.11.2026 - Kundenportal gesperrt (keine Erlaubnis nach 34d GewO), Gast-Chat (KI-119)
+
+- **Task**: Betreiber-Vorgabe: Kundenportal systemweit sperren, Kunden erreichen uns weiter ohne Anmeldung (Chat, WhatsApp, Telefon, E-Mail); Erinnerungen laufen weiter.
+- **Files Changed**: neu `config/portal.php`, `app/Support/Kundenportal.php`, `app/Support/ChatReferenz.php`, `app/Http/Middleware/KundenportalSperre.php`, `app/Http/Controllers/WebChatController.php`, `app/Services/Messaging/Channels/WebChatAdapter.php`, Migration `2026_11_20_120000_webchat_kanal`, Views `errors/portal-gesperrt`, `support/chat`, `emails/_kontaktwege`; geaendert `bootstrap/app.php`, `config/logging.php`, `routes/web.php`, `routes/console.php`, `HomeController`, `PasswordResetLinkController`, `PortalAccessService`, `SendPortalInvitations`, `CustomerMessageMail`, `Channel`, `AppServiceProvider`, Mails `ticket_reply`/`document_request`/`customer_message`, `website/layout`, `services/index`/`show`, `legal/page`, `support/form`/`thanks`, `lang/ar.json`, `phpunit.xml`, `DesignSystemTest`; Test `KundenportalSperreTest`; `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: eine neue Zeile in `channels` (`webchat`), nichts geaendert oder geloescht. **API Changes**: neue Routen `chat`, `chat.send`, `chat.verlauf` (`ROUTES_INVENTORY.md` neu erzeugt); Portal-Routen antworten bei Sperre mit 503.
+- **Potential Side Effects**: Mit dem Deploy ist das Portal GESPERRT (Standard AUS). Kunden werden beim naechsten Aufruf abgemeldet. Portal-Einladungen, Kunden-Reset-Links und die "Bitte einloggen"-Erinnerung entfallen (Personal sieht eine Meldung). Antwort-/Nachrichten-Mails tragen den Text jetzt in der Mail. Chat-Links zeigen auf die Portal-Adresse (`/chat`), umstellbar per `CUSTOMER_CHAT_BASE_URL`.
+- **Tests Performed**: `KundenportalSperreTest` (25 Faelle, u.a. jede `portal*`-Route einzeln), volle Suite, `pint`; Wartungsseite und Chat in Chromium (iPhone 13 + Desktop). `phpstan` lokal nicht lauffaehig (Paket nicht ladbar), laeuft in CI.
+- **Result**: erledigt.
+
 ## 20.11.2026 - KI nur nach Freigabe, Karten gratis lesen (KI-116, KI-117, KI-118, Nachtrag KI-115)
 
 - **Task**: Betreiber: "erst fragen, dann KI - Kosten sehr stark senken"; BIG-Gesundheitskarte und Berliner-Sparkasse-girocard liefen zur KI.

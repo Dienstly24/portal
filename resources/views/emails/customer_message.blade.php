@@ -18,7 +18,7 @@
 @if($attachmentCount > 0)
 <p style="font-size:13.5px;color:#555;margin-top:14px;">📎 {{ $attachmentCount }} {{ $attachmentCount === 1 ? 'ملف مرفق' : 'ملفات مرفقة' }} – لأسباب تتعلق بحماية البيانات تجدها في بوابة العملاء فقط.</p>
 @endif
-<p style="font-size:15px;color:#333;margin-top:18px;">يمكنك الرد مباشرة عبر بوابة العملاء:</p>
+<p style="font-size:15px;color:#333;margin-top:18px;">{{ \App\Support\Kundenportal::aktiv() ? 'يمكنك الرد مباشرة عبر بوابة العملاء:' : 'يمكنك الرد علينا مباشرة:' }}</p>
 @else
 <p style="font-size:15px;color:#333;">لديك رسالة جديدة من مستشارك في بوابة العملاء. يرجى تسجيل الدخول للاطلاع عليها والرد.</p>
 @endif
@@ -30,20 +30,24 @@
 <td style="background:#f4f5f7;border-left:3px solid #17A65B;border-radius:8px;padding:16px 18px;font-size:14.5px;color:#333;line-height:1.7;">{!! nl2br(e(trim($customerMessage->body))) !!}</td>
 </tr></table>
 @if($attachmentCount > 0)
-<p style="font-size:13.5px;color:#555;margin-top:14px;">📎 {{ $attachmentCount }} {{ $attachmentCount === 1 ? 'Anhang liegt' : 'Anhänge liegen' }} aus Datenschutzgründen nur im Kundenportal für Sie bereit.</p>
+<p style="font-size:13.5px;color:#555;margin-top:14px;">📎 {{ $attachmentCount }} {{ $attachmentCount === 1 ? 'Anhang liegt' : 'Anhänge liegen' }} aus Datenschutzgründen {{ \App\Support\Kundenportal::aktiv() ? 'nur im Kundenportal für Sie bereit.' : 'nicht in dieser E-Mail. Antworten Sie uns kurz, dann senden wir sie Ihnen zu.' }}</p>
 @endif
-<p style="font-size:15px;color:#333;margin-top:18px;">Sie können direkt im Kundenportal antworten:</p>
+<p style="font-size:15px;color:#333;margin-top:18px;">{{ \App\Support\Kundenportal::aktiv() ? 'Sie können direkt im Kundenportal antworten:' : 'Sie können uns direkt antworten:' }}</p>
 @else
 <p style="font-size:15px;color:#333;">Sie haben eine neue Nachricht von Ihrem Berater im Kundenportal. Bitte melden Sie sich an, um sie zu lesen und zu antworten.</p>
 @endif
 @endif
+@if(\App\Support\Kundenportal::aktiv())
 <p style="text-align:center;margin:25px 0;">
 <a href="{{ $messagesUrl }}" style="background:#17A65B;color:#ffffff;padding:12px 30px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold;">{{ $lang === 'ar' ? 'فتح الرسائل والرد' : 'Nachricht öffnen & antworten' }}</a>
 </p>
+@else
+@include('emails._kontaktwege', ['lang' => $lang, 'chatUrl' => $messagesUrl])
+@endif
 <p style="font-size:15px;color:#333;">{{ $lang === 'ar' ? 'مع أطيب التحيات،' : 'Mit freundlichen Grüßen' }}<br>{{ $lang === 'ar' ? 'فريق Dienstly24' : 'Ihr Dienstly24 Team' }}</p>
 </td></tr>
 <tr><td style="background:#f4f5f7;padding:16px 30px;font-size:12px;color:#888;text-align:center;">
-Dienstly24 · {{ $lang === 'ar' ? 'هذه رسالة تلقائية من بوابة العملاء' : 'Diese Nachricht wurde automatisch vom Kundenportal versendet' }}
+Dienstly24 · @if(\App\Support\Kundenportal::aktiv()){{ $lang === 'ar' ? 'هذه رسالة تلقائية من بوابة العملاء' : 'Diese Nachricht wurde automatisch vom Kundenportal versendet' }}@else{{ $lang === 'ar' ? 'هذه رسالة تلقائية' : 'Diese Nachricht wurde automatisch versendet' }}@endif
 </td></tr>
 </table>
 </td></tr></table>

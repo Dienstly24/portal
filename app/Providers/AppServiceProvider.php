@@ -99,6 +99,7 @@ use App\Services\Commission\Sources\VermittlerSettlementSource;
 use App\Services\Messaging\Channels\ChannelManager;
 use App\Services\Messaging\Channels\InternalChatAdapter;
 use App\Services\Messaging\Channels\PortalAdapter;
+use App\Services\Messaging\Channels\WebChatAdapter;
 use App\Services\Messaging\Channels\WhatsAppAdapter;
 use App\Services\Notifications\NotificationService;
 use App\Services\Ocr\TesseractTextExtractor;
@@ -169,6 +170,7 @@ class AppServiceProvider extends ServiceProvider
             $manager = new ChannelManager;
             $manager->register(new PortalAdapter);
             $manager->register(new InternalChatAdapter);
+            $manager->register(new WebChatAdapter);
             $manager->register(new WhatsAppAdapter);
 
             return $manager;

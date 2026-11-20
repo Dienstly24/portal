@@ -34,7 +34,11 @@ a{color:#185FA5;}
 <body>
 <div class="top">
     <a class="logo" href="https://dienstly24.de"><img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24"></a>
+    @if(\App\Support\Kundenportal::aktiv())
     <a class="back" href="{{ route('login') }}">→ Zum Kundenportal-Login</a>
+    @else
+    <a class="back" href="/chat">→ Im Chat schreiben</a>
+    @endif
 </div>
 
 <div class="wrap">
@@ -110,8 +114,12 @@ a{color:#185FA5;}
     @if($company['address']){!! nl2br(e($company['address'])) !!}<br>@endif
     @if($company['phone'])☎ Telefon: <a href="tel:{{ preg_replace('/\s+/', '', $company['phone']) }}">{{ $company['phone'] }}</a><br>@endif
     ✉ E-Mail: <a href="mailto:{{ $company['email'] }}">{{ $company['email'] }}</a></p>
+    @if(\App\Support\Kundenportal::aktiv())
     <h2>Als Kunde angemeldet?</h2>
     <p>Am schnellsten erreichen Sie uns über den Bereich <a href="{{ route('login') }}">„Nachrichten" in Ihrem Kundenportal</a> – dort landet Ihre Anfrage direkt bei Ihrem Ansprechpartner.</p>
+    @else
+    <p>Am schnellsten erreichen Sie uns im <a href="/chat">Chat</a> oder per WhatsApp.</p>
+    @endif
 @endif
 </div>
 </div>

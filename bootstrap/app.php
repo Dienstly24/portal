@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureTwoFactor;
 use App\Http\Middleware\EnsureUserRole;
 use App\Http\Middleware\ExtraBasicAuth;
+use App\Http\Middleware\KundenportalSperre;
 use App\Http\Middleware\RedirectWebsiteHost;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
@@ -11,6 +12,7 @@ use App\Http\Middleware\SetRequestLocale;
 use App\Http\Middleware\TrackStaffActivity;
 use App\Support\ErrorRecorder;
 use App\Support\TrustedProxies;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -81,6 +83,18 @@ return Application::configure(basePath: dirname(__DIR__))
         // war also kein Rauswurf, sondern nur eine Umbenennung des
         // Schluessels. (Betreiber-Vorgabe 18.08.2026)
         $middleware->appendToGroup('web', AuthenticateSession::class);
+        // Kundenportal gesperrt (CUSTOMER_PORTAL_ENABLED=false, keine
+        // Erlaubnis nach 34d GewO): beendet Kundensitzungen und weist
+        // Kunden-Wege ab. VOR dem Passwortzwang, sonst leitet der eine
+        // Kundensitzung noch auf /passwort-festlegen um.
+        $middleware->appendToGroup('web', KundenportalSperre::class);
+        // Laravel sortiert Middleware nach Prioritaet - ohne diesen Eintrag
+        // liefe 'auth' der Route VOR der Sperre und leitete einen Gast
+        // still zur Anmeldung um, statt die Wartungsseite zu zeigen.
+        $middleware->prependToPriorityList(
+            before: AuthenticatesRequests::class,
+            prepend: KundenportalSperre::class,
+        );
         // Vom SYSTEM vergebene Passwoerter (Startpasswort = Geburtsdatum,
         // Admin-Reset, CLI) muessen beim naechsten Aufruf gegen ein
         // eigenes getauscht werden. NACH AuthenticateSession, damit die

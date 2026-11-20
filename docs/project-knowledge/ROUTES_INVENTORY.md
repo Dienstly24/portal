@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 20.11.2026 aus `php artisan route:list --json` (549 Routen).
+Generiert am 20.11.2026 aus `php artisan route:list --json` (552 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -440,6 +440,9 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | GET | `ar/leistungen/{slug}` | ar.services.show | forceLocale:ar |
 | GET | `ar/versicherungsmakler-hamburg` | ar.website.hamburg | forceLocale:ar |
 | GET | `ar/{page}` | ar.legal | forceLocale:ar |
+| GET | `chat` | chat | throttle:60,1 |
+| POST | `chat` | chat.send | throttle:8,1 |
+| GET | `chat/verlauf` | chat.verlauf | throttle:60,1 |
 | GET | `forgot-password` | password.request | guest |
 | POST | `forgot-password` | password.email | guest throttle:passwort-reset |
 | GET | `forgot-password/gesendet` | password.request.sent | guest |

@@ -382,7 +382,11 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
     <a href="{{ url('/agb') }}">AGB</a><span class="sep">·</span>
     <a href="{{ url('/widerruf') }}">{{ __('Widerruf') }}</a><span class="sep">·</span>
     <a href="{{ url('/leistungen') }}">{{ __('Alle Leistungen') }}</a><span class="sep">·</span>
+    @if(\App\Support\Kundenportal::aktiv())
     <a href="{{ route('login') }}" data-cta="portal" data-cta-seite="leistung">{{ __('Kundenportal') }}</a><span class="sep">·</span>
+    @else
+    <a href="/chat" data-cta="chat" data-cta-seite="leistung">{{ __('Im Chat schreiben') }}</a><span class="sep">·</span>
+    @endif
     <a href="#" data-consent-oeffnen>{{ __('Cookie-Einstellungen') }}</a>
 </div>
 <p class="foot" style="border-top:0;padding-top:0;max-width:780px;margin:0 auto 22px;text-align:center;line-height:1.6;">{{ $rtl

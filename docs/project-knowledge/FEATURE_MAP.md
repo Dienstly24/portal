@@ -294,6 +294,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - CSS `resources/css/bedienung.css`; JS `resources/js/ui.js` (Abschnitte 7-9), `resources/js/datum.js`, `datum-logik.js`; V `partials/feldfehler`
 - Tests `tests/js/datum-logik.test.js` (`npm run test:js`, in CI) · Status **ACTIVE** (09.10.2026) · Issues KI-097, KI-098, KI-100
 
+### F-101 Kundenportal-Sperre + Gast-Chat
+- Config `config/portal.php` (`CUSTOMER_PORTAL_ENABLED`, Standard AUS); MW `KundenportalSperre`; Support `Kundenportal`, `ChatReferenz`; C `WebChatController` (`/chat`, `/chat/verlauf`); Adapter `WebChatAdapter` (Kanal `webchat`); V `errors/portal-gesperrt`, `support/chat`, `emails/_kontaktwege`; Log-Kanal `portal_sperre`
+- Tests `KundenportalSperreTest` · Status **ACTIVE** (20.11.2026) · Issues KI-119
+
 ## J. Entfernt / tot
 
 ### F-099 AI-Workflow-Engine

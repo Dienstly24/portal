@@ -114,7 +114,11 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;col
     <a href="{{ url('/erstinformation') }}">{{ __('Erstinformation') }}</a><span class="sep">·</span>
     <a href="{{ url('/agb') }}">AGB</a><span class="sep">·</span>
     <a href="{{ url('/widerruf') }}">{{ __('Widerruf') }}</a><span class="sep">·</span>
+    @if(\App\Support\Kundenportal::aktiv())
     <a href="{{ route('login') }}" data-cta="portal" data-cta-seite="leistungen">{{ __('Kundenportal') }}</a><span class="sep">·</span>
+    @else
+    <a href="/chat" data-cta="chat" data-cta-seite="leistungen">{{ __('Im Chat schreiben') }}</a><span class="sep">·</span>
+    @endif
     <a href="#" data-consent-oeffnen>{{ __('Cookie-Einstellungen') }}</a>
 </div>
 @include('website.partials.whatsapp')

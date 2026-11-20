@@ -86,6 +86,16 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Blockierte Zugriffe auf das gesperrte Kundenportal. Nur Grund,
+        // Methode, Pfad, Route, Konto-ID - keine IP, keine Formulardaten.
+        'portal_sperre' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/portal-sperre.log'),
+            'level' => 'info',
+            'days' => env('PORTAL_SPERRE_LOG_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

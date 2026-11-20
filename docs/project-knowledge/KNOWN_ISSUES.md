@@ -30,6 +30,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-116 | HIGH | cost | Dokument-KI lief ungefragt bei jedem nicht vollstaendig kostenlos gelesenen Dokument; E-Mail-KI-Vorschlag ungefragt je unbekannter Mail; kostenpflichtige Analysen ohne Kennzeichen im Eingang | FIXED |
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
+| KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
 | KI-112 | MEDIUM | usability | E-Signatur: bei zwei Unterzeichnern mit derselben E-Mail war nicht erkennbar, welche Einladung wem gehoert und wo welche Person unterschreibt | FIXED |
 | KI-111 | MEDIUM | usability | E-Signatur: ein fertig unterschriebenes Dokument liess sich nicht ergaenzen (zweiter Unterzeichner, vergessene Stelle, Textfeld) | FIXED |
 | KI-110 | MEDIUM | usability | E-Signatur: kein Weg, falsch Unterschriebenes neu anzufordern; Unterschrift nur ueber E-Mail-Link (kein WhatsApp-/Vor-Ort-Weg); Einladung wurde von Kunden fuer Betrug gehalten | FIXED |
@@ -164,6 +165,13 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-119 - Kundenportal offen ohne Erlaubnis nach 34d GewO
+- **Category** legal/security · **Severity** HIGH · **Status** FIXED
+- **Location** `App\Http\Middleware\KundenportalSperre`, `config/portal.php`, `App\Support\Kundenportal`, `PortalAccessService`, `PasswordResetLinkController`, Mails `ticket_reply`/`document_request`/`customer_message`, Website-Kopf/-Fuss, `WebChatController`
+- **Description** Betreiber-Vorgabe 20.11.2026: Dienstly24 haelt keine Erlaubnis nach Paragraph 34d GewO, Kunden duerfen keinen Portalzugang haben. Portal, Anmeldung, Registrierung, Passwort- und Magic-Links waren offen; Mails und Website verlinkten das Portal; der einzige Kundenchat setzte eine Portal-Sitzung voraus.
+- **Fix** Globaler Schalter `CUSTOMER_PORTAL_ENABLED` (Standard AUS), serverseitige Sperre mit Wartungsseite/503-JSON, Beenden bestehender Kundensitzungen, Nachlauf gegen jede Kundenanmeldung, keine Einladungen/Reset-Links an Kunden, Kontaktwege statt Portal-Links, Gast-Chat `/chat` (Kanal `webchat`) mit signiertem `?ref=` nur als interne Notiz, minimales Sperr-Protokoll.
+- **Test** `KundenportalSperreTest`
 
 ### KI-114 - Dokumenten-Eingang: Vorgang nicht einem Bestandskunden zuordenbar
 - **Category** usability/correctness · **Severity** HIGH · **Status** FIXED

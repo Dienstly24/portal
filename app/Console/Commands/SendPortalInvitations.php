@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\Portal\PortalAccessService;
+use App\Support\Kundenportal;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -33,6 +34,10 @@ class SendPortalInvitations extends Command
 
     public function handle(PortalAccessService $portal): int
     {
+        if (Kundenportal::gesperrt()) {
+            $this->warn('Kundenportal gesperrt (CUSTOMER_PORTAL_ENABLED=false) - keine Einladungen.');
+            return self::SUCCESS;
+        }
         if (! $this->option('dry-run') && ! SystemSetting::get('portal_invite_auto_enabled')) {
             $this->warn('portal_invite_auto_enabled ist AUS - Batch uebersprungen. Zum Aktivieren: SystemSetting::set(\'portal_invite_auto_enabled\', \'1\').');
             return self::SUCCESS;
