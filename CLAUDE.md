@@ -5365,6 +5365,16 @@ neue Seitenfassung derselben Idee.
   sind (Paragraph 5b Abs. 3 UWG). Die Gesamtzahl ("X von Y empfehlen")
   laeuft nach 7 Tagen ohne Abruf ab. Das feste Zitat "Laila M." fuellt
   nur auf, solange weniger als drei Empfehlungen freigegeben sind.
+- **Automatische Freigabe** (Betreiber-Wunsch 21.11.2026 "keine Zeit,
+  selbst auszuwaehlen"; `SystemSetting facebook_bewertungen_automatisch`,
+  Voreinstellung AN, Schalter auf der Pruefseite): nach jedem Abruf gibt
+  `FacebookBewertungAbruf::automatischFreigeben()` jede Zeile im Status
+  "neu" frei, die `automatischFreigebbar()` ist - positiv, mit Text und
+  OHNE JEDEN Hinweis. Beratung mit Strom/Gas/Internet-Wort ist kein
+  Hinweis; Beratung ohne Bezug, jedes Versicherungswort und
+  Makler/Vermittlung sind einer und bleiben unsichtbar unter "Neu".
+  Abgelehnte fasst die Regel nie an. Merkmal `auto_freigegeben` trennt
+  Regel und Mensch; ein geaenderter Text setzt es zurueck.
 - Offen: Erwaehnung in der Datenschutzerklaerung (Rechtsseite, Anwalt).
 - Tests: `FacebookBewertungenTest`.
 

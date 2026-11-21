@@ -2,6 +2,7 @@
 
 namespace App\Services\Social;
 
+use App\Models\ActivityLog;
 use App\Models\FacebookBewertung;
 use App\Support\FacebookEmpfehlung;
 use Illuminate\Support\Carbon;
@@ -29,7 +30,7 @@ class FacebookBewertungAbruf
     public function __construct(private MetaGraphClient $graph) {}
 
     /**
-     * @return array{neu: int, geaendert: int, entfernt: int, positiv: int, gesamt: int}
+     * @return array{neu: int, geaendert: int, entfernt: int, positiv: int, gesamt: int, automatisch: int}
      *
      * @throws \RuntimeException
      */
@@ -75,6 +76,7 @@ class FacebookBewertungAbruf
                     $aenderung['status'] = 'neu';
                     $aenderung['geprueft_von'] = null;
                     $aenderung['geprueft_at'] = null;
+                    $aenderung['auto_freigegeben'] = false;
                 }
                 $zeile->update($aenderung);
                 $geaendert++;
@@ -88,6 +90,8 @@ class FacebookBewertungAbruf
             ->whereNotIn('fb_kennung', $gesehen === [] ? [''] : $gesehen)
             ->update(['entfernt_at' => now()]);
 
+        $automatisch = $this->automatischFreigeben();
+
         $positiv = count(array_filter($eintraege, fn ($e) => $e['empfehlung'] === 'positive' || (int) $e['sterne'] >= 4));
 
         Cache::put(FacebookEmpfehlung::CACHE_KEY, [
@@ -96,7 +100,30 @@ class FacebookBewertungAbruf
             'stand' => now()->toDateTimeString(),
         ], now()->addDays(FacebookEmpfehlung::MAX_ALTER_TAGE));
 
-        return ['neu' => $neu, 'geaendert' => $geaendert, 'entfernt' => $entfernt, 'positiv' => $positiv, 'gesamt' => count($eintraege)];
+        return ['neu' => $neu, 'geaendert' => $geaendert, 'entfernt' => $entfernt, 'positiv' => $positiv, 'gesamt' => count($eintraege), 'automatisch' => $automatisch];
+    }
+
+    /**
+     * Automatische Freigabe (Betreiber-Wunsch 21.11.2026). Betrachtet nur
+     * Zeilen im Status "neu" - was ein Mensch abgelehnt hat, bleibt
+     * abgelehnt. Was einen Hinweis traegt, bleibt "neu" und unsichtbar.
+     */
+    public function automatischFreigeben(): int
+    {
+        if (! FacebookBewertung::automatikAn()) {
+            return 0;
+        }
+        $anzahl = 0;
+        foreach (FacebookBewertung::where('status', 'neu')->whereNull('entfernt_at')->get() as $b) {
+            if (! $b->automatischFreigebbar()) {
+                continue;
+            }
+            $b->update(['status' => 'freigegeben', 'geprueft_von' => null, 'geprueft_at' => now(), 'auto_freigegeben' => true]);
+            ActivityLog::record('facebook_bewertung_auto_freigegeben', FacebookBewertung::class, $b->id, [], null);
+            $anzahl++;
+        }
+
+        return $anzahl;
     }
 
     /**

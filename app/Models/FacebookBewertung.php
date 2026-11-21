@@ -34,9 +34,18 @@ class FacebookBewertung extends Model
 
     private const VERSICHERUNG = '/versicher|police|kfz|haftpflicht|hausrat|rechtsschutz|krankenkasse|krankenversicher|تأمين|بوليصة/iu';
 
+    /** Woerter, mit denen "Beratung" eindeutig zu Strom/Gas/Internet gehoert. */
+    private const ENERGIE_INTERNET = '/strom|\\bgas|energie|internet|dsl|glasfaser|router|kabel|كهرباء|غاز|انترنت|إنترنت/iu';
+
+    /** Klingt nach Makler/Vermittlung - nie automatisch. */
+    private const VERMITTLUNG = '/makler|vermittl|وسيط|سمسار/iu';
+
+    /** SystemSetting-Schluessel; Voreinstellung AN (Betreiber 21.11.2026). */
+    public const SETTING_AUTOMATISCH = 'facebook_bewertungen_automatisch';
+
     protected $fillable = [
         'fb_kennung', 'name_kurz', 'text', 'empfehlung', 'sterne', 'verfasst_at',
-        'status', 'geprueft_von', 'geprueft_at', 'entfernt_at',
+        'status', 'geprueft_von', 'geprueft_at', 'auto_freigegeben', 'entfernt_at',
     ];
 
     protected function casts(): array
@@ -46,6 +55,7 @@ class FacebookBewertung extends Model
             'geprueft_at' => 'datetime',
             'entfernt_at' => 'datetime',
             'sterne' => 'integer',
+            'auto_freigegeben' => 'boolean',
         ];
     }
 
@@ -86,15 +96,35 @@ class FacebookBewertung extends Model
         }
 
         $beratung = ServiceSeitenTexte::funde($text) !== [];
-        if ($beratung && preg_match(self::VERSICHERUNG, $text)) {
+        $versicherung = (bool) preg_match(self::VERSICHERUNG, $text);
+        if ($beratung && $versicherung) {
             $hinweise[] = ['art' => 'sperre', 'text' => 'Spricht von Beratung zu einer Versicherung - darf nicht auf die Website (keine Erlaubnis nach Paragraph 34d GewO).'];
-        } elseif ($beratung) {
-            $hinweise[] = ['art' => 'pruefen', 'text' => 'Spricht von Beratung - nur freigeben, wenn es um Strom, Gas oder Internet geht.'];
-        } elseif (preg_match(self::VERSICHERUNG, $text)) {
+        } elseif ($beratung && ! preg_match(self::ENERGIE_INTERNET, $text)) {
+            $hinweise[] = ['art' => 'pruefen', 'text' => 'Spricht von Beratung, ohne Strom/Gas/Internet zu nennen - nur freigeben, wenn es darum geht.'];
+        } elseif ($versicherung) {
             $hinweise[] = ['art' => 'pruefen', 'text' => 'Erwaehnt eine Versicherung - pruefen, dass der Text nicht nach Vermittlung durch uns klingt.'];
+        }
+        if (preg_match(self::VERMITTLUNG, $text)) {
+            $hinweise[] = ['art' => 'pruefen', 'text' => 'Spricht von Makler/Vermittlung - pruefen.'];
         }
 
         return $hinweise;
+    }
+
+    /**
+     * Darf die Regel allein freigeben? Nur, wenn es GAR NICHTS zu pruefen
+     * gibt: positiv, mit Text, keine Sperre, kein Hinweis. Alles andere
+     * bleibt "neu" und erscheint nicht - lieber eine Empfehlung weniger
+     * als ein Text, der uns als Versicherungsberater darstellt.
+     */
+    public function automatischFreigebbar(): bool
+    {
+        return $this->entfernt_at === null && $this->hinweise() === [];
+    }
+
+    public static function automatikAn(): bool
+    {
+        return (string) SystemSetting::get(self::SETTING_AUTOMATISCH, '1') !== '0';
     }
 
     public function freigabeGesperrt(): ?string
