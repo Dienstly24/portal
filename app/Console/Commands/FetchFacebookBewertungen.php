@@ -36,8 +36,8 @@ class FetchFacebookBewertungen extends Command
         }
 
         $this->info(sprintf(
-            'Empfehlungen: %d gesamt (%d positiv). Neu: %d, geaendert: %d, bei Facebook entfernt: %d.',
-            $e['gesamt'], $e['positiv'], $e['neu'], $e['geaendert'], $e['entfernt']
+            'Empfehlungen: %d gesamt (%d positiv). Neu: %d, geaendert: %d, bei Facebook entfernt: %d, automatisch freigegeben: %d.',
+            $e['gesamt'], $e['positiv'], $e['neu'], $e['geaendert'], $e['entfernt'], $e['automatisch']
         ));
         if ($e['neu'] > 0) {
             $this->line('Neue Empfehlungen warten auf Freigabe: /admin/facebook-bewertungen');

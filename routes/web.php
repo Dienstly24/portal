@@ -858,6 +858,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
             ->name('facebook_bewertungen');
         Route::post('/facebook-bewertungen/abrufen', [FacebookBewertungController::class, 'abrufen'])
             ->name('facebook_bewertungen.abrufen')->middleware('throttle:6,1');
+        Route::post('/facebook-bewertungen/automatik', [FacebookBewertungController::class, 'automatik'])
+            ->name('facebook_bewertungen.automatik');
         Route::post('/facebook-bewertungen/{id}/status', [FacebookBewertungController::class, 'status'])
             ->whereNumber('id')->name('facebook_bewertungen.status');
     });

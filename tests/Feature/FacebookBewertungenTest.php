@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\FacebookBewertung;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\Social\FacebookBewertungAbruf;
 use App\Support\FacebookEmpfehlung;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -65,7 +66,8 @@ class FacebookBewertungenTest extends TestCase
         $this->assertSame(2, FacebookBewertung::count());
         $s1 = FacebookBewertung::where('fb_kennung', 's1')->firstOrFail();
         $this->assertSame('Ahmad A.', $s1->name_kurz);
-        $this->assertSame('neu', $s1->status);
+        // unbedenklich -> automatisch freigegeben (Voreinstellung AN)
+        $this->assertSame('freigegeben', $s1->status);
         $this->assertDatabaseMissing('facebook_bewertungen', ['name_kurz' => 'Ahmad Albhre']);
         $this->assertSame(['positiv' => 1, 'gesamt' => 2], array_intersect_key(FacebookEmpfehlung::stand(), ['positiv' => 1, 'gesamt' => 1]));
 
@@ -77,6 +79,7 @@ class FacebookBewertungenTest extends TestCase
 
     public function test_nichts_erscheint_ohne_freigabe(): void
     {
+        SystemSetting::set(FacebookBewertung::SETTING_AUTOMATISCH, '0');
         $this->fakeFacebook([$this->eintrag('s1', 'Super schneller Stromwechsel, danke!')]);
         $this->artisan('facebook:bewertungen-holen')->assertSuccessful();
 
@@ -118,8 +121,9 @@ class FacebookBewertungenTest extends TestCase
         $this->assertSame('freigegeben', $strom->fresh()->status);
         $this->assertSame($admin->id, $strom->fresh()->geprueft_von);
 
-        // Hinweis fuer den Pruefer
-        $this->assertSame('pruefen', $strom->hinweise()[0]['art']);
+        // Beratung + Strom ist unbedenklich, Beratung ohne Bezug nicht
+        $this->assertSame([], $strom->hinweise());
+        $this->assertSame('pruefen', (new FacebookBewertung(['text' => 'Gute Beratung', 'empfehlung' => 'positive']))->hinweise()[0]['art']);
     }
 
     public function test_negative_oder_leere_empfehlung_kann_nicht_freigegeben_werden(): void
@@ -137,6 +141,7 @@ class FacebookBewertungenTest extends TestCase
 
     public function test_geaenderter_text_braucht_neue_freigabe_und_geloeschte_verschwindet(): void
     {
+        SystemSetting::set(FacebookBewertung::SETTING_AUTOMATISCH, '0');
         Http::fakeSequence('graph.facebook.com/*')
             ->push(['data' => [$this->eintrag('s1', 'Alter Text'), $this->eintrag('s2', 'Bleibt')]])
             ->push(['data' => [$this->eintrag('s1', 'Neuer Text')]]);
@@ -198,6 +203,49 @@ class FacebookBewertungenTest extends TestCase
         $this->assertSame('neu', $b->fresh()->status);
 
         $this->actingAs($this->admin())->get(route('admin.facebook_bewertungen'))->assertOk()->assertSee('Gut');
+    }
+
+    /** Betreiber-Wunsch 21.11.2026: "keine Zeit, selbst auszuwaehlen". */
+    public function test_automatik_gibt_nur_unbedenkliches_frei(): void
+    {
+        $this->fakeFacebook([
+            $this->eintrag('ok', 'Super schneller Service, sehr freundlich!'),
+            $this->eintrag('energie', 'Tolle Beratung beim Stromvertrag, danke!'),
+            $this->eintrag('versicherung', 'Gute Beratung zur Kfz-Versicherung'),
+            $this->eintrag('unklar', 'Sehr gute Beratung!'),
+            $this->eintrag('makler', 'Bester Makler in Hamburg'),
+            $this->eintrag('versicherung2', 'Haben mir mit der Haftpflicht geholfen'),
+            $this->eintrag('negativ', 'Nicht erreichbar', 'negative'),
+            $this->eintrag('leer', ''),
+        ]);
+
+        $this->artisan('facebook:bewertungen-holen')
+            ->expectsOutputToContain('automatisch freigegeben: 2')
+            ->assertSuccessful();
+
+        $this->assertEqualsCanonicalizing(['ok', 'energie'], FacebookBewertung::sichtbar()->pluck('fb_kennung')->all());
+        $this->assertTrue(FacebookBewertung::where('fb_kennung', 'ok')->value('auto_freigegeben'));
+        $this->assertSame('neu', FacebookBewertung::where('fb_kennung', 'versicherung')->value('status'));
+    }
+
+    public function test_automatik_laesst_abgelehnte_in_ruhe_und_ist_abschaltbar(): void
+    {
+        FacebookBewertung::create(['fb_kennung' => 'weg', 'text' => 'Toll', 'empfehlung' => 'positive', 'status' => 'abgelehnt']);
+        $this->fakeFacebook([$this->eintrag('weg', 'Toll')]);
+        $this->artisan('facebook:bewertungen-holen')->assertSuccessful();
+        $this->assertSame('abgelehnt', FacebookBewertung::where('fb_kennung', 'weg')->value('status'));
+
+        $admin = $this->admin();
+        $this->actingAs($admin)->post(route('admin.facebook_bewertungen.automatik'), ['an' => '0'])->assertSessionHasNoErrors();
+        $this->assertFalse(FacebookBewertung::automatikAn());
+
+        $neu = FacebookBewertung::create(['fb_kennung' => 'n', 'text' => 'Klasse', 'empfehlung' => 'positive']);
+        $this->assertSame(0, app(FacebookBewertungAbruf::class)->automatischFreigeben());
+        $this->assertSame('neu', $neu->fresh()->status);
+
+        // Einschalten gibt sofort frei
+        $this->actingAs($admin)->post(route('admin.facebook_bewertungen.automatik'), ['an' => '1']);
+        $this->assertSame('freigegeben', $neu->fresh()->status);
     }
 
     public function test_kurzname(): void

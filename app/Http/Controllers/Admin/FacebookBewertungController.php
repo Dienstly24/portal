@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\FacebookBewertung;
+use App\Models\SystemSetting;
 use App\Services\Social\FacebookBewertungAbruf;
 use App\Support\FacebookEmpfehlung;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class FacebookBewertungController extends Controller
                 ->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status'),
             'stand' => FacebookEmpfehlung::stand(),
             'eingerichtet' => FacebookEmpfehlung::abrufEingerichtet(),
+            'automatik' => FacebookBewertung::automatikAn(),
         ]);
     }
 
@@ -51,6 +53,7 @@ class FacebookBewertungController extends Controller
         }
 
         $bewertung->update([
+            'auto_freigegeben' => false,
             'status' => $data['status'],
             'geprueft_von' => $data['status'] === 'neu' ? null : $request->user()->id,
             'geprueft_at' => $data['status'] === 'neu' ? null : now(),
@@ -64,6 +67,19 @@ class FacebookBewertungController extends Controller
         });
     }
 
+    /** Automatische Freigabe an/aus; beim Einschalten sofort anwenden. */
+    public function automatik(Request $request, FacebookBewertungAbruf $abruf)
+    {
+        $an = $request->boolean('an');
+        SystemSetting::set(FacebookBewertung::SETTING_AUTOMATISCH, $an ? '1' : '0');
+        ActivityLog::record('facebook_bewertungen_automatik_'.($an ? 'an' : 'aus'));
+        $anzahl = $an ? $abruf->automatischFreigeben() : 0;
+
+        return back()->with('success', $an
+            ? 'Automatische Freigabe eingeschaltet - '.$anzahl.' Empfehlung(en) sofort freigegeben.'
+            : 'Automatische Freigabe ausgeschaltet. Bereits freigegebene bleiben stehen.');
+    }
+
     public function abrufen(FacebookBewertungAbruf $abruf)
     {
         try {
@@ -73,8 +89,8 @@ class FacebookBewertungController extends Controller
         }
 
         return back()->with('success', sprintf(
-            'Abgerufen: %d Empfehlungen (%d positiv). Neu: %d, geaendert: %d, bei Facebook entfernt: %d.',
-            $e['gesamt'], $e['positiv'], $e['neu'], $e['geaendert'], $e['entfernt']
+            'Abgerufen: %d Empfehlungen (%d positiv). Neu: %d, geaendert: %d, bei Facebook entfernt: %d, automatisch freigegeben: %d.',
+            $e['gesamt'], $e['positiv'], $e['neu'], $e['geaendert'], $e['entfernt'], $e['automatisch']
         ));
     }
 }

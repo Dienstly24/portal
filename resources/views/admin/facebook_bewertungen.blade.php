@@ -35,11 +35,29 @@
     </div>
 @endunless
 
+<div class="card" style="margin-bottom:16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;">
+    <div>
+        <b>Automatische Freigabe: {{ $automatik ? 'AN' : 'AUS' }}</b>
+        <div style="font-size:.85rem;color:var(--ink-soft);">
+            @if($automatik)
+                Positive Empfehlungen ohne jeden Hinweis gehen nach dem Abruf direkt auf die Website.
+                Alles mit Hinweis bleibt unter „Neu" und erscheint nicht – Sie müssen nichts tun.
+            @else
+                Jede Empfehlung wartet auf Ihre Freigabe.
+            @endif
+        </div>
+    </div>
+    <form method="POST" action="{{ route('admin.facebook_bewertungen.automatik') }}">@csrf
+        <input type="hidden" name="an" value="{{ $automatik ? '0' : '1' }}">
+        <button type="submit" class="btn {{ $automatik ? 'btn-ghost' : 'btn-primary' }}">{{ $automatik ? 'Ausschalten' : 'Einschalten' }}</button>
+    </form>
+</div>
+
 <div class="card" style="margin-bottom:16px;font-size:.9rem;">
     <b>Regeln für die Freigabe</b>
     <ul style="margin:6px 0 0;padding-inline-start:18px;">
         <li>Nur positive Empfehlungen mit Text. Der Text wird nie geändert oder gekürzt.</li>
-        <li>„Beratung" ist in Ordnung, wenn es um <b>Strom, Gas oder Internet</b> geht.
+        <li>„Beratung" ist in Ordnung, wenn es um <b>Strom, Gas oder Internet</b> geht (steht das Wort dabei, gibt die Automatik frei).
             Spricht der Text von Beratung zu einer <b>Versicherung</b>, ist die Freigabe gesperrt (keine Erlaubnis nach § 34d GewO).</li>
         <li>Auf der Website steht nur der Vorname und der erste Buchstabe des Nachnamens.</li>
         <li>Ändert der Verfasser seinen Text bei Facebook, muss er neu freigegeben werden; löscht er ihn, verschwindet er von der Website.</li>
@@ -101,7 +119,7 @@
         @endforeach
         @if($b->geprueft_at)
             <div style="margin-top:6px;font-size:.8rem;color:var(--ink-soft);">
-                Geprüft von {{ $b->pruefer?->name ?? 'unbekannt' }} am {{ $b->geprueft_at->lokal()->format('d.m.Y H:i') }}
+                {{ $b->auto_freigegeben ? 'Automatisch freigegeben' : 'Geprüft von '.($b->pruefer?->name ?? 'unbekannt') }} am {{ $b->geprueft_at->lokal()->format('d.m.Y H:i') }}
             </div>
         @endif
     </div>
