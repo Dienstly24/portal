@@ -55,6 +55,20 @@ class DocumentAnalyzer
     ) {
     }
 
+    /**
+     * Der zuletzt in analyze() kostenlos gelesene Text (Textebene oder OCR).
+     * NUR im Speicher und nur fuer die Dauer des Analyse-Jobs: der Job sucht
+     * darin nach VORHANDENEN Kunden (KundenImTextFinder). Rohtext wird
+     * weiterhin NIE gespeichert (Datenminimierung) - er steht bewusst nicht
+     * im Ergebnis-Array, damit er nicht versehentlich in ai_extracted landet.
+     */
+    private string $gelesenerText = '';
+
+    public function letzterGelesenerText(): string
+    {
+        return $this->gelesenerText;
+    }
+
     /** Analyse moeglich? (KI-Anbieter ODER kostenlose Text-/OCR-Basisebene) */
     public function isEnabled(): bool
     {
@@ -134,6 +148,8 @@ class DocumentAnalyzer
 
     public function analyze(Document $document, bool $forceAi = false, bool $fresh = false): ?array
     {
+        $this->gelesenerText = '';
+
         // Duplikat-Wiederverwendung (identischer Inhalts-Hash -> duplicate_of):
         // das fertige Ergebnis des Zwillings spart vor allem den zweiten
         // (kostenpflichtigen) KI-Aufruf. Sie greift aber erst NACH den
@@ -172,6 +188,7 @@ class DocumentAnalyzer
         if ($mime === 'application/pdf' && $this->pdfText->isAvailable()) {
             $rawTextLayer = $this->pdfText->extractRaw($binary);
             if ($rawTextLayer !== '') {
+                $this->gelesenerText = $rawTextLayer;
                 $parsed = $this->templateParser->parse($rawTextLayer);
                 if ($parsed !== null) {
                     return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $rawTextLayer, true, $reuse);
@@ -189,6 +206,9 @@ class DocumentAnalyzer
         if ($mime === 'application/pdf' && $this->pdfText->isAvailable()) {
             $freeText = $this->pdfText->extract($binary);
             $fromTextLayer = $freeText !== '';
+            if ($fromTextLayer) {
+                $this->gelesenerText = $freeText;
+            }
         }
 
         // HYBRID-Schutz: eine WINZIGE Textebene (nur Briefkopf/Fusszeile eines
@@ -218,6 +238,9 @@ class DocumentAnalyzer
         // der verbesserte Parser kam fuer Fotos nie zum Zug.
         if ($freeText === '' && $this->ocr->isAvailable()) {
             $freeText = $this->ocr->extract($binary, $mime);
+            if ($freeText !== '') {
+                $this->gelesenerText = $freeText;
+            }
 
             // Bekanntes Formular auf dem OCR-Text (z.B. die als Bild-PDF
             // hochgeladene KKH-Beitrittserklaerung)? Ebenfalls gratis lesen.

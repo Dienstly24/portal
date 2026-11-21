@@ -3,6 +3,7 @@
 namespace App\Services\Ai;
 
 use App\Models\Document;
+use App\Services\Ai\Concerns\RepairsOcrText;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Energy\MeterPhotoReader;
 
@@ -21,6 +22,7 @@ use App\Services\Energy\MeterPhotoReader;
  */
 class HeuristicDocumentClassifier
 {
+    use RepairsOcrText;
     use ValidatesExtractedFields;
 
     private const KEYWORDS = [
@@ -129,7 +131,12 @@ class HeuristicDocumentClassifier
                 }
             }
         }
-        return null;
+
+        // Steht die IBAN mitten in einer Zeile (Bankkarten-Scan:
+        // "DE89370400440532013000 1:69 Max Muster", KI-122), greift keines
+        // der beiden Muster oben. Dann nur eine deutsche IBAN mit GUELTIGER
+        // Pruefziffer - geraten wird dabei nichts.
+        return $this->ocrGermanIban($text);
     }
 
     private function findVin(string $text): ?string

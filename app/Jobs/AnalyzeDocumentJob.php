@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Document;
 use App\Services\Ai\DocumentAnalyzer;
 use App\Services\DocumentIntake\DocumentIntakeService;
+use App\Services\Matching\KundenImTextFinder;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -111,6 +112,15 @@ class AnalyzeDocumentJob implements ShouldQueue
                 // sie nicht trifft, greift das uebliche Personen-Matching.
                 $match = $result['type'] === 'zaehlerfoto' ? $intake->findMeterMatch($extracted) : null;
                 $match ??= $intake->findMatch($extracted);
+
+                // Vorhandene Kunden im gelesenen Text (voller Name / IBAN) -
+                // auch wenn die kostenlose Stufe keinen Namen auslesen durfte
+                // (KI-122). Nur Vorschlag, nie automatische Zuordnung.
+                $imText = $this->kundenImText($analyzer, $extracted);
+                if ($imText !== []) {
+                    $extracted['kunden_im_text'] = $imText;
+                }
+                $match ??= $intake->matchAusTextHinweisen($imText);
                 $extracted['match'] = $match;
             }
 
@@ -195,6 +205,26 @@ class AnalyzeDocumentJob implements ShouldQueue
             }
         } catch (\Throwable $e) {
             Log::warning('Dokument-Nachverarbeitung (Protokoll/Zuordnung) fehlgeschlagen ('.$document->id.'): '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Fehler hier duerfen die Analyse nie kippen - der Abgleich ist eine
+     * Zugabe, das Ergebnis selbst ist bereits bezahlt/gelesen.
+     *
+     * @param  array<string,mixed>  $extracted
+     * @return list<array{customer_id: string, art: string, score: int, grund: string}>
+     */
+    private function kundenImText(DocumentAnalyzer $analyzer, array $extracted): array
+    {
+        try {
+            return app(KundenImTextFinder::class)->finde(
+                $analyzer->letzterGelesenerText(),
+                ($extracted['bank'] ?? [])['iban'] ?? null,
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Kundenabgleich im Dokumenttext fehlgeschlagen ('.$this->documentId.'): '.$e->getMessage());
+            return [];
         }
     }
 
