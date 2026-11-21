@@ -372,16 +372,25 @@ class DocumentIntakeService
 
         // Kunden-Hinweise aus dem Dokumenttext (KI-122) aller Dokumente
         // zusammenfuehren - je Kunde der hoechste Score.
+        /** @var array<string, array<string, mixed>> $imText */
         $imText = [];
         foreach ($docs as $doc) {
-            foreach (($doc->ai_extracted['kunden_im_text'] ?? []) as $hinweis) {
+            // getAttribute() statt Property: der encrypted:array-Cast wird von
+            // der statischen Analyse als string|null gelesen.
+            $daten = $doc->getAttribute('ai_extracted');
+            $hinweise = is_array($daten) && is_array($daten['kunden_im_text'] ?? null) ? $daten['kunden_im_text'] : [];
+            foreach ($hinweise as $hinweis) {
+                if (! is_array($hinweis)) {
+                    continue;
+                }
                 $id = (string) ($hinweis['customer_id'] ?? '');
-                if ($id !== '' && (! isset($imText[$id]) || $imText[$id]['score'] < ($hinweis['score'] ?? 0))) {
+                $score = (int) ($hinweis['score'] ?? 0);
+                if ($id !== '' && (! isset($imText[$id]) || (int) ($imText[$id]['score'] ?? 0) < $score)) {
                     $imText[$id] = $hinweis;
                 }
             }
         }
-        if ($imText !== []) {
+        if (count($imText) > 0) {
             $merged['kunden_im_text'] = array_values($imText);
         }
 
