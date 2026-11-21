@@ -33,7 +33,7 @@ class KundeImDokumenttextTest extends TestCase
     use RefreshDatabase;
 
     /** Aufbau wie der gemessene OCR-Text des Bankkarten-Scans (Daten ersetzt). */
-    private const OCR_BANKKARTE = "DE89370400440532013000 1:69 Karim Benali Haddad ati";
+    private const OCR_BANKKARTE = 'DE89370400440532013000 1:69 Karim Benali Haddad ati';
 
     private function kunde(string $name, array $extra = []): Customer
     {
