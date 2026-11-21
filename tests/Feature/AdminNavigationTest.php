@@ -101,7 +101,7 @@ class AdminNavigationTest extends TestCase
 
         $this->assertSame(['provisionen', 'partner', 'vergleichsportale', 'berichte'], $keys($settings['vertrieb']));
         $this->assertSame(
-            ['leistungsseiten', 'medien', 'werbung', 'banner', 'newsletter', 'ankuendigungen'],
+            ['leistungsseiten', 'medien', 'werbung', 'banner', 'facebook_bewertungen', 'newsletter', 'ankuendigungen'],
             $keys($settings['marketing'])
         );
         $this->assertSame(
