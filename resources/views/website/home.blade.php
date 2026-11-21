@@ -219,13 +219,36 @@
     <span class="kicker">{{ $isAr ? 'آراء العملاء' : 'Kundenstimmen' }}</span>
     <h2 class="title display">{{ $isAr ? 'ماذا يقول عملاؤنا عنا' : 'Was Kunden über uns sagen' }}</h2>
   </div>
+  @php
+      // Echte Empfehlungen von Facebook - nur freigegebene (Admin), nie
+      // umformuliert. Das feste Zitat fuellt nur auf, solange es weniger
+      // als drei sind.
+      $fbStimmen = \App\Support\FacebookEmpfehlung::freigegeben();
+      $fbStand = \App\Support\FacebookEmpfehlung::stand();
+  @endphp
+  @if($fbStand && $fbStand['positiv'] > 0)
+    <p class="fb-zahl reveal">{{ $isAr
+        ? $fbStand['positiv'].' من أصل '.$fbStand['gesamt'].' تقييماً على فيسبوك يوصون بـ Dienstly24'
+        : $fbStand['positiv'].' von '.$fbStand['gesamt'].' Bewertungen auf Facebook empfehlen Dienstly24' }}</p>
+  @endif
   <div class="tgrid">
     {{-- Zwei Zitate ("Tarife erklaert", "Beratung auf Arabisch") am 20.11.2026
          entfernt: ein Kundenzitat wird nie umformuliert, und beide beschrieben
          eine Beratung, die Dienstly24 nicht erbringt. --}}
+    @foreach($fbStimmen as $stimme)
+      <div class="tcard reveal"><p class="q" dir="auto">{{ $stimme->text }}</p><div class="who"><div class="av">{{ mb_strtoupper(mb_substr($stimme->name_kurz ?? 'F', 0, 1)) }}</div><div><b><bdi>{{ $stimme->name_kurz ?? ($isAr ? 'عميل' : 'Kunde') }}</bdi></b><span>{{ $isAr ? 'توصية على فيسبوك' : 'Empfehlung auf Facebook' }}@if($stimme->verfasst_at) · <span dir="ltr">{{ $stimme->verfasst_at->lokal()->format('m/Y') }}</span>@endif</span></div></div></div>
+    @endforeach
+    @if($fbStimmen->count() < \App\Models\FacebookBewertung::MAX_ANZEIGE)
     <div class="tcard reveal"><p class="q">{{ $isAr ? '«كانت لدي جهة اتصال ثابتة طوال العملية، وهذا منحني شعوراً بالأمان.»' : '„Ich hatte einen festen Ansprechpartner während des ganzen Prozesses. Das hat mir Sicherheit gegeben.“' }}</p><div class="who"><div class="av">L</div><div><b>Laila M.</b><span>München</span></div></div></div>
+    @endif
   </div>
-  <p style="text-align:center;margin-top:28px;"><a href="{{ config('website.facebook') }}" target="_blank" rel="noopener" class="btn btn-ghost">{{ $isAr ? 'شاهدوا جميع التقييمات على فيسبوك' : 'Alle Bewertungen auf Facebook ansehen' }}</a></p>
+  @if($fbStimmen->isNotEmpty())
+    {{-- Transparenz (UWG Paragraph 5b Abs. 3): Herkunft, Auswahl und was
+         wir NICHT pruefen koennen. --}}
+    <p class="fb-hinweis">{{ $isAr
+        ? 'توصيات مختارة من صفحتنا على فيسبوك، تُعرض كما كتبها أصحابها. لا نستطيع التحقق مما إذا كان كاتبوها عملاء لدينا. جميع التقييمات متاحة على فيسبوك.'
+        : 'Ausgewählte Empfehlungen von unserer Facebook-Seite, unverändert wiedergegeben. Ob die Verfasser Kunden von uns sind, können wir nicht prüfen. Alle Bewertungen finden Sie auf Facebook.' }}</p>
+  @endif
 </div></section>
 
 {{-- FAQ --}}

@@ -306,6 +306,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Support `Tippgeber\ServiceSeitenTexte` (Ersetzungsliste + Wortliste); Command `website:tippgeber-texte`; Migration `2026_11_20_140000_leistungsseiten_tippgeber_texte`; Seeder `ServicePageSeeder::neutral()`; Routen `/dienstly24-hamburg` (alt `/versicherungsmakler-hamburg` 301), `/leistungen/so-arbeiten-wir` (alt `/leistungen/versicherungsmakler` 301)
 - Tests `TippgeberTexteTest` · Status **ACTIVE** (20.11.2026) · Issues KI-121
 
+### F-104 Facebook-Empfehlungen auf der Startseite
+- M `FacebookBewertung`; Support `FacebookEmpfehlung`; S `Social\FacebookBewertungAbruf`; Command `facebook:bewertungen-holen` (taeglich 04:50); C `Admin\FacebookBewertungController` (`/admin/facebook-bewertungen`, nur admin/manager); V `admin/facebook_bewertungen`, Abschnitt "Kundenstimmen" in `website/home`; Migration `2026_11_21_090000_facebook_bewertungen`
+- Tests `FacebookBewertungenTest` · Status **ACTIVE** (21.11.2026; braucht `pages_read_user_content` am Seiten-Token)
+
 ## J. Entfernt / tot
 
 ### F-099 AI-Workflow-Engine

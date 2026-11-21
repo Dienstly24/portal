@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 20.11.2026 aus `php artisan route:list --json` (554 Routen).
+Generiert am 21.11.2026 aus `php artisan route:list --json` (557 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -175,6 +175,9 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | PUT | `admin/employees/{id}/toggle-active` | admin.employees.toggle | auth role:staff role:admin,manager |
 | POST | `admin/employees/{id}/zwei-faktor-zuruecksetzen` | admin.employees.reset_two_factor | auth role:staff role:admin |
 | GET | `admin/export` | admin.export | auth role:staff role:admin,manager |
+| GET | `admin/facebook-bewertungen` | admin.facebook_bewertungen | auth role:staff role:admin,manager |
+| POST | `admin/facebook-bewertungen/abrufen` | admin.facebook_bewertungen.abrufen | auth role:staff role:admin,manager throttle:6,1 |
+| POST | `admin/facebook-bewertungen/{id}/status` | admin.facebook_bewertungen.status | auth role:staff role:admin,manager |
 | GET | `admin/familie/uebergaenge` | admin.family.transitions | auth role:staff |
 | POST | `admin/familie/uebergaenge/{relation}/vorbereiten` | admin.family.prepare_transition | auth role:staff |
 | GET | `admin/fehler` | admin.errors | auth role:staff role:admin,manager |

@@ -93,6 +93,13 @@ Schedule::command('errors:prune')->dailyAt('03:55');
  */
 Schedule::command('google:bewertungen-holen')->dailyAt('04:45');
 
+/*
+ | Empfehlungen der Facebook-Seite holen. Neue warten danach auf Freigabe
+ | unter /admin/facebook-bewertungen - auf die Website kommt nichts ohne
+ | einen Menschen. Ohne Meta-Einrichtung endet der Lauf still.
+ */
+Schedule::command('facebook:bewertungen-holen')->dailyAt('04:50');
+
 // Provisionsmanagement: Fristen laufen ab, ohne dass jemand etwas tut.
 // Frueh am Morgen, damit die Liste "Fehlende Provisionen" schon steht, wenn
 // der Betrieb den Tag beginnt.

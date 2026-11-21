@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CompanySignatureAssetController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
+use App\Http\Controllers\Admin\FacebookBewertungController;
 use App\Http\Controllers\Admin\HaushaltController;
 use App\Http\Controllers\Admin\InternalSignatureController;
 use App\Http\Controllers\Admin\KiTrainingController;
@@ -847,6 +848,20 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     | Wissensbasis des Assistenten: was hier steht, sagt die KI ALLEN
     | Kunden - deshalb nur Verwaltung (admin/manager).
     */
+    /*
+    | Facebook-Empfehlungen pruefen und fuer die Website freigeben
+    | (Betreiber-Wunsch 21.11.2026). Was hier freigegeben wird, steht
+    | oeffentlich auf der Startseite - deshalb nur Verwaltung.
+    */
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::get('/facebook-bewertungen', [FacebookBewertungController::class, 'index'])
+            ->name('facebook_bewertungen');
+        Route::post('/facebook-bewertungen/abrufen', [FacebookBewertungController::class, 'abrufen'])
+            ->name('facebook_bewertungen.abrufen')->middleware('throttle:6,1');
+        Route::post('/facebook-bewertungen/{id}/status', [FacebookBewertungController::class, 'status'])
+            ->whereNumber('id')->name('facebook_bewertungen.status');
+    });
+
     Route::middleware('role:admin,manager')->group(function () {
         Route::get('/ki-wissensbasis', [AiAssistantController::class, 'knowledgeIndex'])
             ->name('ai_knowledge');
