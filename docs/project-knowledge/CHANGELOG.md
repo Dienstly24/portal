@@ -16,6 +16,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Potential Side Effects**: eine Abfrage mehr je Analyse (Namens-Vorauswahl per LIKE, IBAN-Vergleich ueber Kunden mit Bankdaten). Nie automatische Zuordnung. Altbestand im Eingang profitiert erst nach "Neu analysieren"; der Vorgangs-Vorschlag wirkt sofort.
 - **Tests Performed**: `php -l` aller geaenderten Dateien. `php artisan test`/`pint`/`stan` in dieser Umgebung NICHT ausfuehrbar (Composer-Downloads von GitHub gesperrt) - CI prueft.
 - **Result**: erledigt, Pruefung durch CI ausstehend.
+## 21.11.2026 - Facebook-Empfehlungen: automatische Freigabe (F-104)
+
+- **Task**: Betreiber: "keine Zeit, selbst auszuwaehlen".
+- **Files Changed**: `FacebookBewertung` (`automatischFreigebbar`, Energie/Internet-Bezug, Makler-Hinweis), `FacebookBewertungAbruf::automatischFreigeben`, Controller + Route `admin.facebook_bewertungen.automatik`, Pruefseite, Migration `2026_11_21_130000_facebook_bewertungen_automatisch`, `CLAUDE.md`, arabische Anleitung.
+- **Database Changes**: Spalte `facebook_bewertungen.auto_freigegeben`.
+- **Potential Side Effects**: nach dem Deploy gibt der naechste Abruf unbedenkliche Empfehlungen sofort frei.
+- **Tests Performed**: `FacebookBewertungenTest` (13), volle Suite.
+- **Result**: erledigt.
+
 ## 21.11.2026 - Facebook-Empfehlungen auf der Startseite (F-104)
 
 - **Task**: Betreiber-Wunsch: echte Kundenbewertungen von Facebook auf der Website zeigen. "Beratung" ist bei Strom/Gas/Internet echt und darf in einer Empfehlung stehen, bei Versicherungen nicht.
