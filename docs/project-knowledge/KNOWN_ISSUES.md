@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-122 | HIGH | correctness | Dokumenten-Eingang: Bestandskunde trotz vollem Namen/IBAN im OCR-Text "Kein Kunde gefunden"; Vorgang bot den Kunden eines bereits zugeordneten Geschwister-Dokuments nicht an | FIXED |
 | KI-121 | HIGH | legal | Website, Leistungsseiten, Mails und KI-Prompts stellten Dienstly24 als Berater/Makler dar | FIXED |
 | KI-120 | HIGH | legal/correctness | Wechsel-Erinnerung: Beratungs-/Spar-Formulierungen ohne 34d-Erlaubnis und Versand nach Fristablauf | FIXED |
 | KI-112 | MEDIUM | usability | E-Signatur: bei zwei Unterzeichnern mit derselben E-Mail war nicht erkennbar, welche Einladung wem gehoert und wo welche Person unterschreibt | FIXED |
@@ -181,6 +182,15 @@ und PHPStan) auf `main` gruen ist.
 - **Description** Die Erinnerung versprach "Sparchance", "guenstigeren Tarif", "das beste Angebot sichern" und "Beratung" - unzulaessig ohne Erlaubnis nach 34d GewO. Ausserdem lief das Kfz-Fenster bis "Ende minus 1 Monat" (01.12. statt 30.11.): am Tag nach Fristablauf ging noch eine Wechsel-Mail raus.
 - **Fix** Neue Vorlagen A/B im Tippgeber-Rahmen (DE/AR, HTML + Klartext), eine Fristregel, Job-Schalter je Sparte (nur Kfz aktiv), Kurzreferenz statt Vertragsnummer in WhatsApp.
 - **Test** `VertragsErinnerungTest`, `KuendigungsfristTest`
+
+### KI-122 - Eingang: Bestandskunde im OCR-Text nicht erkannt
+- **Category** correctness · **Severity** HIGH · **Status** FIXED
+- **Location** `HeuristicDocumentClassifier::findIban`, `AnalyzeDocumentJob`, `DocumentIntakeService::findSuggestions`/`mergeExtractions`, neu `App\Services\Matching\KundenImTextFinder`
+- **Description** Betreiber-Meldung 21.11.2026: eine Familie (Wechsel der gesetzlichen Krankenversicherung) schickte Karten, Ausweise, Arbeitsvertrag und Heiratsurkunde; 11 Dokumente blieben mit "Kein Kunde gefunden" im Eingang. Alle liefen ueber die kostenlose OCR (KI nur nach Freigabe, KI-116). Ein Scan trug IBAN UND vollen Namen eines Bestandskunden ("DE58... 1:69 <Vorname> <Name> <Name>"). Zwei stille Ursachen: (1) die Heuristik liest bewusst keine Namen aus Freitext - ohne Name kein Abgleich; (2) die IBAN stand nicht allein auf ihrer Zeile und hatte keine Beschriftung, `findIban` fand sie nicht. Dazu: ein Dokument desselben Vorgangs war dem Kunden bereits zugeordnet, die Vorschlagsliste der uebrigen kannte ihn trotzdem nicht.
+- **Fix (21.11.2026)**: `KundenImTextFinder` prueft im gelesenen Text (nur im Speicher, nie gespeichert), ob der volle Name eines VORHANDENEN Kunden dort steht (mind. 2 Teile, >= 8 Buchstaben, direkt hintereinander, auch Nachname vorn) oder seine IBAN (Pruefziffer). Ergebnis `ai_extracted.kunden_im_text` (nur ID + Grund ohne Namen); genau EIN Treffer wird Match mit Stufe `confirm` (Score <= 90 - nie automatisch zugeordnet), mehrere nur Vorschlaege. `findIban` faellt auf `ocrGermanIban` zurueck (IBAN mitten in der Zeile). Vorschlaege nennen zusaetzlich den Kunden, dem ein Dokument desselben `intake_batch` schon gehoert.
+- **Nicht behoben (Betrieb)**: arabische Dokumente (Heiratsurkunde) liest die kostenlose Stufe nicht - Typ/Personen kommen nur ueber "Mit KI analysieren". Ein Vorgang mit MEHREREN Personen (Familie) ist weiterhin pro Person zuzuordnen.
+- **Test** `KundeImDokumenttextTest` (6 Faelle; mit dem gemessenen OCR-Text)
+- **Discovered** 21.11.2026 (Betreiber)
 
 ### KI-119 - Kundenportal offen ohne Erlaubnis nach 34d GewO
 - **Category** legal/security · **Severity** HIGH · **Status** FIXED

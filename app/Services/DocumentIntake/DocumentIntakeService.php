@@ -370,6 +370,21 @@ class DocumentIntakeService
             }
         }
 
+        // Kunden-Hinweise aus dem Dokumenttext (KI-122) aller Dokumente
+        // zusammenfuehren - je Kunde der hoechste Score.
+        $imText = [];
+        foreach ($docs as $doc) {
+            foreach (($doc->ai_extracted['kunden_im_text'] ?? []) as $hinweis) {
+                $id = (string) ($hinweis['customer_id'] ?? '');
+                if ($id !== '' && (! isset($imText[$id]) || $imText[$id]['score'] < ($hinweis['score'] ?? 0))) {
+                    $imText[$id] = $hinweis;
+                }
+            }
+        }
+        if ($imText !== []) {
+            $merged['kunden_im_text'] = array_values($imText);
+        }
+
         $merged['_conflicts'] = $this->nameConflicts($docs);
 
         return $merged;
@@ -449,6 +464,36 @@ class DocumentIntakeService
     }
 
     /**
+     * Treffer aus dem Kundenabgleich im Dokumenttext (KundenImTextFinder)
+     * als Match - nur wenn er EINDEUTIG ist (genau ein Kunde). Bleibt immer
+     * unter der Auto-Schwelle: ein Name im Text belegt keine Identitaet, er
+     * ist ein Vorschlag, den ein Mensch bestaetigt.
+     *
+     * @param  list<array{customer_id: string, art: string, score: int, grund: string}>  $hinweise
+     * @return array<string,mixed>|null
+     */
+    public function matchAusTextHinweisen(array $hinweise): ?array
+    {
+        if (count($hinweise) !== 1) {
+            return null;
+        }
+        $customer = Customer::with('user')->find($hinweise[0]['customer_id']);
+        if (! $customer) {
+            return null;
+        }
+        $score = min(90, (int) $hinweise[0]['score']);
+
+        return [
+            'customer_id' => (string) $customer->id,
+            'name' => $customer->user?->name,
+            'customer_number' => $customer->customer_number,
+            'score' => $score,
+            'tier' => (new MatchResult($customer, $score))->tier(),
+            'via' => 'text',
+        ];
+    }
+
+    /**
      * Kunde ueber die ZAEHLERNUMMER eines Zaehlerfotos finden. Auf einem
      * Zaehler steht kein Name - die Nummer ist die einzige Bruecke zum
      * bereits erfassten Energievertrag und damit zum Kunden. Sie ist ein
@@ -500,13 +545,37 @@ class DocumentIntakeService
      * @param  array<string,mixed>  $extracted
      * @return list<array{customer_id:string,name:?string,customer_number:?string,email:?string,score:int,tier:string,reasons:list<string>}>
      */
-    public function findSuggestions(array $extracted, int $limit = 5): array
+    public function findSuggestions(array $extracted, int $limit = 5, ?Document $document = null): array
     {
         /** @var array<string,array{customer: Customer, score: int, reasons: list<string>}> $found */
         $found = [];
 
         foreach ($this->identityHits($extracted) as [$customer, $reason]) {
             $this->collectSuggestion($found, $customer, 100, [$reason]);
+        }
+
+        // Vorhandene Kunden, deren voller Name/IBAN im gelesenen Text steht
+        // (KI-122) - gespeichert ohne Namen, nur ID + Grund.
+        foreach (($extracted['kunden_im_text'] ?? []) as $hinweis) {
+            $customer = Customer::with('user')->find($hinweis['customer_id'] ?? null);
+            if ($customer) {
+                $this->collectSuggestion($found, $customer, min(90, (int) ($hinweis['score'] ?? 70)), [(string) ($hinweis['grund'] ?? 'Im Dokumenttext gefunden')]);
+            }
+        }
+
+        // Gemeinsam hochgeladen = ein Vorgang: ist ein anderes Dokument
+        // desselben Vorgangs schon einem Kunden zugeordnet, ist er der
+        // naheliegende Kandidat (KI-122). Eine Familie bringt ihre
+        // Unterlagen zusammen - der Vorschlag spart die Suche, entscheiden
+        // tut weiterhin der Mitarbeiter.
+        if ($document?->intake_batch) {
+            $ids = Document::where('intake_batch', $document->intake_batch)
+                ->whereKeyNot($document->id)
+                ->whereNotNull('customer_id')
+                ->distinct()->limit(5)->pluck('customer_id');
+            foreach (Customer::with('user')->whereIn('id', $ids)->get() as $customer) {
+                $this->collectSuggestion($found, $customer, 70, ['Ein anderes Dokument desselben Vorgangs ist diesem Kunden zugeordnet']);
+            }
         }
 
         $criteria = $this->matchCriteria($extracted);

@@ -1110,7 +1110,7 @@ class SmartDocumentUploadController extends Controller
             unset($extracted['_conflicts']);
         }
 
-        $suggestions = $this->intake->findSuggestions($extracted);
+        $suggestions = $this->intake->findSuggestions($extracted, 5, $document);
         $user = auth()->user();
         $visible = array_values(array_filter(
             $suggestions,

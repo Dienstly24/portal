@@ -8,6 +8,14 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 21.11.2026 - Eingang erkennt Bestandskunden im OCR-Text (KI-122)
+
+- **Task**: Betreiber-Meldung: Unterlagen einer Familie blieben im Eingang mit "Kein Kunde gefunden", obwohl ein Scan IBAN und vollen Namen eines Bestandskunden trug und ein Dokument desselben Vorgangs ihm schon zugeordnet war.
+- **Files Changed**: neu `app/Services/Matching/KundenImTextFinder.php`, Test `tests/Feature/DocumentIntake/KundeImDokumenttextTest.php`; geaendert `DocumentAnalyzer` (merkt sich den gelesenen Text im Speicher), `AnalyzeDocumentJob`, `HeuristicDocumentClassifier`, `DocumentIntakeService`, `SmartDocumentUploadController::customerSuggestions`; `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine (neuer Schluessel `kunden_im_text` in `documents.ai_extracted`). **API Changes**: `admin.documents.customer_suggestions` liefert zusaetzliche Vorschlaege (Text, Vorgang).
+- **Potential Side Effects**: eine Abfrage mehr je Analyse (Namens-Vorauswahl per LIKE, IBAN-Vergleich ueber Kunden mit Bankdaten). Nie automatische Zuordnung. Altbestand im Eingang profitiert erst nach "Neu analysieren"; der Vorgangs-Vorschlag wirkt sofort.
+- **Tests Performed**: `php -l` aller geaenderten Dateien. `php artisan test`/`pint`/`stan` in dieser Umgebung NICHT ausfuehrbar (Composer-Downloads von GitHub gesperrt) - CI prueft.
+- **Result**: erledigt, Pruefung durch CI ausstehend.
 ## 21.11.2026 - Facebook-Empfehlungen: automatische Freigabe (F-104)
 
 - **Task**: Betreiber: "keine Zeit, selbst auszuwaehlen".
