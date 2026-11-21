@@ -5336,6 +5336,38 @@ neue Seitenfassung derselben Idee.
   angaben des Partners); interne Begriffe ("Beraterwelt", Platzhalter
   `{{berater}}` in Mitarbeiter-Vorlagen).
 
+## Facebook-Empfehlungen auf der Startseite (Betreiber-Wunsch 21.11.2026)
+
+- **Weg**: `facebook:bewertungen-holen` (taeglich 04:50, Knopf im Admin)
+  holt `/{page-id}/ratings` mit dem Seiten-Token (`MetaGraphClient`,
+  Token im Header) nach `facebook_bewertungen`. Die Website liest NUR die
+  Datenbank und den Cache (`App\Support\FacebookEmpfehlung`) - der
+  Browser des Besuchers spricht nie mit Facebook (Test). Voraussetzung:
+  Berechtigung `pages_read_user_content`; fehlt sie, uebersetzt
+  `FacebookBewertungAbruf::verstaendlich()` die Meta-Meldung, nichts wird
+  als entfernt markiert. Anleitung `docs/ANLEITUNG_FACEBOOK_BEWERTUNGEN_AR.md`.
+- **Nichts ohne Freigabe**: `/admin/facebook-bewertungen` (nur
+  admin/manager). Sichtbar ist nur `FacebookBewertung::sichtbar()`:
+  freigegeben, positiv, mit Text, bei Facebook noch vorhanden. Ein Text
+  wird NIE umformuliert oder gekuerzt. Aendert der Verfasser den Text,
+  faellt die Freigabe auf "neu"; loescht er ihn, setzt der Abruf
+  `entfernt_at` (nur bei VOLLSTAENDIG geholter Liste).
+- **Tippgeber**: "Beratung" bei Strom/Gas/Internet ist echt (Betreiber,
+  21.11.2026) und darf in einer Empfehlung stehen - Hinweis "pruefen".
+  Beratung + Versicherungswort sperrt die Freigabe SERVERSEITIG
+  (`freigabeGesperrt()`). `TippgeberTexteTest` laeuft ohne Empfehlungen;
+  freigegebene Kundenstimmen sind die einzige bewusste Ausnahme von der
+  Wortliste - die Verantwortung liegt bei der Freigabe.
+- **Datenschutz/UWG**: gespeichert wird nur der Kurzname ("Ahmad A.",
+  Partikel ueber `PersonenName`), nie der volle Name oder die
+  Facebook-Kennung der Person. Unter den Stimmen steht, dass es eine
+  Auswahl von Facebook ist und nicht geprueft wird, ob Verfasser Kunden
+  sind (Paragraph 5b Abs. 3 UWG). Die Gesamtzahl ("X von Y empfehlen")
+  laeuft nach 7 Tagen ohne Abruf ab. Das feste Zitat "Laila M." fuellt
+  nur auf, solange weniger als drei Empfehlungen freigegeben sind.
+- Offen: Erwaehnung in der Datenschutzerklaerung (Rechtsseite, Anwalt).
+- Tests: `FacebookBewertungenTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

@@ -168,6 +168,8 @@ header.site.scrolled{background:rgba(15,21,18,.96);box-shadow:0 10px 30px rgba(1
 .tcard .who{display:flex;align-items:center;gap:11px;font-size:.86rem;}
 .tcard .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(155deg,var(--emerald),#0A3D22);box-shadow:0 0 0 2px var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;}
 .tcard .who b{display:block;}.tcard .who span{color:var(--dark-muted);}
+.stimmen .fb-zahl{text-align:center;color:var(--gold-soft);font-weight:600;margin:-8px 0 22px;}
+.stimmen .fb-hinweis{text-align:center;color:var(--dark-muted);font-size:.8rem;max-width:640px;margin:18px auto 0;}
 /* FAQ */
 .faq details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:12px;transition:border-color .25s;}
 .faq details[open]{border-color:var(--gold-line);}

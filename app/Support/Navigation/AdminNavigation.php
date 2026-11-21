@@ -272,7 +272,7 @@ final class AdminNavigation
      * Alles, was nach aussen sichtbar ist - in einem Untermenue der
      * Einstellungen. Website-Medien standen frueher einzeln zwischen den
      * Arbeitsbereichen, Banner und Werbeanzeigen dagegen nur ueber die
-     * Einstellungen; jetzt stehen alle sechs an EINER Stelle.
+     * Einstellungen; jetzt stehen alle an EINER Stelle (seit 21.11.2026 auch die Facebook-Bewertungen).
      */
     private function marketing(): NavGroup
     {
@@ -290,6 +290,7 @@ final class AdminNavigation
         if ($this->isManagement()) {
             $items[] = ['werbung', 'Werbeanzeigen', 'admin.werbung', 'globe', ['admin.werbung*']];
             $items[] = ['banner', 'Banner', 'admin.banners', 'image', ['admin.banners*']];
+            $items[] = ['facebook_bewertungen', 'Facebook-Bewertungen', 'admin.facebook_bewertungen', 'megaphone', ['admin.facebook_bewertungen*']];
         }
 
         $items[] = ['newsletter', 'Newsletter', 'admin.email_marketing', 'mail', ['admin.email_marketing*']];

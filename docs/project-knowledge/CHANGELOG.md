@@ -16,6 +16,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Potential Side Effects**: eine Abfrage mehr je Analyse (Namens-Vorauswahl per LIKE, IBAN-Vergleich ueber Kunden mit Bankdaten). Nie automatische Zuordnung. Altbestand im Eingang profitiert erst nach "Neu analysieren"; der Vorgangs-Vorschlag wirkt sofort.
 - **Tests Performed**: `php -l` aller geaenderten Dateien. `php artisan test`/`pint`/`stan` in dieser Umgebung NICHT ausfuehrbar (Composer-Downloads von GitHub gesperrt) - CI prueft.
 - **Result**: erledigt, Pruefung durch CI ausstehend.
+## 21.11.2026 - Facebook-Empfehlungen auf der Startseite (F-104)
+
+- **Task**: Betreiber-Wunsch: echte Kundenbewertungen von Facebook auf der Website zeigen. "Beratung" ist bei Strom/Gas/Internet echt und darf in einer Empfehlung stehen, bei Versicherungen nicht.
+- **Files Changed**: `app/Models/FacebookBewertung.php`, `app/Support/FacebookEmpfehlung.php`, `app/Services/Social/FacebookBewertungAbruf.php`, `app/Console/Commands/FetchFacebookBewertungen.php`, `app/Http/Controllers/Admin/FacebookBewertungController.php`, `resources/views/admin/facebook_bewertungen.blade.php`, `resources/views/website/home.blade.php`, `public/website-assets/site.css`, `routes/web.php`, `routes/console.php`, `AdminNavigation`, `docs/ANLEITUNG_FACEBOOK_BEWERTUNGEN_AR.md`, `CLAUDE.md`.
+- **Database Changes**: neue Tabelle `facebook_bewertungen` (nur Kurzname, Text, Art, Datum, Pruefstatus).
+- **API Changes**: drei Admin-Routen (`admin.facebook_bewertungen*`). Kein oeffentlicher Endpunkt.
+- **Potential Side Effects**: ohne `pages_read_user_content` meldet der Abruf einen verstaendlichen Fehler (Exitcode 1, Systemzustand rot) - die Website zeigt dann weiter das feste Zitat. Die statische Uebergangs-Site ist nicht betroffen.
+- **Tests Performed**: `FacebookBewertungenTest` (11), volle Suite.
+- **Result**: erledigt; Freischaltung durch den Betreiber offen.
 
 ## 20.11.2026 - Nachtrag KI-121: statische Uebergangs-Website
 
