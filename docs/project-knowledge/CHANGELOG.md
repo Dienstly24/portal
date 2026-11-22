@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 22.11.2026 - CosmosDirekt-Kfz-Beitragsrechnung gratis lesen (KI-123)
+
+- **Task**: Betreiber-Meldung: die Cosmos-Beitragsrechnung wurde ohne KI nicht erkannt ("Rechnung 40 %", kein Kunde, KI-Freigabe empfohlen).
+- **Files Changed**: neu `app/Services/Ai/TemplateParsers/CosmosDirektKfzBeitragsrechnungParser.php`, Test `tests/Feature/Ai/CosmosDirektKfzBeitragsrechnungParserTest.php`; `AppServiceProvider` (Registrierung hinter `AdmiralDirektKfzParser`), `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: greift nur bei "Cosmos" UND "Beitragsrechnung für Ihre Autoversicherung"; andere Cosmos-Sparten und CHECK24-Protokolle bleiben unberuehrt. Bereits hochgeladene Dokumente profitieren erst nach "Neu analysieren".
+- **Tests Performed**: Parser am echten PDF (pdftotext -layout) ausgefuehrt, alle Felder korrekt, die Kfz-Parser davor liefern null; Testfaelle mit einem Assertion-Ersatz ausgefuehrt (30 Pruefungen gruen). `php artisan test`/`pint`/`stan` in dieser Umgebung NICHT ausfuehrbar (Composer-Downloads von GitHub gesperrt) - CI prueft.
+- **Result**: erledigt, Pruefung durch CI ausstehend.
+
 ## 21.11.2026 - Eingang erkennt Bestandskunden im OCR-Text (KI-122)
 
 - **Task**: Betreiber-Meldung: Unterlagen einer Familie blieben im Eingang mit "Kein Kunde gefunden", obwohl ein Scan IBAN und vollen Namen eines Bestandskunden trug und ein Dokument desselben Vorgangs ihm schon zugeordnet war.
