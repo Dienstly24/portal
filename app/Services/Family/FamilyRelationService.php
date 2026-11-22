@@ -9,8 +9,11 @@ use App\Models\CustomerRelationship;
 use App\Models\CustomerTimeline;
 use App\Models\InternalNotification;
 use App\Models\SystemSetting;
+use App\Models\User;
 use App\Services\Relationships\CustomerRelationshipService;
+use App\Support\Anschrift;
 use App\Support\FamilienAlter;
+use App\Support\FamilienName;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -187,6 +190,8 @@ class FamilyRelationService
         return [
             'all' => $relations,
             'suggestions' => $this->linkSuggestions($customer),
+            // Moegliche Eltern eines Kindes (Betreiber-Vorgabe 22.11.2026).
+            'elternVorschlaege' => $this->elternVorschlaege($customer, auth()->user()),
             'spouses' => $relations->whereIn('relationship_type', CustomerFamilyRelation::PARTNER_ROLES)->values(),
             'children' => $relations->whereIn('relationship_type', CustomerFamilyRelation::CHILD_ROLES)->values(),
             'parents' => $relations->whereIn('relationship_type', CustomerFamilyRelation::PARENT_ROLES)->values(),
@@ -233,6 +238,133 @@ class FamilyRelationService
         }
 
         return Customer::with('user')->whereIn('id', $ids)->get();
+    }
+
+    /** Mindestabstand Elternteil - Kind in Jahren. */
+    public const ELTERN_MIN_ABSTAND_JAHRE = 16;
+
+    /**
+     * Moegliche ELTERN eines Kindes (Betreiber-Vorgabe 22.11.2026: "bei
+     * Kindern soll das System sofort Eltern vorschlagen"). Nur fuer ein
+     * Kind (unter 18 oder ohne eigene Kundennummer) und nur, solange noch
+     * KEIN Elternteil verknuepft ist.
+     *
+     * Kandidat ist eine Akte mit GLEICHEM Familiennamen (Skelett,
+     * transkriptionstolerant) oder an DERSELBEN Anschrift - die Mutter
+     * fuehrt oft einen anderen Nachnamen, wohnt aber dort. Ist bei beiden
+     * das Geburtsdatum bekannt, muss der Kandidat mind. 16 Jahre aelter
+     * sein; ein bekannt minderjaehriger Kandidat ist nie Elternteil.
+     *
+     * Vorgeschlagen wird die Rolle nach dem Geschlecht des Kandidaten
+     * (Vater/Mutter, sonst Elternteil) - VERKNUEPFT wird nur per Klick.
+     * Portfolio-Scope: nur Akten, die der Betrachter sehen darf.
+     *
+     * @return Collection<int, array<string, mixed>> je Eintrag: customer (Customer), rolle (string), gruende (list<string>)
+     */
+    public function elternVorschlaege(Customer $kind, ?User $betrachter = null, int $limit = 5): Collection
+    {
+        $alter = $kind->age();
+        $istKind = ($alter !== null && $alter < 18) || blank($kind->customer_number);
+        if (! $istKind) {
+            return collect();
+        }
+
+        $verknuepft = $kind->familyRelations()->get();
+        if ($verknuepft->whereIn('relationship_type', CustomerFamilyRelation::PARENT_ROLES)->isNotEmpty()) {
+            return collect();
+        }
+        $bereits = $verknuepft->pluck('related_customer_id')->map(fn ($id) => (string) $id)->all();
+
+        $kindName = (string) $kind->user?->name;
+        $kern = FamilienName::kern($kindName);
+        $anschrift = $this->anschriftSchluessel($kind);
+
+        if (mb_strlen($kern) < 3 && $anschrift === '') {
+            return collect();
+        }
+
+        $basis = fn () => Customer::query()->with('user')
+            ->whereKeyNot($kind->id)
+            ->when($betrachter !== null, fn ($q) => $q->visibleTo($betrachter));
+
+        $kandidaten = collect();
+        if (mb_strlen($kern) >= 3) {
+            $kandidaten = $kandidaten->merge($basis()
+                ->whereHas('user', fn ($q) => $q->where('role', 'customer')->where('name', 'like', '%'.$kern.'%'))
+                ->limit(200)->get());
+        }
+        if ($anschrift !== '' && filled($kind->address_zip)) {
+            $kandidaten = $kandidaten->merge($basis()
+                ->where('address_zip', $kind->address_zip)
+                ->limit(200)->get());
+        }
+
+        $kindGeburt = $kind->birth_date ? Carbon::parse($kind->birth_date) : null;
+
+        $ergebnis = $kandidaten->unique(fn (Customer $c) => (string) $c->id)
+            ->reject(fn (Customer $c) => in_array((string) $c->id, $bereits, true))
+            ->map(function (Customer $c) use ($kindName, $anschrift, $kindGeburt) {
+                $gruende = [];
+                $nameGleich = FamilienName::gleich($kindName, $c->user?->name);
+                $ortGleich = $anschrift !== '' && $this->anschriftSchluessel($c) === $anschrift;
+                if ($nameGleich) {
+                    $gruende[] = 'Gleicher Familienname';
+                }
+                if ($ortGleich) {
+                    $gruende[] = 'Gleiche Anschrift';
+                }
+                if ($gruende === []) {
+                    return null;
+                }
+
+                $cAlter = $c->age();
+                if ($cAlter !== null && $cAlter < 18) {
+                    return null; // ein Minderjaehriger ist nie Elternteil
+                }
+                if ($c->birth_date && $kindGeburt) {
+                    $abstand = Carbon::parse($c->birth_date)->diffInYears($kindGeburt, false);
+                    if ($abstand < self::ELTERN_MIN_ABSTAND_JAHRE) {
+                        return null;
+                    }
+                    $gruende[] = (int) $abstand.' Jahre aelter';
+                } else {
+                    $gruende[] = 'Geburtsdatum fehlt - bitte pruefen';
+                }
+
+                return [
+                    'customer' => $c,
+                    'rolle' => match ($c->gender) {
+                        'male' => 'vater',
+                        'female' => 'mutter',
+                        default => 'elternteil',
+                    },
+                    'gruende' => $gruende,
+                    'gewicht' => ($nameGleich ? 2 : 0) + ($ortGleich ? 2 : 0) + ($c->birth_date && $kindGeburt ? 1 : 0),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('gewicht')
+            ->take($limit)
+            ->map(fn (array $v) => ['customer' => $v['customer'], 'rolle' => $v['rolle'], 'gruende' => $v['gruende']])
+            ->values()
+            ->all();
+
+        // Ueber ein Array zurueck: Collection ist invariant, die Analyse
+        // liesse die genaue Form sonst nicht als array<string, mixed> gelten.
+        /** @var array<int, array<string, mixed>> $ergebnis */
+        return collect($ergebnis);
+    }
+
+    /** Strasse + Hausnummer + PLZ als Vergleichsschluessel; leer ohne Strasse. */
+    private function anschriftSchluessel(Customer $c): string
+    {
+        if (blank($c->address_street) || blank($c->address_zip)) {
+            return '';
+        }
+
+        return Anschrift::schluessel(
+            $c->address_street.' '.$c->address_house_number.' '.$c->address_zip
+        );
     }
 
     /**

@@ -159,6 +159,12 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 .chat-row{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;}
 .chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
 </style>
+@if(($familie['elternVorschlaege'] ?? collect())->isNotEmpty())
+<div style="border:1px solid var(--emerald);background:var(--emerald-soft);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;">
+    👪 Für dieses Kind wurden <strong>{{ $familie['elternVorschlaege']->count() }} mögliche Eltern</strong> gefunden
+    (gleicher Familienname bzw. gleiche Anschrift) – bitte unter <strong>„Familie"</strong> prüfen und verknüpfen.
+</div>
+@endif
 <div class="cust-tabs">
     <button type="button" class="cust-tab active" data-tab="tab-uebersicht" data-h-click="d2815a66b5">📄 Übersicht</button>
     <button type="button" id="cust-tab-familie" class="cust-tab" data-tab="tab-familie" data-h-click="bd7b7fc256">👨‍👩‍👦 Familie <span style="opacity:.7;">({{ $customer->family->count() + $familie['all']->count() }})</span></button>

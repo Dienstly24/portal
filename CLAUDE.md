@@ -2423,6 +2423,18 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   `customer_family` (Personen OHNE eigene Akte) bleibt unveraendert daneben
   bestehen - beide Listen stehen getrennt beschriftet in der Registerkarte.
   Tests: `CustomerFamilyRelationTest` (Abnahmefaelle 1-17).
+  **ELTERN-VORSCHLAG FUER KINDER** (Betreiber-Vorgabe 22.11.2026):
+  `FamilyRelationService::elternVorschlaege()` - fuer ein Kind (unter 18
+  oder ohne Kundennummer) OHNE verknuepften Elternteil schlaegt die
+  Familienkarte (+ Hinweis ueber den Reitern der Kundenakte) moegliche
+  Eltern vor: gleicher Familienname (`App\Support\FamilienName`, Skelett,
+  "Al Najjar" = "Alnajjar") ODER gleiche Anschrift (die Mutter traegt oft
+  einen anderen Nachnamen). Mind. 16 Jahre aelter, wenn beide Daten
+  bekannt; ein bekannt Minderjaehriger nie. Hier ist die Rolle
+  AUSNAHMSWEISE vorgewaehlt (Vater/Mutter nach Geschlecht, sonst
+  Elternteil) - verknuepft wird trotzdem nur per Klick. Portfolio-Scope
+  ueber `visibleTo`. Der Ehepartner bleibt bewusst ohne Vorschlag (manuell).
+  Tests: `ElternVorschlagTest`.
 - **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**
   (Betreiber-Vorgabe 29.07.2026, Details in
   `docs/AUFTRAG_UND_VERTRAG_ZUSAMMENFUEHREN.md`): Zuerst wird der
