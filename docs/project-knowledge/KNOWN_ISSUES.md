@@ -169,6 +169,14 @@ und PHPStan) auf `main` gruen ist.
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
 
+### KI-123 - Eingang: CosmosDirekt-Beitragsrechnung nur per KI lesbar
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** neu `App\Services\Ai\TemplateParsers\CosmosDirektKfzBeitragsrechnungParser`, Reihenfolge in `AppServiceProvider`
+- **Description** Betreiber-Meldung 22.11.2026: die Kfz-Beitragsrechnung der CosmosDirekt (digitale Textebene) landete als "Rechnung, 40 % sicher, OCR ohne KI, Kein Kunde gefunden" mit "KI empfohlen - wartet auf Freigabe". Kein Vorlagen-Parser kannte das Schreiben, die Heuristik liest bewusst keine Namen aus Freitext - ohne Name kein Kundenabgleich, und jede Cosmos-Beitragsrechnung kostete einen KI-Aufruf.
+- **Fix (22.11.2026)**: eigener Gratis-Parser (Typ `kfz_vertrag`): Kunde aus dem Empfaengerblock (linke Spalte, rechts steht Werbetext auf derselben Zeile), Vertragsnummer, Kennzeichen, Tarif, SF-Klasse und Beitraege aus der Spalte des NEUEN Jahres, Teilkasko-SB, Werkstattbindung, Verkehrs-Rechtsschutz, Gesamtbeitrag + Zahlweise. Faelligkeit, Beitraege alt -> neu und Vergleichsbeitrag nur in der Zusammenfassung. Keine Bankdaten (Kunden-IBAN maskiert, Brieffuss-IBANs gehoeren der Cosmos). Steht hinter den anderen Kfz-Parsern; am echten PDF geprueft, dass keiner davor zugreift.
+- **Test** `CosmosDirektKfzBeitragsrechnungParserTest` (3 Faelle, inkl. echter Kette aus dem Container)
+- **Discovered** 22.11.2026 (Betreiber)
+
 ### KI-121 - Beratungs-/Makler-Wortlaut ohne Erlaubnis nach 34d GewO
 - **Category** legal · **Severity** HIGH · **Status** FIXED
 - **Location** `website/home`, `website/layout`, `website/hamburg`, `services/index`/`show`, Leistungsseiten (DB + `ServicePageSeeder`), `StructuredData`, Mails `customer_message`/`schutzbrief_renewal`/`registration_verification`/`contract_switch`, `legal/page`, `website/legal/agb`, `auth/login`, `portal/messages`, `CustomerMessageNotifier`, `AssistantPrompt`, `WebsitePrompt`, `lang/ar.json`

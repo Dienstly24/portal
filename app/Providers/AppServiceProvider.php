@@ -59,6 +59,7 @@ use App\Services\Ai\TemplateParsers\BayerischeEscooterParser;
 use App\Services\Ai\TemplateParsers\BigGesundParser;
 use App\Services\Ai\TemplateParsers\Check24KfzProtocolParser;
 use App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser;
+use App\Services\Ai\TemplateParsers\CosmosDirektKfzBeitragsrechnungParser;
 use App\Services\Ai\TemplateParsers\DaDirektKfzPoliceParser;
 use App\Services\Ai\TemplateParsers\DeckungsauftragParser;
 use App\Services\Ai\TemplateParsers\DevkKfzPoliceParser;
@@ -206,6 +207,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(DaDirektKfzPoliceParser::class),
                 $app->make(AllianzKfzPoliceParser::class),
                 $app->make(AdmiralDirektKfzParser::class),
+                $app->make(CosmosDirektKfzBeitragsrechnungParser::class),
                 $app->make(EuropaGoKfzParser::class),
                 $app->make(SparkasseDirektKfzParser::class),
                 $app->make(WgvKfzPoliceParser::class),

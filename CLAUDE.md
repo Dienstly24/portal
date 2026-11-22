@@ -985,6 +985,21 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Zahlungsweise; Teilkasko-SB, Schutzbrief/Werkstattbindung, SF-Klasse,
   Kilometerstand, Zulassung auf den VN. Keine Bankdaten (nur
   "Lastschriftverfahren"). Tests: `DevkKfzPoliceParserTest`.
+- **Kfz-BEITRAGSRECHNUNG der CosmosDirekt** (`CosmosDirektKfzBeitragsrechnungParser`,
+  Betreiber-Meldung 22.11.2026, KI-123): vorher "Rechnung 40 % / Kein Kunde
+  gefunden / KI empfohlen". Digitale Textebene; der Empfaengerblock steht
+  LINKS, rechts auf derselben Zeile Werbetext ("für Sie da!",
+  "www.cosmosdirekt.de") - gelesen wird die erste Spalte. Je Sparte eine
+  Tabelle ALTES | NEUES Jahr: uebernommen wird das NEUE Jahr (SF-Klasse
+  Haftpflicht/Vollkasko). Beitrag = "Ihr neuer Beitrag" (brutto, mit
+  Zahlweise). Die Faelligkeit ("Am 01.01.2027 wird Ihr Beitrag fällig") ist
+  KEIN Vertragsbeginn und steht wie die Beitraege alt -> neu und der
+  Vergleichsbeitrag nur in der Zusammenfassung. Verkehrs-Rechtsschutz ->
+  Extra `verkehrsrechtsschutz`. Vertragsnummer ohne Leerzeichen
+  ("924 073 119" -> "924073119"). KEINE Bankdaten. Sparten-Abschnitte nur ab
+  einer Ueberschrift am Zeilenanfang - das Kleingedruckte nennt die Sparten
+  im Fliesstext ("Kfz-Haftpflichtversicherung: 446,90 EUR").
+  Test: `CosmosDirektKfzBeitragsrechnungParserTest`.
 - **Kfz-Angebot der Sparkassen DirektVersicherung**
   (`SparkasseDirektKfzParser`, 31.07.2026): Spaltenlayout (Beschriftung links,
   Wert rechts), Stufe `antrag`. Bewusst NICHT übernommen: die Empfehlung
