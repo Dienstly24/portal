@@ -301,7 +301,7 @@ class FamilyRelationService
 
         $kindGeburt = $kind->birth_date ? Carbon::parse($kind->birth_date) : null;
 
-        return $kandidaten->unique(fn (Customer $c) => (string) $c->id)
+        $ergebnis = $kandidaten->unique(fn (Customer $c) => (string) $c->id)
             ->reject(fn (Customer $c) => in_array((string) $c->id, $bereits, true))
             ->map(function (Customer $c) use ($kindName, $anschrift, $kindGeburt) {
                 $gruende = [];
@@ -346,7 +346,13 @@ class FamilyRelationService
             ->sortByDesc('gewicht')
             ->take($limit)
             ->map(fn (array $v) => ['customer' => $v['customer'], 'rolle' => $v['rolle'], 'gruende' => $v['gruende']])
-            ->values();
+            ->values()
+            ->all();
+
+        // Ueber ein Array zurueck: Collection ist invariant, die Analyse
+        // liesse die genaue Form sonst nicht als array<string, mixed> gelten.
+        /** @var array<int, array<string, mixed>> $ergebnis */
+        return collect($ergebnis);
     }
 
     /** Strasse + Hausnummer + PLZ als Vergleichsschluessel; leer ohne Strasse. */
