@@ -63,9 +63,9 @@ class ElternVorschlagTest extends TestCase
 
     public function test_schreibweisen_des_artikels_gelten_als_gleich(): void
     {
-        $this->assertTrue(FamilienName::gleich('Tala Alhamoud', 'Jehad Al Hamoud'));
-        $this->assertTrue(FamilienName::gleich('Tala Al-Hamoud', 'Jehad Alhamoud'));
-        $this->assertFalse(FamilienName::gleich('Tala Haddad', 'Jehad Mansour'));
+        $this->assertTrue(FamilienName::gleich('Mona Alnajjar', 'Samir Al Najjar'));
+        $this->assertTrue(FamilienName::gleich('Mona Al-Najjar', 'Samir Alnajjar'));
+        $this->assertFalse(FamilienName::gleich('Mona Haddad', 'Samir Mansour'));
         $this->assertFalse(FamilienName::gleich('Ali', ''), 'Ohne Namen nie ein Treffer.');
     }
 

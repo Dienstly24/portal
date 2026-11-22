@@ -2413,7 +2413,7 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   oder ohne Kundennummer) OHNE verknuepften Elternteil schlaegt die
   Familienkarte (+ Hinweis ueber den Reitern der Kundenakte) moegliche
   Eltern vor: gleicher Familienname (`App\Support\FamilienName`, Skelett,
-  "Al Hamoud" = "Alhamoud") ODER gleiche Anschrift (die Mutter traegt oft
+  "Al Najjar" = "Alnajjar") ODER gleiche Anschrift (die Mutter traegt oft
   einen anderen Nachnamen). Mind. 16 Jahre aelter, wenn beide Daten
   bekannt; ein bekannt Minderjaehriger nie. Hier ist die Rolle
   AUSNAHMSWEISE vorgewaehlt (Vater/Mutter nach Geschlecht, sonst
