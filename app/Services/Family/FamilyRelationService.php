@@ -259,7 +259,7 @@ class FamilyRelationService
      * (Vater/Mutter, sonst Elternteil) - VERKNUEPFT wird nur per Klick.
      * Portfolio-Scope: nur Akten, die der Betrachter sehen darf.
      *
-     * @return Collection<int, array{customer: Customer, rolle: string, gruende: array<int, string>}>
+     * @return Collection<int, array<string, mixed>> je Eintrag: customer (Customer), rolle (string), gruende (list<string>)
      */
     public function elternVorschlaege(Customer $kind, ?User $betrachter = null, int $limit = 5): Collection
     {
