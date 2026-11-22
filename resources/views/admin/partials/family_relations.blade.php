@@ -50,6 +50,34 @@
     </div>
     @endif
 
+    @if(($familie['elternVorschlaege'] ?? collect())->isNotEmpty())
+    {{-- Moegliche Eltern eines Kindes (Betreiber-Vorgabe 22.11.2026):
+         gleicher Familienname oder gleiche Anschrift, mind. 16 Jahre
+         aelter. Die Rolle ist vorgewaehlt, verknuepft wird nur per Klick. --}}
+    <div id="eltern-vorschlaege" style="border:1px solid var(--emerald);background:var(--emerald-soft);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">👪 Mögliche Eltern ({{ $familie['elternVorschlaege']->count() }})</div>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:10px;">Gefunden über Familienname bzw. Anschrift. Bitte prüfen und verknüpfen – nichts wird automatisch verbunden.</div>
+        @foreach($familie['elternVorschlaege'] as $vorschlag)
+        @php $kandidat = $vorschlag['customer']; @endphp
+        <form method="POST" action="{{ route('admin.customer.family.link', $customer->id) }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;{{ !$loop->first ? 'border-top:1px solid var(--line);' : '' }}">
+            @csrf
+            <input type="hidden" name="related_customer_id" value="{{ $kandidat->id }}">
+            <div style="flex:1;min-width:180px;font-size:13px;">
+                <a href="{{ route('admin.customer', $kandidat->id) }}"><strong>{{ $kandidat->user?->name ?? 'Kunde' }}</strong></a>
+                <span style="color:var(--ink-soft);font-size:12px;"> · {{ $kandidat->customer_number ?? 'ohne Nr.' }}@if($kandidat->age() !== null) · {{ $kandidat->age() }} J.@endif</span>
+                <div style="font-size:11.5px;color:var(--ink-soft);">{{ implode(' · ', $vorschlag['gruende']) }}</div>
+            </div>
+            <select name="relationship_type" aria-label="Rolle" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px;">
+                @foreach(\App\Models\CustomerFamilyRelation::PARENT_ROLES as $rolle)
+                <option value="{{ $rolle }}" @selected($rolle === $vorschlag['rolle'])>{{ \App\Models\CustomerFamilyRelation::ROLES[$rolle] }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="btn btn-emerald" style="padding:5px 10px;font-size:12px;">Als Elternteil verknüpfen</button>
+        </form>
+        @endforeach
+    </div>
+    @endif
+
     @if($familie['suggestions']->isNotEmpty())
     {{-- Bereits als "verwandt / kein Duplikat" erkannte Akten (z. B. gleicher
          Familienname beim Einlesen mehrerer Gesundheitskarten). Es fehlt nur

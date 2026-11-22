@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 22.11.2026 - Eltern-Vorschlag fuer Kinder in der Familienkarte
+
+- **Task**: Betreiber-Frage "warum verknuepft das System Kunden mit gleichem Familiennamen nicht? Bei Kindern sollen sofort moegliche Eltern vorgeschlagen werden."
+- **Files Changed**: neu `app/Support/FamilienName.php`, Test `tests/Feature/ElternVorschlagTest.php`; geaendert `FamilyRelationService` (`elternVorschlaege`, Eintrag in `overview`), `admin/partials/family_relations.blade.php`, `admin/customer_show.blade.php`; `CLAUDE.md`.
+- **Database Changes**: keine. **API Changes**: keine (Verknuepfen ueber die bestehende Route `admin.customer.family.link`).
+- **Potential Side Effects**: zwei zusaetzliche Abfragen beim Oeffnen der Akte eines Kindes ohne Elternteil. Nichts wird automatisch verknuepft.
+- **Tests Performed**: `php -l`; volle Suite, pint und stan ueber CI.
+- **Result**: erledigt, CI ausstehend.
+
 ## 21.11.2026 - Eingang erkennt Bestandskunden im OCR-Text (KI-122)
 
 - **Task**: Betreiber-Meldung: Unterlagen einer Familie blieben im Eingang mit "Kein Kunde gefunden", obwohl ein Scan IBAN und vollen Namen eines Bestandskunden trug und ein Dokument desselben Vorgangs ihm schon zugeordnet war.
