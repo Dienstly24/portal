@@ -25,7 +25,7 @@ use Tests\TestCase;
 
 /**
  * Kinder unter dem Selbststaendigkeitsalter (Betreiber-Auftrag 07.10.2026,
- * KI-096). Gemeldet: die Tochter "Tala" (Kind) trug eine eigene
+ * KI-096). Gemeldet: die Tochter "Lina" (Kind) trug eine eigene
  * Kundennummer. Regel: unter 16 keine Kundennummer, kein Vertrag, kein
  * Portal - das Kind steht als abhaengiges Familienmitglied unter dem Vater
  * (sonst der Mutter); mit 15 erinnert das System das Team; ab 16 vergibt
@@ -81,7 +81,7 @@ class AbhaengigeKinderTest extends TestCase
     /** [ohne Fix rot] Kind unter 16 bekommt keine Kundennummer, egal welcher Weg sie mitgibt. */
     public function test_kind_unter_16_bekommt_keine_kundennummer(): void
     {
-        $kind = $this->anlegen('Tala Alhamoud', $this->jahre(9), 'female');
+        $kind = $this->anlegen('Lina Haddad', $this->jahre(9), 'female');
 
         $this->assertNull($kind->fresh()->customer_number);
         $this->assertTrue($kind->unterSelbststaendigkeitsalter());
@@ -89,8 +89,8 @@ class AbhaengigeKinderTest extends TestCase
 
     public function test_ab_16_gibt_es_eine_kundennummer(): void
     {
-        $jugend = $this->anlegen('Omar Alhamoud', $this->jahre(16), 'male');
-        $erwachsen = $this->anlegen('Ahmad Alhamoud', '1980-01-01', 'male');
+        $jugend = $this->anlegen('Omar Haddad', $this->jahre(16), 'male');
+        $erwachsen = $this->anlegen('Karim Haddad', '1980-01-01', 'male');
 
         $this->assertNotNull($jugend->fresh()->customer_number);
         $this->assertNotNull($erwachsen->fresh()->customer_number);
@@ -116,12 +116,12 @@ class AbhaengigeKinderTest extends TestCase
     {
         Mail::fake();
         $this->actingAs($this->admin())->post(route('admin.customers.store'), [
-            'first_name' => 'Tala', 'last_name' => 'Alhamoud',
-            'email' => 'tala@example.com',
+            'first_name' => 'Lina', 'last_name' => 'Haddad',
+            'email' => 'lina@example.com',
             'birth_date' => $this->jahre(9),
         ])->assertRedirect()->assertSessionHas('warning');
 
-        $kind = Customer::whereHas('user', fn ($q) => $q->where('email', 'tala@example.com'))->firstOrFail();
+        $kind = Customer::whereHas('user', fn ($q) => $q->where('email', 'lina@example.com'))->firstOrFail();
         $this->assertNull($kind->customer_number);
         Mail::assertNothingSent();
     }
@@ -131,7 +131,7 @@ class AbhaengigeKinderTest extends TestCase
     {
         Mail::fake();
         $this->post('/register', [
-            'first_name' => 'Tala', 'last_name' => 'Alhamoud',
+            'first_name' => 'Lina', 'last_name' => 'Haddad',
             'email' => 'kind@example.com',
             'birth_date' => $this->jahre(13),
             'password' => 'test-passwort-2026', 'password_confirmation' => 'test-passwort-2026',
@@ -148,7 +148,7 @@ class AbhaengigeKinderTest extends TestCase
     /** [ohne Fix rot] Kein Vertrag an der Akte eines Kindes - auf JEDEM Weg (Modell-Netz). */
     public function test_kein_vertrag_fuer_kind_am_modell(): void
     {
-        $kind = $this->anlegen('Tala Alhamoud', $this->jahre(9), 'female');
+        $kind = $this->anlegen('Lina Haddad', $this->jahre(9), 'female');
 
         $this->expectException(AbhaengigerKundeException::class);
         Contract::create(['customer_id' => $kind->id, 'type' => 'haftpflicht', 'insurer' => 'Test AG', 'status' => 'active']);
@@ -157,7 +157,7 @@ class AbhaengigeKinderTest extends TestCase
     /** [ohne Fix rot] Auch ein Altbestand-Kind MIT Nummer bekommt keinen neuen Vertrag. */
     public function test_kein_vertrag_fuer_altbestand_kind_mit_nummer(): void
     {
-        $kind = $this->altbestand('Tala Alhamoud', '2600810', $this->jahre(9), 'female');
+        $kind = $this->altbestand('Lina Haddad', '2600981', $this->jahre(9), 'female');
 
         $this->expectException(AbhaengigerKundeException::class);
         Contract::create(['customer_id' => $kind->id, 'type' => 'haftpflicht', 'insurer' => 'Test AG', 'status' => 'active']);
@@ -166,7 +166,7 @@ class AbhaengigeKinderTest extends TestCase
     /** [ohne Fix rot] Formular: kein Vertragsformular, kein Speichern - mit verstaendlicher Meldung. */
     public function test_vertragsformular_fuer_kind_gesperrt(): void
     {
-        $kind = $this->anlegen('Tala Alhamoud', $this->jahre(9), 'female');
+        $kind = $this->anlegen('Lina Haddad', $this->jahre(9), 'female');
         $admin = $this->admin();
 
         $this->actingAs($admin)->get(route('admin.contract.create', $kind->id))
@@ -181,7 +181,7 @@ class AbhaengigeKinderTest extends TestCase
 
     public function test_vertrag_fuer_16_jaehrigen_erlaubt(): void
     {
-        $jugend = $this->anlegen('Omar Alhamoud', $this->jahre(16), 'male');
+        $jugend = $this->anlegen('Omar Haddad', $this->jahre(16), 'male');
 
         $vertrag = Contract::create(['customer_id' => $jugend->id, 'type' => 'haftpflicht', 'insurer' => 'Test AG', 'status' => 'active']);
         $this->assertTrue($vertrag->exists);
@@ -191,8 +191,8 @@ class AbhaengigeKinderTest extends TestCase
     public function test_kein_portal_fuer_kind(): void
     {
         Mail::fake();
-        $kind = $this->altbestand('Tala Alhamoud', '2600810', $this->jahre(9), 'female');
-        $kind->user->forceFill(['email' => 'tala@example.com'])->save();
+        $kind = $this->altbestand('Lina Haddad', '2600981', $this->jahre(9), 'female');
+        $kind->user->forceFill(['email' => 'lina@example.com'])->save();
 
         $this->assertFalse(app(PortalAccessService::class)->autoInvite($kind->fresh()));
         $this->expectException(\RuntimeException::class);
@@ -205,9 +205,9 @@ class AbhaengigeKinderTest extends TestCase
 
     private function familie(int $alterKind, int $tage = 10): array
     {
-        $vater = $this->anlegen('Ahmad Alhamoud', '1980-01-01', 'male');
-        $mutter = $this->anlegen('Hiba Alhamoud', '1983-01-01', 'female');
-        $kind = $this->anlegen('Tala Alhamoud', $this->jahre($alterKind, $tage), 'female');
+        $vater = $this->anlegen('Karim Haddad', '1980-01-01', 'male');
+        $mutter = $this->anlegen('Rana Haddad', '1983-01-01', 'female');
+        $kind = $this->anlegen('Lina Haddad', $this->jahre($alterKind, $tage), 'female');
         app(FamilyRelationService::class)->link($mutter, $kind, 'tochter');
         app(FamilyRelationService::class)->link($vater, $kind, 'tochter');
         $betreuer = User::factory()->create(['role' => 'employee']);
@@ -225,7 +225,7 @@ class AbhaengigeKinderTest extends TestCase
 
         $task = Task::where('customer_id', $vater->id)->first();
         $this->assertNotNull($task, 'Die Erinnerung steht in der Akte des Vaters');
-        $this->assertStringContainsString('Das abhängige Familienmitglied Tala Alhamoud ist 15', $task->title);
+        $this->assertStringContainsString('Das abhängige Familienmitglied Lina Haddad ist 15', $task->title);
         $this->assertStringContainsString('Portal', $task->title);
         $this->assertSame($betreuer->id, $task->assigned_to, 'In der Aufgabenliste des Betreuers');
         $this->assertTrue(InternalNotification::where('user_id', $betreuer->id)->where('type', 'family_transition')->exists());
@@ -254,7 +254,7 @@ class AbhaengigeKinderTest extends TestCase
         $this->artisan('familie:portal-vorbereitung-erinnern')->assertExitCode(0);
         $this->assertSame(1, Task::where('customer_id', $vater->id)->count(), 'Erinnerung schon mit 14');
 
-        $sechzehn = $this->anlegen('Omar Alhamoud', $this->jahre(16), 'male');
+        $sechzehn = $this->anlegen('Omar Haddad', $this->jahre(16), 'male');
         $this->assertNull($sechzehn->fresh()->customer_number, 'Mit Grenze 17 ist ein 16-Jaehriger noch Kind');
     }
 
@@ -339,13 +339,13 @@ class AbhaengigeKinderTest extends TestCase
 
     public function test_pruefbericht_ist_lesend(): void
     {
-        $vater = $this->anlegen('Ahmad Alhamoud', '1980-01-01', 'male');
-        $kind = $this->altbestand('Tala Alhamoud', '2600810', $this->jahre(9), 'female');
+        $vater = $this->anlegen('Karim Haddad', '1980-01-01', 'male');
+        $kind = $this->altbestand('Lina Haddad', '2600981', $this->jahre(9), 'female');
         app(FamilyRelationService::class)->link($vater, $kind, 'tochter');
         $vorher = Customer::where('id', $kind->id)->value('customer_number');
 
         $this->artisan('kunden:kinder-pruefen')
-            ->expectsOutputToContain('2600810 - Tala Alhamoud')
+            ->expectsOutputToContain('2600981 - Lina Haddad')
             ->expectsOutputToContain('Es wurde NICHTS geaendert')
             ->assertExitCode(0);
 
@@ -353,44 +353,44 @@ class AbhaengigeKinderTest extends TestCase
         $this->assertSame(0, ArchivierteKundennummer::count());
     }
 
-    /** [ohne Fix rot] Tala: Probelauf aendert nichts, Ausfuehren archiviert die Nummer und stellt um. */
+    /** [ohne Fix rot] Lina: Probelauf aendert nichts, Ausfuehren archiviert die Nummer und stellt um. */
     public function test_umstellen_der_bestehenden_kinderakte(): void
     {
-        $vater = $this->anlegen('Ahmad Alhamoud', '1980-01-01', 'male');
-        $kind = $this->altbestand('Tala Alhamoud', '2600810', $this->jahre(9), 'female');
-        $kind->user->forceFill(['email' => 'tala@example.com'])->save();
+        $vater = $this->anlegen('Karim Haddad', '1980-01-01', 'male');
+        $kind = $this->altbestand('Lina Haddad', '2600981', $this->jahre(9), 'female');
+        $kind->user->forceFill(['email' => 'lina@example.com'])->save();
         app(FamilyRelationService::class)->link($vater, $kind, 'tochter');
 
-        $this->artisan('kunden:kind-umstellen', ['nummer' => '2600810'])
+        $this->artisan('kunden:kind-umstellen', ['nummer' => '2600981'])
             ->expectsOutputToContain('PROBELAUF')->assertExitCode(0);
-        $this->assertSame('2600810', $kind->fresh()->customer_number);
+        $this->assertSame('2600981', $kind->fresh()->customer_number);
 
-        $this->artisan('kunden:kind-umstellen', ['nummer' => '2600810', '--ausfuehren' => true])->assertExitCode(0);
+        $this->artisan('kunden:kind-umstellen', ['nummer' => '2600981', '--ausfuehren' => true])->assertExitCode(0);
 
         $kind->refresh();
         $this->assertNull($kind->customer_number);
         $this->assertDatabaseHas('customers', ['id' => $kind->id]); // Die Akte bleibt - nichts geloescht.
         $this->assertDatabaseHas('archivierte_kundennummern', [
-            'customer_number' => '2600810', 'customer_id' => $kind->id, 'bezugsperson_customer_id' => $vater->id,
+            'customer_number' => '2600981', 'customer_id' => $kind->id, 'bezugsperson_customer_id' => $vater->id,
         ]);
         $this->assertTrue(CustomerFamilyRelation::where('customer_id', $vater->id)->where('related_customer_id', $kind->id)
             ->where('is_dependent', true)->exists());
         $this->assertFalse((bool) $kind->user->fresh()->is_active, 'Portal stillgelegt, nicht geloescht');
-        $this->assertTrue(CustomerTimeline::where('customer_id', $vater->id)->where('description', 'like', '%2600810%')->exists());
+        $this->assertTrue(CustomerTimeline::where('customer_id', $vater->id)->where('description', 'like', '%2600981%')->exists());
 
         // Die alte Nummer findet weiterhin das Kind ...
-        $this->assertTrue(Customer::search('2600810')->where('customers.id', $kind->id)->exists());
+        $this->assertTrue(Customer::search('2600981')->where('customers.id', $kind->id)->exists());
         // ... und wird nie neu vergeben.
         $neu = app(CustomerNumberGenerator::class)->generate();
-        $this->assertNotSame('2600810', $neu);
+        $this->assertNotSame('2600981', $neu);
         $this->assertGreaterThan(810, (int) substr($neu, 2));
     }
 
     /** [ohne Fix rot] Haengt ein Vertrag an der Kinderakte, wird NICHTS umgestellt - der Betreiber entscheidet. */
     public function test_umstellen_mit_vertrag_ist_blockiert(): void
     {
-        $vater = $this->anlegen('Ahmad Alhamoud', '1980-01-01', 'male');
-        $kind = $this->altbestand('Tala Alhamoud', '2600810', $this->jahre(9), 'female');
+        $vater = $this->anlegen('Karim Haddad', '1980-01-01', 'male');
+        $kind = $this->altbestand('Lina Haddad', '2600981', $this->jahre(9), 'female');
         app(FamilyRelationService::class)->link($vater, $kind, 'tochter');
         Contract::withoutEvents(fn () => Contract::forceCreate([
             'id' => (string) Str::uuid(), 'customer_id' => $kind->id,
@@ -398,18 +398,18 @@ class AbhaengigeKinderTest extends TestCase
         ]));
 
         $this->artisan('kunden:kinder-pruefen')->expectsOutputToContain('BLOCKIERT')->assertExitCode(0);
-        $this->artisan('kunden:kind-umstellen', ['nummer' => '2600810', '--ausfuehren' => true])
+        $this->artisan('kunden:kind-umstellen', ['nummer' => '2600981', '--ausfuehren' => true])
             ->expectsOutputToContain('BLOCKIERT')->assertExitCode(1);
 
-        $this->assertSame('2600810', $kind->fresh()->customer_number);
+        $this->assertSame('2600981', $kind->fresh()->customer_number);
         $this->assertSame(0, ArchivierteKundennummer::count());
     }
 
     public function test_umstellen_ohne_eindeutigen_elternteil_verweigert(): void
     {
-        $this->altbestand('Tala Alhamoud', '2600810', $this->jahre(9), 'female');
+        $this->altbestand('Lina Haddad', '2600981', $this->jahre(9), 'female');
 
-        $this->artisan('kunden:kind-umstellen', ['nummer' => '2600810', '--ausfuehren' => true])
+        $this->artisan('kunden:kind-umstellen', ['nummer' => '2600981', '--ausfuehren' => true])
             ->expectsOutputToContain('Kein eindeutiger Elternteil')->assertExitCode(1);
         $this->assertSame(0, ArchivierteKundennummer::count());
     }
@@ -426,7 +426,7 @@ class AbhaengigeKinderTest extends TestCase
             ->assertDontSee('+ Vertrag hinzufügen');
 
         $this->actingAs($admin)->get(route('admin.customer', $vater->id))->assertOk()
-            ->assertSee('Tala Alhamoud')
+            ->assertSee('Lina Haddad')
             ->assertSee('ohne eigene Kundennummer')
             ->assertSee('Erinnerung „Portal vorbereiten"', false)
             ->assertSee('+ Vertrag hinzufügen');

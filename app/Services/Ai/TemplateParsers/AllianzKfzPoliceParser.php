@@ -114,7 +114,7 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
                 && preg_match('/^[A-ZÄÖÜ][\p{L}\-]+(?:\s+[A-ZÄÖÜ][\p{L}\-]+)+$/u', $block[0])
                 && preg_match('/^(\d{5})\s+(.+)$/', $block[2], $z)) {
                 // Firmen-Policen (AKB-NF) schreiben den Namen in VERSALIEN
-                // ("MOHAMAD ADNAN RANKO") - fuer die Kundenakte normalisieren.
+                // ("OMAR KHALED NASSER") - fuer die Kundenakte normalisieren.
                 $nameParts = preg_split('/\s+/', $this->tidyName($block[0])) ?: [];
                 $raw['last_name'] = array_pop($nameParts);
                 $raw['first_name'] = implode(' ', $nameParts) ?: null;

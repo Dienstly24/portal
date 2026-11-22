@@ -65,8 +65,8 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 1: Die Beziehung wird IMMER in beiden Richtungen gespeichert. */
     public function test_verknuepfung_ist_bidirektional(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(10)->toDateString(), 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $kind = $this->kunde('Nour Mansour', '2600910', now()->subYears(10)->toDateString(), 'female');
 
         $this->service()->link($vater, $kind, 'tochter');
 
@@ -84,8 +84,8 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 2: Es entsteht KEIN zweiter Kundendatensatz - der bestehende wird verbunden. */
     public function test_bestehender_kunde_wird_verknuepft_nie_dupliziert(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(10)->toDateString(), 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $kind = $this->kunde('Nour Mansour', '2600910', now()->subYears(10)->toDateString(), 'female');
         $vorher = Customer::count();
 
         $this->actingAs($this->admin())
@@ -102,8 +102,8 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 3: Verträge, Dokumente und die Kundennummer bleiben unangetastet. */
     public function test_keine_datenverluste_bei_verknuepfung_und_loesen(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(12)->toDateString(), 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $kind = $this->kunde('Yara Mansour', '2600911', now()->subYears(12)->toDateString(), 'female');
 
         $vertrag = $this->altvertrag($kind);
         $dokument = Document::create([
@@ -123,8 +123,8 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 4: Eine Familie ist keine Dublette - das Paar verlaesst die Dubletten-Pruefung. */
     public function test_familie_wird_aus_dubletten_ausgenommen(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $frau = $this->kunde('Hasnaa Qasem', '2600612', '1988-01-01', 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $frau = $this->kunde('Hasnaa Qasem', '2600912', '1988-01-01', 'female');
 
         $this->service()->link($vater, $frau, 'ehepartner');
 
@@ -137,21 +137,21 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 5: Kind unter 16 (seit KI-096, vorher 15) gilt als abhaengiges Familienmitglied - mit eigener Akte. */
     public function test_kind_unter_15_ist_abhaengiges_familienmitglied(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(10)->toDateString(), 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $kind = $this->kunde('Nour Mansour', '2600910', now()->subYears(10)->toDateString(), 'female');
         $this->service()->link($vater, $kind, 'tochter');
 
         $status = $kind->fresh()->familyStatus();
         $this->assertSame('familienmitglied', $status['key']);
-        $this->assertStringContainsString('Jehad Ebraheem', $status['label']);
+        $this->assertStringContainsString('Samir Mansour', $status['label']);
         $this->assertSame('hauptkunde', $vater->fresh()->familyStatus()['key']);
     }
 
     /** Fall 6: Ohne Geburtsdatum wird KEINE Abhaengigkeit angenommen (nie raten). */
     public function test_ohne_geburtsdatum_keine_abhaengigkeit(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Mayar Ebraheem', '2600613');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $kind = $this->kunde('Dana Mansour', '2600913');
 
         $relation = $this->service()->link($vater, $kind, 'kind');
 
@@ -162,13 +162,13 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 7: Stammdaten werden GELESEN, nicht kopiert - eigener Wert schlaegt den geerbten. */
     public function test_stammdaten_werden_vererbt_nicht_dupliziert(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male', [
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male', [
             'phone' => '0170 1234567',
             'address_street' => 'Musterweg', 'address_house_number' => '5',
             'address_zip' => '71522', 'address_city' => 'Backnang',
         ]);
-        $kind = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(10)->toDateString(), 'female');
-        $eigenes = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(12)->toDateString(), 'female', [
+        $kind = $this->kunde('Nour Mansour', '2600910', now()->subYears(10)->toDateString(), 'female');
+        $eigenes = $this->kunde('Yara Mansour', '2600911', now()->subYears(12)->toDateString(), 'female', [
             'phone' => '0171 9999999',
         ]);
 
@@ -197,8 +197,8 @@ class CustomerFamilyRelationTest extends TestCase
     public function test_uebergang_mit_16_aendert_nur_den_status(): void
     {
         $this->admin(); // Zustaendiger fuer die Aufgabe "Kundennummer vergeben"
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(15)->subMonths(11)->toDateString(), 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $kind = $this->kunde('Yara Mansour', '2600911', now()->subYears(15)->subMonths(11)->toDateString(), 'female');
         $vertrag = $this->altvertrag($kind);
 
         $relation = $this->service()->link($vater, $kind, 'tochter');
@@ -230,7 +230,7 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 9: Anzeige haengt nie am Cron - ein 16-Jaehriger gilt sofort als eigenstaendig. */
     public function test_anzeige_folgt_dem_alter_auch_ohne_tageslauf(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
         $kind = $this->kunde('Schiyar Ebrahim', '2514545', now()->subYears(10)->toDateString(), 'male');
         $relation = $this->service()->link($vater, $kind, 'sohn');
         $this->assertTrue($relation->dependentNow());
@@ -244,11 +244,11 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 10: "Kinder werden 16" listet nur den gewaehlten Vorlauf, sortiert nach Restzeit. */
     public function test_uebergangsliste_zeigt_kinder_vor_dem_16_geburtstag(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
         // 16. Geburtstag in ~2 Monaten.
-        $bald = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(16)->addMonths(2)->toDateString(), 'female');
+        $bald = $this->kunde('Yara Mansour', '2600911', now()->subYears(16)->addMonths(2)->toDateString(), 'female');
         // 16. Geburtstag in ~6 Jahren - weit weg.
-        $spaeter = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(10)->toDateString(), 'female');
+        $spaeter = $this->kunde('Nour Mansour', '2600910', now()->subYears(10)->toDateString(), 'female');
 
         $this->service()->link($vater, $bald, 'tochter');
         $this->service()->link($vater, $spaeter, 'tochter');
@@ -258,14 +258,14 @@ class CustomerFamilyRelationTest extends TestCase
         $this->assertSame((string) $bald->id, (string) $liste->first()->related_customer_id);
 
         $this->actingAs($this->admin())->get(route('admin.family.transitions'))
-            ->assertOk()->assertSee('Siela Ebraheem')->assertDontSee('Zania Ebraheem');
+            ->assertOk()->assertSee('Yara Mansour')->assertDontSee('Nour Mansour');
     }
 
     /** Fall 11: "Uebergang vorbereiten" aendert KEINEN Vertrag - es entsteht nur eine Wiedervorlage. */
     public function test_uebergang_vorbereiten_aendert_keine_vertraege(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Siela Ebraheem', '2600611', now()->subYears(16)->addMonths(3)->toDateString(), 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $kind = $this->kunde('Yara Mansour', '2600911', now()->subYears(16)->addMonths(3)->toDateString(), 'female');
         $vertrag = $this->altvertrag($kind);
         $relation = $this->service()->link($vater, $kind, 'tochter');
 
@@ -282,29 +282,29 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 12: Die Suche findet bestehende Kunden auch ueber das Geburtsdatum. */
     public function test_suche_findet_bestehende_kunden(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
         // 17 Jahre: traegt eine eigene Nummer (unter 16 gaebe es keine, KI-096).
-        $kind = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(17)->format('Y').'-03-12', 'female');
+        $kind = $this->kunde('Nour Mansour', '2600910', now()->subYears(17)->format('Y').'-03-12', 'female');
 
         $admin = $this->admin();
 
-        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=2600610')
-            ->assertOk()->assertJsonPath('customers.0.number', '2600610');
+        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=2600910')
+            ->assertOk()->assertJsonPath('customers.0.number', '2600910');
 
         $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=12.03.'.now()->subYears(17)->format('Y'))
             ->assertOk()->assertJsonPath('customers.0.id', (string) $kind->id);
 
         // Bereits verknuepfte Kunden und der Kunde selbst tauchen nicht auf.
         $this->service()->link($vater, $kind, 'tochter');
-        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=Ebraheem')
+        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=Mansour')
             ->assertOk()->assertJsonCount(0, 'customers');
     }
 
     /** Fall 13: Rolle aendern zieht die Gegenrolle mit - kein halber Zustand. */
     public function test_rollenwechsel_aktualisiert_beide_richtungen(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $person = $this->kunde('Hasnaa Qasem', '2600612', '1988-01-01', 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $person = $this->kunde('Hasnaa Qasem', '2600912', '1988-01-01', 'female');
         $relation = $this->service()->link($vater, $person, 'sonstiges');
 
         $this->actingAs($this->admin())
@@ -322,7 +322,7 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 14: Ein Kunde kann nicht mit sich selbst verknuepft werden. */
     public function test_selbstverknuepfung_wird_abgelehnt(): void
     {
-        $kunde = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
+        $kunde = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
 
         $this->actingAs($this->admin())
             ->post(route('admin.customer.family.link', $kunde->id), [
@@ -335,20 +335,20 @@ class CustomerFamilyRelationTest extends TestCase
     /** Fall 15: Die Familienkarte im Kundenprofil verlinkt jedes Mitglied. */
     public function test_kundenprofil_zeigt_familienkarte(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Zania Ebraheem', '2600610', now()->subYears(10)->toDateString(), 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $kind = $this->kunde('Nour Mansour', '2600910', now()->subYears(10)->toDateString(), 'female');
         $this->service()->link($vater, $kind, 'tochter');
 
         $this->actingAs($this->admin())->get(route('admin.customer', $vater->id))
             ->assertOk()
-            ->assertSee('Zania Ebraheem')
+            ->assertSee('Nour Mansour')
             ->assertSee('Tochter')
             ->assertSee(route('admin.customer', $kind->id));
 
         // Und zurueck: das Kind zeigt seine Bezugsperson.
         $this->actingAs($this->admin())->get(route('admin.customer', $kind->id))
             ->assertOk()
-            ->assertSee('Jehad Ebraheem')
+            ->assertSee('Samir Mansour')
             ->assertSee('Familienmitglied');
     }
 
@@ -360,8 +360,8 @@ class CustomerFamilyRelationTest extends TestCase
      */
     public function test_bereits_verwandte_akten_werden_als_vorschlag_angeboten(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
-        $kind = $this->kunde('Mayar Ebraheem', '2600611', now()->subYears(9)->toDateString(), 'female');
+        $vater = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
+        $kind = $this->kunde('Dana Mansour', '2600911', now()->subYears(9)->toDateString(), 'female');
 
         // So entsteht der Bestand heute: gleicher Familienname beim Einlesen.
         [$a, $b] = CustomerRelationship::pairKey((string) $vater->id, (string) $kind->id);
@@ -390,7 +390,7 @@ class CustomerFamilyRelationTest extends TestCase
     public function test_fremder_kunde_kann_nicht_verknuepft_werden(): void
     {
         $mitarbeiter = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
-        $eigener = $this->kunde('Jehad Ebraheem', '2600608', '1985-04-02', 'male');
+        $eigener = $this->kunde('Samir Mansour', '2600908', '1985-04-02', 'male');
         $fremder = $this->kunde('Ahmad Alibrahim', '2513596', '1990-05-05', 'male');
         $eigener->betreuer()->attach($mitarbeiter->id);
 

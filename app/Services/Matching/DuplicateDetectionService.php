@@ -525,9 +525,9 @@ class DuplicateDetectionService
             } else {
                 // Gleicher Nachname, aber ein ANDERER Vorname: auf beiden
                 // Seiten bleibt ein Namensteil uebrig, der auf der anderen
-                // fehlt ("Maher Abboud" / "Ahmad Jihad Abboud"). Ein
+                // fehlt ("Fadi Saleh" / "Ahmad Yusuf Saleh"). Ein
                 // zusaetzlicher zweiter Vorname auf nur EINER Seite ist kein
-                // Widerspruch ("Ahmad Abboud" / "Ahmad Jihad Abboud"), ein
+                // Widerspruch ("Ahmad Saleh" / "Ahmad Yusuf Saleh"), ein
                 // Tippfehler ebenfalls nicht ("Mohamad" / "Mohammad").
                 [$restA, $restB] = $this->ohneTippfehler(
                     array_values(array_diff($ta, $gemeinsam)),

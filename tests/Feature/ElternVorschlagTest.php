@@ -82,7 +82,7 @@ class ElternVorschlagTest extends TestCase
     {
         $vater = $this->kunde('Karim Haddad', $this->jahreAlt(45), ['gender' => 'male']);
         $this->kunde('Rana Haddad', $this->jahreAlt(42), ['gender' => 'female']);
-        $erwachsen = $this->kunde('Maher Saleh', $this->jahreAlt(30));
+        $erwachsen = $this->kunde('Tarek Saleh', $this->jahreAlt(30));
         $kind = $this->kunde('Lina Haddad', $this->jahreAlt(9));
         $service = app(FamilyRelationService::class);
 

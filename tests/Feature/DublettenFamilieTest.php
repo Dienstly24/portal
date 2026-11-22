@@ -15,7 +15,7 @@ use Tests\TestCase;
  * Familienmitglieder werden NIE versehentlich zusammengefuehrt (Betreiber-
  * Auftrag 03.10.2026, KI-063).
  *
- * Gemeldeter Fall: Maher Abboud (geb. 10.02.1971) und Ahmad Jihad Abboud
+ * Gemeldeter Fall: Fadi Saleh (geb. 14.06.1971) und Ahmad Yusuf Saleh
  * (geb. 2002) standen nur wegen derselben E-Mail-Adresse als
  * "44 % · Wahrscheinlich · ✓ sicher" in der Dubletten-Liste - Vater und
  * Sohn, per "Alle auswaehlen" + "Zusammenfuehren" mit einem Klick
@@ -44,10 +44,10 @@ class DublettenFamilieTest extends TestCase
     private function vaterUndSohn(): array
     {
         $adresse = ['address_street' => 'Nagelshof', 'address_house_number' => '20', 'address_zip' => '51069', 'address_city' => 'Köln'];
-        $vater = $this->kunde('Maher Abboud', 'familie.abboud@example.com', $adresse + ['birth_date' => '1971-02-10']);
-        $sohn = $this->kunde('Ahmad Jihad Abboud', 'ahmad.abboud@example.com', $adresse + [
+        $vater = $this->kunde('Fadi Saleh', 'familie.saleh@example.com', $adresse + ['birth_date' => '1971-06-14']);
+        $sohn = $this->kunde('Ahmad Yusuf Saleh', 'ahmad.saleh@example.com', $adresse + [
             'birth_date' => '2002-05-04',
-            'email2' => 'familie.abboud@example.com',
+            'email2' => 'familie.saleh@example.com',
         ]);
 
         return [$vater, $sohn];
@@ -75,7 +75,7 @@ class DublettenFamilieTest extends TestCase
         $this->assertContains('Gleiche E-Mail-Adresse', $paar['signals']);
         $gruende = implode(' ', $paar['konflikte']);
         $this->assertStringContainsString('Abweichendes Geburtsdatum', $gruende);
-        $this->assertStringContainsString('10.02.1971', $gruende);
+        $this->assertStringContainsString('14.06.1971', $gruende);
         $this->assertStringContainsString('04.05.2002', $gruende);
         $this->assertStringContainsString('Abweichender Vorname', $gruende);
     }
@@ -140,14 +140,14 @@ class DublettenFamilieTest extends TestCase
 
     /**
      * Fehlt das Geburtsdatum beim Sohn, war das Paar vorher KEIN Widerspruch
-     * (gemeinsames Namenswort "Abboud" genuegte) - mit gemeinsamer IBAN wurde
+     * (gemeinsames Namenswort "Saleh" genuegte) - mit gemeinsamer IBAN wurde
      * es per "Alle sicheren" automatisch verschmolzen. Der andere Vorname
      * ist jetzt selbst ein Widerspruch.
      */
     public function test_anderer_vorname_ist_widerspruch_auch_ohne_geburtsdatum(): void
     {
-        $vater = $this->kunde('Maher Abboud', 'maher@example.com', ['iban' => 'DE89370400440532013000', 'birth_date' => '1971-02-10']);
-        $sohn = $this->kunde('Ahmad Abboud', 'ahmad@example.com', ['iban' => 'DE89 3704 0044 0532 0130 00', 'email2' => 'maher@example.com']);
+        $vater = $this->kunde('Fadi Saleh', 'fadi@example.com', ['iban' => 'DE89370400440532013000', 'birth_date' => '1971-06-14']);
+        $sohn = $this->kunde('Ahmad Saleh', 'ahmad@example.com', ['iban' => 'DE89 3704 0044 0532 0130 00', 'email2' => 'fadi@example.com']);
 
         $paar = $this->paarAusScan($vater, $sohn);
         $this->assertSame(DuplicateDetectionService::KLASSE_FAMILIE, $paar['klasse']);
@@ -179,8 +179,8 @@ class DublettenFamilieTest extends TestCase
         $svc = app(DuplicateDetectionService::class);
         $a = $this->kunde('Mohamad Rahimi', 'm1@example.com', ['birth_date' => '1990-01-01']);
         $b = $this->kunde('Mohammad Rahimi', 'm2@example.com', ['birth_date' => '1990-01-01']);
-        $c = $this->kunde('Ahmad Abboud', 'a1@example.com');
-        $d = $this->kunde('Ahmad Jihad Abboud', 'a2@example.com');
+        $c = $this->kunde('Ahmad Saleh', 'a1@example.com');
+        $d = $this->kunde('Ahmad Yusuf Saleh', 'a2@example.com');
 
         $this->assertSame([], $svc->identityConflicts($a, $b));
         $this->assertSame([], $svc->identityConflicts($c, $d));
