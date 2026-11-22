@@ -117,9 +117,12 @@ class ElternVorschlagTest extends TestCase
         $this->actingAs($admin)->post(route('admin.customer.family.link', $kind->id), [
             'related_customer_id' => $vater->id,
             'relationship_type' => 'vater',
-        ])->assertRedirect();
+        ])->assertRedirect()->assertSessionHasNoErrors();
 
+        $zeilen = CustomerFamilyRelation::all()
+            ->map(fn ($r) => ($r->customer_id == $kind->id ? 'kind' : 'vater').'->'.($r->related_customer_id == $kind->id ? 'kind' : 'vater').':'.$r->relationship_type)
+            ->implode(', ');
         $this->assertTrue(CustomerFamilyRelation::where('customer_id', $kind->id)
-            ->where('related_customer_id', $vater->id)->where('relationship_type', 'vater')->exists());
+            ->where('related_customer_id', $vater->id)->where('relationship_type', 'vater')->exists(), 'Gespeichert: ['.$zeilen.']');
     }
 }

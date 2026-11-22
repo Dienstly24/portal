@@ -9,8 +9,11 @@ use App\Models\CustomerRelationship;
 use App\Models\CustomerTimeline;
 use App\Models\InternalNotification;
 use App\Models\SystemSetting;
+use App\Models\User;
 use App\Services\Relationships\CustomerRelationshipService;
+use App\Support\Anschrift;
 use App\Support\FamilienAlter;
+use App\Support\FamilienName;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -258,7 +261,7 @@ class FamilyRelationService
      *
      * @return Collection<int, array{customer: Customer, rolle: string, gruende: list<string>}>
      */
-    public function elternVorschlaege(Customer $kind, ?\App\Models\User $betrachter = null, int $limit = 5): Collection
+    public function elternVorschlaege(Customer $kind, ?User $betrachter = null, int $limit = 5): Collection
     {
         $alter = $kind->age();
         $istKind = ($alter !== null && $alter < 18) || blank($kind->customer_number);
@@ -273,7 +276,7 @@ class FamilyRelationService
         $bereits = $verknuepft->pluck('related_customer_id')->map(fn ($id) => (string) $id)->all();
 
         $kindName = (string) $kind->user?->name;
-        $kern = \App\Support\FamilienName::kern($kindName);
+        $kern = FamilienName::kern($kindName);
         $anschrift = $this->anschriftSchluessel($kind);
 
         if (mb_strlen($kern) < 3 && $anschrift === '') {
@@ -302,7 +305,7 @@ class FamilyRelationService
             ->reject(fn (Customer $c) => in_array((string) $c->id, $bereits, true))
             ->map(function (Customer $c) use ($kindName, $anschrift, $kindGeburt) {
                 $gruende = [];
-                $nameGleich = \App\Support\FamilienName::gleich($kindName, $c->user?->name);
+                $nameGleich = FamilienName::gleich($kindName, $c->user?->name);
                 $ortGleich = $anschrift !== '' && $this->anschriftSchluessel($c) === $anschrift;
                 if ($nameGleich) {
                     $gruende[] = 'Gleicher Familienname';
@@ -353,7 +356,7 @@ class FamilyRelationService
             return '';
         }
 
-        return \App\Support\Anschrift::schluessel(
+        return Anschrift::schluessel(
             $c->address_street.' '.$c->address_house_number.' '.$c->address_zip
         );
     }
