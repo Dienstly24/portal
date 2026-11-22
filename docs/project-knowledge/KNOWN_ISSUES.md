@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-123 | MEDIUM | correctness | Dokumenten-Eingang: CosmosDirekt-Kfz-Beitragsrechnung nur per kostenpflichtiger KI lesbar ("Rechnung 40 %", kein Kunde) | FIXED |
 | KI-122 | HIGH | correctness | Dokumenten-Eingang: Bestandskunde trotz vollem Namen/IBAN im OCR-Text "Kein Kunde gefunden"; Vorgang bot den Kunden eines bereits zugeordneten Geschwister-Dokuments nicht an | FIXED |
 | KI-121 | HIGH | legal | Website, Leistungsseiten, Mails und KI-Prompts stellten Dienstly24 als Berater/Makler dar | FIXED |
 | KI-120 | HIGH | legal/correctness | Wechsel-Erinnerung: Beratungs-/Spar-Formulierungen ohne 34d-Erlaubnis und Versand nach Fristablauf | FIXED |
@@ -168,6 +169,14 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-123 - Eingang: CosmosDirekt-Beitragsrechnung nur per KI lesbar
+- **Category** correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** neu `App\Services\Ai\TemplateParsers\CosmosDirektKfzBeitragsrechnungParser`, Reihenfolge in `AppServiceProvider`
+- **Description** Betreiber-Meldung 22.11.2026: die Kfz-Beitragsrechnung der CosmosDirekt (digitale Textebene) landete als "Rechnung, 40 % sicher, OCR ohne KI, Kein Kunde gefunden" mit "KI empfohlen - wartet auf Freigabe". Kein Vorlagen-Parser kannte das Schreiben, die Heuristik liest bewusst keine Namen aus Freitext - ohne Name kein Kundenabgleich, und jede Cosmos-Beitragsrechnung kostete einen KI-Aufruf.
+- **Fix (22.11.2026)**: eigener Gratis-Parser (Typ `kfz_vertrag`): Kunde aus dem Empfaengerblock (linke Spalte, rechts steht Werbetext auf derselben Zeile), Vertragsnummer, Kennzeichen, Tarif, SF-Klasse und Beitraege aus der Spalte des NEUEN Jahres, Teilkasko-SB, Werkstattbindung, Verkehrs-Rechtsschutz, Gesamtbeitrag + Zahlweise. Faelligkeit, Beitraege alt -> neu und Vergleichsbeitrag nur in der Zusammenfassung. Keine Bankdaten (Kunden-IBAN maskiert, Brieffuss-IBANs gehoeren der Cosmos). Steht hinter den anderen Kfz-Parsern; am echten PDF geprueft, dass keiner davor zugreift.
+- **Test** `CosmosDirektKfzBeitragsrechnungParserTest` (3 Faelle, inkl. echter Kette aus dem Container)
+- **Discovered** 22.11.2026 (Betreiber)
 
 ### KI-121 - Beratungs-/Makler-Wortlaut ohne Erlaubnis nach 34d GewO
 - **Category** legal · **Severity** HIGH · **Status** FIXED

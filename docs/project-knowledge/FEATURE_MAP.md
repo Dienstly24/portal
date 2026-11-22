@@ -111,6 +111,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Erkennung braucht mehr als EIN Stichwort: `GeburtsurkundeParser` verlangt zusaetzlich einen Standesamts-Beleg - das Wort "Geburtsurkunde" steht im Kleingedruckten vieler Formulare (KI-054)
 - Bankkarte/girocard (`BankkarteParser`, vor `KontaktdatenBlockParser`): kurzer Text + Kartenmerkmal + IBAN mit gueltiger Pruefziffer, sonst greift er nicht. Test `BankkarteParserTest`
 - DEVK-Kfz-Police (`DevkKfzPoliceParser`, Neuvertrag + Anpassung): steht VOR `Check24KfzProtocolParser` - die Police nennt CHECK24 als Vermittler und "Beratungsprotokoll" im Kleingedruckten (KI-102). Test `DevkKfzPoliceParserTest`
+- CosmosDirekt-Kfz-Beitragsrechnung (`CosmosDirektKfzBeitragsrechnungParser`, KI-123): liest die Spalte des NEUEN Jahres; Faelligkeit ist kein Vertragsbeginn, keine Bankdaten. Test `CosmosDirektKfzBeitragsrechnungParserTest`
 - Status **ACTIVE** · Regel `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`
 
 ### F-022 Dokumenten-Anforderungen
