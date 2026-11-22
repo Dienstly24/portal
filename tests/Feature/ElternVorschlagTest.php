@@ -115,7 +115,7 @@ class ElternVorschlagTest extends TestCase
             ->assertSee('Als Elternteil verknüpfen');
 
         $this->actingAs($admin)->post(route('admin.customer.family.link', $kind->id), [
-            'related_customer_id' => $vater->id,
+            'related_customer_id' => (string) $vater->id,
             'relationship_type' => 'vater',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
