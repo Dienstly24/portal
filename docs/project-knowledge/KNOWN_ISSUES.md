@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-123 | MEDIUM | correctness | Dokumenten-Eingang: CosmosDirekt-Kfz-Beitragsrechnung nur per kostenpflichtiger KI lesbar ("Rechnung 40 %", kein Kunde) | FIXED |
 | KI-122 | HIGH | correctness | Dokumenten-Eingang: Bestandskunde trotz vollem Namen/IBAN im OCR-Text "Kein Kunde gefunden"; Vorgang bot den Kunden eines bereits zugeordneten Geschwister-Dokuments nicht an | FIXED |
 | KI-121 | HIGH | legal | Website, Leistungsseiten, Mails und KI-Prompts stellten Dienstly24 als Berater/Makler dar | FIXED |
 | KI-120 | HIGH | legal/correctness | Wechsel-Erinnerung: Beratungs-/Spar-Formulierungen ohne 34d-Erlaubnis und Versand nach Fristablauf | FIXED |

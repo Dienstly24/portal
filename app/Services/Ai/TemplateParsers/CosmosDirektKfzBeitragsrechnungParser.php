@@ -190,7 +190,7 @@ class CosmosDirektKfzBeitragsrechnungParser implements DocumentTemplateParser
             };
         }
 
-        return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+        return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== ''));
     }
 
     private function summary(string $text, string $flat, string $name, array $kfz, array $ins): string
