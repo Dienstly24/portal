@@ -55,10 +55,8 @@ class FahrzeugscheinParser implements DocumentTemplateParser
             return null;
         }
 
-        $this->lines = array_values(array_filter(
-            array_map(fn ($l) => trim((string) $l), preg_split('/\R/u', $text) ?: []),
-            fn ($l) => $l !== '',
-        ));
+        $zeilen = array_map(fn ($l) => trim((string) $l), preg_split('/\R/u', $text) ?: []);
+        $this->lines = array_values(array_filter($zeilen, fn ($l) => $l !== ''));
 
         $vehicle = $this->parseVehicle($text);
         if (! isset($vehicle['vin']) && ! isset($vehicle['license_plate'])) {

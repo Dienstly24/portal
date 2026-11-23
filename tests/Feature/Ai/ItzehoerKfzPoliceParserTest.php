@@ -109,6 +109,6 @@ class ItzehoerKfzPoliceParserTest extends TestCase
         $parser = new ItzehoerKfzPoliceParser;
 
         $this->assertNull($parser->parse("Itzehoer Versicherungen\nAntrag auf Kfz-Versicherung\nVersicherungs-Nr. 2X-1-001"));
-        $this->assertNull($parser->parse(str_replace('Itzehoer', 'Musterversicherung', $this->fixture())));
+        $this->assertNull($parser->parse(str_ireplace('Itzehoe', 'Musterstadt', $this->fixture())));
     }
 }
