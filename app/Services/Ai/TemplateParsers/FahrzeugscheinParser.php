@@ -41,6 +41,9 @@ class FahrzeugscheinParser implements DocumentTemplateParser
     /** @var list<string> */
     private array $lines = [];
 
+    /** Foto ohne lesbare Beschriftungen (KI-132) - nur dann gilt das Kennzeichen ohne Beschriftung. */
+    private bool $ohneBeschriftungen = false;
+
     public function parse(string $text): ?array
     {
         $upper = mb_strtoupper($text);
@@ -66,6 +69,7 @@ class FahrzeugscheinParser implements DocumentTemplateParser
         if (! ($teil1 && $vokabular) && ! $foto) {
             return null;
         }
+        $this->ohneBeschriftungen = $foto;
 
         $zeilen = array_map(fn ($l) => trim((string) $l), preg_split('/\R/u', $text) ?: []);
         $this->lines = array_values(array_filter($zeilen, fn ($l) => $l !== ''));
@@ -122,7 +126,7 @@ class FahrzeugscheinParser implements DocumentTemplateParser
 
         if (($i = $this->plateLine()) !== null) {
             $raw['license_plate'] = $this->plateFrom($this->lines[$i]);
-        } elseif (($ohne = $this->plateOhneBeschriftung()) !== null) {
+        } elseif ($this->ohneBeschriftungen && ($ohne = $this->plateOhneBeschriftung()) !== null) {
             $raw['license_plate'] = $ohne[1];
         }
 
@@ -246,7 +250,7 @@ class FahrzeugscheinParser implements DocumentTemplateParser
             }
         }
 
-        $start = $this->plateLine() ?? $this->plateOhneBeschriftung()[0] ?? null;
+        $start = $this->plateLine() ?? ($this->ohneBeschriftungen ? $this->plateOhneBeschriftung()[0] ?? null : null);
         $end = $street['index'] ?? count($this->lines);
         $from = $start !== null ? $start + 1 : max(0, $end - 6);
         $namen = [];
