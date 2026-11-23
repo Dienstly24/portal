@@ -372,7 +372,7 @@
         <div id="review-contract-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">
             <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;">
                 <input type="checkbox" id="review-create-contract" style="margin-top:2px;">
-                <span><strong>Vertrag anlegen/verknüpfen</strong><br><span id="review-contract-info" style="color:var(--ink-soft);font-size:12.5px;"></span></span>
+                <span><strong>Vertrag anlegen/verknüpfen</strong><br><span id="review-contract-info" style="color:var(--ink-soft);font-size:12.5px;"></span><span id="review-contract-weitere" style="display:none;margin-top:6px;font-size:12.5px;"></span></span>
             </label>
         </div>
 
@@ -895,7 +895,8 @@ window.docReview = (function() {
         }
 
         var has = ins.insurer || ins.contract_number || ins.reference_number;
-        el('review-contract-section').style.display = has ? '' : 'none';
+        var hatWeitere = ((doc.extracted || {}).weitere_vertraege || []).length > 0;
+        el('review-contract-section').style.display = (has || hatWeitere) ? '' : 'none';
         el('review-create-contract').checked = false;
         if (has) {
             var parts = [];
@@ -961,6 +962,26 @@ window.docReview = (function() {
                 parts.push('✅ Vertragsbestätigung – ergänzt einen vorhandenen Auftrag, statt ihn zu verdoppeln');
             }
             el('review-contract-info').textContent = parts.join(' · ');
+        }
+        // Weitere Vertraege im selben Dokument/Vorgang (z.B. ADAC-Mitgliedschaft
+        // neben dem Kfz-Antrag): sie entstehen mit demselben Haken als EIGENE
+        // Vertraege - der Mitarbeiter sieht vorher, welche.
+        var weitere = (doc.extracted || {}).weitere_vertraege || [];
+        var wBox = el('review-contract-weitere');
+        wBox.textContent = '';
+        if (!has) el('review-contract-info').textContent = '';
+        wBox.style.display = weitere.length ? 'block' : 'none';
+        if (weitere.length) {
+            var kopf = document.createElement('strong');
+            kopf.textContent = '+ ' + weitere.length + (weitere.length === 1 ? ' weiterer Vertrag' : ' weitere Verträge') + ' (wird mit angelegt):';
+            wBox.appendChild(kopf);
+            weitere.forEach(function (w) {
+                var v = w.versicherung || {};
+                var zeile = document.createElement('div');
+                zeile.textContent = '• ' + [v.insurer, v.sparte ? 'Sparte: ' + v.sparte : null,
+                    v.contract_number ? 'Nr. ' + v.contract_number : null, v.tariff].filter(Boolean).join(' · ');
+                wBox.appendChild(zeile);
+            });
         }
     }
 

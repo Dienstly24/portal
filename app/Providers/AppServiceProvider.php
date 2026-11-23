@@ -92,6 +92,7 @@ use App\Services\Ai\TemplateParsers\PlanBNetZeroAuftragParser;
 use App\Services\Ai\TemplateParsers\PrivathaftpflichtAntragParser;
 use App\Services\Ai\TemplateParsers\ReisepassMrzParser;
 use App\Services\Ai\TemplateParsers\SparkasseDirektKfzParser;
+use App\Services\Ai\TemplateParsers\TarifcheckKfzAntragUebersichtParser;
 use App\Services\Ai\TemplateParsers\VermittlerVorgangslisteHinweisParser;
 use App\Services\Ai\TemplateParsers\WgvKfzPoliceParser;
 use App\Services\Commission\CommissionReadService;
@@ -210,6 +211,9 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(CosmosDirektKfzBeitragsrechnungParser::class),
                 $app->make(EuropaGoKfzParser::class),
                 $app->make(SparkasseDirektKfzParser::class),
+                // Zusammenfassung der Kfz-Antragsstrecke (Screenshot, 23.11.2026):
+                // nennt die Gesellschaft (z.B. WGV) - VOR deren Policen-Parsern.
+                $app->make(TarifcheckKfzAntragUebersichtParser::class),
                 $app->make(WgvKfzPoliceParser::class),
                 $app->make(NafiKfzAntragParser::class),
                 $app->make(BayerischeEscooterParser::class),
