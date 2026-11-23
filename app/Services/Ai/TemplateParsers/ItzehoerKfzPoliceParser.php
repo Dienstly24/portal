@@ -335,7 +335,7 @@ class ItzehoerKfzPoliceParser implements DocumentTemplateParser
         // der LETZTE Betrag der Zeile, nicht die Steuer in der Klammer.
         foreach ($this->lines as $line) {
             if (preg_match('/^\s*Gesamtbeitrag\b/u', $line)
-                && preg_match_all('/(\d{1,3}(?:\.\d{3})*,\d{2})\s*€/u', $line, $mm) && count($mm[1]) > 0) {
+                && preg_match_all('/(\d{1,3}(?:\.\d{3})*,\d{2})\s*€/u', $line, $mm)) {
                 $raw['premium_amount'] = (float) str_replace(['.', ','], ['', '.'], $mm[1][count($mm[1]) - 1]);
                 $raw['premium_interval'] = $this->interval();
                 break;

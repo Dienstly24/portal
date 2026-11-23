@@ -535,7 +535,7 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
                 // Gesellschaftsname ist - und NUR diese: ist sie verstuemmelt
                 // ("imal ." aus "Optimal" bei einem 72-dpi-Scan), bleibt der
                 // Tarif leer, statt eine Folgezeile ("Gem") zu nehmen.
-                $folge = array_values(array_slice($werte, $idx + 1));
+                $folge = array_slice($werte, $idx + 1);
                 foreach ($folge as $pos => $rest) {
                     if ($this->knownInsurer($rest) !== $kanon) {
                         $rest = trim($rest, ' .,;');
