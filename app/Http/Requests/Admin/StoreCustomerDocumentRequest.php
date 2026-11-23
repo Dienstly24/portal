@@ -30,6 +30,8 @@ class StoreCustomerDocumentRequest extends FormRequest
         return [
             'documents' => 'required|array|min:1|max:20',
             'documents.*' => UploadRules::each(UploadRules::DOCUMENT_MIMES),
+            // Entscheidung bei einer bereits vorhandenen Datei (KI-126).
+            'bei_konflikt' => 'nullable|in:ersetzen,ueberspringen,beide_behalten',
         ] + CustomerDocumentMetaRules::rules();
     }
 }

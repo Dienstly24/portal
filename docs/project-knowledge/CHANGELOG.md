@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 23.11.2026 - Doppelt hochgeladene Dokumente erkennen, ersetzen oder ueberspringen (KI-126, KI-127)
+
+- **Task**: Betreiber: eine schon vorhandene Datei wird beim erneuten Hochladen nicht erkannt - weder "bereits vorhanden" noch "alte ersetzen?".
+- **Files Changed**: `CustomerDocumentController`, `StoreCustomerDocumentRequest`, `AdminController` (eager load), `EmailAttachmentService`, neu `app/Support/Dateiname.php`, `admin/customer_show.blade.php`, Test `tests/Feature/DocumentIntake/DoppeltesHochladenTest.php`; `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine (nutzt vorhandenes `documents.content_hash`). **API Changes**: `POST admin/customers/{id}/documents` antwortet bei Konflikt ohne `bei_konflikt` mit 409 + `konflikte`; neues Feld `bei_konflikt` (ersetzen/ueberspringen/beide_behalten); Erfolgsantwort traegt `ersetzt`/`uebersprungen`/`message`.
+- **Potential Side Effects**: Wer bisher absichtlich dieselbe Datei zweimal ablegte, muss jetzt "Beide behalten" waehlen. Ersetzen aendert NICHT Kategorie/Vertrag/Sichtbarkeit des alten Dokuments.
+- **Tests Performed**: neuer Test (ohne Fix 6 von 9 rot), volle Suite, `pint`, `phpstan`, Dialog im Headless-Chromium.
+- **Result**: erledigt.
+
 ## 23.11.2026 - ADAC-Variante der Antrags-Zusammenfassung + zwei Vertraege je Vorgang (KI-125)
 
 - **Task**: Betreiber: ADAC-Variante (zwei Bilder) erkennen; enthalten die Unterlagen zwei Vertraege (Auto + Pannenhilfe/ADAC), beide erkennen und direkt in der Kundenakte anlegen koennen.

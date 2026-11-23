@@ -31,6 +31,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-126 | HIGH | usability/correctness | Kundenakte: erneut hochgeladene, bereits vorhandene Datei wurde kommentarlos doppelt gespeichert - kein Hinweis, kein Angebot zum Ersetzen; ersetztes Dokument behielt den Hash der alten Datei | FIXED |
+| KI-127 | LOW | ux-i18n | E-Mail-Anhaenge: RFC-2047-kodierte Dateinamen ("=?UTF-8?B?...?=") standen unlesbar in der Kundenakte | FIXED |
 | KI-125 | HIGH | correctness | Dokumenten-Eingang: Vorgang mit Kfz-Unterlagen + ADAC-Mitgliedschaft wurde zu EINEM Vertrag verschmolzen (Mitgliedsnummer als Kfz-Vertragsnummer, Mitgliedschaft fehlte) | FIXED |
 | KI-124 | MEDIUM | cost/correctness | Dokumenten-Eingang: Screenshot der Kfz-Antrags-Zusammenfassung (Vergleichsrechner) von keinem Parser erkannt - nur per KI lesbar | FIXED |
 | KI-123 | MEDIUM | correctness | Dokumenten-Eingang: CosmosDirekt-Kfz-Beitragsrechnung nur per kostenpflichtiger KI lesbar ("Rechnung 40 %", kein Kunde) | FIXED |
@@ -171,6 +173,22 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-126 - Kundenakte: dieselbe Datei wurde still doppelt gespeichert
+- **Category** usability/correctness · **Severity** HIGH · **Status** FIXED
+- **Location** `CustomerDocumentController::storeDocument`/`documentReplace` (neu `findeKonflikte`, `ersetzeDatei`, `normalisiereDateiname`), `StoreCustomerDocumentRequest` (`bei_konflikt`), `AdminController::customer` (eager load `documents.uploader`), `admin/customer_show.blade.php` (Konflikt-Dialog, Badge "Doppelt", Duplikat-Hinweis beim Smart-Upload)
+- **Description** Betreiber-Meldung 23.11.2026: "lade ich eine Datei hoch und spaeter noch einmal, erkennt das System nicht, dass sie schon da ist - es fragt weder nach Ersetzen noch sagt es 'bereits vorhanden'". Gemessen: `Document::boot` setzte zwar `content_hash`/`duplicate_of`, aber der Upload in der Kundenakte las das NIE aus; der Smart-Upload lieferte `duplicates` im JSON, die Seite zeigte sie nicht an. Zusaetzlich behielt `documentReplace` den Hash der ALTEN Datei.
+- **Fix (23.11.2026)**: Pruefung VOR dem Speichern, nur in der EIGENEN Akte (fremde Akten verraten nichts): gleicher Inhalt (SHA-256) = "identisch", gleicher Name (ohne Browser-Zusatz "(1)") mit anderem Inhalt = "gleicher_name". Ohne Entscheidung 409 + Liste, es wird NICHTS gespeichert; der Dialog bietet "Alte ersetzen" (Datensatz bleibt, Datei + Hash neu), "Vorhandene ueberspringen", "Beide behalten". Ohne JS: Warnung statt stiller Ablage. In der Liste traegt die spaetere Kopie "Doppelt - schon vorhanden seit".
+- **Test** `DoppeltesHochladenTest` (9 Faelle; 6 scheitern ohne den Fix)
+- **Discovered** 23.11.2026 (Betreiber-Meldung)
+
+### KI-127 - E-Mail-Anhaenge mit kodiertem Dateinamen
+- **Category** ux-i18n · **Severity** LOW · **Status** FIXED
+- **Location** neu `App\Support\Dateiname`, `EmailAttachmentService::storeFiles`, Anzeige in `admin/customer_show.blade.php`
+- **Description** Am selben Screenshot sichtbar: "=?UTF-8?B?Q2FtU2Nhbm5lciDZodmk...?=" als Dokumentname (CamScanner-Datei mit arabischem Datum). Der Name wurde nie nach RFC 2047 dekodiert.
+- **Fix (23.11.2026)**: Dekodierung beim Ablegen des Anhangs (alle drei Postfach-Anbieter laufen dort durch) und bei der Anzeige fuer den Altbestand; unsichtbare Richtungszeichen werden entfernt.
+- **Test** `DoppeltesHochladenTest::test_mime_kodierter_anhangsname_wird_lesbar`
+- **Discovered** 23.11.2026 (Nebenbefund)
 
 ### KI-125 - Eingang: zwei Vertraege eines Vorgangs zu einem verschmolzen
 - **Category** correctness · **Severity** HIGH · **Status** FIXED
