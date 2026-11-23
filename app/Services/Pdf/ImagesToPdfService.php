@@ -2,6 +2,8 @@
 
 namespace App\Services\Pdf;
 
+use App\Support\ExifAusrichtung;
+
 /**
  * Baut aus fotografierten/ausgewaehlten Seiten (JPEG/PNG/WebP/GIF) ein
  * einzelnes mehrseitiges PDF - ohne externe Abhaengigkeit (kein Imagick,
@@ -91,11 +93,9 @@ class ImagesToPdfService
             return $binary;
         }
         file_put_contents($tmp, $binary);
-        $exif = @exif_read_data($tmp, null, false);
+        $orientation = ExifAusrichtung::lesen($tmp);
         @unlink($tmp);
-
-        $orientation = (int) ($exif['Orientation'] ?? 1);
-        if ($orientation <= 1 || $orientation > 8) {
+        if ($orientation === 1) {
             return $binary;
         }
 
@@ -103,25 +103,7 @@ class ImagesToPdfService
         if ($img === false) {
             return $binary;
         }
-
-        switch ($orientation) {
-            case 2: imageflip($img, IMG_FLIP_HORIZONTAL);
-            break;
-            case 3: $img = imagerotate($img, 180, 0);
-            break;
-            case 4: imageflip($img, IMG_FLIP_VERTICAL);
-            break;
-            case 5: imageflip($img, IMG_FLIP_VERTICAL);
-            $img = imagerotate($img, -90, 0);
-            break;
-            case 6: $img = imagerotate($img, -90, 0);
-            break;
-            case 7: imageflip($img, IMG_FLIP_HORIZONTAL);
-            $img = imagerotate($img, -90, 0);
-            break;
-            case 8: $img = imagerotate($img, 90, 0);
-            break;
-        }
+        $img = ExifAusrichtung::anwenden($img, $orientation);
 
         ob_start();
         imagejpeg($img, null, self::JPEG_QUALITY);

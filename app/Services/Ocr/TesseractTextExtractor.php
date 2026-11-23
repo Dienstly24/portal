@@ -2,6 +2,7 @@
 
 namespace App\Services\Ocr;
 
+use App\Support\ExifAusrichtung;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
@@ -166,7 +167,38 @@ class TesseractTextExtractor implements TextExtractorInterface
         $path = $dir.'/input.'.$ext;
         file_put_contents($path, $binary);
 
-        return [$this->upscaleIfSmall($path, $dir)];
+        return [$this->upscaleIfSmall($this->aufrichten($path, $dir), $dir)];
+    }
+
+    /**
+     * Hochkant gespeicherte Handyfotos VOR der OCR aufrichten (KI-132): das
+     * Telefon vermerkt die Drehung nur im EXIF-Feld, Tesseract wertet es
+     * nicht aus und liest seitlich. Am eingesandten Fahrzeugschein gemessen:
+     * ohne Aufrichten 3 Zeilen Text, aufgerichtet Kennzeichen, FIN, Halter
+     * und Anschrift. Faellt etwas aus, bleibt das Original.
+     */
+    private function aufrichten(string $path, string $dir): string
+    {
+        $orientierung = ExifAusrichtung::lesen($path);
+        if ($orientierung === 1 || ! function_exists('imagecreatefromstring')) {
+            return $path;
+        }
+
+        try {
+            $bild = @imagecreatefromstring((string) file_get_contents($path));
+            if ($bild === false) {
+                return $path;
+            }
+            $bild = ExifAusrichtung::anwenden($bild, $orientierung);
+            $ziel = $dir.'/input-aufgerichtet.png';
+            $ok = imagepng($bild, $ziel);
+            imagedestroy($bild);
+
+            return ($ok && is_file($ziel)) ? $ziel : $path;
+        } catch (\Throwable $e) {
+            Log::warning('OCR: Aufrichten des Bildes fehlgeschlagen: '.$e->getMessage());
+            return $path;
+        }
     }
 
     /**
@@ -242,9 +274,47 @@ class TesseractTextExtractor implements TextExtractorInterface
         if ($grenze <= 0 || mb_strlen(trim($text)) >= $grenze || microtime(true) >= $deadline) {
             return $text;
         }
+        $sieger = $text;
         $block = $this->ocrImage($path, '6');
+        if (self::lesbareWoerter($block) > self::lesbareWoerter($sieger)) {
+            $sieger = $block;
+        }
 
-        return self::lesbareWoerter($block) > self::lesbareWoerter($text) ? $block : $text;
+        // Graustufen (KI-132, am Fahrzeugschein-Foto gemessen): der gruen
+        // gemusterte Grund verschluckt in Farbe die Schrift - als Block
+        // gelesen kamen 42 lesbare Woerter, in Graustufen 86, darunter
+        // Ueberschrift, Kennzeichen, Halter und Anschrift. Wie oben gewinnt
+        // der Lauf mit MEHR lesbaren Woertern, nie eine Mischung.
+        if (microtime(true) < $deadline && ($grau = $this->graustufen($path)) !== null) {
+            $grauBlock = $this->ocrImage($grau, '6');
+            if (self::lesbareWoerter($grauBlock) > self::lesbareWoerter($sieger)) {
+                $sieger = $grauBlock;
+            }
+        }
+
+        return $sieger;
+    }
+
+    /** Graustufen-Fassung neben dem Bild; null, wenn GD fehlt oder etwas ausfaellt. */
+    private function graustufen(string $path): ?string
+    {
+        if (! function_exists('imagecreatefromstring') || ! function_exists('imagefilter')) {
+            return null;
+        }
+        try {
+            $bild = @imagecreatefromstring((string) file_get_contents($path));
+            if ($bild === false) {
+                return null;
+            }
+            $ziel = dirname($path).'/'.pathinfo($path, PATHINFO_FILENAME).'-grau.png';
+            $ok = imagefilter($bild, IMG_FILTER_GRAYSCALE) && imagepng($bild, $ziel);
+            imagedestroy($bild);
+
+            return ($ok && is_file($ziel)) ? $ziel : null;
+        } catch (\Throwable $e) {
+            Log::warning('OCR: Graustufen-Fassung fehlgeschlagen: '.$e->getMessage());
+            return null;
+        }
     }
 
     /** Anzahl lesbarer Woerter (Latein/Ziffern, mind. 3 Zeichen) - Mass fuer "mehr gelesen". */

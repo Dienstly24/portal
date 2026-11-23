@@ -22,6 +22,7 @@ use App\Services\Relationships\CustomerRelationshipService;
 use App\Services\VehicleOverlapGuard;
 use App\Support\Facades\Notify;
 use App\Support\FamilienName;
+use App\Support\FinVerlesen;
 use App\Support\GermanPhone;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -712,6 +713,10 @@ class DocumentIntakeService
      *   Familienname des Dokuments zum Kunden passt.
      * - Mehrere Kunden zum selben Merkmal -> nichts (nie raten). Eine FIN, die
      *   zu mehreren Kunden gehoert, sperrt auch den Kennzeichen-Weg.
+     * - FIN in EINEM verwechselbaren Zeichen verlesen (KI-132, `FinVerlesen`):
+     *   genau ein Kunde mit so einer erfassten FIN = Vorschlag; 'auto' nur,
+     *   wenn das Kennzeichen auf DENSELBEN Kunden zeigt. Zeigt es auf einen
+     *   anderen, wird nichts zugeordnet.
      *
      * @param  array<string,mixed>  $extracted
      * @return array<string,mixed>|null
@@ -736,6 +741,14 @@ class DocumentIntakeService
             $customer = array_values($kunden['FIN'])[0];
             $score = 96;
             $via = 'fin';
+        } elseif (($aehnlich = $this->finAehnlicheKunden((string) ($kfz['vin'] ?? ''))) !== []) {
+            if (count($aehnlich) > 1 || count($kunden['Kennzeichen']) > 1
+                || ($kunden['Kennzeichen'] !== [] && ! isset($kunden['Kennzeichen'][array_key_first($aehnlich)]))) {
+                return null;
+            }
+            $customer = array_values($aehnlich)[0];
+            $score = $kunden['Kennzeichen'] !== [] ? 96 : 85;
+            $via = 'fin_aehnlich';
         } elseif (count($kunden['Kennzeichen']) === 1) {
             $customer = array_values($kunden['Kennzeichen'])[0];
             $person = $extracted['person'] ?? [];
@@ -932,6 +945,35 @@ class DocumentIntakeService
         }
 
         return $hits;
+    }
+
+    /**
+     * Kunden mit einer erfassten FIN, die von der gelesenen in genau EINEM
+     * verwechselbaren Zeichen abweicht (KI-132). Vorfilter: eine Abweichung
+     * liegt entweder in der vorderen oder in der hinteren Haelfte - die
+     * andere stimmt.
+     *
+     * @return array<string,Customer>
+     */
+    private function finAehnlicheKunden(string $vin): array
+    {
+        $vin = (string) ContractVehicleDetail::normalizeVin($vin);
+        if (strlen($vin) !== 17) {
+            return [];
+        }
+        $kunden = [];
+        $details = ContractVehicleDetail::query()
+            ->where(fn ($q) => $q->where('vin', 'like', substr($vin, 0, 8).'%')->orWhere('vin', 'like', '%'.substr($vin, 9)))
+            ->with('contract.customer.user')
+            ->limit(50)->get();
+        foreach ($details as $detail) {
+            $customer = $detail->contract?->customer;
+            if ($customer && FinVerlesen::einZeichen($vin, (string) ContractVehicleDetail::normalizeVin($detail->vin))) {
+                $kunden[(string) $customer->id] = $customer;
+            }
+        }
+
+        return $kunden;
     }
 
     /** Laengste zusammenhaengende Ziffernfolge als Vorfilter fuer LIKE. */

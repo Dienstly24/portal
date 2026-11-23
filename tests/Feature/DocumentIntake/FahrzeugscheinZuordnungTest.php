@@ -184,6 +184,76 @@ class FahrzeugscheinZuordnungTest extends TestCase
         $this->assertNull($match);
     }
 
+    /**
+     * [ohne Fix rot] KI-132: echtes Handyfoto, aufgerichtet und in Graustufen
+     * gelesen - die kleinen Beschriftungen fehlen, die Ueberschrift heisst
+     * "Teil |", das Kennzeichen steht ohne "Amtliches Kennzeichen" davor.
+     * Fixture = die Tesseract-Ausgabe mit ausgetauschten Daten.
+     */
+    public function test_handyfoto_ohne_lesbare_beschriftungen(): void
+    {
+        $r = (new FahrzeugscheinParser)->parse($this->ocr('handyfoto'));
+
+        $this->assertNotNull($r, 'Vorher: kein Parser, das Foto landete als "Sonstiges".');
+        $k = $r['data']['kfz'];
+        $this->assertSame('KI X 77', $k['license_plate']);
+        $this->assertSame('WEA0B000X0AB12345', $k['vin'], 'So gelesen - verlesen, aber nicht "repariert".');
+        $this->assertSame('0005', $k['hsn']);
+        $this->assertSame('733', $k['tsn'], 'TSN darf rein numerisch sein (Feld 2.2 "73301A").');
+        $this->assertSame('2006-05-03', $k['first_registration']);
+
+        $p = $r['data']['person'];
+        $this->assertSame('MUSTERWEG', $p['street']);
+        $this->assertSame('12', $p['house_number'], 'Rauschen "he" ist keine Hausnummer-Endung.');
+        $this->assertSame('24103', $p['zip']);
+        $this->assertArrayNotHasKey('last_name', $p, 'Namen sind im Rauschen nicht sicher lesbar - nicht raten.');
+
+        $kette = app(DocumentTemplateParser::class)->parse($this->ocr('handyfoto'));
+        $this->assertSame('fahrzeugschein', $kette['type'] ?? null);
+    }
+
+    /** Zwei kennzeichenfoermige Woerter ohne Beschriftung -> keins. */
+    public function test_kennzeichen_ohne_beschriftung_nur_wenn_eindeutig(): void
+    {
+        $text = str_replace('KI X77 PERSONENKRAFTWAGEN', 'KI X77 PERSONENKRAFTWAGEN HH AB 12', $this->ocr('handyfoto'));
+
+        $r = (new FahrzeugscheinParser)->parse($text);
+
+        $this->assertArrayNotHasKey('license_plate', $r['data']['kfz']);
+    }
+
+    /** [ohne Fix rot] FIN in einem verwechselbaren Zeichen verlesen + Kennzeichen passt -> automatisch. */
+    public function test_verlesene_fin_mit_kennzeichen_ordnet_zu(): void
+    {
+        $kunde = $this->kunde('Rami Haddad');
+        $vertrag = $this->kfzVertrag($kunde, ['vin' => 'WBA0B000X0AB12345', 'license_plate' => 'KI-X 77']);
+
+        $doc = $this->analysiere($this->ocr('handyfoto'));
+
+        $this->assertSame('fin_aehnlich', $doc->ai_extracted['match']['via']);
+        $this->assertSame((string) $kunde->id, (string) $doc->customer_id);
+        $this->assertSame((string) $vertrag->id, (string) $doc->contract_id);
+        $this->assertSame('WBA0B000X0AB12345', $vertrag->fresh()->vehicleDetail->vin, 'Die erfasste FIN bleibt.');
+    }
+
+    /** Verlesene FIN allein ist nur ein Vorschlag; zeigt das Kennzeichen auf jemand anderen -> nichts. */
+    public function test_verlesene_fin_ohne_kennzeichen_ist_vorschlag(): void
+    {
+        $kunde = $this->kunde('Rami Haddad');
+        $this->kfzVertrag($kunde, ['vin' => 'WBA0B000X0AB12345']);
+        $service = app(DocumentIntakeService::class);
+        $kfz = ['vin' => 'WEA0B000X0AB12345'];
+
+        $match = $service->findVehicleMatch(['kfz' => $kfz]);
+        $this->assertSame('confirm', $match['tier']);
+        $this->assertSame('fin_aehnlich', $match['via']);
+
+        $this->kfzVertrag($this->kunde('Peter Schmidt'), ['license_plate' => 'KI-X 77']);
+        $this->assertNull($service->findVehicleMatch(['kfz' => $kfz + ['license_plate' => 'KI X 77']]));
+
+        $this->assertNull($service->findVehicleMatch(['kfz' => ['vin' => 'WEA0B000X0AB12399']]), 'Zwei Zeichen anders = andere FIN.');
+    }
+
     public function test_teil_zwei_und_andere_dokumente_werden_nicht_beansprucht(): void
     {
         $parser = new FahrzeugscheinParser;
@@ -191,5 +261,6 @@ class FahrzeugscheinZuordnungTest extends TestCase
         $this->assertNull($parser->parse(str_replace('Teil I', 'Teil II', $this->ocr('jpeg'))));
         $this->assertNull($parser->parse("Antrag Kfz-Versicherung\nBitte Fahrzeugschein beilegen.\nKennzeichen KI AB 123"));
         $this->assertNull($parser->parse((string) file_get_contents(base_path('tests/Fixtures/itzehoer_kfz_police.txt'))));
+        $this->assertNull($parser->parse(str_replace('Zulassungsbescheinigung', 'Versicherungsschein Zulassungsbescheinigung', $this->ocr('handyfoto'))));
     }
 }

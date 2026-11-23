@@ -44,14 +44,26 @@ class FahrzeugscheinParser implements DocumentTemplateParser
     public function parse(string $text): ?array
     {
         $upper = mb_strtoupper($text);
-        $teil1 = (bool) preg_match('/ZULASSUNGSBESCHEINIGUNG\s+TEIL\s+(I|1)\b(?!I)/u', $upper)
+        // "Teil I" kommt am Handyfoto als "Teil |" oder "Teil!" an (KI-132).
+        $teil1 = (bool) preg_match('/ZULASSUNGSBESCHEINIGUNG\s+TEIL\s*[I1|!](?![I1|!])/u', $upper)
             || str_contains($upper, 'FAHRZEUGSCHEIN');
-        if (! $teil1 || preg_match('/ZULASSUNGSBESCHEINIGUNG\s+TEIL\s+(II|2)\b|FAHRZEUGBRIEF/u', $upper)) {
+        if (preg_match('/ZULASSUNGSBESCHEINIGUNG\s+TEIL\s*(II|2)\b|FAHRZEUGBRIEF/u', $upper)) {
             return null;
         }
         // Erwaehnt ein Antrag/eine Police den Fahrzeugschein nur, fehlt das
         // Formularvokabular.
-        if (! preg_match('/KENNZEICHEN|C\.?1\.?1|VORNAME|ANSCHRIFT/u', $upper)) {
+        $vokabular = (bool) preg_match('/KENNZEICHEN|C\.?1\.?1|VORNAME|ANSCHRIFT/u', $upper);
+        // Am echten Handyfoto (KI-132) sind die kleinen Beschriftungen nicht
+        // lesbar, die Ueberschrift oft zerrissen. Dann genuegt der Anfang
+        // der Ueberschrift + eine FIN-artige Kennung + der Aufdruck des
+        // Formulars - aber nie in einem Text, der von Versicherung, Beitrag
+        // oder Antrag spricht.
+        $foto = ! $vokabular
+            && str_contains($upper, 'ZULASSUNGSBES')
+            && preg_match('/(?<![A-Z0-9])[A-HJ-NPR-Z0-9]{17}(?![A-Z0-9])/u', $upper)
+            && preg_match('/DEUTSCHLAND|BUNDESREPUBLIK|GEMEINSCHAFT|PERSONENKRAFTWAGEN/u', $upper)
+            && ! preg_match('/VERSICHERUNG|BEITRAG|ANTRAG/u', $upper);
+        if (! ($teil1 && $vokabular) && ! $foto) {
             return null;
         }
 
@@ -110,6 +122,8 @@ class FahrzeugscheinParser implements DocumentTemplateParser
 
         if (($i = $this->plateLine()) !== null) {
             $raw['license_plate'] = $this->plateFrom($this->lines[$i]);
+        } elseif (($ohne = $this->plateOhneBeschriftung()) !== null) {
+            $raw['license_plate'] = $ohne[1];
         }
 
         // Feld B (Erstzulassung) + 2.1 (HSN) + 2.2 (TSN) stehen in einer Zeile.
@@ -118,8 +132,11 @@ class FahrzeugscheinParser implements DocumentTemplateParser
                 continue;
             }
             $rest = (string) preg_replace('/(?<!\d)2[.,]?[12](?!\d)/u', ' ', $m[4]);
-            if (preg_match('/(?<![\d.])(\d{4})(?![\d.])\W{0,4}\s*([A-Z0-9]{3})/u', $rest, $h)
-                && preg_match('/[A-Z]/', $h[2])) {
+            // TSN = die ersten DREI Zeichen von Feld 2.2 - sie darf rein
+            // numerisch sein (BMW "733" aus "73301A"), dann muss der Rest
+            // von 2.2 einen Buchstaben tragen (sonst ist es irgendeine Zahl).
+            if (preg_match('/(?<![\d.])(\d{4})(?![\d.])\W{0,4}\s*([A-Z0-9]{3})([A-Z0-9]{0,8})/u', $rest, $h)
+                && preg_match('/[A-Z]/', $h[2].$h[3])) {
                 $raw['first_registration'] = $m[3].'-'.$m[2].'-'.$m[1];
                 $raw['hsn'] = $h[1];
                 $raw['tsn'] = $h[2];
@@ -181,6 +198,30 @@ class FahrzeugscheinParser implements DocumentTemplateParser
         return null;
     }
 
+    /**
+     * Kennzeichen OHNE lesbare Beschriftung (KI-132): am Handyfoto steht
+     * "f : KI X77 PERSONENKRAFTWAGEN" - die kleine Zeile "Amtliches
+     * Kennzeichen" fehlt. Genommen wird ein kennzeichenfoermiges Wort nur,
+     * wenn es im GANZEN Text genau EIN solches gibt; die Nummer der
+     * Bescheinigung ("SE-K-0-173/26-...") faellt durch den Bindestrich danach
+     * heraus. Zwei verschiedene -> keins (nie raten).
+     *
+     * @return array{0:int,1:string}|null Zeilenindex + Kennzeichen
+     */
+    private function plateOhneBeschriftung(): ?array
+    {
+        $gefunden = [];
+        foreach ($this->lines as $i => $line) {
+            if (preg_match_all('/(?<![\p{L}\d\-.\/])([A-ZÄÖÜ]{1,3})[ \-]([A-Z]{1,2})[ \-]?(\d{1,4})([EH]?)(?![\p{L}\d\-.\/])/u', $line, $mm, PREG_SET_ORDER)) {
+                foreach ($mm as $m) {
+                    $gefunden[$m[1].' '.$m[2].' '.$m[3].$m[4]] ??= $i;
+                }
+            }
+        }
+
+        return count($gefunden) === 1 ? [(int) reset($gefunden), (string) array_key_first($gefunden)] : null;
+    }
+
     /** "KI AB123 2 LKW ..." -> "KI AB 123"; nur ein Kennzeichen am Zeilenanfang. */
     private function plateFrom(string $line): ?string
     {
@@ -197,7 +238,7 @@ class FahrzeugscheinParser implements DocumentTemplateParser
         $street = null;
         foreach ($this->lines as $i => $line) {
             $next = $this->lines[$i + 1] ?? '';
-            if (preg_match('/^(\p{L}[\p{L}ß.\- ]{2,40}?)\s+(\d{1,4}\s?[a-zA-Z]?)(?![\d.,\/])/u', $line, $s)
+            if (preg_match('/^(\p{L}[\p{L}ß.\- ]{2,40}?)\s+(\d{1,4}(?:\s?[a-zA-Z](?!\p{L}))?)(?![\d.,\/])/u', $line, $s)
                 && preg_match('/^(\d{5})\s+(\p{Lu}[\p{L}\-]+(?:\s\p{Lu}[\p{L}\-]+)?)/u', $next, $z)
                 && ! preg_match(self::BESCHRIFTUNG, $s[1])) {
                 $street = ['index' => $i, 'street' => trim($s[1]).' '.trim($s[2]), 'zip' => $z[1], 'city' => $z[2]];
@@ -205,7 +246,7 @@ class FahrzeugscheinParser implements DocumentTemplateParser
             }
         }
 
-        $start = $this->plateLine();
+        $start = $this->plateLine() ?? $this->plateOhneBeschriftung()[0] ?? null;
         $end = $street['index'] ?? count($this->lines);
         $from = $start !== null ? $start + 1 : max(0, $end - 6);
         $namen = [];
