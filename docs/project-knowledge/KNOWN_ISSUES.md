@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-132 | HIGH | correctness | Hochkant gespeicherte Handyfotos wurden seitlich per OCR gelesen (EXIF-Ausrichtung ignoriert) - echter Fahrzeugschein ergab fast keinen Text | FIXED |
 | KI-131 | HIGH | correctness | Kfz-Antrags-Zusammenfassung (KRAVAG): bei spaltenweiser OCR fehlten Name, IBAN, Beitrag, Tarif und Kilometerstand | FIXED |
 | KI-130 | HIGH | usability | Dokumenten-Eingang: Fahrzeugschein-Foto ohne Parser; Kunde/Vertrag wurde ueber FIN oder Kennzeichen nur vorgeschlagen, nie automatisch zugeordnet | FIXED |
 | KI-129 | MEDIUM | cost/correctness | Dokumenten-Eingang: Itzehoer-Kfz-Versicherungsschein von keinem Parser erkannt; Heuristik nahm E-Mail und IBAN der Itzehoer als Kundendaten | FIXED |
@@ -177,6 +178,14 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-132 - Handyfoto seitlich gelesen: EXIF-Ausrichtung, Graustufen, Fahrzeugschein ohne Beschriftungen
+- **Category** correctness · **Severity** HIGH · **Status** FIXED
+- **Location** `TesseractTextExtractor` (Aufrichten + Graustufen im zweiten Lauf), neu `App\Support\ExifAusrichtung`, `App\Support\FinVerlesen`, `FahrzeugscheinParser`, `DocumentIntakeService::findVehicleMatch`
+- **Description** Betreiber-Foto 23.11.2026 (echter Fahrzeugschein): die OCR lieferte 3 Zeilen (Bruchstuecke der Anschrift). Ursache: das Telefon speichert das Bild HOCHKANT und vermerkt die Drehung nur im EXIF-Feld Orientation (hier 8); Browser zeigen es richtig herum, Tesseract nicht - es las seitlich. Betrifft JEDES so gespeicherte Handyfoto im Eingang, nicht nur Fahrzeugscheine. Aufgerichtet blieb es duenn (42 lesbare Woerter): der gruen gemusterte Grund verschluckt in Farbe die Schrift. Und der Parser verlangte die kleinen Beschriftungen ("Amtliches Kennzeichen", "Vorname") und "Teil I" sauber gelesen - am Foto steht "Teil |", die Beschriftungen fehlen ganz, die TSN "733" ist rein numerisch, und in der FIN kam ein "B" als "E" an.
+- **Fix (23.11.2026)**: (1) Bild vor der OCR nach EXIF aufrichten (`ExifAusrichtung`, dieselbe Regel nutzt jetzt `ImagesToPdfService`). (2) Zweiter Lauf (nur bei duennem Text) liest zusaetzlich eine GD-Graustufen-Fassung; es gewinnt der Lauf mit mehr lesbaren Woertern (gemessen 42 -> 86, mit Ueberschrift, Kennzeichen, FIN, Anschrift). (3) Parser: "Teil |"/"Teil!"; ohne Beschriftungen genuegt Ueberschrift-Anfang + FIN-Wort + Formularaufdruck (nie bei Versicherung/Beitrag/Antrag); Kennzeichen ohne Beschriftung nur, wenn im ganzen Text genau EINES; TSN numerisch erlaubt; Hausnummer ohne angeklebtes Rauschen. Namen bleiben leer, wenn sie im Rauschen stehen (nicht raten). (4) Verlesene FIN wird NIE repariert (Pruefziffer ergab 4 gueltige Kandidaten), sondern mit dem Bestand verglichen: genau ein Kunde mit einer FIN, die in EINEM verwechselbaren Zeichen abweicht = Vorschlag, automatisch nur, wenn das Kennzeichen auf denselben Kunden zeigt. Gemessen an der echten Aufnahme: 3,5 s OCR, Kennzeichen, HSN/TSN, Erstzulassung, Kraftstoff, Strasse erkannt; Grenze: die PLZ kam verlesen an (Pruefung im Review).
+- **Test** `FahrzeugscheinZuordnungTest` (4 neue Faelle, Fixture = Tesseract-Ausgabe mit ausgetauschten Daten), `tests/Unit/FotoAusrichtungTest.php`
+- **Discovered** 23.11.2026 (Betreiber)
 
 ### KI-131 - Antrags-Zusammenfassung: Werte getrennt von ihren Beschriftungen
 - **Category** correctness · **Severity** HIGH · **Status** FIXED

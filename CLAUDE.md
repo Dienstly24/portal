@@ -1105,6 +1105,20 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Vorschlag, gewinnt ein staerkerer Namens-Treffer. Nach der Zuordnung
   ergaenzt `linkMatchingContract` die LEEREN Fahrzeugfelder des Vertrags.
   Test: `FahrzeugscheinZuordnungTest`.
+  **ECHTES HANDYFOTO** (KI-132, 23.11.2026): das Telefon speichert hochkant
+  und vermerkt die Drehung nur im EXIF-Feld - Tesseract las seitlich (3
+  Zeilen Text). `TesseractTextExtractor` richtet jedes Bild VOR der OCR auf
+  (`App\Support\ExifAusrichtung`, gilt fuer ALLE Fotos im Eingang) und
+  liest im zweiten Lauf zusaetzlich eine Graustufen-Fassung (gruen
+  gemusterter Grund; 42 -> 86 lesbare Woerter, Sieger = mehr Woerter, nie
+  eine Mischung). Der Parser kommt ohne die kleinen Beschriftungen aus
+  ("Teil |", Ueberschrift-Anfang + FIN-Wort + Formularaufdruck; Kennzeichen
+  ohne Beschriftung nur, wenn genau EINES im Text; TSN darf numerisch sein).
+  Namen im Rauschen bleiben leer. Eine verlesene FIN wird NIE repariert
+  (Pruefziffer mehrdeutig), sondern mit dem Bestand verglichen
+  (`App\Support\FinVerlesen`: ein verwechselbares Zeichen) - Vorschlag,
+  automatisch nur mit Kennzeichen beim selben Kunden. Test:
+  `tests/Unit/FotoAusrichtungTest.php`.
 - **Kfz-Angebot der Sparkassen DirektVersicherung**
   (`SparkasseDirektKfzParser`, 31.07.2026): Spaltenlayout (Beschriftung links,
   Wert rechts), Stufe `antrag`. Bewusst NICHT übernommen: die Empfehlung

@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 23.11.2026 - Handyfotos aufrichten, Fahrzeugschein vom echten Foto lesen (KI-132)
+
+- **Task**: Betreiber schickte ein echtes Fahrzeugschein-Foto: "erkenne die Datei".
+- **Files Changed**: neu `App\Support\ExifAusrichtung`, `App\Support\FinVerlesen`, Test `tests/Unit/FotoAusrichtungTest.php`, Fixture `fahrzeugschein_ocr_handyfoto.txt` (Daten ausgetauscht); geaendert `TesseractTextExtractor`, `ImagesToPdfService`, `FahrzeugscheinParser`, `DocumentIntakeService::findVehicleMatch`, `FahrzeugscheinZuordnungTest`, CI (`exif`-Erweiterung).
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: Jedes Handyfoto mit EXIF-Drehung wird jetzt aufrecht gelesen (vorher seitlich) - Parser koennen bei solchen Fotos erstmals greifen. Bei duennem OCR-Text kostet der zweite Lauf einen weiteren Tesseract-Aufruf (~1-2 s).
+- **Tests Performed**: echte Aufnahme mit dem echten Extraktor (Tesseract) gelesen und durch die ganze Parser-Kette geschickt; bisherige Fahrzeugschein- und Itzehoer-Fixtures liefern unveraendert dasselbe; `php -l`; volle Suite, pint und stan ueber CI.
+- **Result**: erledigt, CI ausstehend.
+
 ## 23.11.2026 - Itzehoer-Police und Fahrzeugschein gratis lesen, Zuordnung ueber FIN/Kennzeichen (KI-129, KI-130), Antrags-Zusammenfassung spaltenweise (KI-131)
 
 - **Task**: Betreiber: "Erkenne den Vertrag (Itzehoer-Police) im Eingang" und "beim Fahrzeugschein Kunde und Vertrag ueber Kennzeichen oder FIN finden und ins System bringen" und "die KRAVAG-Zusammenfassung erkennt Name, Anschrift, Konto, E-Mail nicht".
