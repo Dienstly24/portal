@@ -209,9 +209,9 @@
             Suche nach Vorname, Nachname, Kundennummer, Geburtsdatum (TT.MM.JJJJ), E-Mail, Telefon oder Anschrift.
             Der gefundene Kunde wird <strong>verknüpft, nicht kopiert</strong> – sein Datensatz bleibt unverändert.
         </p>
-        <input type="text" id="fam-suche-feld" placeholder="z. B. Ebraheem, 2600610 oder 12.03.2012"
+        <input type="text" id="fam-suche-feld" placeholder="z. B. Mansour, 2600910 oder 12.03.2012"
                data-h-input="12b45f2c35" autocomplete="off"
-               style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:14px;" aria-label="z. B. Ebraheem, 2600610 oder 12.03.2012">
+               style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:14px;" aria-label="z. B. Mansour, 2600910 oder 12.03.2012">
         <div id="fam-suche-treffer" style="margin-top:12px;"></div>
     </div>
 </div>

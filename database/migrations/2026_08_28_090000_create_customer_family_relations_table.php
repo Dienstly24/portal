@@ -11,15 +11,15 @@ use Illuminate\Support\Facades\Schema;
  * Warum eine eigene Tabelle neben `customer_relationships`:
  *  - `customer_relationships` beantwortet genau EINE Frage - "dieses Paar ist
  *    KEINE Dublette". Das Paar wird dort sortiert gespeichert (a < b), es hat
- *    also bewusst KEINE Richtung. "Zania ist Tochter von Jehad" laesst sich
+ *    also bewusst KEINE Richtung. "Nour ist Tochter von Samir" laesst sich
  *    darin nicht ausdruecken, ohne die Bedeutung der Tabelle zu verbiegen.
  *  - Eine Familienrolle ist dagegen IMMER gerichtet und wird als PAAR
  *    gespeichert (Hin- und Rueckrichtung), damit man von den Eltern zum Kind
  *    UND vom Kind zu den Eltern navigieren kann.
  *
  * Lesart einer Zeile: "`related_customer_id` ist `relationship_type` von
- * `customer_id`" - z. B. (Jehad, Zania, 'tochter') = "Zania ist Tochter von
- * Jehad". Die Gegenzeile (Zania, Jehad, 'vater') legt der Service automatisch
+ * `customer_id`" - z. B. (Samir, Nour, 'tochter') = "Nour ist Tochter von
+ * Samir". Die Gegenzeile (Nour, Samir, 'vater') legt der Service automatisch
  * an; beide Zeilen existieren immer gemeinsam.
  *
  * `is_dependent` steht NUR an der Zeile der Bezugsperson (Elternteil ->

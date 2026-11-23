@@ -700,7 +700,7 @@ class CommissionImportService
             'customer_id' => $contract?->customer_id,
             'contract_label' => $contract ? trim($contract->typeLabel().' · '.($contract->contract_number ?: $contract->reference_number ?: '')) : null,
             // Der Name aus der Datei steht in der Schreibweise der Quelle
-            // ("VN RANKO, MOHAMAD ADNAN"). Fuer die Anzeige wird er lesbar
+            // ("VN NASSER, OMAR KHALED"). Fuer die Anzeige wird er lesbar
             // gemacht - fuer die ZUORDNUNG bleibt er weiterhin unbenutzt.
             'customer_label' => ValueParser::text(
                 $contract?->customer?->user?->name

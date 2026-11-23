@@ -2223,8 +2223,8 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   `auto` (`confirm` heisst "koennte sein" - daraus darf nichts werden). Der
   unscharfe Abgleich laeuft genau EINMAL je Zeile, naemlich im
   Duplikatsschutz von `CustomerAutoCreationService`.
-  NAMEN/ADRESSEN aus Fremdformaten: `PersonNameParser` ("VN RANKO, MOHAMAD
-  ADNAN" -> "Mohamad Adnan Ranko", Anrede -> Geschlecht, Firma bleibt
+  NAMEN/ADRESSEN aus Fremdformaten: `PersonNameParser` ("VN NASSER, OMAR
+  KHALED" -> "Omar Khaled Nasser", Anrede -> Geschlecht, Firma bleibt
   unangetastet, haengendes Komma dreht nicht) und `ValueParser::address`
   (Anker ist die PLZ, nicht das Komma; ohne PLZ wird NICHTS zerlegt).
   **ZWEI BETRIEBSARTEN** (`commission_imports.mode`): eine ABRECHNUNG traegt
@@ -2459,7 +2459,7 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   wird NICHTS geloescht, NICHTS neu angelegt und KEIN Vertrag angefasst -
   nur `is_dependent` faellt weg (`independent_since` haelt den Tag fest).
   Die Familienbeziehung BLEIBT (Betreiber-Vorgabe 8): aus "Kind, abhaengig"
-  wird "eigenstaendige Kundin, Tochter von Jehad". Timeline-Eintrag + Glocke
+  wird "eigenstaendige Kundin, Tochter von Samir". Timeline-Eintrag + Glocke
   an die Betreuer sagen ausdruecklich, dass Vertraege zu pruefen sind.
   Fehlt die Kundennummer, entsteht zusaetzlich die Aufgabe "Kundennummer
   vergeben und Portal aktivieren" - vergeben wird sie nie automatisch.
@@ -4955,8 +4955,8 @@ Merge von PR #358, Teil E/F).
 
 ## Dubletten: Familie ist keine Dublette (Betreiber-Auftrag 03.10.2026, KI-063)
 
-- **Anlass**: Vater und Sohn (Maher Abboud, geb. 1971 / Ahmad Jihad
-  Abboud, geb. 2002) standen nur wegen derselben E-Mail als
+- **Anlass**: Vater und Sohn (Fadi Saleh, geb. 1971 / Ahmad Yusuf
+  Saleh, geb. 2002) standen nur wegen derselben E-Mail als
   "44 % · ✓ sicher" in der Liste und waren per "Alle auswaehlen" +
   "Zusammenfuehren" verschmelzbar - ein Merge LOESCHT die Akte des Sohnes.
 - **Der Score sortiert, die KLASSE entscheidet**:
@@ -5139,13 +5139,13 @@ Merge von PR #358, Teil E/F).
 
 ## Kinder unter 16: keine eigene Kundennummer (Betreiber-Auftrag 07.10.2026, KI-096)
 
-- **Anlass**: die Tochter "Tala Alhamoud" war als Kind verknuepft und trug
-  trotzdem eine eigene Kundennummer (2600810). Ursache: KEIN Anlageweg
+- **Anlass**: die Tochter "Lina Haddad" war als Kind verknuepft und trug
+  trotzdem eine eigene Kundennummer (2600981). Ursache: KEIN Anlageweg
   fragte das Alter. Die Nummer wurde in jedem Aufrufer vorab gezogen
   (`CustomerAutoCreationService`, Admin-Formular, Registrierung, Lexoffice);
   der wahrscheinlichste Weg ist "👪 N Kunden anlegen" im Dokumenten-Eingang
   (Gesundheitskarten / Antrag auf Familienversicherung) - er legt JE PERSON
-  eine Akte an, Kinder eingeschlossen. Welcher Weg es bei Tala war, zeigt
+  eine Akte an, Kinder eingeschlossen. Welcher Weg es bei Lina war, zeigt
   `kunden:kinder-pruefen` (Herkunft aus dem ActivityLog).
 - **Regel** (beide Alter sind EINSTELLUNGEN, `App\Support\FamilienAlter`,
   Einstellungen -> "Familie / Kinder", Standard 15/16, die Erinnerung liegt

@@ -1108,7 +1108,7 @@ class ContractCommissionImportTest extends TestCase
     public function test_mit_haken_entstehen_vertrag_und_kundenakte(): void
     {
         $import = $this->service()->analyze(
-            $this->file($this->poolCsv([['kunde' => 'VN RANKO, MOHAMAD ADNAN']])),
+            $this->file($this->poolCsv([['kunde' => 'VN NASSER, OMAR KHALED']])),
             'abrechnung.csv'
         );
         $import = $this->service()->confirm($import, null, buildContracts: true);
@@ -1123,8 +1123,8 @@ class ContractCommissionImportTest extends TestCase
         $this->assertSame('betriebshaftpflicht', $contract->type);
         $this->assertSame($import->id, $contract->commission_import_id);
 
-        // Der Name kommt lesbar in die Akte, nicht als "VN RANKO, MOHAMAD ADNAN".
-        $this->assertSame('Mohamad Adnan Ranko', Customer::sole()->user->name);
+        // Der Name kommt lesbar in die Akte, nicht als "VN NASSER, OMAR KHALED".
+        $this->assertSame('Omar Khaled Nasser', Customer::sole()->user->name);
 
         // Und die Provision haengt jetzt am neuen Vertrag.
         $this->assertSame($contract->id, ContractCommission::sole()->contract_id);
@@ -1150,8 +1150,8 @@ class ContractCommissionImportTest extends TestCase
 
     public function test_vorhandener_kunde_wird_nicht_dupliziert(): void
     {
-        $existing = $this->customer('Mohamad Adnan Ranko');
-        $csv = $this->poolCsv([['kunde' => 'VN RANKO, MOHAMAD ADNAN']]);
+        $existing = $this->customer('Omar Khaled Nasser');
+        $csv = $this->poolCsv([['kunde' => 'VN NASSER, OMAR KHALED']]);
 
         $import = $this->service()->confirm(
             $this->service()->analyze($this->file($csv), 'abrechnung.csv'),
@@ -1301,7 +1301,7 @@ class ContractCommissionImportTest extends TestCase
     {
         $parser = new PersonNameParser;
 
-        $this->assertSame('Mohamad Adnan Ranko', $parser->parse('VN RANKO, MOHAMAD ADNAN')['name']);
+        $this->assertSame('Omar Khaled Nasser', $parser->parse('VN NASSER, OMAR KHALED')['name']);
         $this->assertSame('Sven Kaergel', $parser->parse('VN Kaergel, Sven')['name']);
         // Haengendes Komma ohne Vorname: es wird NICHT gedreht.
         $this->assertSame('Ahmed Al Huweij', $parser->parse('VN Ahmed Al Huweij, ')['name']);

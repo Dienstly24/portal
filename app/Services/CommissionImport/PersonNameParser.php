@@ -6,12 +6,12 @@ namespace App\Services\CommissionImport;
  * Namen aus fremden Abrechnungs- und Auftragsdateien lesbar machen.
  *
  * WARUM EIGENS DAFUER: Die Quellen schreiben denselben Menschen auf drei
- * Arten - der Maklerpool als "VN RANKO, MOHAMAD ADNAN" (Praefix, Nachname
+ * Arten - der Maklerpool als "VN NASSER, OMAR KHALED" (Praefix, Nachname
  * zuerst, Versalien), das Energieportal als "Herr Saddam Alahmad Al Hakkar"
  * (Anrede davor, natuerliche Reihenfolge), und beide gelegentlich mit
  * haengendem Komma, wenn der Vorname fehlt ("VN Ahmed Al Huweij, ").
  * Wuerde man das ungeprueft uebernehmen, hiesse der Kunde in der Akte
- * "VN RANKO, MOHAMAD ADNAN" - und keine Suche und kein Serienbrief kaeme
+ * "VN NASSER, OMAR KHALED" - und keine Suche und kein Serienbrief kaeme
  * damit zurecht.
  *
  * GRUNDSATZ: Aus dem Namen wird NIE eine Zuordnung abgeleitet (das entscheidet
@@ -119,7 +119,7 @@ class PersonNameParser
     }
 
     /**
-     * VERSALIEN in normale Schreibweise bringen ("RANKO" -> "Ranko"), aber
+     * VERSALIEN in normale Schreibweise bringen ("NASSER" -> "Nasser"), aber
      * eine bereits gemischte Schreibweise NICHT anfassen: "McDonald" und
      * "Al Huweij" wuerden sonst schlechter, nicht besser.
      */

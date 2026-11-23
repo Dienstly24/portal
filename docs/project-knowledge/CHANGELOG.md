@@ -26,6 +26,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Tests Performed**: echte Kette (Tesseract -> Composite) am Original-Screenshot als PNG, JPEG, verkleinert und als PDF-Scan mit 72/96/150 dpi (72 dpi reproduzierte den Betreiber-Upload "Ihr Beitra"); `php artisan test` (volle Suite), `composer lint`, `composer stan`.
 - **Result**: erledigt.
 
+## 22.11.2026 - Echte Kundennamen aus Code, Tests und Doku entfernt
+
+- **Task**: Betreiber-Freigabe "Namen entfernen". Das Repository ist oeffentlich; in Tests, Kommentaren, Platzhaltern und Doku standen Namen, Kundennummern und ein Geburtsdatum aus echten Betreiber-Meldungen (KI-063, KI-096 u.a.).
+- **Files Changed**: 20 Dateien (CLAUDE.md, KNOWN_ISSUES, CHANGELOG, sechs Dienste/Parser nur Kommentare, eine Migration nur Kommentar, drei Views nur Platzhalter, acht Testdateien). Ersetzt durch erfundene Werte (Haddad, Mansour, Saleh, Nasser; Kundennummern 26009xx).
+- **Database Changes**: keine. **API Changes**: keine. Kein Verhalten geaendert.
+- **Potential Side Effects**: keine; Tests pruefen dieselben Faelle mit anderen Namen.
+- **Offen**: die Git-Historie enthaelt die alten Werte weiter; weitere reale Kontaktdaten in aelteren Parser-Tests (E-Mail, Mobilnummern) sind noch nicht ersetzt.
+- **Tests Performed**: `php -l`; volle Suite, pint und stan ueber CI.
+- **Result**: erledigt, CI ausstehend.
 ## 22.11.2026 - Eltern-Vorschlag fuer Kinder in der Familienkarte
 
 - **Task**: Betreiber-Frage "warum verknuepft das System Kunden mit gleichem Familiennamen nicht? Bei Kindern sollen sofort moegliche Eltern vorgeschlagen werden."
@@ -290,7 +299,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ## 07.10.2026 - Kinder unter 16: keine eigene Kundennummer, Erinnerung mit 15 (KI-096)
 
-- **Task**: Betreiber-Auftrag 07.10.2026 - "Tala Alhamoud" (Kind) trug die Kundennummer 2600810. Regel: unter 16 keine Nummer, kein Vertrag, kein Portal; Kind unter dem Vater (sonst Mutter); Erinnerung mit 15; Nummer ab 16; beide Alter als Einstellung. Bestand ZUERST pruefen, dann auf Freigabe umstellen.
+- **Task**: Betreiber-Auftrag 07.10.2026 - "Lina Haddad" (Kind) trug die Kundennummer 2600981. Regel: unter 16 keine Nummer, kein Vertrag, kein Portal; Kind unter dem Vater (sonst Mutter); Erinnerung mit 15; Nummer ab 16; beide Alter als Einstellung. Bestand ZUERST pruefen, dann auf Freigabe umstellen.
 - **Files Changed**: Migration `2026_10_07_120000_abhaengige_kinder_ohne_kundennummer`; neu `App\Support\FamilienAlter`, `ArchivierteKundennummer`, `Family/AbhaengigesKindService`, `AbhaengigerKundeException`, Befehle `ErinnereKinderPortalVorbereitung`, `PruefeKinderMitKundennummer`, `StelleKindAufAbhaengigUm`; geaendert `Customer`, `CustomerFamilyRelation`, `Contract`, `CustomerNumberGenerator`, `CustomerAutoCreationService`, `FamilyRelationService`, `ApplyFamilyTransitions`, `PortalAccessService`, `DocumentIntakeService`, `AdminController`, `Admin\ContractController`, `CustomerFamilyRelationController`, `SmartDocumentUploadController`, `RegisteredUserController`, `SettingsController` + `UpdateSettingsRequest`, Views `customer_show`, `partials/family_relations`, `family_transitions`, `customers`, `settings`, `routes/web.php`, `routes/console.php`, `lang/ar.json`; Tests `AbhaengigeKinderTest` (neu), `CustomerFamilyRelationTest` (nachgezogen); `CLAUDE.md`.
 - **Components Affected**: jede Kundenanlage, Vertragsanlage, Portal-Einladung, Registrierung, Familien-Registerkarte, Einstellungen, Planer.
 - **Database Changes**: `customers.customer_number` nullbar, neue Spalte `customers.portal_vorbereitung_erinnert_at`, neue Tabelle `archivierte_kundennummern`. Bestandsdaten werden von der Migration NICHT veraendert.
@@ -417,7 +426,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ## 03.10.2026 - Dubletten: Familienmitglieder nie als "sicher", nie per Ein-Klick zusammengefuehrt (KI-063)
 
-- **Task**: Betreiber-Auftrag "Moegliche Dubletten / Verwandte Kunden / Beziehung festlegen", Schritt 1 (Bestandsaufnahme, Befunde KI-063..068) und Schritt 2 Teil 1 (PR-1 des freigegebenen Plans). Anlass: Vater und Sohn Abboud als "44 % · ✓ sicher".
+- **Task**: Betreiber-Auftrag "Moegliche Dubletten / Verwandte Kunden / Beziehung festlegen", Schritt 1 (Bestandsaufnahme, Befunde KI-063..068) und Schritt 2 Teil 1 (PR-1 des freigegebenen Plans). Anlass: Vater und Sohn Saleh als "44 % · ✓ sicher".
 - **Files Changed**: `DuplicateDetectionService` (`classify()`, `identityConflicts()`, Familienrollen-Paare ausgeschlossen, Sortierung nach Klasse), `Admin\DuplicateController` (alle drei Merge-Wege lesen die Klasse; Gruppenpruefung; Uebersteuern mit Begruendung), `admin/customer_duplicates.blade.php`, `admin/customer_merge.blade.php`; neu `tests/Feature/DublettenFamilieTest.php`; `DuplicateBulkMergeTest` (sicheres Paar braucht jetzt gleiches Geburtsdatum); `CLAUDE.md`, `KNOWN_ISSUES.md`, `FEATURE_MAP.md`.
 - **Components Affected**: Dubletten-Seite, "Alle sicheren zusammenfuehren", Sammel-Merge, Einzel-Merge.
 - **Database Changes**: keine. **API Changes**: `POST /admin/customers/{id}/merge` nimmt bei Widerspruch zusaetzlich `konflikt_bestaetigt` + `konflikt_begruendung`.

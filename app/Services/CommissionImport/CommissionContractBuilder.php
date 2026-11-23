@@ -263,8 +263,8 @@ class CommissionContractBuilder
      * Kunde ueber einen EXAKTEN Namenstreffer.
      *
      * Verglichen wird eine normalisierte Fassung (Kleinschreibung, einfache
-     * Leerzeichen) - "Mohamad Adnan Ranko" trifft also auch
-     * "VN RANKO, MOHAMAD ADNAN" nach dem Umdrehen. Bewusst KEIN Teiltreffer
+     * Leerzeichen) - "Omar Khaled Nasser" trifft also auch
+     * "VN NASSER, OMAR KHALED" nach dem Umdrehen. Bewusst KEIN Teiltreffer
      * und keine Aehnlichkeit: "Ahmad" darf nicht auf "Ahmad Al Huweij"
      * passen. Interne Platzhalter-Namen zaehlen nie.
      *

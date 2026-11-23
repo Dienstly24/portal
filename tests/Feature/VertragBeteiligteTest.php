@@ -51,8 +51,8 @@ class VertragBeteiligteTest extends TestCase
 
     public function test_versicherte_personen_mit_und_ohne_akte(): void
     {
-        $vater = $this->kunde('Maher Abboud');
-        $sohn = $this->kunde('Ahmad Abboud');
+        $vater = $this->kunde('Fadi Saleh');
+        $sohn = $this->kunde('Ahmad Saleh');
         $vertrag = $this->vertrag($vater);
         $admin = $this->admin();
 
@@ -60,7 +60,7 @@ class VertragBeteiligteTest extends TestCase
             'rolle' => 'versicherte_person', 'customer_id' => (string) $sohn->id,
         ])->assertSessionHas('success');
         $this->actingAs($admin)->post(route('admin.contract.beteiligte.store', $vertrag->id), [
-            'rolle' => 'versicherte_person', 'name' => 'Lina Abboud', 'geburtsdatum' => '2018-04-02',
+            'rolle' => 'versicherte_person', 'name' => 'Lina Saleh', 'geburtsdatum' => '2018-04-02',
         ])->assertSessionHas('success');
         // Der VN darf sich selbst mitversichern.
         $this->actingAs($admin)->post(route('admin.contract.beteiligte.store', $vertrag->id), [
@@ -73,8 +73,8 @@ class VertragBeteiligteTest extends TestCase
         $this->assertSame(3, ActivityLog::where('action', 'contract_party_added')->count());
 
         $this->actingAs($admin)->get(route('admin.contract.edit', $vertrag->id))
-            ->assertOk()->assertSee('Personen am Vertrag')->assertSee('Ahmad Abboud')
-            ->assertSee('Lina Abboud')->assertSee('ohne Kundenakte')->assertSee('geb. 02.04.2018');
+            ->assertOk()->assertSee('Personen am Vertrag')->assertSee('Ahmad Saleh')
+            ->assertSee('Lina Saleh')->assertSee('ohne Kundenakte')->assertSee('geb. 02.04.2018');
     }
 
     public function test_beitragszahler_hoechstens_einer_und_nie_der_vn(): void
@@ -216,8 +216,8 @@ class VertragBeteiligteTest extends TestCase
     public function test_zusammenfuehrung_haengt_die_beteiligung_um(): void
     {
         $vn = $this->kunde('VN');
-        $haupt = $this->kunde('Ahmad Abboud', ['birth_date' => '2002-01-01']);
-        $dublette = $this->kunde('Ahmad Abboud', ['birth_date' => '2002-01-01']);
+        $haupt = $this->kunde('Ahmad Saleh', ['birth_date' => '2002-01-01']);
+        $dublette = $this->kunde('Ahmad Saleh', ['birth_date' => '2002-01-01']);
         $vertrag = $this->vertrag($vn);
         $b = $this->service()->hinzufuegen($vertrag, 'versicherte_person', $dublette, []);
 

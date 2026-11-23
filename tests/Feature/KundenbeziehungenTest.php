@@ -321,8 +321,8 @@ class KundenbeziehungenTest extends TestCase
 
     public function test_registerkarte_familie_schreibt_die_beziehung_mit(): void
     {
-        $vater = $this->kunde('Jehad Ebraheem', ['gender' => 'male']);
-        $tochter = $this->kunde('Zania Ebraheem', ['gender' => 'female']);
+        $vater = $this->kunde('Samir Mansour', ['gender' => 'male']);
+        $tochter = $this->kunde('Nour Mansour', ['gender' => 'female']);
         $family = app(FamilyRelationService::class);
 
         $family->link($vater, $tochter, 'tochter');

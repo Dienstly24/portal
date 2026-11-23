@@ -108,7 +108,7 @@ $labels = [
             </label>
             <div class="field" style="margin-top:10px;margin-bottom:0;">
                 <label for="konflikt_begruendung">Begründung (wird protokolliert)</label>
-                <textarea id="konflikt_begruendung" name="konflikt_begruendung" rows="2" maxlength="500" style="width:100%;" placeholder="z. B. Geburtsdatum in der Import-Akte vertippt, laut Ausweis 10.02.1971">{{ old('konflikt_begruendung') }}</textarea>
+                <textarea id="konflikt_begruendung" name="konflikt_begruendung" rows="2" maxlength="500" style="width:100%;" placeholder="z. B. Geburtsdatum in der Import-Akte vertippt, laut Ausweis 14.06.1971">{{ old('konflikt_begruendung') }}</textarea>
             </div>
         </div>
         @endif
