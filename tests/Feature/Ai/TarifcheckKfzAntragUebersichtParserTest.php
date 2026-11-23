@@ -188,6 +188,38 @@ class TarifcheckKfzAntragUebersichtParserTest extends TestCase
         $this->assertSame('2026-11-23', $r['data']['versicherung']['start_date']);
     }
 
+    /**
+     * Betreiber-Upload 23.11.2026: derselbe Screenshot als PDF-SCAN mit
+     * niedriger Aufloesung (nachgestellt mit 72 dpi). Die OCR liest
+     * "Ihr Beitra", den Tarifnamen verstuemmelt ("imal .") und eine
+     * Rauschzeile ("Gem"). Vorher: "Sonstiges Dokument / KI empfohlen".
+     */
+    public function test_pdf_scan_mit_niedriger_aufloesung(): void
+    {
+        $text = implode("\n", [
+            'Ihr Beitra , .', '9 Adresse des Versicherungsnehmers ändern', 'monatlich © 58,28 €',
+            'E-Mail-Adresse max.mustermann@example.com', 'Versicherungsnehmer Herr Max Mustermann', '',
+            'Musterstr. 22/2', '', '71364 Winnenden', 'Ihr Tarif 01511234567', 'WGV', '', 'imal .', '',
+            'Gem Angaben zum neuen Fahrzeug ändern', 'Ihr Schutz Kilometerstand 183.000 km', 'Ihr Auto',
+            'smart forfour 1.3', 'Versicherungsumfang', 'Haftpflicht', 'Versicherungsbeginn Zahlungsdaten ändern',
+            '23.11.2026 (bzw. Tag der', 'Zulassung) IBAN DE89 37040044 0532 0130 00',
+            '@ Tarifdetails anzeigen Kontoinhaber Max Mustermann', '(Versicherungsnehmer)',
+        ]);
+
+        $r = app(DocumentTemplateParser::class)->parse($text);
+
+        $this->assertNotNull($r);
+        $v = $r['data']['versicherung'];
+        $this->assertSame('WGV', $v['insurer']);
+        $this->assertArrayNotHasKey('tariff', $v, 'verstuemmelter Tarifname wird nicht uebernommen');
+        $this->assertSame(58.28, $v['premium_amount']);
+        $this->assertSame('2026-11-23', $v['start_date']);
+        $this->assertSame('Mustermann', $r['data']['person']['last_name']);
+        $this->assertSame(183000, $r['data']['kfz']['initial_mileage']);
+        $this->assertSame('DE89370400440532013000', $r['data']['bank']['iban']);
+        $this->assertStringContainsString('Tarifname nicht sicher lesbar', $r['summary']);
+    }
+
     public function test_abschluss_seite_bleibt_beim_eigenen_parser(): void
     {
         $this->assertNull((new TarifcheckKfzAntragUebersichtParser)->parse(

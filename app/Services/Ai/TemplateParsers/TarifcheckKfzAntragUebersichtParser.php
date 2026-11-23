@@ -93,7 +93,10 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         $text = (string) preg_replace('/(?<![\p{L}])[TlI1|]hr (Beitrag|Tarif|Schutz|Auto)\b/u', 'Ihr $1', $text);
         $upper = mb_strtoupper($text);
 
-        if (! str_contains($upper, 'IHR BEITRAG')
+        // "Ihr Beitrag" kommt bei niedrig aufgeloesten PDF-Scans als "Ihr Beitra"
+        // an (Betreiber-Upload 23.11.2026) - die Anfangsbuchstaben genuegen,
+        // oder die Ueberschrift des Kundenblocks.
+        if ((! str_contains($upper, 'IHR BEITRA') && ! str_contains($upper, 'ADRESSE DES VERSICHERUNGSNEHMERS'))
             || ! str_contains($upper, 'IHR TARIF')
             || ! str_contains($upper, 'VERSICHERUNGSNEHMER')
             || (! str_contains($upper, 'VERSICHERUNGSUMFANG') && ! str_contains($upper, 'IHR AUTO'))) {
@@ -224,7 +227,7 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         // Beitrag: "monatlich (i) 58,28 €" - Zahlweise und Betrag koennen auf
         // derselben oder auf benachbarten Zeilen stehen.
         $flat = (string) preg_replace('/\s+/u', ' ', $text);
-        if (preg_match('/Ihr Beitrag.{0,80}?\b(monatlich|vierteljährlich|vierteljaehrlich|halbjährlich|halbjaehrlich|jährlich|jaehrlich)\b.{0,15}?(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:€|EUR)/u', $flat, $m)) {
+        if (preg_match('/\b(monatlich|vierteljährlich|vierteljaehrlich|halbjährlich|halbjaehrlich|jährlich|jaehrlich)\b[^\d\n]{0,6}(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:€|EUR)/u', $flat, $m)) {
             $raw['premium_amount'] = (float) str_replace(['.', ','], ['', '.'], $m[2]);
             $raw['premium_interval'] = match (true) {
                 str_starts_with($m[1], 'monat') => 'monthly',
@@ -353,10 +356,15 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
             if ($kanon !== null) {
                 $insurer = $kanon;
                 // Der Tarif ist die naechste Zeile, die NICHT wieder der
-                // Gesellschaftsname ist.
+                // Gesellschaftsname ist - und NUR diese: ist sie verstuemmelt
+                // ("imal ." aus "Optimal" bei einem 72-dpi-Scan), bleibt der
+                // Tarif leer, statt eine Folgezeile ("Gem") zu nehmen.
                 foreach (array_slice($werte, $idx + 1) as $rest) {
                     if ($this->knownInsurer($rest) !== $kanon) {
-                        $tariff = $rest;
+                        $rest = trim($rest, ' .,;');
+                        if (preg_match('/^\p{Lu}[\p{L}\d+\-]{2,}(?:\s+[\p{L}\d+\-]+){0,4}$/u', $rest)) {
+                            $tariff = $rest;
+                        }
                         break;
                     }
                 }
@@ -484,6 +492,8 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
 
         if (isset($ins['tariff'])) {
             $s .= ' - Tarifname aus der Texterkennung - bei unbekanntem Namen bitte am Bild pruefen';
+        } else {
+            $s .= ' - Tarifname nicht sicher lesbar - bitte am Bild nachtragen';
         }
 
         return $s.' - Antrag ohne Vertragsnummer (kommt mit der Police). Felder gratis aus dem Screenshot gelesen (ohne KI).';

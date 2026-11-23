@@ -1022,7 +1022,13 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   `AntragBestaetigungParser`) wird ueber
   `findApplicationContractForSameProcess` mit diesem Vertrag
   zusammengefuehrt; enthaelt der Text "Referenznummer", greift dieser
-  Parser nicht. Steht VOR `WgvKfzPoliceParser`. Grenze: bei starker
+  Parser nicht. PDF-SCAN mit niedriger Aufloesung (Betreiber-Upload
+  23.11.2026, mit 72 dpi nachgestellt): "Ihr Beitra" statt "Ihr Beitrag",
+  Tarifname verstuemmelt ("imal ."). Erkennung deshalb ueber "Ihr Beitra"
+  ODER "Adresse des Versicherungsnehmers"; der Tarif ist NUR die Zeile
+  direkt unter der Gesellschaft und nur mit plausibler Form - sonst bleibt
+  er leer (nie eine Rauschzeile wie "Gem"), die Zusammenfassung sagt es.
+  Steht VOR `WgvKfzPoliceParser`. Grenze: bei starker
   JPEG-Kompression kann der Tarifname verlesen werden - die
   Zusammenfassung bittet um Pruefung. Test:
   `TarifcheckKfzAntragUebersichtParserTest`.

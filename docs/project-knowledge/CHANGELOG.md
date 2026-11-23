@@ -14,7 +14,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Files Changed**: neu `app/Services/Ai/TemplateParsers/TarifcheckKfzAntragUebersichtParser.php`, Test `tests/Feature/Ai/TarifcheckKfzAntragUebersichtParserTest.php`; `AppServiceProvider` (Registrierung VOR `WgvKfzPoliceParser`), `CLAUDE.md`, Wissensbasis.
 - **Database Changes**: keine. **API Changes**: keine.
 - **Potential Side Effects**: greift nur bei "Ihr Beitrag" + "Ihr Tarif" + "Versicherungsnehmer" + ("Versicherungsumfang" oder "Ihr Auto") und ohne "Referenznummer". Bereits hochgeladene Bilder profitieren erst nach "Neu analysieren".
-- **Tests Performed**: echte Kette (Tesseract -> Composite) am Original-Screenshot als PNG, JPEG und verkleinert; `php artisan test` (volle Suite), `composer lint`, `composer stan`.
+- **Tests Performed**: echte Kette (Tesseract -> Composite) am Original-Screenshot als PNG, JPEG, verkleinert und als PDF-Scan mit 72/96/150 dpi (72 dpi reproduzierte den Betreiber-Upload "Ihr Beitra"); `php artisan test` (volle Suite), `composer lint`, `composer stan`.
 - **Result**: erledigt.
 
 ## 22.11.2026 - Eltern-Vorschlag fuer Kinder in der Familienkarte
