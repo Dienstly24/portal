@@ -479,14 +479,18 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     @php
         $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'var(--emerald)'][$d->color ?? 'green'];
         $docContract = $d->contract_id ? $customer->contracts->firstWhere('id', $d->contract_id) : null;
+        // Doppelt in DIESER Akte (gleicher Inhalt, frueher hochgeladen) - KI-126.
+        $docDoppelt = $d->content_hash ? $docs->first(fn ($o) => $o->id !== $d->id && $o->content_hash === $d->content_hash
+            && ($o->created_at < $d->created_at || ($o->created_at == $d->created_at && strcmp((string) $o->id, (string) $d->id) < 0))) : null;
     @endphp
     <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);">
         <div style="width:10px;height:10px;border-radius:50%;background:{{ $dotColor }};flex:none;" title="Priorität"></div>
         <div style="flex:1;min-width:0;">
-            <div style="font-size:14px;font-weight:600;">{{ $d->file_name }}</div>
+            <div style="font-size:14px;font-weight:600;">{{ \App\Support\Dateiname::dekodiere($d->file_name) }}</div>
             <div style="font-size:12px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px;">
                 <span>{{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }}</span>
                 <span>· {{ $d->created_at->lokal()->format('d.m.Y') }}</span>
+                @if($docDoppelt)<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;" title="Identischer Inhalt wie „{{ $docDoppelt->file_name }}“">⧉ Doppelt – schon vorhanden seit {{ $docDoppelt->created_at->lokal()->format('d.m.Y') }}</span>@endif
                 @if(($d->visibility ?? 'customer') === 'internal')<span style="background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
                 @if($docContract)<span style="background:var(--emerald-soft);color:var(--emerald);padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
                 @if($docContract?->isExternal())@include('admin.partials.contract_origin_badge', ['contract' => $docContract])@endif
@@ -1234,6 +1238,16 @@ function smartReanalyze(docId, btn) {
             if (xhr.status >= 200 && xhr.status < 300) {
                 label.textContent = '✓ Hochgeladen – KI-Analyse läuft im Hintergrund';
                 bar.style.background = 'var(--emerald)';
+                // Doppelt-Hinweis (KI-126): das Backend meldet bereits vorhandene
+                // Dateien - vorher wurde die Meldung nie angezeigt.
+                let dups = [];
+                try { dups = (JSON.parse(xhr.responseText).duplicates || []); } catch(e) {}
+                if (dups.length) {
+                    alert('Hinweis: ' + dups.length + ' Datei(en) waren bereits im System:\n\n'
+                        + dups.map(d => '• ' + d.file_name + ' (seit ' + d.uploaded_at
+                            + (d.customer_name ? ', Kunde: ' + d.customer_name : (d.in_inbox ? ', im Eingang' : '')) + ')').join('\n')
+                        + '\n\nDas Duplikat ist im Dokumenten-Eingang markiert und kann dort gelöscht werden.');
+                }
                 setTimeout(() => { window.location.href = window.location.pathname + '#tab-dokumente'; window.location.reload(); }, 800);
             } else {
                 let msg = 'Fehler beim Upload.';
@@ -1304,6 +1318,16 @@ function smartReanalyze(docId, btn) {
                     </select>
                 </div>
             </div>
+            {{-- Doppelt-Pruefung (KI-126): Datei liegt in der Akte schon vor --}}
+            <div id="doc-konflikt" style="display:none;margin-bottom:14px;padding:12px 14px;border:1px solid #F0E0B0;background:#FEF3C7;border-radius:8px;font-size:13px;color:#92400E;">
+                <div style="font-weight:700;margin-bottom:6px;">⚠ Bereits in der Akte vorhanden</div>
+                <div id="doc-konflikt-liste" style="margin-bottom:10px;"></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" class="btn btn-primary" data-konflikt="ersetzen">🔁 Alte ersetzen</button>
+                    <button type="button" class="btn btn-ghost" data-konflikt="ueberspringen">⏭ Vorhandene überspringen</button>
+                    <button type="button" class="btn btn-ghost" data-konflikt="beide_behalten">➕ Beide behalten</button>
+                </div>
+            </div>
             <div id="upload-progress" style="display:none;margin-bottom:14px;">
                 <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
                     <div id="upload-progress-bar" style="height:100%;width:0;background:var(--graphite);transition:width .2s;"></div>
@@ -1331,22 +1355,50 @@ function smartReanalyze(docId, btn) {
             const tooBig = f.size > 10*1024*1024;
             const row = document.createElement('div');
             row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;'+(tooBig?'background:#F9E3E3;':'');
-            row.innerHTML = '<span>📄 '+f.name+'</span><span style="color:'+(tooBig?'#A32D2D':'var(--ink-soft)')+';">'+fmt(f.size)+(tooBig?' · zu groß':'')+'</span>';
+            const left = document.createElement('span');
+            left.textContent = '📄 ' + f.name;
+            const right = document.createElement('span');
+            right.style.color = tooBig ? '#A32D2D' : 'var(--ink-soft)';
+            right.textContent = fmt(f.size) + (tooBig ? ' · zu groß' : '');
+            row.appendChild(left); row.appendChild(right);
             list.appendChild(row);
         });
     }
+    const konfliktBox = document.getElementById('doc-konflikt');
+    const konfliktListe = document.getElementById('doc-konflikt-liste');
+    function resetKonflikt() { konfliktBox.style.display = 'none'; konfliktListe.innerHTML = ''; }
+    function zeigeKonflikte(konflikte) {
+        konfliktListe.innerHTML = '';
+        konflikte.forEach(k => {
+            const z = document.createElement('div');
+            z.style.marginBottom = '4px';
+            z.textContent = '📄 ' + k.file_name + (k.art === 'identisch'
+                ? ' – identische Datei schon vorhanden'
+                : ' – Datei mit gleichem Namen vorhanden (anderer Inhalt)')
+                + (k.vorhanden_name && k.vorhanden_name !== k.file_name ? ' als „' + k.vorhanden_name + '"' : '')
+                + (k.vorhanden_seit ? ', seit ' + k.vorhanden_seit : '') + '.';
+            konfliktListe.appendChild(z);
+        });
+        konfliktBox.style.display = 'block';
+    }
+    konfliktBox.querySelectorAll('[data-konflikt]').forEach(b => b.addEventListener('click', () => senden(b.getAttribute('data-konflikt'))));
     dz.addEventListener('click', () => input.click());
-    input.addEventListener('change', render);
+    input.addEventListener('change', () => { resetKonflikt(); render(); });
     ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--graphite)'; dz.style.background = 'var(--canvas)'; }));
     ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; }));
-    dz.addEventListener('drop', ev => { ev.preventDefault(); input.files = ev.dataTransfer.files; render(); });
+    dz.addEventListener('drop', ev => { ev.preventDefault(); input.files = ev.dataTransfer.files; resetKonflikt(); render(); });
 
     // Echter Upload-Fortschritt via XHR (Punkt 3): Prozent + verbleibende Zeit
     form.addEventListener('submit', function(ev) {
         if (!input.files.length) return; // normales Verhalten, Server validiert
         ev.preventDefault();
+        senden(null);
+    });
+    function senden(entscheidung) {
+        resetKonflikt();
         const xhr = new XMLHttpRequest();
         const data = new FormData(form);
+        if (entscheidung) data.append('bei_konflikt', entscheidung);
         const bar = document.getElementById('upload-progress-bar');
         const wrap = document.getElementById('upload-progress');
         const label = document.getElementById('upload-progress-label');
@@ -1362,10 +1414,17 @@ function smartReanalyze(docId, btn) {
             label.textContent = pct + '% · noch ~' + remain + ' s';
         });
         xhr.addEventListener('load', function() {
+            let j = null;
+            try { j = JSON.parse(xhr.responseText); } catch(e) {}
             if (xhr.status >= 200 && xhr.status < 300) {
-                label.textContent = '✓ Erfolgreich hochgeladen';
+                label.textContent = '✓ ' + ((j && j.message) || 'Erfolgreich hochgeladen');
                 bar.style.background = 'var(--emerald)';
-                setTimeout(() => window.location.reload(), 600);
+                setTimeout(() => window.location.reload(), (j && (j.ersetzt || j.uebersprungen)) ? 1400 : 600);
+            } else if (xhr.status === 409 && j && j.konflikte) {
+                // Nichts gespeichert - erst entscheiden lassen.
+                wrap.style.display = 'none';
+                bar.style.width = '0';
+                zeigeKonflikte(j.konflikte);
             } else {
                 let msg = 'Fehler beim Upload.';
                 try { const j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e) {}
@@ -1381,7 +1440,7 @@ function smartReanalyze(docId, btn) {
         xhr.setRequestHeader('Accept', 'application/json');
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         xhr.send(data);
-    });
+    }
 })();
 </script>
 </div>

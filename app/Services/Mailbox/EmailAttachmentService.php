@@ -5,6 +5,7 @@ namespace App\Services\Mailbox;
 use App\Models\Contract;
 use App\Models\Document;
 use App\Models\EmailMessage;
+use App\Support\Dateiname;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -38,6 +39,8 @@ class EmailAttachmentService
 
         $meta = [];
         foreach ($attachments as $attachment) {
+            // RFC-2047-kodierte Namen ("=?UTF-8?B?...?=") lesbar machen (KI-127).
+            $attachment['filename'] = Dateiname::dekodiere($attachment['filename']);
             $path = 'email_attachments/'.$message->id.'/'.Str::random(8).'_'.$this->sanitizeFilename($attachment['filename']);
             Storage::disk(self::DISK)->put($path, $attachment['content']);
             $meta[] = [

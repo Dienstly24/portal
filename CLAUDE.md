@@ -1933,6 +1933,18 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   `duplicate` mit, die Oberflaeche bietet "Alle Dokumente ... zuordnen"
   an - liegt er ausserhalb des Portfolios, nennt die Meldung weder Name
   noch ID (vorher stand der Name drin). Test `BestandskundeStapelZuordnungTest`.
+- **Dokument doppelt hochgeladen (Kundenakte)** (Betreiber-Meldung
+  23.11.2026, KI-126): `CustomerDocumentController::storeDocument` prueft
+  VOR dem Speichern gegen die EIGENE Akte - gleicher Inhalt (SHA-256) oder
+  gleicher Dateiname mit anderem Inhalt (Browser-Zusatz "(1)" zaehlt nicht).
+  Ohne Feld `bei_konflikt` wird bei einem Treffer NICHTS gespeichert
+  (JSON 409 + `konflikte`, Formular ohne JS: `warning`); der Dialog bietet
+  "Alte ersetzen" (Datensatz samt Kategorie/Vertrag bleibt, Datei UND
+  `content_hash` neu - `documentReplace` nutzt denselben Weg, vorher blieb
+  der alte Hash stehen), "Vorhandene ueberspringen", "Beide behalten".
+  Fremde Akten werden NIE erwaehnt. Die Liste markiert die spaetere Kopie
+  mit "Doppelt". Anhangsnamen nach RFC 2047 ("=?UTF-8?B?...?=") dekodiert
+  `App\Support\Dateiname` (KI-127). Test: `DoppeltesHochladenTest`.
 - **Vertrags-Duplikat-Schutz + Version History** (`DocumentIntakeService`,
   Betreiber-Vorgabe 23.07.2026): Ein neu importiertes Dokument fuer ein
   bereits erfasstes Fahrzeug/eine Police erzeugt KEIN Duplikat mehr.
