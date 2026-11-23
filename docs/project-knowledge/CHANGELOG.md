@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 23.11.2026 - Kfz-Antrags-Zusammenfassung (Screenshot) gratis lesen (KI-124)
+
+- **Task**: Betreiber: "das System soll auch solche Bilder erkennen" - Screenshot der Zusammenfassung der Kfz-Antragsstrecke mit Gesellschaft, Beginn, Deckung, Kilometerstand und kompletten Kundendaten.
+- **Files Changed**: neu `app/Services/Ai/TemplateParsers/TarifcheckKfzAntragUebersichtParser.php`, Test `tests/Feature/Ai/TarifcheckKfzAntragUebersichtParserTest.php`; `AppServiceProvider` (Registrierung VOR `WgvKfzPoliceParser`), `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: greift nur bei "Ihr Beitrag" + "Ihr Tarif" + "Versicherungsnehmer" + ("Versicherungsumfang" oder "Ihr Auto") und ohne "Referenznummer". Bereits hochgeladene Bilder profitieren erst nach "Neu analysieren".
+- **Tests Performed**: echte Kette (Tesseract -> Composite) am Original-Screenshot als PNG, JPEG und verkleinert; `php artisan test` (volle Suite), `composer lint`, `composer stan`.
+- **Result**: erledigt.
+
 ## 22.11.2026 - Eltern-Vorschlag fuer Kinder in der Familienkarte
 
 - **Task**: Betreiber-Frage "warum verknuepft das System Kunden mit gleichem Familiennamen nicht? Bei Kindern sollen sofort moegliche Eltern vorgeschlagen werden."

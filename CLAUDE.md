@@ -1000,6 +1000,32 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   einer Ueberschrift am Zeilenanfang - das Kleingedruckte nennt die Sparten
   im Fliesstext ("Kfz-Haftpflichtversicherung: 446,90 EUR").
   Test: `CosmosDirektKfzBeitragsrechnungParserTest`.
+- **Kfz-ANTRAG, Zusammenfassung der Antragsstrecke als SCREENSHOT**
+  (`TarifcheckKfzAntragUebersichtParser`, Betreiber-Auftrag 23.11.2026,
+  KI-124): die Seite "Pruefen und absenden" des Vergleichsrechners
+  (Tarifcheck/CHECK24-Partnerrechner) mit "Ihr Beitrag", "Ihr Tarif",
+  "Ihr Schutz", "Adresse des Versicherungsnehmers", "Angaben zum neuen
+  Fahrzeug", "Zahlungsdaten". Vorher griff KEIN Parser. Gelesen ueber das
+  Beschriftungs-VOKABULAR (die OCR mischt die zwei Spalten in eine Zeile -
+  "Optimal Angaben zum neuen Fahrzeug andern" - oder liest sie bei
+  verkleinerten Bildern nacheinander; Fremdbeschriftungen werden vor dem
+  Wert abgeschnitten). Gesellschaft aus dem Tarif-Block gegen eine feste
+  Liste (das Logo kommt als zweite Kopie des Namens an), Tarif = naechste
+  Zeile; Beitrag ueber "Zahl,Zahl EUR" (das Info-Symbol davor kommt als
+  "©O"); Beginn NUR als echtes Datum ("23.11.2026 (bzw. Tag der
+  Zulassung)" ja, "Tag der Zulassung" allein nie); Deckung NUR aus
+  "Versicherungsumfang"; Kilometerstand -> `initial_mileage` (nie
+  Jahresfahrleistung); Hersteller = erstes Wort von "Ihr Auto". IBAN NUR mit
+  gueltiger Pruefziffer UND Kontoinhaber = Versicherungsnehmer. "Thr"
+  statt "Ihr" wird zurueckgesetzt. Stufe `antrag`, KEINE Vertragsnummer -
+  der Screenshot der Abschluss-Seite (Referenznummer,
+  `AntragBestaetigungParser`) wird ueber
+  `findApplicationContractForSameProcess` mit diesem Vertrag
+  zusammengefuehrt; enthaelt der Text "Referenznummer", greift dieser
+  Parser nicht. Steht VOR `WgvKfzPoliceParser`. Grenze: bei starker
+  JPEG-Kompression kann der Tarifname verlesen werden - die
+  Zusammenfassung bittet um Pruefung. Test:
+  `TarifcheckKfzAntragUebersichtParserTest`.
 - **Kfz-Angebot der Sparkassen DirektVersicherung**
   (`SparkasseDirektKfzParser`, 31.07.2026): Spaltenlayout (Beschriftung links,
   Wert rechts), Stufe `antrag`. Bewusst NICHT übernommen: die Empfehlung

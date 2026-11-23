@@ -112,6 +112,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Bankkarte/girocard (`BankkarteParser`, vor `KontaktdatenBlockParser`): kurzer Text + Kartenmerkmal + IBAN mit gueltiger Pruefziffer, sonst greift er nicht. Test `BankkarteParserTest`
 - DEVK-Kfz-Police (`DevkKfzPoliceParser`, Neuvertrag + Anpassung): steht VOR `Check24KfzProtocolParser` - die Police nennt CHECK24 als Vermittler und "Beratungsprotokoll" im Kleingedruckten (KI-102). Test `DevkKfzPoliceParserTest`
 - CosmosDirekt-Kfz-Beitragsrechnung (`CosmosDirektKfzBeitragsrechnungParser`, KI-123): liest die Spalte des NEUEN Jahres; Faelligkeit ist kein Vertragsbeginn, keine Bankdaten. Test `CosmosDirektKfzBeitragsrechnungParserTest`
+- Kfz-Antragsstrecke, ZUSAMMENFASSUNG als Screenshot (`TarifcheckKfzAntragUebersichtParser`, KI-124): Gesellschaft/Tarif/Beitrag/Beginn/Deckung, Fahrzeug + Kilometerstand, Kunde komplett, IBAN nur bei Kontoinhaber = VN. Stufe `antrag`, steht VOR `WgvKfzPoliceParser`. Test `TarifcheckKfzAntragUebersichtParserTest`
 - Status **ACTIVE** · Regel `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`
 
 ### F-022 Dokumenten-Anforderungen

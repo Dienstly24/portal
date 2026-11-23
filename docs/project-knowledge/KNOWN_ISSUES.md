@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-124 | MEDIUM | cost/correctness | Dokumenten-Eingang: Screenshot der Kfz-Antrags-Zusammenfassung (Vergleichsrechner) von keinem Parser erkannt - nur per KI lesbar | FIXED |
 | KI-123 | MEDIUM | correctness | Dokumenten-Eingang: CosmosDirekt-Kfz-Beitragsrechnung nur per kostenpflichtiger KI lesbar ("Rechnung 40 %", kein Kunde) | FIXED |
 | KI-122 | HIGH | correctness | Dokumenten-Eingang: Bestandskunde trotz vollem Namen/IBAN im OCR-Text "Kein Kunde gefunden"; Vorgang bot den Kunden eines bereits zugeordneten Geschwister-Dokuments nicht an | FIXED |
 | KI-121 | HIGH | legal | Website, Leistungsseiten, Mails und KI-Prompts stellten Dienstly24 als Berater/Makler dar | FIXED |
@@ -169,6 +170,15 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-124 - Eingang: Kfz-Antrags-Zusammenfassung (Screenshot) nur per KI lesbar
+- **Category** cost/correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** neu `App\Services\Ai\TemplateParsers\TarifcheckKfzAntragUebersichtParser`, Reihenfolge in `AppServiceProvider`
+- **Description** Betreiber-Auftrag 23.11.2026: kuenftig wird die Zusammenfassungsseite der Kfz-Antragsstrecke (Tarifcheck/CHECK24-Partnerrechner: "Ihr Beitrag", "Ihr Tarif", "Adresse des Versicherungsnehmers", "Angaben zum neuen Fahrzeug", "Zahlungsdaten") als Screenshot hochgeladen. Gemessen (Tesseract deu+eng, 2x vergroessert wie im Extraktor): die OCR liest die Seite fast fehlerfrei, aber KEIN Parser der Kette griff - das Bild waere "Sonstiges / KI empfohlen" geworden.
+- **Fix (23.11.2026)**: eigener Gratis-Parser (Typ `kfz_vertrag`, Stufe `antrag`). Liest ueber das Beschriftungs-Vokabular (Spalten kommen gemischt bzw. nacheinander an), Gesellschaft aus dem Tarif-Block (Logo-Doppel "WGV/WGV" zaehlt einmal), Beitrag trotz verlesenem Info-Symbol ("©O58,28€"), Beginn nur als echtes Datum, Deckung nur aus "Versicherungsumfang", Kilometerstand -> `initial_mileage`, IBAN nur mit Pruefziffer UND Kontoinhaber = Versicherungsnehmer. "Thr" statt "Ihr" (verkleinerte Bilder) wird zurueckgesetzt. Steht vor `WgvKfzPoliceParser`; die Abschluss-Seite (Referenznummer) bleibt beim `AntragBestaetigungParser`.
+- **Grenze**: bei starker JPEG-Kompression las Tesseract den Tarifnamen einmal falsch ("Stiel" statt "Optimal") - das ist nicht korrigierbar; die Zusammenfassung bittet deshalb, den Tarifnamen am Bild zu pruefen.
+- **Test** `TarifcheckKfzAntragUebersichtParserTest` (9 Faelle, inkl. echter Kette aus dem Container); am echten Screenshot als PNG, JPEG (Qualitaet 60) und auf 1000 px verkleinert gemessen.
+- **Discovered** 23.11.2026 (Betreiber)
 
 ### KI-123 - Eingang: CosmosDirekt-Beitragsrechnung nur per KI lesbar
 - **Category** correctness · **Severity** MEDIUM · **Status** FIXED
