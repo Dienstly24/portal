@@ -128,9 +128,12 @@ class FahrzeugscheinParser implements DocumentTemplateParser
         }
 
         // Feld I: Datum der Zulassung auf den Halter.
-        if (preg_match('/\bDatum\b\W{0,4}(\d{2})\.(\d{2})\.(\d{4})\b/u', $text, $m)
-            && $m[3].'-'.$m[2].'-'.$m[1] <= date('Y-m-d')) {
-            $raw['acquisition_date'] = $m[3].'-'.$m[2].'-'.$m[1];
+        if (preg_match('/\bDatum\b\W{0,4}(\d{2})\.(\d{2})\.(\d{4})\b/u', $text, $m)) {
+            $datum = $m[3].'-'.$m[2].'-'.$m[1];
+            $heute = date('Y-m-d');
+            if ($datum <= $heute) {
+                $raw['acquisition_date'] = $datum;
+            }
         }
 
         // Feld 2: "FIAT (I)" - Herstellerkurzname mit Laenderkennung.
