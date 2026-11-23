@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-131 | HIGH | correctness | Kfz-Antrags-Zusammenfassung (KRAVAG): bei spaltenweiser OCR fehlten Name, IBAN, Beitrag, Tarif und Kilometerstand | FIXED |
 | KI-130 | HIGH | usability | Dokumenten-Eingang: Fahrzeugschein-Foto ohne Parser; Kunde/Vertrag wurde ueber FIN oder Kennzeichen nur vorgeschlagen, nie automatisch zugeordnet | FIXED |
 | KI-129 | MEDIUM | cost/correctness | Dokumenten-Eingang: Itzehoer-Kfz-Versicherungsschein von keinem Parser erkannt; Heuristik nahm E-Mail und IBAN der Itzehoer als Kundendaten | FIXED |
 | KI-126 | HIGH | usability/correctness | Kundenakte: erneut hochgeladene, bereits vorhandene Datei wurde kommentarlos doppelt gespeichert - kein Hinweis, kein Angebot zum Ersetzen; ersetztes Dokument behielt den Hash der alten Datei | FIXED |
@@ -176,6 +177,14 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-131 - Antrags-Zusammenfassung: Werte getrennt von ihren Beschriftungen
+- **Category** correctness · **Severity** HIGH · **Status** FIXED
+- **Location** `TarifcheckKfzAntragUebersichtParser`
+- **Description** Betreiber-Meldung 23.11.2026 (KRAVAG-Screenshot): "Name, Anschrift, Bankkonto, E-Mail werden nicht erkannt". Nachgestellt (Chromium + Tesseract, erfundene Daten): bei diesem Layout liefert die OCR je Karte erst ALLE Beschriftungen, dann die Werte. Der Parser las nur "Beschriftung + Wert" in einer Zeile bzw. der Folgezeile - es fehlten Name (dort stand die E-Mail), Kontoinhaber (dort stand "225.000 km", IBAN verworfen), Kilometerstand; dazu "monatiich" statt "monatlich", "153, 11 €" (2x vergroessert), der Tarif hinter "KRAVAG-Allgem. Vers." und der zweizeilige Tarif-/Modellname.
+- **Fix (23.11.2026)**: Rueckfallwege nur fuer den getrennten Fall: Name = erste Zeile MIT Anrede in den naechsten vier Zeilen; Kontoinhaber = Name DIREKT ueber dem Vermerk "(Versicherungsnehmer)" (ohne Vermerk keine IBAN); km-Stand nur als EINZIGER km-Wert und ohne Fahrleistung; Zahlweise am Wortanfang; Komma-Leerzeichen nur vor "€"; Gesellschaft auch mit Bindestrich-Zusatz; Zeile auf "mit/und/plus/ohne/inkl." wird mit der naechsten verbunden; Modell um ein einzelnes Folgewort ergaenzt. Die bisherigen Testeingaben liefern unveraendert dasselbe.
+- **Test** `TarifcheckKfzAntragUebersichtParserTest` (2 Fassungen + Gegenprobe ohne Vermerk)
+- **Discovered** 23.11.2026 (Betreiber)
 
 ### KI-130 - Fahrzeugschein: Kunde und Vertrag ueber FIN/Kennzeichen
 - **Category** usability · **Severity** HIGH · **Status** FIXED

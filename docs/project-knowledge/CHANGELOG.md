@@ -8,10 +8,10 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
-## 23.11.2026 - Itzehoer-Police und Fahrzeugschein gratis lesen, Zuordnung ueber FIN/Kennzeichen (KI-129, KI-130)
+## 23.11.2026 - Itzehoer-Police und Fahrzeugschein gratis lesen, Zuordnung ueber FIN/Kennzeichen (KI-129, KI-130), Antrags-Zusammenfassung spaltenweise (KI-131)
 
-- **Task**: Betreiber: "Erkenne den Vertrag (Itzehoer-Police) im Eingang" und "beim Fahrzeugschein Kunde und Vertrag ueber Kennzeichen oder FIN finden und ins System bringen".
-- **Files Changed**: neu `ItzehoerKfzPoliceParser`, `FahrzeugscheinParser`, Tests `ItzehoerKfzPoliceParserTest`, `FahrzeugscheinZuordnungTest`, Fixtures (anonymisiert); geaendert `AppServiceProvider` (Reihenfolge), `DocumentIntakeService::findVehicleMatch`, `AnalyzeDocumentJob`.
+- **Task**: Betreiber: "Erkenne den Vertrag (Itzehoer-Police) im Eingang" und "beim Fahrzeugschein Kunde und Vertrag ueber Kennzeichen oder FIN finden und ins System bringen" und "die KRAVAG-Zusammenfassung erkennt Name, Anschrift, Konto, E-Mail nicht".
+- **Files Changed**: neu `ItzehoerKfzPoliceParser`, `FahrzeugscheinParser`, Tests `ItzehoerKfzPoliceParserTest`, `FahrzeugscheinZuordnungTest`, Fixtures (anonymisiert); geaendert `AppServiceProvider` (Reihenfolge), `DocumentIntakeService::findVehicleMatch`, `AnalyzeDocumentJob`, `TarifcheckKfzAntragUebersichtParser` (Rueckfallwege fuer getrennte Beschriftung/Wert) + 2 Fixtures.
 - **Database Changes**: keine. **API Changes**: keine.
 - **Potential Side Effects**: Dokumente mit Fahrzeugdaten werden jetzt automatisch zugeordnet, wenn die FIN genau zu einem Kunden gehoert (vorher nur Vorschlag). Ein Kennzeichen allein bleibt Vorschlag; ein staerkerer Namens-Treffer gewinnt dann.
 - **Tests Performed**: Parser am echten PDF (`pdftotext -layout`) und an Tesseract-Ausgaben einer Fahrzeugschein-Nachbildung (PNG/JPEG) ausgefuehrt; ganze Parser-Kette lokal durchlaufen; `php -l`; volle Suite, pint und stan ueber CI.

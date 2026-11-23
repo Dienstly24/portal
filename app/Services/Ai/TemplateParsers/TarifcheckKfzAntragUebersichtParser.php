@@ -252,6 +252,21 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
                     $nameText = $n[2];
                     $j++;
                 }
+                // Spaltenweise gelesen (KRAVAG-Screenshot, KI-131): zwischen
+                // Beschriftung und Name steht die E-Mail. Gesucht wird die
+                // erste Zeile MIT Anrede in den naechsten vier Zeilen - nur
+                // die Anrede belegt, dass es der Name des VN ist.
+                if (str_contains($nameText, '@') || preg_match('/\d/u', $nameText)) {
+                    $nameText = '';
+                    for ($k = $j; $k < min($j + 4, count($this->lines)); $k++) {
+                        if (preg_match('/^(Herrn?|Frau)\s+(\S.+)$/u', $this->cut($this->lines[$k]), $n)) {
+                            $anrede = $n[1];
+                            $nameText = $n[2];
+                            $j = $k + 1;
+                            break;
+                        }
+                    }
+                }
             }
             if ($anrede !== '') {
                 $raw['gender'] = $anrede === 'Frau' ? 'female' : 'male';
@@ -307,7 +322,12 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         // Beitrag: "monatlich (i) 58,28 €" - Zahlweise und Betrag koennen auf
         // derselben oder auf benachbarten Zeilen stehen.
         $flat = (string) preg_replace('/\s+/u', ' ', $text);
-        if (preg_match('/\b(monatlich|vierteljährlich|vierteljaehrlich|halbjährlich|halbjaehrlich|jährlich|jaehrlich)\b[^\d\n]{0,6}(\d[\d.,\/]{2,10}\d)\s*(?:€|EUR)/u', $flat, $m)) {
+        // "153, 11 €": Leerzeichen hinter dem Komma (vergroesserter
+        // Screenshot, KI-131) - nur direkt vor dem Waehrungszeichen.
+        $flat = (string) preg_replace('/(\d),\s(\d{2})(?=\s*(?:€|EUR))/u', '$1,$2', $flat);
+        // "monatlich" kommt verlesen an ("monatiich", KRAVAG-Screenshot
+        // 23.11.2026, KI-131) - der Wortanfang genuegt.
+        if (preg_match('/\b(monat\p{L}{2,4}ch|viertelj\p{L}{4,7}|halbj\p{L}{4,7}|j(?:ä|ae)hrlich)\b[^\d\n]{0,6}(\d[\d.,\/]{2,10}\d)\s*(?:€|EUR)/u', $flat, $m)) {
             $betrag = $this->beitrag($m[2], $flat);
             if ($betrag !== null) {
                 $raw['premium_amount'] = $betrag;
@@ -361,6 +381,14 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         $raw = [];
 
         $auto = $this->valueAfter('Ihr Auto');
+        if ($auto !== null) {
+            foreach ($this->lines as $i => $line) {
+                if ($this->cut($line) === $auto && preg_match('/^\p{Lu}\p{Ll}{3,}$/u', $this->cut($this->lines[$i + 1] ?? ''))) {
+                    $auto .= ' '.$this->cut($this->lines[$i + 1]);
+                    break;
+                }
+            }
+        }
         if ($auto !== null && preg_match('/^([\p{L}\-]+)\s+(.+)$/u', $auto, $m)) {
             $raw['manufacturer'] = $m[1];
             $raw['model'] = $m[2];
@@ -368,6 +396,14 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
 
         if (preg_match('/Kilometerstand\s*:?\s*(\d{1,3}(?:[.\s]\d{3})*|\d+)\s*km/iu', $text, $m)) {
             $raw['initial_mileage'] = (int) preg_replace('/\D/', '', $m[1]);
+        }
+        // Spaltenweise gelesen: Beschriftung und Wert stehen getrennt. Dann
+        // zaehlt der Wert nur, wenn er der EINZIGE km-Wert der Seite ist und
+        // keine Fahrleistung danebensteht (KI-131).
+        if (! isset($raw['initial_mileage']) && str_contains($text, 'Kilometerstand')
+            && ! preg_match('/Fahrleistung/iu', $text)
+            && preg_match_all('/(?<![\d.])(\d{1,3}(?:\.\d{3})+|\d{1,7})\s*km\b/u', $text, $km) === 1) {
+            $raw['initial_mileage'] = (int) str_replace('.', '', $km[1][0]);
         }
         if (preg_match('/(?:Jährliche\s+)?Fahrleistung\s*:?\s*(\d{1,3}(?:\.\d{3})*|\d+)\s*km/iu', $text, $m)) {
             $raw['annual_mileage'] = (int) str_replace('.', '', $m[1]);
@@ -417,6 +453,20 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
             $inhaber = trim((string) preg_replace('/\(.*$/u', '', $m[1]));
             $folge = ($this->lines[$i + 1] ?? '');
             $istVn = str_contains($m[1].' '.$folge, '(Versicherungsnehmer');
+            // Spaltenweise gelesen (KI-131): die Beschriftung steht allein,
+            // Name und Vermerk "(Versicherungsnehmer)" folgen einige Zeilen
+            // spaeter. Gilt nur, wenn der Vermerk DIREKT unter einem Namen
+            // steht - ein loser Vermerk belegt nichts.
+            if ($inhaber === '') {
+                for ($k = $i + 1; $k < min($i + 8, count($this->lines)); $k++) {
+                    if (str_starts_with($this->lines[$k], '(Versicherungsnehmer')
+                        && preg_match('/^\p{Lu}[\p{L}\-\']+(?:\s+\p{Lu}[\p{L}\-\']+)+$/u', $this->lines[$k - 1])) {
+                        $inhaber = $this->lines[$k - 1];
+                        $istVn = true;
+                        break;
+                    }
+                }
+            }
             break;
         }
 
@@ -485,9 +535,15 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
                 // Gesellschaftsname ist - und NUR diese: ist sie verstuemmelt
                 // ("imal ." aus "Optimal" bei einem 72-dpi-Scan), bleibt der
                 // Tarif leer, statt eine Folgezeile ("Gem") zu nehmen.
-                foreach (array_slice($werte, $idx + 1) as $rest) {
+                $folge = array_values(array_slice($werte, $idx + 1));
+                foreach ($folge as $pos => $rest) {
                     if ($this->knownInsurer($rest) !== $kanon) {
                         $rest = trim($rest, ' .,;');
+                        // Umbruch mitten im Tarifnamen: endet die Zeile auf ein
+                        // Bindewort, gehoert die naechste dazu (KI-131).
+                        if (preg_match('/\s(mit|und|plus|ohne|inkl\.?)$/u', $rest) && isset($folge[$pos + 1])) {
+                            $rest .= ' '.trim($folge[$pos + 1], ' .,;');
+                        }
                         if (preg_match('/^\p{Lu}[\p{L}\d+\-]{2,}(?:\s+\(?[\p{L}\d+\-]+\)?){0,6}$/u', $rest)) {
                             $tariff = $rest;
                         }
@@ -505,7 +561,8 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
     {
         $klein = mb_strtolower($value);
         foreach (self::INSURERS as $muster => $name) {
-            if ($klein === $muster || str_starts_with($klein, $muster.' ') || $klein === mb_strtolower($name)) {
+            if ($klein === $muster || str_starts_with($klein, $muster.' ') || str_starts_with($klein, $muster.'-')
+                || $klein === mb_strtolower($name)) {
                 return $name;
             }
         }

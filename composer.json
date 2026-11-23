@@ -74,7 +74,7 @@
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ],
         "lint": [
-            "@php vendor/bin/pint --test"
+            "@php vendor/bin/pint --test -v"
         ],
         "lint:fix": [
             "@php vendor/bin/pint"

@@ -1064,6 +1064,17 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Dokument des Hauptvertrags laesst dieses am Hauptvertrag. Die Pruefmaske
   zeigt vorher "+ N weitere Vertraege (wird mit angelegt)". Doppelte
   Eintraege (Sparte + Nummer) zaehlen einmal. Test: `WeitereVertraegeTest`.
+- **Kfz-Antrags-Zusammenfassung: Werte GETRENNT von ihren Beschriftungen**
+  (`TarifcheckKfzAntragUebersichtParser`, KRAVAG-Screenshot 23.11.2026,
+  KI-131): bei diesem Layout liefert Tesseract je Karte erst ALLE
+  Beschriftungen, dann alle Werte ("Versicherungsnehmer" -> E-Mail ->
+  "Frau ..."; "Kontoinhaber" -> "225.000 km"). Rueckfallwege NUR fuer diesen
+  Fall: Name = erste Zeile MIT Anrede (die Anrede belegt den VN);
+  Kontoinhaber = Name DIREKT ueber "(Versicherungsnehmer)" - ohne Vermerk
+  keine IBAN; km-Stand nur als einziger km-Wert ohne Fahrleistung;
+  "monatiich"/"153, 11 €" toleriert; Tarif-Zeile auf ein Bindewort ("mit")
+  wird mit der naechsten verbunden. Bisherige Eingaben liefern unveraendert
+  dasselbe.
 - **Kfz-Versicherungsschein der Itzehoer** (`ItzehoerKfzPoliceParser`,
   Betreiber-Meldung 23.11.2026, KI-129): vorher griff kein Parser, und die
   Heuristik nahm `info@itzehoer.de` und die IBAN der Itzehoer (Brieffuss)
