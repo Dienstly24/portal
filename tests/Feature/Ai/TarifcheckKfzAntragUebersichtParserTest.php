@@ -27,7 +27,7 @@ class TarifcheckKfzAntragUebersichtParserTest extends TestCase
             'Versicherungsnehmer Herr Max Mustermann',
             '',
             'Musterstr. 22/2',
-            '71364 Winnenden',
+            '12345 Musterstadt',
             '',
             'Ihr Tarif 01511234567',
             '',
@@ -72,8 +72,8 @@ class TarifcheckKfzAntragUebersichtParserTest extends TestCase
         $this->assertSame('male', $p['gender']);
         $this->assertSame('Musterstr.', $p['street']);
         $this->assertSame('22/2', $p['house_number']);
-        $this->assertSame('71364', $p['zip']);
-        $this->assertSame('Winnenden', $p['city']);
+        $this->assertSame('12345', $p['zip']);
+        $this->assertSame('Musterstadt', $p['city']);
         $this->assertSame('max.mustermann@example.com', $p['email']);
         $this->assertSame('01511234567', $p['phone']);
 
@@ -171,7 +171,7 @@ class TarifcheckKfzAntragUebersichtParserTest extends TestCase
             'Thr Auto', 'smart forfour 1.3', 'Versicherungsumfang', 'Haftpflicht',
             'Versicherungsbeginn', '23.11.2026 (bzw. Tag der', 'Zulassung)', '@ Tarifdetails anzeigen',
             'Adresse des Versicherungsnehmers andern', 'E-Mail-Adresse max.mustermann@example.com',
-            'Versicherungsnehmer Herr Max Mustermann', 'Musterstr. 22/2', '71364 Winnenden',
+            'Versicherungsnehmer Herr Max Mustermann', 'Musterstr. 22/2', '12345 Musterstadt',
             '01511234567', 'Angaben zum neuen Fahrzeug ändern', 'Kilometerstand 183.000 km',
             'Zahlungsdaten ändern', 'IBAN DE89 3704 0044 05320130 00', 'Kontoinhaber Max Mustermann',
             '(Versicherungsnehmer)',
@@ -199,7 +199,7 @@ class TarifcheckKfzAntragUebersichtParserTest extends TestCase
         $text = implode("\n", [
             'Ihr Beitra , .', '9 Adresse des Versicherungsnehmers ändern', 'monatlich © 58,28 €',
             'E-Mail-Adresse max.mustermann@example.com', 'Versicherungsnehmer Herr Max Mustermann', '',
-            'Musterstr. 22/2', '', '71364 Winnenden', 'Ihr Tarif 01511234567', 'WGV', '', 'imal .', '',
+            'Musterstr. 22/2', '', '12345 Musterstadt', 'Ihr Tarif 01511234567', 'WGV', '', 'imal .', '',
             'Gem Angaben zum neuen Fahrzeug ändern', 'Ihr Schutz Kilometerstand 183.000 km', 'Ihr Auto',
             'smart forfour 1.3', 'Versicherungsumfang', 'Haftpflicht', 'Versicherungsbeginn Zahlungsdaten ändern',
             '23.11.2026 (bzw. Tag der', 'Zulassung) IBAN DE89 37040044 0532 0130 00',
@@ -239,8 +239,8 @@ class TarifcheckKfzAntragUebersichtParserTest extends TestCase
     {
         return implode("\n", [
             'Adresse des Versicherungsnehmers ändern', 'E-Mail-Adresse erika.muster@example.com',
-            'Versicherungsnehmer Frau Erika Muster', 'Marienstr. 24', '66809 Nalbach', '01761234567',
-            'Angaben zum neuen Fahrzeug ändern', 'Kilometerstand 167.882 km',
+            'Versicherungsnehmer Frau Erika Muster', 'Musterweg 5', '54321 Beispielstadt', '01761234567',
+            'Angaben zum neuen Fahrzeug ändern', 'Kilometerstand 154.321 km',
             'Automobilclub-Mitgliedschaft ändern', 'ADAC Mitgliedschaft bereits ADAC Mitglied (712345678)',
             'Zahlungsdaten ändern', 'IBAN DE89 3704 0044 0532 0130 00', 'Kontoinhaber Erika Muster',
             '(Versicherungsnehmer)',
@@ -276,7 +276,7 @@ class TarifcheckKfzAntragUebersichtParserTest extends TestCase
             $this->assertFalse($k['has_vollkasko']);
             $this->assertSame(150, $k['teilkasko_deductible']);
             $this->assertSame('Ford', $k['manufacturer']);
-            $this->assertSame(167882, $k['initial_mileage']);
+            $this->assertSame(154321, $k['initial_mileage']);
 
             $this->assertSame('Erika', $r['data']['person']['first_name']);
             $this->assertSame('female', $r['data']['person']['gender']);

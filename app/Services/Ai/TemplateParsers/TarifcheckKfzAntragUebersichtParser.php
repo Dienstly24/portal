@@ -27,7 +27,7 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  *
  * OCR-LEHRE (wie Energieportal/CHECK24-DSL): die Spalten kommen OHNE
  * verlaesslichen Abstand an - "Optimal Angaben zum neuen Fahrzeug andern",
- * "Ihr Tarif 015781208190". Gelesen wird deshalb ueber das Beschriftungs-
+ * "Ihr Tarif 01511234567". Gelesen wird deshalb ueber das Beschriftungs-
  * VOKABULAR der Seite; Fremdbeschriftungen der Nachbarspalte werden vor dem
  * Lesen eines Werts abgeschnitten. Das Info-Symbol vor dem Beitrag kommt als
  * "©O" an - der Betrag wird ueber "Zahl,Zahl €" gelesen, nicht ueber seine
@@ -195,7 +195,7 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
     }
 
     /**
-     * "ADAC Mitgliedschaft  bereits ADAC Mitglied (713937673)" -> eigener
+     * "ADAC Mitgliedschaft  bereits ADAC Mitglied (712345678)" -> eigener
      * Vertrag Sparte `schutzbrief`, Mitgliedsnummer als Vertragsnummer
      * (wie `AdacMitgliedschaftParser`). Nur mit "bereits ... Mitglied" UND
      * Nummer: eine erst beantragte Mitgliedschaft hat noch keine.
@@ -235,7 +235,7 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         }
 
         foreach ($this->lines as $i => $line) {
-            // "Versicherungsnehmer Herr Ali Sharaf" - NICHT die Ueberschrift
+            // "Versicherungsnehmer Herr Max Mustermann" - NICHT die Ueberschrift
             // "Adresse des Versicherungsnehmers" und nicht "(Versicherungsnehmer)".
             if (! preg_match('/(?:^|\s)Versicherungsnehmer\s*:?\s*(Herrn?|Frau)?\s*(.*)$/u', $line, $m)
                 || str_contains($line, 'Adresse des')
@@ -264,7 +264,7 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
 
             // Danach Strasse, PLZ Ort und Telefon - hoechstens fuenf Zeilen,
             // jede an ihrer FORM erkannt (die Nachbarspalte kann dazwischen
-            // stehen: "Ihr Tarif 015781208190").
+            // stehen: "Ihr Tarif 01511234567").
             for ($k = $j; $k < min($j + 6, count($this->lines)); $k++) {
                 $z = $this->lines[$k];
                 if (! isset($raw['zip']) && preg_match('/(?:^|\s)(\d{5})\s+([\p{Lu}][\p{L}\-. ]+?)\s*$/u', $z, $p)) {

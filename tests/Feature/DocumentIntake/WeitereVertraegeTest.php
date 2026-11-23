@@ -93,7 +93,7 @@ class WeitereVertraegeTest extends TestCase
         $intake = app(DocumentIntakeService::class);
         $protokoll = $this->doc('beratungsprotokoll', $this->kfzAntrag(), 'protokoll.pdf');
         $antrag = $this->doc('versicherungsvertrag', ['versicherung' => ['insurer' => 'WGV', 'sparte' => 'kfz',
-            'reference_number' => '1457-1212-5600-17', 'document_stage' => 'antrag']], 'bestaetigung.pdf');
+            'reference_number' => '1234-5678-9012-34', 'document_stage' => 'antrag']], 'bestaetigung.pdf');
         $mitgliedschaft = $this->doc('versicherungsvertrag', [
             'person' => ['first_name' => 'Erika', 'last_name' => 'Muster'],
         ] + $this->adac(), 'adac.pdf');
@@ -109,7 +109,7 @@ class WeitereVertraegeTest extends TestCase
         $weitere = $intake->createWeitereVertraege($protokoll, $customer, null, $merged);
 
         $this->assertNull($kfz->contract_number);
-        $this->assertSame('1457-1212-5600-17', $kfz->reference_number);
+        $this->assertSame('1234-5678-9012-34', $kfz->reference_number);
         $this->assertSame('712345678', $weitere[0]->contract_number);
         // Das ADAC-Dokument haengt an SEINEM Vertrag.
         $this->assertSame((string) $weitere[0]->id, (string) $mitgliedschaft->fresh()->contract_id);
@@ -120,11 +120,11 @@ class WeitereVertraegeTest extends TestCase
         $intake = app(DocumentIntakeService::class);
         $a = $this->doc('beratungsprotokoll', $this->kfzAntrag());
         $b = $this->doc('versicherungsvertrag', ['versicherung' => ['insurer' => 'WGV', 'sparte' => 'kfz',
-            'reference_number' => '1457-1212-5600-17']]);
+            'reference_number' => '1234-5678-9012-34']]);
 
         $merged = $intake->mergeExtractions([$a, $b]);
 
-        $this->assertSame('1457-1212-5600-17', $merged['versicherung']['reference_number']);
+        $this->assertSame('1234-5678-9012-34', $merged['versicherung']['reference_number']);
         $this->assertSame('Optimal', $merged['versicherung']['tariff']);
         $this->assertArrayNotHasKey('weitere_vertraege', $merged);
     }
