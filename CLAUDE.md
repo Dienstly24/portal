@@ -1945,6 +1945,22 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Fremde Akten werden NIE erwaehnt. Die Liste markiert die spaetere Kopie
   mit "Doppelt". Anhangsnamen nach RFC 2047 ("=?UTF-8?B?...?=") dekodiert
   `App\Support\Dateiname` (KI-127). Test: `DoppeltesHochladenTest`.
+  **BESTAND BEREINIGEN** (KI-128): `DokumentDublettenService` legt Kopien
+  mit GLEICHEM INHALT in DERSELBEN Akte in den Papierkorb
+  (`dokument_papierkorb`, eigene Tabelle statt einer Spalte an
+  `documents` - rund 40 Abfragen haetten sonst eine Bedingung gebraucht).
+  Behalten wird: mit Vertrag > verknuepft > fuer Kunden sichtbar > aelteste.
+  NIE RATEN: Kopien an verschiedenen Vertraegen, eine nur fuer den Kunden
+  sichtbare Kopie und verknuepfte Kopien (Signatur, Anforderung,
+  Chat-Anhang, Zaehlerstand, SF-Nachweis, Provisionsrechnung) bleiben, mit
+  Grund an der Datei. Datei nach `customers/{id}/papierkorb/` (die
+  Kundenloeschung raeumt den Ordner mit), Zeile verschluesselt in `daten`;
+  "Wiederherstellen" bringt sie unter DERSELBEN Kennung zurueck (inkl.
+  KI-Protokoll-Verknuepfung). 30 Tage, dann `dokumente:papierkorb-leeren`
+  (taeglich 03:50). Knopf "Duplikate entfernen" + Papierkorb in der
+  Kundenakte, Bestand per `dokumente:duplikate-bereinigen` (ohne
+  `--ausfuehren` Probelauf, Kundennummern statt Namen). Nur admin/manager.
+  Test: `DokumentDuplikateBereinigenTest`.
 - **Vertrags-Duplikat-Schutz + Version History** (`DocumentIntakeService`,
   Betreiber-Vorgabe 23.07.2026): Ein neu importiertes Dokument fuer ein
   bereits erfasstes Fahrzeug/eine Police erzeugt KEIN Duplikat mehr.

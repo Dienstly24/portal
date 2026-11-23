@@ -313,6 +313,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - M `FacebookBewertung`; Support `FacebookEmpfehlung`; S `Social\FacebookBewertungAbruf`; Command `facebook:bewertungen-holen` (taeglich 04:50); C `Admin\FacebookBewertungController` (`/admin/facebook-bewertungen`, nur admin/manager); V `admin/facebook_bewertungen`, Abschnitt "Kundenstimmen" in `website/home`; Migration `2026_11_21_090000_facebook_bewertungen`
 - Tests `FacebookBewertungenTest` · Status **ACTIVE** (21.11.2026; braucht `pages_read_user_content` am Seiten-Token)
 
+### F-105 Doppelte Dokumente bereinigen + Papierkorb
+- S `Dokumente\DokumentDublettenService`; M `DokumentPapierkorb`; Commands `dokumente:duplikate-bereinigen` (Probelauf ohne `--ausfuehren`), `dokumente:papierkorb-leeren` (taeglich 03:50); C `Admin\CustomerDocumentController` (`duplikateBereinigen`, `papierkorbWiederherstellen`, nur admin/manager); V `admin/customer_show` (Reiter Dokumente); Migration `2026_11_23_120000_dokument_papierkorb`
+- Tests `DokumentDuplikateBereinigenTest` · Status **ACTIVE** (23.11.2026, KI-128)
+
 ## J. Entfernt / tot
 
 ### F-099 AI-Workflow-Engine

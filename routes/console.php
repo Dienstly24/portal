@@ -252,3 +252,5 @@ Schedule::command('social:refresh-insights')->everySixHours()->withoutOverlappin
 // loeschen (Audit SEC-1). Datenminimierung UND Freigabe der Adresse - eine
 // blockierte Adresse verhindert sonst die spaetere echte Registrierung.
 Schedule::command('registrierungen:aufraeumen')->dailyAt('03:40');
+// Papierkorb der doppelten Dokumente: nach 30 Tagen endgueltig (KI-128).
+Schedule::command('dokumente:papierkorb-leeren')->dailyAt('03:50');

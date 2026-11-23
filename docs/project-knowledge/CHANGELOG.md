@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 23.11.2026 - Doppelte Dokumente im Bestand bereinigen, Papierkorb 30 Tage (KI-128)
+
+- **Task**: Betreiber: das System soll die Dateien pruefen und doppelte entfernen.
+- **Files Changed**: neu `DokumentDublettenService`, `DokumentPapierkorb`, Befehle `DokumentDuplikateBereinigen`/`DokumentPapierkorbLeeren`, Migration `2026_11_23_120000_dokument_papierkorb`; `CustomerDocumentController`, `AdminController`, `admin/customer_show.blade.php`, `routes/web.php`, `routes/console.php`; Test `DokumentDuplikateBereinigenTest`; `CLAUDE.md`, Wissensbasis (`ROUTES_INVENTORY` neu erzeugt).
+- **Database Changes**: neue Tabelle `dokument_papierkorb`. **API Changes**: `POST admin/customers/{id}/documents/duplikate-bereinigen`, `POST admin/dokument-papierkorb/{id}/wiederherstellen` (beide admin/manager).
+- **Potential Side Effects**: entfernte Kopien verschwinden aus Akte, Eingang und Portal; KI-Protokoll-Verknuepfung wird beim Entfernen geleert und beim Wiederherstellen zurueckgesetzt.
+- **Tests Performed**: neuer Test, volle Suite, `pint`, `phpstan`, Headless-Chromium.
+- **Result**: erledigt.
+
 ## 23.11.2026 - Doppelt hochgeladene Dokumente erkennen, ersetzen oder ueberspringen (KI-126, KI-127)
 
 - **Task**: Betreiber: eine schon vorhandene Datei wird beim erneuten Hochladen nicht erkannt - weder "bereits vorhanden" noch "alte ersetzen?".

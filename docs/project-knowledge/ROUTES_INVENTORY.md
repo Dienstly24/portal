@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 21.11.2026 aus `php artisan route:list --json` (558 Routen).
+Generiert am 23.11.2026 aus `php artisan route:list --json` (560 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -88,6 +88,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | DELETE | `admin/customers/{id}` | admin.customers.delete | auth role:staff role:admin |
 | POST | `admin/customers/{id}/betreuer` | admin.customers.betreuer | auth role:staff role:admin,manager |
 | POST | `admin/customers/{id}/documents` | admin.customer.document.store | auth role:staff |
+| POST | `admin/customers/{id}/documents/duplikate-bereinigen` | admin.customer.documents.dedupe | auth role:staff role:admin,manager |
 | GET | `admin/customers/{id}/edit` | admin.customer.edit | auth role:staff |
 | GET | `admin/customers/{id}/familie/kunden-suche` | admin.customer.family.search | auth role:staff |
 | POST | `admin/customers/{id}/familie/verknuepfen` | admin.customer.family.link | auth role:staff |
@@ -129,6 +130,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | GET | `admin/documents/{id}/kunden-vorschlaege` | admin.documents.customer_suggestions | auth role:staff throttle:600,1 |
 | POST | `admin/documents/{id}/reanalyze` | admin.documents.reanalyze | auth role:staff throttle:300,10 |
 | POST | `admin/documents/{id}/replace` | admin.documents.replace | auth role:staff |
+| POST | `admin/dokument-papierkorb/{id}/wiederherstellen` | admin.documents.trash.restore | auth role:staff role:admin,manager |
 | GET | `admin/dokumenten-eingang` | admin.documents.inbox | auth role:staff |
 | GET | `admin/email-accounts` | admin.email_accounts.index | auth role:staff role:admin |
 | POST | `admin/email-accounts` | admin.email_accounts.store | auth role:staff role:admin |

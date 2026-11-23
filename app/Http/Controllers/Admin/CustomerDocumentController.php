@@ -10,8 +10,10 @@ use App\Http\Requests\Admin\UpdateCustomerDocumentRequest;
 use App\Models\ActivityLog;
 use App\Models\Contract;
 use App\Models\Document;
+use App\Models\DokumentPapierkorb;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
+use App\Services\Dokumente\DokumentDublettenService;
 use App\Support\Dateiname;
 use App\Support\InlineDatei;
 use App\Support\LocalTime;
@@ -136,6 +138,36 @@ class CustomerDocumentController extends Controller
             ]);
         }
         return back()->with('success', $meldung);
+    }
+
+    /**
+     * Doppelte Dokumente dieser Akte in den Papierkorb legen (KI-128).
+     * Nur admin/manager (Route), Zugriff auf den Kunden (hier).
+     */
+    public function duplikateBereinigen($id) {
+        $this->authorizeCustomerAccess($id);
+        $r = app(DokumentDublettenService::class)->bereinigen((string) $id, auth()->id());
+
+        $meldung = $r['entfernt'] === 0
+            ? 'Keine doppelten Dokumente zum Entfernen gefunden.'
+            : $r['entfernt'].' doppelte(s) Dokument(e) in den Papierkorb gelegt - '.DokumentPapierkorb::AUFBEWAHRUNG_TAGE.' Tage wiederherstellbar.';
+        if ($r['uebersprungen'] > 0) {
+            $meldung .= ' '.$r['uebersprungen'].' Kopie(n) bewusst behalten (Grund steht an der Datei).';
+        }
+
+        return redirect()->to(route('admin.customer', $id).'#tab-dokumente')
+            ->with($r['fehler'] > 0 ? 'warning' : 'success', $r['fehler'] > 0 ? $meldung.' '.$r['fehler'].' Datei(en) konnten nicht verschoben werden.' : $meldung);
+    }
+
+    /** Dokument aus dem Papierkorb zurueckholen (KI-128). */
+    public function papierkorbWiederherstellen($id) {
+        $eintrag = DokumentPapierkorb::findOrFail($id);
+        $this->authorizeCustomerAccess($eintrag->customer_id);
+        $customerId = $eintrag->customer_id;
+        app(DokumentDublettenService::class)->wiederherstellen($eintrag, auth()->id());
+
+        return redirect()->to(route('admin.customer', $customerId).'#tab-dokumente')
+            ->with('success', 'Dokument wiederhergestellt.');
     }
 
     /** Sicherer Dokument-Download (Admin) - nur mit Zugriff auf den Kunden. */

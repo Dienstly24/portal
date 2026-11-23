@@ -14,6 +14,7 @@ use App\Models\CustomerNote;
 use App\Models\CustomerRelationship;
 use App\Models\CustomerVehicle;
 use App\Models\CustomerView;
+use App\Models\DokumentPapierkorb;
 use App\Models\InternalMessage;
 use App\Models\Partner;
 use App\Models\Ticket;
@@ -21,6 +22,7 @@ use App\Models\User;
 use App\Services\CustomerConversationService;
 use App\Services\CustomerDeletionService;
 use App\Services\CustomerNumberGenerator;
+use App\Services\Dokumente\DokumentDublettenService;
 use App\Services\Family\FamilyRelationService;
 use App\Services\Haushalt\HaushaltService;
 use App\Services\Matching\DuplicateDetectionService;
@@ -337,6 +339,9 @@ class AdminController extends Controller
         // "Verknuepfte Kunden": festgelegte Beziehungen (customer_relationships).
         // Nur Paare, deren andere Seite im Portfolio liegt.
         $verknuepft = $this->linkedCustomers($customer);
+        // Doppelte Dokumente + Papierkorb (KI-128) - nur lesend, ohne Hash-Nachtrag.
+        $dokumentDubletten = app(DokumentDublettenService::class)->plan($customer);
+        $dokumentPapierkorb = DokumentPapierkorb::where('customer_id', $customer->id)->with('entferntVon')->latest('entfernt_at')->get();
         // Haushalt (PR-5b): Mitglieder ausserhalb des Portfolios nur als Anzahl.
         $haushalt = app(HaushaltService::class)->uebersicht($customer, $this->visibleCustomerIds());
         // Vertraege ANDERER Kunden, an denen diese Person beteiligt ist (PR-6).
@@ -347,7 +352,7 @@ class AdminController extends Controller
         $zusammenfuehrungen = auth()->user()?->role === 'admin'
             ? CustomerMerge::where('primary_customer_id', $customer->id)->latest()->limit(10)->get()
             : collect();
-        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie', 'verknuepft', 'zusammenfuehrungen', 'haushalt', 'beteiligungen'));
+        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie', 'verknuepft', 'zusammenfuehrungen', 'haushalt', 'beteiligungen', 'dokumentDubletten', 'dokumentPapierkorb'));
     }
 
 
