@@ -227,10 +227,100 @@ class TarifcheckKfzAntragUebersichtParserTest extends TestCase
         ));
     }
 
-    public function test_ohne_kunde_greift_er_nicht(): void
+    public function test_ohne_kunde_und_ohne_gesellschaft_greift_er_nicht(): void
     {
         $this->assertNull((new TarifcheckKfzAntragUebersichtParser)->parse(
-            "Ihr Beitrag\nIhr Tarif\nWGV\nOptimal\nIhr Auto\nVersicherungsumfang\nHaftpflicht\nAdresse des Versicherungsnehmers"
+            "Ihr Beitrag\nIhr Tarif\nunleserlich\nIhr Auto\nVersicherungsumfang\nHaftpflicht"
         ));
+    }
+
+    /** Seite 1 der ADAC-Variante (Kunde, Fahrzeug, Club, Zahlung) - wie Tesseract sie liefert. */
+    private function adacKunde(): string
+    {
+        return implode("\n", [
+            'Adresse des Versicherungsnehmers ändern', 'E-Mail-Adresse erika.muster@example.com',
+            'Versicherungsnehmer Frau Erika Muster', 'Marienstr. 24', '66809 Nalbach', '01761234567',
+            'Angaben zum neuen Fahrzeug ändern', 'Kilometerstand 167.882 km',
+            'Automobilclub-Mitgliedschaft ändern', 'ADAC Mitgliedschaft bereits ADAC Mitglied (712345678)',
+            'Zahlungsdaten ändern', 'IBAN DE89 3704 0044 0532 0130 00', 'Kontoinhaber Erika Muster',
+            '(Versicherungsnehmer)',
+        ]);
+    }
+
+    /** Seite 2: Tarif/Schutz. "122,/1" = die 7 als "/" gelesen (gemessen). */
+    private function adacTarif(string $preis = 'monatlich ®©122,/1€', string $streich = '129,17€ -5%'): string
+    {
+        return implode("\n", [
+            'Ihr Beitrag', $streich, $preis, 'Ihr Tarif', 'ADAC Auto-', 'versicherung AG',
+            'ADAC Autoversicherung AG', 'Basis mit Werkstattbonus (Mitglieder)', 'Ihr Schutz', 'Ihr Auto',
+            'Ford Focus 1.4', 'Versicherungsumfang', 'Haftpflicht und Teilkasko', 'Selbstbeteiligung',
+            '150€ (TK)', 'Versicherungsbeginn', '23.11.2026 (bzw. Tag der Zulassung)',
+        ]);
+    }
+
+    public function test_adac_variante_mit_zweitem_vertrag(): void
+    {
+        foreach ([$this->adacKunde()."\n".$this->adacTarif(), $this->adacTarif()."\n".$this->adacKunde()] as $text) {
+            $r = app(DocumentTemplateParser::class)->parse($text);
+
+            $this->assertNotNull($r);
+            $v = $r['data']['versicherung'];
+            $this->assertSame('ADAC Autoversicherung AG', $v['insurer']);
+            $this->assertSame('Basis mit Werkstattbonus (Mitglieder)', $v['tariff']);
+            $this->assertSame(122.71, $v['premium_amount'], '"122,/1" ueber Streichpreis -5 % abgesichert');
+            $this->assertSame('kfz', $v['sparte']);
+            $this->assertArrayNotHasKey('contract_number', $v, 'die Mitgliedsnummer ist NICHT die Kfz-Vertragsnummer');
+
+            $k = $r['data']['kfz'];
+            $this->assertTrue($k['has_teilkasko']);
+            $this->assertFalse($k['has_vollkasko']);
+            $this->assertSame(150, $k['teilkasko_deductible']);
+            $this->assertSame('Ford', $k['manufacturer']);
+            $this->assertSame(167882, $k['initial_mileage']);
+
+            $this->assertSame('Erika', $r['data']['person']['first_name']);
+            $this->assertSame('female', $r['data']['person']['gender']);
+            $this->assertSame('DE89370400440532013000', $r['data']['bank']['iban']);
+
+            $this->assertCount(1, $r['data']['weitere_vertraege']);
+            $club = $r['data']['weitere_vertraege'][0]['versicherung'];
+            $this->assertSame('ADAC', $club['insurer']);
+            $this->assertSame('schutzbrief', $club['sparte']);
+            $this->assertSame('712345678', $club['contract_number']);
+            $this->assertStringContainsString('ZWEITER VERTRAG', $r['summary']);
+        }
+    }
+
+    public function test_verlesener_beitrag_ohne_streichpreis_bleibt_leer(): void
+    {
+        $r = (new TarifcheckKfzAntragUebersichtParser)->parse($this->adacKunde()."\n".$this->adacTarif(streich: ''));
+
+        $this->assertArrayNotHasKey('premium_amount', $r['data']['versicherung']);
+        $this->assertSame('monthly', $r['data']['versicherung']['premium_interval']);
+    }
+
+    /** Zwei Bilder EINZELN hochgeladen: jede Haelfte wird fuer sich erkannt. */
+    public function test_haelften_einzeln(): void
+    {
+        $kunde = app(DocumentTemplateParser::class)->parse($this->adacKunde());
+        $this->assertSame('kontaktdaten', $kunde['type']);
+        $this->assertSame('Erika', $kunde['data']['person']['first_name'], 'nie "Versicherungsnehmer" als Vorname');
+        $this->assertSame('Muster', $kunde['data']['person']['last_name']);
+        $this->assertSame([], $kunde['data']['versicherung']);
+        $this->assertSame('712345678', $kunde['data']['weitere_vertraege'][0]['versicherung']['contract_number']);
+
+        $tarif = app(DocumentTemplateParser::class)->parse($this->adacTarif());
+        $this->assertSame('kfz_vertrag', $tarif['type']);
+        $this->assertSame('ADAC Autoversicherung AG', $tarif['data']['versicherung']['insurer']);
+        $this->assertSame([], $tarif['data']['person']);
+    }
+
+    /** Andere Antraege nennen "Adresse des Versicherungsnehmers" auch - ohne "aendern"-Link. */
+    public function test_fremder_antrag_ist_keine_kundenseite(): void
+    {
+        $this->assertNull((new TarifcheckKfzAntragUebersichtParser)->parse(implode("\n", [
+            'Adresse des Versicherungsnehmers', 'Versicherungsnehmer Herr Max Mustermann',
+            'Musterstr. 1', '12345 Musterstadt', 'Zahlungsdaten', 'IBAN DE89 3704 0044 0532 0130 00',
+        ])));
     }
 }

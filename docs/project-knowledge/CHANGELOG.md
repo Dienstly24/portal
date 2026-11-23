@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 23.11.2026 - ADAC-Variante der Antrags-Zusammenfassung + zwei Vertraege je Vorgang (KI-125)
+
+- **Task**: Betreiber: ADAC-Variante (zwei Bilder) erkennen; enthalten die Unterlagen zwei Vertraege (Auto + Pannenhilfe/ADAC), beide erkennen und direkt in der Kundenakte anlegen koennen.
+- **Files Changed**: `TarifcheckKfzAntragUebersichtParser` (Haelften, Logo-Silbentrennung, Rechtsform, Beitrag ueber Streichpreis, SB, Club-Mitgliedschaft), `DocumentIntakeService` (`mergeExtractions` nach Sparte, `vertragsGruppen`, `ohneDoppelteVertraege`, `createWeitereVertraege`), `SmartDocumentUploadController` (4 Wege, Antwort `weitere_contract_ids`), `admin/documents_inbox.blade.php` (Hinweis in der Pruefmaske), `phpstan-baseline.neon` (7 nicht mehr auftretende Eintraege entfernt, 2 Zaehler gesenkt), Tests `WeitereVertraegeTest`, `TarifcheckKfzAntragUebersichtParserTest`; `CLAUDE.md`, Wissensbasis.
+- **Database Changes**: keine (neuer Schluessel `weitere_vertraege` in `documents.ai_extracted`). **API Changes**: Zuordnungs-Antworten tragen `weitere_contract_ids`.
+- **Potential Side Effects**: Vorgaenge mit Dokumenten VERSCHIEDENER Sparten liefern jetzt mehrere Vertraege statt eines gemischten. Vorgaenge mit einer Sparte unveraendert (Test).
+- **Tests Performed**: echte Kette am Original (beide Bilder einzeln, gebuendelt in beiden Reihenfolgen); volle Suite, `pint`, `phpstan`.
+- **Result**: erledigt.
+
 ## 23.11.2026 - Kfz-Antrags-Zusammenfassung (Screenshot) gratis lesen (KI-124)
 
 - **Task**: Betreiber: "das System soll auch solche Bilder erkennen" - Screenshot der Zusammenfassung der Kfz-Antragsstrecke mit Gesellschaft, Beginn, Deckung, Kilometerstand und kompletten Kundendaten.

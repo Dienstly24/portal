@@ -113,6 +113,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - DEVK-Kfz-Police (`DevkKfzPoliceParser`, Neuvertrag + Anpassung): steht VOR `Check24KfzProtocolParser` - die Police nennt CHECK24 als Vermittler und "Beratungsprotokoll" im Kleingedruckten (KI-102). Test `DevkKfzPoliceParserTest`
 - CosmosDirekt-Kfz-Beitragsrechnung (`CosmosDirektKfzBeitragsrechnungParser`, KI-123): liest die Spalte des NEUEN Jahres; Faelligkeit ist kein Vertragsbeginn, keine Bankdaten. Test `CosmosDirektKfzBeitragsrechnungParserTest`
 - Kfz-Antragsstrecke, ZUSAMMENFASSUNG als Screenshot (`TarifcheckKfzAntragUebersichtParser`, KI-124): Gesellschaft/Tarif/Beitrag/Beginn/Deckung, Fahrzeug + Kilometerstand, Kunde komplett, IBAN nur bei Kontoinhaber = VN. Stufe `antrag`, steht VOR `WgvKfzPoliceParser`. Test `TarifcheckKfzAntragUebersichtParserTest`
+- Zwei Vertraege aus einem Dokument/Vorgang (`weitere_vertraege`, KI-125): andere Sparten des Vorgangs und z.B. die ADAC-Mitgliedschaft auf der Antragsseite werden eigene Vertraege; `createWeitereVertraege` legt sie mit "Vertrag anlegen" an. Test `WeitereVertraegeTest`
 - Status **ACTIVE** · Regel `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`
 
 ### F-022 Dokumenten-Anforderungen

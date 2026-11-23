@@ -1032,6 +1032,38 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   JPEG-Kompression kann der Tarifname verlesen werden - die
   Zusammenfassung bittet um Pruefung. Test:
   `TarifcheckKfzAntragUebersichtParserTest`.
+  **ADAC-Variante + zwei Haelften** (23.11.2026): der Betrieb schickt die
+  Seite auch als ZWEI Bilder (rechts Kunde/Fahrzeug/Club/Zahlung, links
+  Tarif/Schutz). Jede Haelfte wird fuer sich gelesen (Kundenseite allein =
+  Typ `kontaktdaten`, nur mit dem "aendern"-Link neben "Adresse des
+  Versicherungsnehmers" - fremde Antraege nennen die Ueberschrift auch;
+  Tarifseite allein = `kfz_vertrag` ohne Person); gebuendelt oder im
+  Vorgang ergibt das dasselbe Ergebnis. Logo-Silbentrennung ("ADAC Auto-"
+  / "versicherung AG") wird zusammengezogen, der VOLLE Name mit Rechtsform
+  gilt als Versicherer. Beitrag mit verlesener Ziffer ("122,/1") wird NUR
+  repariert, wenn der Streichpreis mit Rabatt ("129,17 EUR -5%") genau eine
+  Lesart bestaetigt - sonst bleibt er leer. "Selbstbeteiligung 150 EUR (TK)"
+  -> `teilkasko_deductible`.
+- **ZWEI VERTRAEGE aus einem Dokument bzw. Vorgang** (`weitere_vertraege`,
+  Betreiber-Auftrag 23.11.2026, KI-125): Kfz-Antrag + ADAC-Mitgliedschaft
+  (Schutzbrief/Pannenhilfe). GEMESSENER FEHLER VORHER:
+  `DocumentIntakeService::mergeExtractions` fuellte die Versicherungsdaten
+  des Vorgangs aus ALLEN Dokumenten - lag die ADAC-Mitgliedschaft im selben
+  Vorgang wie die Kfz-Unterlagen, bekam der Kfz-Vertrag die
+  MITGLIEDSNUMMER als Vertragsnummer, und die Mitgliedschaft entstand nie.
+  Jetzt: Versicherung/Fahrzeug kommen nur aus Dokumenten der HAUPT-Sparte
+  (meiste Dokumente, Gleichstand = zuerst hochgeladen; Dokumente ohne
+  Sparte gehoeren dazu); jede andere Sparte wird ein Eintrag in
+  `weitere_vertraege`. Ein Parser kann ihn auch selbst liefern ("bereits
+  ADAC Mitglied (Nr.)" auf der Antragsseite -> Sparte `schutzbrief`, Nummer
+  als Vertragsnummer, Stufe `vertrag`). Mit dem Haken "Vertrag anlegen"
+  legt `createWeitereVertraege` sie an allen vier Zuordnungswegen MIT an -
+  ueber `createContractFromExtraction`, also mit Identitaets-Suche (eine
+  bekannte Mitgliedsnummer wird ergaenzt, nicht verdoppelt). Das Dokument
+  eines eigenen Eintrags haengt an SEINEM Vertrag, ein Eintrag aus dem
+  Dokument des Hauptvertrags laesst dieses am Hauptvertrag. Die Pruefmaske
+  zeigt vorher "+ N weitere Vertraege (wird mit angelegt)". Doppelte
+  Eintraege (Sparte + Nummer) zaehlen einmal. Test: `WeitereVertraegeTest`.
 - **Kfz-Angebot der Sparkassen DirektVersicherung**
   (`SparkasseDirektKfzParser`, 31.07.2026): Spaltenlayout (Beschriftung links,
   Wert rechts), Stufe `antrag`. Bewusst NICHT übernommen: die Empfehlung

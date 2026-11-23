@@ -351,10 +351,25 @@ class DocumentIntakeService
         // Fuer Personendaten Ausweis-Dokumente zuerst; sonst Reihenfolge egal.
         $personFirst = $docs->sortByDesc(fn ($d) => $this->personPriority($d->ai_type));
 
+        // ZWEI VERTRAEGE IN EINEM VORGANG (Betreiber-Auftrag 23.11.2026):
+        // Kfz-Antrag + ADAC-Mitgliedschaft (Schutzbrief) wurden frueher zu
+        // EINEM Vertrag verschmolzen - der Kfz-Vertrag bekam die
+        // Mitgliedsnummer als Vertragsnummer. Versicherungs- und Fahrzeugdaten
+        // kommen jetzt nur aus den Dokumenten der HAUPT-Sparte; jede andere
+        // Sparte wird ein eigener Eintrag in `weitere_vertraege`.
+        [$hauptDocs, $weitere] = $this->vertragsGruppen($docs);
+
         foreach (array_keys($merged) as $group) {
-            $source = $group === 'person' ? $personFirst : $docs;
+            $source = match ($group) {
+                'person' => $personFirst,
+                'versicherung', 'kfz' => $hauptDocs,
+                default => $docs,
+            };
             foreach ($source as $doc) {
-                $values = ($doc->ai_extracted[$group] ?? []);
+                // getAttribute() statt Property: der encrypted:array-Cast wird
+                // von der statischen Analyse als string|null gelesen.
+                $daten = $doc->getAttribute('ai_extracted');
+                $values = is_array($daten) ? ($daten[$group] ?? []) : [];
                 if (! is_array($values)) {
                     continue;
                 }
@@ -362,8 +377,9 @@ class DocumentIntakeService
                     if ($value === null || $value === '' || $value === []) {
                         continue;
                     }
-                    $current = $merged[$group][$field] ?? null;
-                    if ($current === null || $current === '') {
+                    // Leere Werte werden nie gespeichert - der erste echte
+                    // Wert gewinnt.
+                    if (! isset($merged[$group][$field])) {
                         $merged[$group][$field] = $value;
                     }
                 }
@@ -396,7 +412,156 @@ class DocumentIntakeService
 
         $merged['_conflicts'] = $this->nameConflicts($docs);
 
+        // Weitere Vertraege: andere Sparten des Vorgangs UND die Eintraege,
+        // die ein einzelnes Dokument selbst mitbringt (z.B. ADAC-Mitgliedschaft
+        // im Kfz-Antrag). Doppelte (gleiche Sparte + Vertragsnummer bzw. die
+        // des Hauptvertrags) zaehlen einmal.
+        foreach ($docs as $doc) {
+            $daten = $doc->getAttribute('ai_extracted');
+            foreach ((is_array($daten) ? ($daten['weitere_vertraege'] ?? []) : []) as $eintrag) {
+                if (is_array($eintrag) && is_array($eintrag['versicherung'] ?? null)) {
+                    $weitere[] = $eintrag + ['_document_id' => (string) $doc->id, '_aus_demselben_dokument' => true];
+                }
+            }
+        }
+        $merged['weitere_vertraege'] = $this->ohneDoppelteVertraege($merged['versicherung'], $weitere);
+        if ($merged['weitere_vertraege'] === []) {
+            unset($merged['weitere_vertraege']);
+        }
+
         return $merged;
+    }
+
+    /**
+     * Teilt die Dokumente eines Vorgangs nach Sparte auf. Haupt-Sparte ist die
+     * mit den meisten Dokumenten (Gleichstand: die zuerst hochgeladene).
+     * Dokumente ohne Sparte gehoeren zur Haupt-Sparte (bisheriges Verhalten).
+     *
+     * @return array{0: Collection<int, mixed>, 1: list<array<string, mixed>>}
+     */
+    private function vertragsGruppen(Collection $docs): array
+    {
+        $sparteVon = function ($doc): ?string {
+            $daten = $doc->getAttribute('ai_extracted');
+            $ins = is_array($daten) && is_array($daten['versicherung'] ?? null) ? $daten['versicherung'] : [];
+            if (blank($ins['insurer'] ?? null) && blank($ins['contract_number'] ?? null)) {
+                return null; // kein Vertrag im Dokument (Ausweis, Kontaktdaten ...)
+            }
+            $sparte = $ins['sparte'] ?? null;
+
+            return is_string($sparte) && $sparte !== '' ? $sparte : null;
+        };
+
+        $gruppen = [];
+        foreach ($docs as $doc) {
+            if (($s = $sparteVon($doc)) !== null) {
+                $gruppen[$s][] = $doc;
+            }
+        }
+        if (count($gruppen) < 2) {
+            return [$docs, []];
+        }
+
+        $haupt = null;
+        foreach ($gruppen as $sparte => $liste) {
+            if ($haupt === null || count($liste) > count($gruppen[$haupt])) {
+                $haupt = $sparte;
+            }
+        }
+
+        $hauptDocs = $docs->filter(fn ($d) => in_array($sparteVon($d), [null, $haupt], true))->values();
+        $weitere = [];
+        foreach ($gruppen as $sparte => $liste) {
+            if ($sparte === $haupt) {
+                continue;
+            }
+            $eintrag = ['versicherung' => [], 'kfz' => []];
+            foreach (['versicherung', 'kfz'] as $teil) {
+                foreach ($liste as $doc) {
+                    $werte = $doc->getAttribute('ai_extracted')[$teil] ?? [];
+                    foreach (is_array($werte) ? $werte : [] as $feld => $wert) {
+                        if ($wert !== null && $wert !== '' && $wert !== [] && ! isset($eintrag[$teil][$feld])) {
+                            $eintrag[$teil][$feld] = $wert;
+                        }
+                    }
+                }
+            }
+            $eintrag['_document_id'] = (string) $liste[0]->id;
+            $weitere[] = $eintrag;
+        }
+
+        return [$hauptDocs, $weitere];
+    }
+
+    /**
+     * @param  array<string, mixed>  $haupt
+     * @param  list<array<string, mixed>>  $weitere
+     * @return list<array<string, mixed>>
+     */
+    private function ohneDoppelteVertraege(array $haupt, array $weitere): array
+    {
+        $schluessel = fn (array $ins) => mb_strtolower(($ins['sparte'] ?? '').'|'.preg_replace('/\s+/', '', (string) ($ins['contract_number'] ?? $ins['insurer'] ?? '')));
+        $gesehen = [$schluessel($haupt) => true];
+        $ergebnis = [];
+        foreach ($weitere as $eintrag) {
+            $k = $schluessel($eintrag['versicherung']);
+            if (isset($gesehen[$k])) {
+                continue;
+            }
+            $gesehen[$k] = true;
+            $ergebnis[] = $eintrag;
+        }
+
+        return $ergebnis;
+    }
+
+    /**
+     * Legt die WEITEREN Vertraege eines Dokuments bzw. Vorgangs an (oder
+     * ergaenzt vorhandene - dieselbe Identitaets-Suche wie beim Hauptvertrag,
+     * eine bekannte Mitgliedsnummer erzeugt also kein Duplikat). Das Dokument,
+     * aus dem ein Eintrag stammt, haengt danach an SEINEM Vertrag; stammt er
+     * aus demselben Dokument wie der Hauptvertrag, bleibt dieses am
+     * Hauptvertrag.
+     *
+     * @param  array<string, mixed>|null  $extracted  zusammengefuehrtes Ergebnis (Vorgang)
+     * @return list<Contract>
+     */
+    public function createWeitereVertraege(Document $primary, Customer $customer, ?int $byUserId, ?array $extracted = null): array
+    {
+        $data = $extracted ?? ($primary->getAttribute('ai_extracted') ?? []);
+        $eintraege = is_array($data['weitere_vertraege'] ?? null) ? $data['weitere_vertraege'] : [];
+        if ($eintraege === []) {
+            return [];
+        }
+
+        $vertraege = [];
+        foreach ($eintraege as $eintrag) {
+            if (! is_array($eintrag) || ! is_array($eintrag['versicherung'] ?? null)) {
+                continue;
+            }
+            $quelle = isset($eintrag['_document_id'])
+                ? (Document::find($eintrag['_document_id']) ?? $primary)
+                : $primary;
+            $vorher = $quelle->contract_id;
+            $teil = [
+                'person' => [], 'versicherung' => $eintrag['versicherung'],
+                'kfz' => is_array($eintrag['kfz'] ?? null) ? $eintrag['kfz'] : [],
+                'gesundheit' => [], 'bank' => [], 'energie' => [], 'internet' => [],
+            ];
+            $vertrag = $this->createContractFromExtraction($quelle, $customer, $byUserId, $teil);
+            if ($vertrag === null) {
+                continue;
+            }
+            // Das Dokument des Hauptvertrags bleibt am Hauptvertrag.
+            $ausDemselben = ! isset($eintrag['_document_id']) || ! empty($eintrag['_aus_demselben_dokument']);
+            if ($vorher !== null && $ausDemselben) {
+                $quelle->contract_id = $vorher;
+                $quelle->save();
+            }
+            $vertraege[] = $vertrag;
+        }
+
+        return $vertraege;
     }
 
     private function personPriority(?string $aiType): int

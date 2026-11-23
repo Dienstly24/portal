@@ -63,7 +63,8 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         'Ihr Beitrag', 'Ihr Tarif', 'Ihr Schutz', 'Ihr Auto',
         'Versicherungsumfang', 'Versicherungsbeginn', 'Tarifdetails anzeigen',
         'Kennzeichen', 'Fahrzeug-Identifikationsnummer', 'Erstzulassung',
-        'Jährliche Fahrleistung', 'Fahrleistung', 'ändern', 'andern',
+        'Jährliche Fahrleistung', 'Fahrleistung', 'Selbstbeteiligung',
+        'Automobilclub-Mitgliedschaft', 'ADAC Mitgliedschaft', 'ändern', 'andern',
     ];
 
     /** Kanonische Schreibweise der Gesellschaften, die der Rechner anbietet. */
@@ -93,13 +94,23 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         $text = (string) preg_replace('/(?<![\p{L}])[TlI1|]hr (Beitrag|Tarif|Schutz|Auto)\b/u', 'Ihr $1', $text);
         $upper = mb_strtoupper($text);
 
-        // "Ihr Beitrag" kommt bei niedrig aufgeloesten PDF-Scans als "Ihr Beitra"
-        // an (Betreiber-Upload 23.11.2026) - die Anfangsbuchstaben genuegen,
-        // oder die Ueberschrift des Kundenblocks.
-        if ((! str_contains($upper, 'IHR BEITRA') && ! str_contains($upper, 'ADRESSE DES VERSICHERUNGSNEHMERS'))
-            || ! str_contains($upper, 'IHR TARIF')
-            || ! str_contains($upper, 'VERSICHERUNGSNEHMER')
-            || (! str_contains($upper, 'VERSICHERUNGSUMFANG') && ! str_contains($upper, 'IHR AUTO'))) {
+        // Die Seite kommt GANZ (ein Screenshot / gebuendelte Bilder) oder in
+        // ZWEI HAELFTEN, wenn der Betrieb zwei Bilder einzeln hochlaedt
+        // (Betreiber-Upload 23.11.2026): links Tarif/Schutz, rechts Kunde/
+        // Fahrzeug/Zahlung. Jede Haelfte wird fuer sich gelesen; im Vorgang
+        // fuehrt `mergeExtractions` sie zusammen.
+        // "Ihr Beitrag" kommt bei niedrig aufgeloesten PDF-Scans als
+        // "Ihr Beitra" an - die Anfangsbuchstaben genuegen.
+        $tarifSeite = str_contains($upper, 'IHR TARIF')
+            && (str_contains($upper, 'VERSICHERUNGSUMFANG') || str_contains($upper, 'IHR AUTO'));
+        // Kundenseite nur mit dem "aendern"-Link der Antragsstrecke neben der
+        // Ueberschrift - andere Antraege (NAFI, Versicherer-PDF) nennen
+        // "Adresse des Versicherungsnehmers" auch, aber ohne Bearbeiten-Link.
+        $kundenSeite = (bool) preg_match('/Adresse des Versicherungsnehmers\s+[äa]ndern/u', $text)
+            && (str_contains($upper, 'ZAHLUNGSDATEN') || str_contains($upper, 'ANGABEN ZUM NEUEN FAHRZEUG'));
+        $ganz = $tarifSeite && str_contains($upper, 'VERSICHERUNGSNEHMER')
+            && (str_contains($upper, 'IHR BEITRA') || $kundenSeite);
+        if (! $ganz && ! ($tarifSeite && str_contains($upper, 'IHR BEITRA')) && ! $kundenSeite) {
             return null;
         }
         // Die ABSCHLUSS-Seite (Referenznummer, "Antrag eingegangen") hat ihren
@@ -112,25 +123,60 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
             array_map('trim', preg_split('/\R/u', $text) ?: []),
             fn ($l) => $l !== ''
         ));
+        // Silbentrennung im Logo-Text: "ADAC Auto-" + "versicherung AG".
+        for ($i = count($this->lines) - 2; $i >= 0; $i--) {
+            if (preg_match('/\p{L}-$/u', $this->lines[$i]) && preg_match('/^\p{Ll}/u', $this->lines[$i + 1])) {
+                $this->lines[$i] = mb_substr($this->lines[$i], 0, -1).$this->lines[$i + 1];
+                array_splice($this->lines, $i + 1, 1);
+            }
+        }
 
         $person = $this->parsePerson($text);
         $insurance = $this->parseInsurance($text);
         $vehicle = $this->parseVehicle($text);
         $bank = $this->parseBank($text, $person);
 
+        $club = $this->clubMitgliedschaft();
+        $hatKunde = isset($person['last_name']);
+        $hatVertrag = isset($insurance['insurer']);
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
+
         // Ohne Kunde UND ohne Gesellschaft ist die Seite nicht verwertbar -
-        // dann soll die KI-Stufe sie vollstaendig lesen.
-        if (! isset($person['last_name']) || ! isset($insurance['insurer'])) {
+        // dann soll die KI-Stufe sie vollstaendig lesen. Eine HAELFTE braucht
+        // ihren eigenen Kern: die Tarifseite die Gesellschaft, die
+        // Kundenseite den Namen.
+        if (! $hatKunde && ! $hatVertrag) {
             return null;
         }
+        if (! $hatVertrag) {
+            // Nur die Kundenseite: Kontaktdaten + Kilometerstand + ggf. die
+            // Club-Mitgliedschaft. KEIN Kfz-Vertrag (die Gesellschaft fehlt).
+            if (! $kundenSeite) {
+                return null;
+            }
 
-        $name = trim(($person['first_name'] ?? '').' '.$person['last_name']);
+            return [
+                'type' => 'kontaktdaten',
+                'confidence' => 70,
+                'summary' => 'Kfz-Antrag, Kundenseite (Zusammenfassung der Antragsstrecke) - '.$name
+                    .(isset($vehicle['initial_mileage']) ? ' - Kilometerstand '.number_format($vehicle['initial_mileage'], 0, ',', '.').' km' : '')
+                    .($club !== null ? ' - ZWEITER VERTRAG: bestehende '.$club['insurer'].'-Mitgliedschaft Nr. '.$club['contract_number'].' (wird mit "Vertrag anlegen" als eigener Vertrag angelegt bzw. ergaenzt)' : '')
+                    .($bank === [] && preg_match('/\bIBAN\b/u', $text) ? ' - IBAN NICHT uebernommen (Pruefziffer ungueltig oder Kontoinhaber nicht der Versicherungsnehmer)' : '')
+                    .' - Tarif/Gesellschaft stehen auf der zweiten Seite. Felder gratis aus dem Screenshot gelesen (ohne KI).',
+                'title' => 'Kfz-Antrag Kundenseite '.$name,
+                'data' => [
+                    'person' => $person, 'versicherung' => [], 'kfz' => $vehicle,
+                    'gesundheit' => [], 'bank' => $bank, 'personen' => [], 'energie' => [],
+                    ...($club !== null ? ['weitere_vertraege' => [['versicherung' => $club, 'kfz' => []]]] : []),
+                ],
+            ];
+        }
 
         return [
             'type' => 'kfz_vertrag',
-            'confidence' => 78,
-            'summary' => $this->summary($text, $name, $person, $insurance, $vehicle, $bank),
-            'title' => 'Kfz-Antrag '.$insurance['insurer'].' '.$name,
+            'confidence' => $hatKunde ? 78 : 70,
+            'summary' => $this->summary($text, $name !== '' ? $name : 'Kunde auf der zweiten Seite', $person, $insurance, $vehicle, $bank, $club),
+            'title' => 'Kfz-Antrag '.$insurance['insurer'].($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -139,8 +185,42 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
                 'bank' => $bank,
                 'personen' => [],
                 'energie' => [],
+                // ZWEITER VERTRAG (Betreiber-Auftrag 23.11.2026): die Seite
+                // nennt eine BESTEHENDE Automobilclub-Mitgliedschaft mit
+                // Nummer - das ist ein eigener Vertrag (Schutzbrief/
+                // Pannenhilfe), nie ein Teil des Kfz-Vertrags.
+                ...($club !== null ? ['weitere_vertraege' => [['versicherung' => $club, 'kfz' => []]]] : []),
             ],
         ];
+    }
+
+    /**
+     * "ADAC Mitgliedschaft  bereits ADAC Mitglied (713937673)" -> eigener
+     * Vertrag Sparte `schutzbrief`, Mitgliedsnummer als Vertragsnummer
+     * (wie `AdacMitgliedschaftParser`). Nur mit "bereits ... Mitglied" UND
+     * Nummer: eine erst beantragte Mitgliedschaft hat noch keine.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function clubMitgliedschaft(): ?array
+    {
+        foreach ($this->lines as $line) {
+            if (preg_match('/bereits\s+(ADAC|ACV|AvD)[\s-]*Mitglied\s*\(\s*(\d{6,12})\s*\)/iu', $line, $m)) {
+                $club = mb_strtoupper($m[1]) === 'AVD' ? 'AvD' : mb_strtoupper($m[1]);
+
+                $ins = $this->validatedInsurance([
+                    'insurer' => $club,
+                    'sparte' => 'schutzbrief',
+                    'contract_number' => $m[2],
+                    'tariff' => $club.' Mitgliedschaft',
+                    'document_stage' => Contract::STAGE_VERTRAG,
+                ]);
+
+                return isset($ins['contract_number']) ? $ins : null;
+            }
+        }
+
+        return null;
     }
 
     /** @return array<string,mixed> */
@@ -227,8 +307,11 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         // Beitrag: "monatlich (i) 58,28 €" - Zahlweise und Betrag koennen auf
         // derselben oder auf benachbarten Zeilen stehen.
         $flat = (string) preg_replace('/\s+/u', ' ', $text);
-        if (preg_match('/\b(monatlich|vierteljährlich|vierteljaehrlich|halbjährlich|halbjaehrlich|jährlich|jaehrlich)\b[^\d\n]{0,6}(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:€|EUR)/u', $flat, $m)) {
-            $raw['premium_amount'] = (float) str_replace(['.', ','], ['', '.'], $m[2]);
+        if (preg_match('/\b(monatlich|vierteljährlich|vierteljaehrlich|halbjährlich|halbjaehrlich|jährlich|jaehrlich)\b[^\d\n]{0,6}(\d[\d.,\/]{2,10}\d)\s*(?:€|EUR)/u', $flat, $m)) {
+            $betrag = $this->beitrag($m[2], $flat);
+            if ($betrag !== null) {
+                $raw['premium_amount'] = $betrag;
+            }
             $raw['premium_interval'] = match (true) {
                 str_starts_with($m[1], 'monat') => 'monthly',
                 str_starts_with($m[1], 'viertel') => 'quarterly',
@@ -243,6 +326,33 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         }
 
         return $this->validatedInsurance($raw);
+    }
+
+    /**
+     * Beitrag aus der OCR. "122,/1" (die 7 als "/" gelesen) wird NUR
+     * repariert, wenn die Seite den Streichpreis mit Rabatt nennt
+     * ("129,17 € -5%") und genau eine Lesart dazu passt - sonst bleibt der
+     * Beitrag leer (nie geraten).
+     */
+    private function beitrag(string $roh, string $flat): ?float
+    {
+        $zahl = fn (string $v) => (float) str_replace(['.', ','], ['', '.'], $v);
+        if (preg_match('/^\d{1,3}(?:\.\d{3})*,\d{2}$/', $roh)) {
+            return $zahl($roh);
+        }
+        if (! preg_match('/(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:€|EUR)\s*-\s*(\d{1,2})\s*%/u', $flat, $r)) {
+            return null;
+        }
+        $erwartet = round($zahl($r[1]) * (100 - (int) $r[2]) / 100, 2);
+        $treffer = [];
+        foreach (['7', '1'] as $ersatz) {
+            $kandidat = str_replace('/', $ersatz, $roh);
+            if (preg_match('/^\d{1,3}(?:\.\d{3})*,\d{2}$/', $kandidat) && abs($zahl($kandidat) - $erwartet) < 0.015) {
+                $treffer[] = $zahl($kandidat);
+            }
+        }
+
+        return count(array_unique($treffer)) === 1 ? $treffer[0] : null;
     }
 
     /** @return array<string,mixed> */
@@ -273,6 +383,13 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         if ($umfang !== null) {
             $raw['has_vollkasko'] = (bool) preg_match('/Vollkasko/iu', $umfang);
             $raw['has_teilkasko'] = $raw['has_vollkasko'] || (bool) preg_match('/Teilkasko/iu', $umfang);
+        }
+        // "Selbstbeteiligung  150€ (TK)" bzw. "300€ (VK) / 150€ (TK)".
+        $sb = $this->valueAfter('Selbstbeteiligung');
+        if ($sb !== null && preg_match_all('/(\d{1,4})\s*(?:€|EUR)\s*\((TK|VK)\)/u', $sb, $t, PREG_SET_ORDER)) {
+            foreach ($t as $treffer) {
+                $raw[$treffer[2] === 'TK' ? 'teilkasko_deductible' : 'vollkasko_deductible'] = (int) $treffer[1];
+            }
         }
 
         return $this->validatedVehicle($raw);
@@ -354,7 +471,16 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         foreach ($werte as $idx => $w) {
             $kanon = $this->knownInsurer($w);
             if ($kanon !== null) {
-                $insurer = $kanon;
+                // Voller Name mit Rechtsform ("ADAC Autoversicherung AG") vor
+                // dem Kurznamen - der Vertragsabgleich setzt beide gleich.
+                $voll = null;
+                foreach (array_slice($werte, $idx) as $kand) {
+                    if ($this->knownInsurer($kand) === $kanon && preg_match('/\b(AG|SE|a\.\s?G\.|VVaG|GmbH)$/u', $kand)) {
+                        $voll = $kand;
+                        break;
+                    }
+                }
+                $insurer = $voll ?? $kanon;
                 // Der Tarif ist die naechste Zeile, die NICHT wieder der
                 // Gesellschaftsname ist - und NUR diese: ist sie verstuemmelt
                 // ("imal ." aus "Optimal" bei einem 72-dpi-Scan), bleibt der
@@ -362,7 +488,7 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
                 foreach (array_slice($werte, $idx + 1) as $rest) {
                     if ($this->knownInsurer($rest) !== $kanon) {
                         $rest = trim($rest, ' .,;');
-                        if (preg_match('/^\p{Lu}[\p{L}\d+\-]{2,}(?:\s+[\p{L}\d+\-]+){0,4}$/u', $rest)) {
+                        if (preg_match('/^\p{Lu}[\p{L}\d+\-]{2,}(?:\s+\(?[\p{L}\d+\-]+\)?){0,6}$/u', $rest)) {
                             $tariff = $rest;
                         }
                         break;
@@ -456,7 +582,7 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
      * @param  array<string,mixed>  $kfz
      * @param  array<string,mixed>  $bank
      */
-    private function summary(string $text, string $name, array $person, array $ins, array $kfz, array $bank): string
+    private function summary(string $text, string $name, array $person, array $ins, array $kfz, array $bank, ?array $club = null): string
     {
         $s = 'Kfz-Antrag (Zusammenfassung der Antragsstrecke) - '.$ins['insurer']
             .(isset($ins['tariff']) ? ' '.$ins['tariff'] : '')
@@ -476,6 +602,15 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
                     'semiannual' => 'halbjährlich', 'yearly' => 'jährlich', default => '',
                 };
         }
+        if (preg_match('/(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:€|EUR)\s*-\s*(\d{1,2})\s*%/u', $text, $r)) {
+            $s .= ' (statt '.$r[1].' EUR, -'.$r[2].' %)';
+        }
+        if (isset($kfz['teilkasko_deductible'])) {
+            $s .= ' - SB Teilkasko '.$kfz['teilkasko_deductible'].' EUR';
+        }
+        if (isset($kfz['vollkasko_deductible'])) {
+            $s .= ' - SB Vollkasko '.$kfz['vollkasko_deductible'].' EUR';
+        }
         $beginn = $this->beginnText();
         if ($beginn !== null) {
             $s .= ' - Versicherungsbeginn laut Seite: '.$beginn;
@@ -485,6 +620,10 @@ class TarifcheckKfzAntragUebersichtParser implements DocumentTemplateParser
         }
         if (isset($person['email']) && str_starts_with($person['email'], 'www.')) {
             $s .= ' - Hinweis: die E-Mail beginnt mit "www." - bitte beim Kunden pruefen (uebernommen wie angegeben)';
+        }
+        if ($club !== null) {
+            $s .= ' - ZWEITER VERTRAG: bestehende '.$club['insurer'].'-Mitgliedschaft Nr. '.$club['contract_number']
+                .' (Schutzbrief, wird mit "Vertrag anlegen" als eigener Vertrag angelegt bzw. ergaenzt)';
         }
         if ($bank === [] && preg_match('/\bIBAN\b/u', $text)) {
             $s .= ' - IBAN NICHT uebernommen (Pruefziffer ungueltig oder Kontoinhaber nicht der Versicherungsnehmer)';

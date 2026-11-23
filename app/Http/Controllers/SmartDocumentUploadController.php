@@ -394,8 +394,12 @@ class SmartDocumentUploadController extends Controller
         $applied = $this->intake->applyExtractedToCustomer($document, $customer, $request->input('apply_fields', []), auth()->id());
 
         $contract = null;
+        $weitere = [];
         if ($request->boolean('create_contract')) {
             $contract = $this->intake->createContractFromExtraction($document, $customer, auth()->id());
+            // Weitere Vertraege im selben Dokument (z.B. ADAC-Mitgliedschaft
+            // im Kfz-Antrag) gleich mit anlegen.
+            $weitere = $this->intake->createWeitereVertraege($document, $customer, auth()->id());
             // Zaehlerfoto: der abgelesene Stand gehoert IMMER in die
             // Verbrauchshistorie - auch wenn der Mitarbeiter zusaetzlich
             // "Vertrag anlegen" gewaehlt hat (sonst lief die Erfassung nur im
@@ -426,6 +430,7 @@ class SmartDocumentUploadController extends Controller
             'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
+            'weitere_contract_ids' => array_map(fn ($c) => $c->id, $weitere),
             'invited' => $invited,
         ]);
     }
@@ -495,8 +500,12 @@ class SmartDocumentUploadController extends Controller
         $applied = $this->intake->applyExtractedToCustomer($document, $customer, $request->input('apply_fields', []), auth()->id());
 
         $contract = null;
+        $weitere = [];
         if ($request->boolean('create_contract')) {
             $contract = $this->intake->createContractFromExtraction($document, $customer, auth()->id());
+            // Weitere Vertraege im selben Dokument (z.B. ADAC-Mitgliedschaft
+            // im Kfz-Antrag) gleich mit anlegen.
+            $weitere = $this->intake->createWeitereVertraege($document, $customer, auth()->id());
         }
 
         // Vertrag aus dem Dokument angelegt -> neuen Kunden automatisch einladen
@@ -513,6 +522,7 @@ class SmartDocumentUploadController extends Controller
             'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
+            'weitere_contract_ids' => array_map(fn ($c) => $c->id, $weitere),
             'invited' => $invited,
         ]);
     }
@@ -744,6 +754,11 @@ class SmartDocumentUploadController extends Controller
         $contract = $request->boolean('create_contract')
             ? $this->intake->createContractFromExtraction($primary, $customer, auth()->id(), $merged)
             : null;
+        // Andere Sparten des Vorgangs (z.B. Kfz + ADAC-Mitgliedschaft) als
+        // eigene Vertraege - nie in den Hauptvertrag gemischt.
+        $weitere = $request->boolean('create_contract')
+            ? $this->intake->createWeitereVertraege($primary, $customer, auth()->id(), $merged)
+            : [];
 
         // Vertrag aus dem Dokumenten-Buendel angelegt -> Kunden automatisch
         // einladen (still uebersprungen, wenn keine echte E-Mail vorliegt).
@@ -776,6 +791,7 @@ class SmartDocumentUploadController extends Controller
             'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
+            'weitere_contract_ids' => array_map(fn ($c) => $c->id, $weitere),
             'invited' => $invited,
             'documents' => $documents->count(),
             'health' => $health,
@@ -850,8 +866,10 @@ class SmartDocumentUploadController extends Controller
         $applied = $this->intake->applyExtractedToCustomer($primary, $customer, $request->input('apply_fields', []), auth()->id(), $merged);
 
         $contract = null;
+        $weitere = [];
         if ($request->boolean('create_contract')) {
             $contract = $this->intake->createContractFromExtraction($primary, $customer, auth()->id(), $merged);
+            $weitere = $this->intake->createWeitereVertraege($primary, $customer, auth()->id(), $merged);
         }
         // Jedes Dokument an einen vorhandenen Vertrag des Kunden haengen
         // (Identitaet: Vertrags-Nr./FIN/MaLo ...), Zaehlerfotos in die
@@ -875,6 +893,7 @@ class SmartDocumentUploadController extends Controller
             'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
+            'weitere_contract_ids' => array_map(fn ($c) => $c->id, $weitere),
             'invited' => $invited,
             'documents' => $documents->count(),
         ]);
