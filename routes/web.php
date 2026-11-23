@@ -431,6 +431,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/customers/{id}/timeline', [AdminController::class, 'customerTimeline'])->name('customer.timeline');
     Route::post('/customers/{id}/notes', [AdminController::class, 'storeNote'])->name('customer.note.store');
     Route::post('/customers/{id}/documents', [AdminCustomerDocumentController::class, 'storeDocument'])->name('customer.document.store');
+    // Doppelte Dokumente in den Papierkorb / zurueckholen (KI-128): nur admin/manager.
+    Route::post('/customers/{id}/documents/duplikate-bereinigen', [AdminCustomerDocumentController::class, 'duplikateBereinigen'])->name('customer.documents.dedupe')->middleware('role:admin,manager');
+    Route::post('/dokument-papierkorb/{id}/wiederherstellen', [AdminCustomerDocumentController::class, 'papierkorbWiederherstellen'])->name('documents.trash.restore')->middleware('role:admin,manager');
     Route::post('/customers/{id}/family', [AdminController::class, 'storeFamily'])->name('customer.family.store');
     // Familien- und Kundenbeziehungen: verknuepft ausschliesslich BESTEHENDE
     // Kundenakten (es entsteht nie ein neuer Kunde, es wird nie einer geloescht).

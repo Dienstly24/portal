@@ -32,6 +32,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
 | KI-126 | HIGH | usability/correctness | Kundenakte: erneut hochgeladene, bereits vorhandene Datei wurde kommentarlos doppelt gespeichert - kein Hinweis, kein Angebot zum Ersetzen; ersetztes Dokument behielt den Hash der alten Datei | FIXED |
+| KI-128 | MEDIUM | usability | Kundenakte: bereits doppelt abgelegte Dokumente liessen sich nur einzeln von Hand finden und loeschen - kein Weg, die Akte zu bereinigen | FIXED |
 | KI-127 | LOW | ux-i18n | E-Mail-Anhaenge: RFC-2047-kodierte Dateinamen ("=?UTF-8?B?...?=") standen unlesbar in der Kundenakte | FIXED |
 | KI-125 | HIGH | correctness | Dokumenten-Eingang: Vorgang mit Kfz-Unterlagen + ADAC-Mitgliedschaft wurde zu EINEM Vertrag verschmolzen (Mitgliedsnummer als Kfz-Vertragsnummer, Mitgliedschaft fehlte) | FIXED |
 | KI-124 | MEDIUM | cost/correctness | Dokumenten-Eingang: Screenshot der Kfz-Antrags-Zusammenfassung (Vergleichsrechner) von keinem Parser erkannt - nur per KI lesbar | FIXED |
@@ -173,6 +174,14 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-128 - Doppelte Dokumente im Bestand bereinigen
+- **Category** usability · **Severity** MEDIUM · **Status** FIXED
+- **Location** neu `App\Services\Dokumente\DokumentDublettenService`, `App\Models\DokumentPapierkorb` (Tabelle `dokument_papierkorb`), `CustomerDocumentController::duplikateBereinigen`/`papierkorbWiederherstellen`, Befehle `dokumente:duplikate-bereinigen` und `dokumente:papierkorb-leeren`, `admin/customer_show.blade.php`
+- **Description** Betreiber-Frage 23.11.2026 nach KI-126: "wie lassen wir das System die Dateien pruefen und das Doppelte loeschen?" KI-126 verhindert NEUE Duplikate; der Bestand vor dem Fix blieb doppelt.
+- **Fix (23.11.2026)**: Papierkorb mit 30 Tagen Wiederherstellung (Betreiber-Entscheidung), Knopf in der Kundenakte + Server-Befehl (Probelauf zuerst), nur admin/manager. Nie raten: verschiedene Vertraege, Kundensicht, Verknuepfungen bleiben.
+- **Test** `DokumentDuplikateBereinigenTest` (10 Faelle)
+- **Discovered** 23.11.2026 (Betreiber-Frage)
 
 ### KI-126 - Kundenakte: dieselbe Datei wurde still doppelt gespeichert
 - **Category** usability/correctness · **Severity** HIGH · **Status** FIXED

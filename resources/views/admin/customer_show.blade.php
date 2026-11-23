@@ -474,7 +474,27 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <button data-h-click="8cde53335d" class="btn btn-emerald btn-sm">+ Hochladen</button>
         </div>
     </div>
-    @php $docs = $customer->documents; @endphp
+    @php
+        $docs = $customer->documents;
+        $darfDublettenEntfernen = in_array(auth()->user()->role, ['admin', 'manager'], true);
+        $dublettenAnzahl = count($dokumentDubletten['entfernen'] ?? []);
+        $dublettenBehalten = collect($dokumentDubletten['uebersprungen'] ?? [])->keyBy(fn ($u) => $u['doc']->id);
+    @endphp
+    {{-- Doppelte Dokumente in den Papierkorb (KI-128) --}}
+    @if($dublettenAnzahl > 0)
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px;border:1px solid #F0E0B0;background:#FEF3C7;border-radius:8px;font-size:13px;color:#92400E;">
+        <span>⧉ <strong>{{ $dublettenAnzahl }}</strong> doppelte(s) Dokument(e) mit identischem Inhalt in dieser Akte.</span>
+        @if($darfDublettenEntfernen)
+        <form method="POST" action="{{ route('admin.customer.documents.dedupe', $customer->id) }}" style="margin:0;"
+              data-confirm="{{ $dublettenAnzahl }} doppelte(s) Dokument(e) in den Papierkorb legen? Die älteste Fassung (bzw. die mit Vertrag) bleibt. Wiederherstellbar {{ \App\Models\DokumentPapierkorb::AUFBEWAHRUNG_TAGE }} Tage.">
+            @csrf
+            <button type="submit" class="btn btn-ghost btn-sm">🧹 Duplikate entfernen</button>
+        </form>
+        @else
+        <span style="font-size:12px;">Entfernen dürfen Administrator und Manager.</span>
+        @endif
+    </div>
+    @endif
     @forelse($docs as $d)
     @php
         $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'var(--emerald)'][$d->color ?? 'green'];
@@ -491,6 +511,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 <span>{{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }}</span>
                 <span>· {{ $d->created_at->lokal()->format('d.m.Y') }}</span>
                 @if($docDoppelt)<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;" title="Identischer Inhalt wie „{{ $docDoppelt->file_name }}“">⧉ Doppelt – schon vorhanden seit {{ $docDoppelt->created_at->lokal()->format('d.m.Y') }}</span>@endif
+                @if($dublettenBehalten->has($d->id))<span style="background:#EEF0F3;color:#5F6B62;padding:1px 6px;border-radius:4px;" title="Wird beim Entfernen der Duplikate bewusst behalten">🔒 bleibt: {{ $dublettenBehalten[$d->id]['grund'] }}</span>@endif
                 @if(($d->visibility ?? 'customer') === 'internal')<span style="background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
                 @if($docContract)<span style="background:var(--emerald-soft);color:var(--emerald);padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
                 @if($docContract?->isExternal())@include('admin.partials.contract_origin_badge', ['contract' => $docContract])@endif
@@ -531,6 +552,27 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     @empty
     <p style="color:var(--ink-soft);font-size:14px;">Keine Dokumente. Über „+ Hochladen" können Sie Dateien hinzufügen und einem Vertrag zuordnen.</p>
     @endforelse
+
+    {{-- Papierkorb (KI-128): entfernte Duplikate, 30 Tage wiederherstellbar --}}
+    @if($dokumentPapierkorb->isNotEmpty())
+    <details style="margin-top:16px;">
+        <summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--ink-soft);">🗑 Papierkorb ({{ $dokumentPapierkorb->count() }})</summary>
+        @foreach($dokumentPapierkorb as $p)
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+            <div style="min-width:0;">
+                <div style="font-weight:600;overflow-wrap:anywhere;">{{ \App\Support\Dateiname::dekodiere($p->file_name) }}</div>
+                <div style="font-size:12px;color:var(--ink-soft);">Duplikat · entfernt {{ $p->entfernt_at->lokal()->format('d.m.Y') }}@if($p->entferntVon) von {{ $p->entferntVon->name }}@endif · endgültig gelöscht am {{ $p->endgueltig_ab->lokal()->format('d.m.Y') }}</div>
+            </div>
+            @if($darfDublettenEntfernen)
+            <form method="POST" action="{{ route('admin.documents.trash.restore', $p->id) }}" style="margin:0;flex:none;">
+                @csrf
+                <button type="submit" class="btn btn-ghost btn-sm">↩ Wiederherstellen</button>
+            </form>
+            @endif
+        </div>
+        @endforeach
+    </details>
+    @endif
 
     {{-- Dokumentenanfragen (Priorität 7): Dokument beim Kunden anfordern --}}
     @php $docRequests = \App\Models\DocumentRequest::with('contract')->where('customer_id', $customer->id)->latest()->limit(8)->get(); @endphp
