@@ -136,7 +136,7 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
             break;
         }
 
-        // Absicherung: "Versicherungsnehmer: RANKO" bestaetigt den Firmennamen.
+        // Absicherung: "Versicherungsnehmer: NASSER" bestaetigt den Firmennamen.
         if (! isset($raw['company_name'])
             && preg_match('/Versicherungsnehmer:\s*(\S[^\r\n]*?)\s*$/mu', $this->text, $m)) {
             $vn = trim($m[1]);

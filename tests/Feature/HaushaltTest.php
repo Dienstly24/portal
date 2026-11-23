@@ -47,14 +47,14 @@ class HaushaltTest extends TestCase
 
     public function test_gruenden_aufnehmen_und_hauptansprechpartner(): void
     {
-        $vater = $this->kunde('Maher Abboud');
-        $sohn = $this->kunde('Ahmad Abboud');
+        $vater = $this->kunde('Fadi Saleh');
+        $sohn = $this->kunde('Ahmad Saleh');
         $admin = $this->admin();
 
-        $this->actingAs($admin)->post(route('admin.customer.haushalt.gruenden', $vater->id), ['name' => 'Familie Abboud'])
+        $this->actingAs($admin)->post(route('admin.customer.haushalt.gruenden', $vater->id), ['name' => 'Familie Saleh'])
             ->assertSessionHasNoErrors()->assertSessionHas('success');
         $haushalt = Haushalt::sole();
-        $this->assertSame('Familie Abboud', $haushalt->name);
+        $this->assertSame('Familie Saleh', $haushalt->name);
         $this->assertTrue(HaushaltMitglied::where('customer_id', $vater->id)->sole()->hauptansprechpartner);
 
         $this->actingAs($admin)->post(route('admin.haushalt.aufnehmen', $haushalt->id), [
@@ -68,7 +68,7 @@ class HaushaltTest extends TestCase
         $this->assertFalse(HaushaltMitglied::where('customer_id', $vater->id)->sole()->hauptansprechpartner, 'Es gibt genau einen');
 
         $this->actingAs($admin)->get(route('admin.customer', $vater->id))
-            ->assertOk()->assertSee('Familie Abboud')->assertSee('Ahmad Abboud')->assertSee('Hauptansprechpartner');
+            ->assertOk()->assertSee('Familie Saleh')->assertSee('Ahmad Saleh')->assertSee('Hauptansprechpartner');
     }
 
     public function test_ein_kunde_gehoert_nur_zu_einem_aktuellen_haushalt(): void

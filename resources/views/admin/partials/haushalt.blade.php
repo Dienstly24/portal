@@ -17,7 +17,7 @@
         <div class="muted-sm" style="margin-bottom:10px;">Diese Akte gehört zu keinem Haushalt.</div>
         <form method="POST" action="{{ route('admin.customer.haushalt.gruenden', $customer->id) }}" style="display:flex;gap:8px;flex-wrap:wrap;margin:0;">
             @csrf
-            <input type="text" name="name" maxlength="120" class="eingabe" placeholder="Name (optional), z. B. Familie Abboud" aria-label="Name des Haushalts" style="flex:1;min-width:200px;font-size:13px;">
+            <input type="text" name="name" maxlength="120" class="eingabe" placeholder="Name (optional), z. B. Familie Saleh" aria-label="Name des Haushalts" style="flex:1;min-width:200px;font-size:13px;">
             <button type="submit" class="btn btn-primary" style="padding:8px 14px;">Haushalt anlegen</button>
         </form>
     @else
