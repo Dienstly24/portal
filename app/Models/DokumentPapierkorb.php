@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -12,8 +13,8 @@ use Illuminate\Support\Str;
  * App\Services\Dokumente\DokumentDublettenService.
  *
  * @property array<string, mixed> $daten
- * @property \Illuminate\Support\Carbon $entfernt_at
- * @property \Illuminate\Support\Carbon $endgueltig_ab
+ * @property Carbon $entfernt_at
+ * @property Carbon $endgueltig_ab
  */
 class DokumentPapierkorb extends Model
 {
