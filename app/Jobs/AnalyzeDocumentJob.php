@@ -111,7 +111,16 @@ class AnalyzeDocumentJob implements ShouldQueue
                 // direkt zum Energievertrag und damit zum Kunden. Erst wenn
                 // sie nicht trifft, greift das uebliche Personen-Matching.
                 $match = $result['type'] === 'zaehlerfoto' ? $intake->findMeterMatch($extracted) : null;
-                $match ??= $intake->findMatch($extracted);
+                // Fahrzeug (FIN/Kennzeichen) neben dem Namen (KI-130): eine FIN
+                // ist haerter als jeder Name, und auf einem Fahrzeugschein-Foto
+                // ist der Name oft verlesen. Ist der Fahrzeug-Treffer nur ein
+                // Vorschlag (Kennzeichen allein), gewinnt der staerkere Treffer.
+                if ($match === null) {
+                    $fahrzeug = $intake->findVehicleMatch($extracted);
+                    $person = ($fahrzeug['tier'] ?? null) === 'auto' ? null : $intake->findMatch($extracted);
+                    $match = $person !== null && ($fahrzeug === null || $person['score'] > $fahrzeug['score'])
+                        ? $person : $fahrzeug;
+                }
 
                 // Vorhandene Kunden im gelesenen Text (voller Name / IBAN) -
                 // auch wenn die kostenlose Stufe keinen Namen auslesen durfte

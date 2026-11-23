@@ -1064,6 +1064,36 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Dokument des Hauptvertrags laesst dieses am Hauptvertrag. Die Pruefmaske
   zeigt vorher "+ N weitere Vertraege (wird mit angelegt)". Doppelte
   Eintraege (Sparte + Nummer) zaehlen einmal. Test: `WeitereVertraegeTest`.
+- **Kfz-Versicherungsschein der Itzehoer** (`ItzehoerKfzPoliceParser`,
+  Betreiber-Meldung 23.11.2026, KI-129): vorher griff kein Parser, und die
+  Heuristik nahm `info@itzehoer.de` und die IBAN der Itzehoer (Brieffuss)
+  als Kundendaten. VN aus dem WERTblock "Versicherungsnehmer" (nicht dem
+  Briefkopf), Vers.-Nr. ("2X-...-001"), Beginn/Ablauf, Tarif ("COMFORT
+  DRIVE mit:"), Gesamtbeitrag BRUTTO = LETZTER Betrag der Zeile (nicht die
+  Steuer in der Klammer, nicht der Erstbeitrag der Rechnung), Fahrzeug
+  inkl. "Lieferwagen" -> transporter. SF: mit "Sondereinstufung bei der
+  Itzehoer" ist SIE die Vertragsklasse (`sf_liability_type` =
+  sondereinstufung, tatsaechliche Klasse in `sf_liability_real_class`), der
+  GRUND wird nie geraten. Keine Bankdaten (Kunden-IBAN maskiert). Steht
+  NACH dem NAFI-Antrag. Test: `ItzehoerKfzPoliceParserTest`.
+- **Fahrzeugschein-Foto + Zuordnung ueber das Fahrzeug**
+  (`FahrzeugscheinParser`, `DocumentIntakeService::findVehicleMatch`,
+  23.11.2026, KI-130): an einer Chromium-Nachbildung mit Tesseract gemessen
+  - die Werte kommen gut an, Spalten und Feldkennungen nicht (einmal fehlte
+  die FIN ganz). Gelesen wird nach der FORM: FIN = das EINZIGE 17-stellige
+  Wort ohne I/O/Q (zwei verschiedene -> keine), Kennzeichen = Zeile nach
+  "Amtliches Kennzeichen", Halter = Zeilen zwischen Kennzeichen und
+  Anschrift (erst Nachname, dann Vorname), Erstzulassung + HSN/TSN = Datum
+  mit 4-stelliger Nummer in derselben Zeile. Teil II wird nicht gelesen;
+  steht NACH allen Kfz-Antraegen/Policen. ZUORDNUNG (`AnalyzeDocumentJob`,
+  fuer JEDES Dokument mit Fahrzeugdaten): FIN bei genau EINEM Kunden =
+  automatisch (96); Kennzeichen allein = Vorschlag (85, Kennzeichen werden
+  neu vergeben), automatisch nur mit gleichem Familiennamen
+  (`FamilienName::gleich`); mehrere Kunden = nichts, und eine mehrdeutige
+  FIN sperrt auch den Kennzeichen-Weg. Ist der Fahrzeug-Treffer nur ein
+  Vorschlag, gewinnt ein staerkerer Namens-Treffer. Nach der Zuordnung
+  ergaenzt `linkMatchingContract` die LEEREN Fahrzeugfelder des Vertrags.
+  Test: `FahrzeugscheinZuordnungTest`.
 - **Kfz-Angebot der Sparkassen DirektVersicherung**
   (`SparkasseDirektKfzParser`, 31.07.2026): Spaltenlayout (Beschriftung links,
   Wert rechts), Stufe `antrag`. Bewusst NICHT übernommen: die Empfehlung

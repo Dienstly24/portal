@@ -31,6 +31,8 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-130 | HIGH | usability | Dokumenten-Eingang: Fahrzeugschein-Foto ohne Parser; Kunde/Vertrag wurde ueber FIN oder Kennzeichen nur vorgeschlagen, nie automatisch zugeordnet | FIXED |
+| KI-129 | MEDIUM | cost/correctness | Dokumenten-Eingang: Itzehoer-Kfz-Versicherungsschein von keinem Parser erkannt; Heuristik nahm E-Mail und IBAN der Itzehoer als Kundendaten | FIXED |
 | KI-126 | HIGH | usability/correctness | Kundenakte: erneut hochgeladene, bereits vorhandene Datei wurde kommentarlos doppelt gespeichert - kein Hinweis, kein Angebot zum Ersetzen; ersetztes Dokument behielt den Hash der alten Datei | FIXED |
 | KI-128 | MEDIUM | usability | Kundenakte: bereits doppelt abgelegte Dokumente liessen sich nur einzeln von Hand finden und loeschen - kein Weg, die Akte zu bereinigen | FIXED |
 | KI-127 | LOW | ux-i18n | E-Mail-Anhaenge: RFC-2047-kodierte Dateinamen ("=?UTF-8?B?...?=") standen unlesbar in der Kundenakte | FIXED |
@@ -174,6 +176,22 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-130 - Fahrzeugschein: Kunde und Vertrag ueber FIN/Kennzeichen
+- **Category** usability · **Severity** HIGH · **Status** FIXED
+- **Location** neu `App\Services\Ai\TemplateParsers\FahrzeugscheinParser`, `DocumentIntakeService::findVehicleMatch`, `AnalyzeDocumentJob`
+- **Description** Betreiber-Wunsch 23.11.2026: ein Fahrzeugschein-Foto soll Kunde und Vertrag ueber Kennzeichen oder FIN finden und die Daten ins System bringen. Es gab keinen Parser (nur die Heuristik), und die Fahrzeug-Identitaet wurde nur als Zuordnungs-VORSCHLAG genutzt, nie fuer die automatische Zuordnung.
+- **Fix (23.11.2026)**: Parser liest nach der FORM der Werte (OCR vermischt die Spalten, gemessen an einer Chromium-Nachbildung als PNG und JPEG): FIN (einziges 17-stelliges Wort ohne I/O/Q), Kennzeichen, Halter, Anschrift, Erstzulassung + HSN/TSN, Hersteller/Modell, Kraftstoff, Leistung, Zulassungsdatum. `findVehicleMatch`: FIN bei genau EINEM Kunden = automatisch; Kennzeichen allein = Vorschlag, automatisch nur mit passendem Familiennamen; mehrere Kunden = nichts. Danach ergaenzt `linkMatchingContract` die leeren Fahrzeugfelder des Vertrags (Version History).
+- **Test** `FahrzeugscheinZuordnungTest` (7 Faelle)
+- **Discovered** 23.11.2026 (Betreiber)
+
+### KI-129 - Itzehoer-Kfz-Versicherungsschein nur per KI lesbar
+- **Category** cost/correctness · **Severity** MEDIUM · **Status** FIXED
+- **Location** neu `App\Services\Ai\TemplateParsers\ItzehoerKfzPoliceParser`, Reihenfolge in `AppServiceProvider`
+- **Description** Betreiber-Meldung 23.11.2026 mit einem echten Schein: kein Parser griff, die Heuristik stufte ihn als "versicherungspolice" ein und uebernahm `info@itzehoer.de` als Kunden-E-Mail und die IBAN der Itzehoer aus dem Brieffuss.
+- **Fix (23.11.2026)**: Gratis-Parser (Typ `kfz_vertrag`): VN aus dem Wertblock, Vers.-Nr., Beginn/Ablauf, Tarif, Gesamtbeitrag brutto + Zahlungsperiode, Fahrzeug (Kennzeichen, FIN, HSN/TSN, kW, Erstzulassung, Zulassung auf Halter, km-Stand, Fahrleistung), SF mit Sondereinstufung (Vertragsklasse + tatsaechliche Klasse, Grund nicht geraten), Deckung nur aus "Versicherungsumfang". Keine Bankdaten.
+- **Test** `ItzehoerKfzPoliceParserTest` (6 Faelle, inkl. echter Kette aus dem Container)
+- **Discovered** 23.11.2026 (Betreiber)
 
 ### KI-128 - Doppelte Dokumente im Bestand bereinigen
 - **Category** usability · **Severity** MEDIUM · **Status** FIXED
