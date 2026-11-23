@@ -21,6 +21,7 @@ use App\Services\Notifications\NotificationService;
 use App\Services\Relationships\CustomerRelationshipService;
 use App\Services\VehicleOverlapGuard;
 use App\Support\Facades\Notify;
+use App\Support\FamilienName;
 use App\Support\GermanPhone;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -695,6 +696,63 @@ class DocumentIntakeService
             'tier' => 'auto',
             // Fuer die Review-UI: der Treffer kommt vom Zaehler, nicht vom Namen.
             'via' => 'meter_number',
+        ];
+    }
+
+    /**
+     * Kunde ueber das FAHRZEUG finden (FIN bzw. Kennzeichen), Betreiber-Wunsch
+     * 23.11.2026 (KI-130): ein Fahrzeugschein, eine Police oder ein Schreiben
+     * zum Auto soll beim richtigen Kunden landen, auch wenn der Name auf dem
+     * Foto unlesbar ist. Gesucht wird in den erfassten Fahrzeugen der
+     * Vertraege (`vehicleIdentityHits`).
+     *
+     * - FIN: identifiziert das Fahrzeug weltweit -> genau EIN Kunde = 'auto'.
+     * - Kennzeichen: wird nach einer Abmeldung neu vergeben. Allein ist es nur
+     *   ein Vorschlag ('confirm'); 'auto' nur, wenn zusaetzlich der
+     *   Familienname des Dokuments zum Kunden passt.
+     * - Mehrere Kunden zum selben Merkmal -> nichts (nie raten). Eine FIN, die
+     *   zu mehreren Kunden gehoert, sperrt auch den Kennzeichen-Weg.
+     *
+     * @param  array<string,mixed>  $extracted
+     * @return array<string,mixed>|null
+     */
+    public function findVehicleMatch(array $extracted): ?array
+    {
+        $kfz = $extracted['kfz'] ?? null;
+        if (! is_array($kfz) || (blank($kfz['vin'] ?? null) && blank($kfz['license_plate'] ?? null))) {
+            return null;
+        }
+
+        $kunden = ['FIN' => [], 'Kennzeichen' => []];
+        foreach ($this->vehicleIdentityHits($kfz) as [$customer, $grund]) {
+            $art = str_starts_with($grund, 'FIN') ? 'FIN' : 'Kennzeichen';
+            $kunden[$art][(string) $customer->id] = $customer;
+        }
+
+        if (count($kunden['FIN']) > 1) {
+            return null;
+        }
+        if (count($kunden['FIN']) === 1) {
+            $customer = array_values($kunden['FIN'])[0];
+            $score = 96;
+            $via = 'fin';
+        } elseif (count($kunden['Kennzeichen']) === 1) {
+            $customer = array_values($kunden['Kennzeichen'])[0];
+            $person = $extracted['person'] ?? [];
+            $nachname = is_array($person) ? trim((string) ($person['last_name'] ?? '')) : '';
+            $score = $nachname !== '' && FamilienName::gleich($nachname, (string) $customer->user?->name) ? 95 : 85;
+            $via = 'kennzeichen';
+        } else {
+            return null;
+        }
+
+        return [
+            'customer_id' => (string) $customer->id,
+            'name' => $customer->user?->name,
+            'customer_number' => $customer->customer_number,
+            'score' => $score,
+            'tier' => (new MatchResult($customer, $score))->tier(),
+            'via' => $via,
         ];
     }
 

@@ -4,6 +4,7 @@ namespace Tests\Feature\Ai;
 
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 use App\Services\Ai\TemplateParsers\TarifcheckKfzAntragUebersichtParser;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -322,5 +323,56 @@ class TarifcheckKfzAntragUebersichtParserTest extends TestCase
             'Adresse des Versicherungsnehmers', 'Versicherungsnehmer Herr Max Mustermann',
             'Musterstr. 1', '12345 Musterstadt', 'Zahlungsdaten', 'IBAN DE89 3704 0044 0532 0130 00',
         ])));
+    }
+
+    /**
+     * KRAVAG-Screenshot (Betreiber-Meldung 23.11.2026, KI-131): Tesseract
+     * liefert dort erst ALLE Beschriftungen einer Karte, dann alle Werte.
+     * Nachgestellt mit Chromium + Tesseract (erfundene Daten), einmal im
+     * Original, einmal 2x vergroessert wie im `TesseractTextExtractor`.
+     * Vorher fehlten Name, IBAN, Beitrag ("monatiich"), Tarif und km-Stand.
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function spaltenFassungen(): iterable
+    {
+        yield 'original' => ['kfz_antrag_uebersicht_spalten.txt'];
+        yield 'vergroessert' => ['kfz_antrag_uebersicht_spalten_2x.txt'];
+    }
+
+    #[DataProvider('spaltenFassungen')]
+    public function test_werte_getrennt_von_ihren_beschriftungen(string $datei): void
+    {
+        $r = app(DocumentTemplateParser::class)->parse((string) file_get_contents(base_path('tests/Fixtures/'.$datei)));
+
+        $this->assertNotNull($r);
+        $this->assertSame('kfz_vertrag', $r['type']);
+        $p = $r['data']['person'];
+        $this->assertSame('Lina', $p['first_name']);
+        $this->assertSame('Haddad', $p['last_name']);
+        $this->assertSame('female', $p['gender']);
+        $this->assertSame('karim.muster77@example.com', $p['email']);
+        $this->assertSame('72793', $p['zip']);
+        $v = $r['data']['versicherung'];
+        $this->assertSame('KRAVAG', $v['insurer']);
+        $this->assertSame('KfzPolice-Kompakt mit Werkstattservice', $v['tariff']);
+        $this->assertSame(153.11, $v['premium_amount']);
+        $this->assertSame('monthly', $v['premium_interval']);
+        $k = $r['data']['kfz'];
+        $this->assertSame('Mercedes-Benz', $k['manufacturer']);
+        $this->assertSame('C 200 Kompressor', $k['model']);
+        $this->assertSame(225000, $k['initial_mileage']);
+        $this->assertSame(150, $k['teilkasko_deductible']);
+        $this->assertSame('DE89370400440532013000', $r['data']['bank']['iban']);
+    }
+
+    /** Ohne den Vermerk "(Versicherungsnehmer)" unter dem Namen kein Konto. */
+    public function test_getrennter_kontoinhaber_ohne_vermerk_bleibt_ohne_iban(): void
+    {
+        $text = str_replace('(Versicherungsnehmer)', '', (string) file_get_contents(base_path('tests/Fixtures/kfz_antrag_uebersicht_spalten.txt')));
+
+        $r = (new TarifcheckKfzAntragUebersichtParser)->parse($text);
+
+        $this->assertSame([], $r['data']['bank']);
     }
 }

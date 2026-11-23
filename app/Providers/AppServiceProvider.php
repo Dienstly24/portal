@@ -70,6 +70,7 @@ use App\Services\Ai\TemplateParsers\EnergiePortalAuftragParser;
 use App\Services\Ai\TemplateParsers\ErsatzbescheinigungParser;
 use App\Services\Ai\TemplateParsers\EuropaGoKfzParser;
 use App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser;
+use App\Services\Ai\TemplateParsers\FahrzeugscheinParser;
 use App\Services\Ai\TemplateParsers\FamilienversicherungParser;
 use App\Services\Ai\TemplateParsers\GeburtsurkundeParser;
 use App\Services\Ai\TemplateParsers\GehaltsabrechnungParser;
@@ -77,6 +78,7 @@ use App\Services\Ai\TemplateParsers\GesundheitskarteParser;
 use App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser;
 use App\Services\Ai\TemplateParsers\GruenweltLieferbestaetigungParser;
 use App\Services\Ai\TemplateParsers\InterlloydPoliceParser;
+use App\Services\Ai\TemplateParsers\ItzehoerKfzPoliceParser;
 use App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser;
 use App\Services\Ai\TemplateParsers\KontaktdatenBlockParser;
 use App\Services\Ai\TemplateParsers\KontaktSepaDatenParser;
@@ -216,7 +218,13 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(TarifcheckKfzAntragUebersichtParser::class),
                 $app->make(WgvKfzPoliceParser::class),
                 $app->make(NafiKfzAntragParser::class),
+                // Police der Itzehoer NACH dem NAFI-Antrag (der Antrag nennt die
+                // Itzehoer als Gesellschaft und gehoert seinem Parser).
+                $app->make(ItzehoerKfzPoliceParser::class),
                 $app->make(BayerischeEscooterParser::class),
+                // Fahrzeugschein-Foto NACH allen Kfz-Antraegen/Policen: sie
+                // nennen Kennzeichen und "Fahrzeugschein" ebenfalls.
+                $app->make(FahrzeugscheinParser::class),
                 // VOR den Beitritts-Formularen: die Bestaetigung der Kasse ist
                 // ein ANSCHREIBEN an den Arbeitgeber, kein ausgefuelltes
                 // Formular - sie darf nicht an einem Formular-Parser haengen
