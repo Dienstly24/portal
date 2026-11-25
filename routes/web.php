@@ -964,6 +964,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 
     // Berichte
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+    // Detailliste hinter jeder Zahl der Berichtsseite (+ Export ?format=csv|xlsx).
+    Route::get('/reports/liste', [ReportController::class, 'liste'])->name('reports.liste');
     // Neukunden-Bericht: Liste fuer alle Rollen (Daten per Portfolio-Scoping),
     // Werber/Sichtbarkeit setzen nur Verwaltung.
     Route::get('/reports/neukunden', [ReportController::class, 'newCustomers'])->name('reports.neukunden');

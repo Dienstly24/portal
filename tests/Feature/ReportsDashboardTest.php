@@ -276,7 +276,10 @@ class ReportsDashboardTest extends TestCase
         $this->assertSame(1, $karte['laender']['NW']['kunden']);
         $this->assertSame(1, $karte['laender']['BY']['kunden']);
         $this->assertSame(1, $karte['ohne_zuordnung']);
-        $this->assertSame(3, $karte['gesamt']);
+        // Berichte 2.0 (F1, 25.11.2026): 'gesamt' = Kunden AUF der Karte
+        // (Basis der Anteile), 'alle' = einschliesslich ohne PLZ.
+        $this->assertSame(2, $karte['gesamt']);
+        $this->assertSame(3, $karte['alle']);
     }
 
     public function test_top_regionen_sind_nach_kunden_sortiert(): void

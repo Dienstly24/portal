@@ -4,6 +4,8 @@ namespace App\Services\Reporting;
 
 use App\Models\Contract;
 use App\Models\Customer;
+use App\Models\Partner;
+use App\Models\User;
 use App\Support\Bundesland;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -83,6 +85,9 @@ class DashboardAnalyticsService
         $kunden = $this->kundenstruktur($f);
         $status = $this->vertragsstatus($f);
 
+        $staedte = $this->staedte($f);
+        $werber = $this->werberRangliste($f);
+
         return [
             'zeitraum' => [
                 'von' => $f->von->format('d.m.Y'),
@@ -93,10 +98,14 @@ class DashboardAnalyticsService
             'kpis' => $kpis,
             'verlauf' => $this->verlauf($f),
             'sparten' => $sparten,
+            'sparten_zeitraum' => $this->spartenImZeitraum($f),
             'karte' => $karte,
+            'staedte' => $staedte,
+            'gesellschaften' => $this->gesellschaften($f),
+            'werber' => $werber,
             'kunden' => $kunden,
             'status' => $status,
-            'insights' => $this->insights($f, $kpis, $sparten, $karte, $kunden, $status),
+            'insights' => $this->insights($f, $kpis, $sparten, $karte, $kunden, $status, $staedte, $werber),
         ];
     }
 
@@ -112,20 +121,35 @@ class DashboardAnalyticsService
      */
     private function kennzahlen(AnalyticsFilters $f): array
     {
-        $monatJetzt = $this->abschluesse($f, now()->startOfMonth(), now()->endOfMonth());
-        $monatVor = $this->abschluesse($f, now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth());
-        $jahrJetzt = $this->abschluesse($f, now()->startOfYear(), now()->endOfYear());
-        $jahrVor = $this->abschluesse($f, now()->subYear()->startOfYear(), now()->subYear()->endOfYear());
+        // Feste Kacheln: GANZER Kalendermonat bzw. GANZES Jahr. Die Liste
+        // hinter der Kachel bekommt genau diese Spanne als eigenen Zeitraum
+        // (siehe 'liste_zeitraum') - sonst zaehlte die Kachel einen Vertrag
+        // mit Beginn am 20.12., die Liste "Dieses Jahr bis heute" aber nicht.
+        $monatVon = now()->startOfMonth();
+        $monatBis = now()->endOfMonth();
+        $jahrVon = now()->startOfYear();
+        $jahrBis = now()->endOfYear();
+
+        $monatJetzt = $this->vertraegeNeu($f, $monatVon, $monatBis)->count();
+        $monatVor = $this->vertraegeNeu($f, now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth())->count();
+        $jahrJetzt = $this->vertraegeNeu($f, $jahrVon, $jahrBis)->count();
+        $jahrVor = $this->vertraegeNeu($f, now()->subYear()->startOfYear(), now()->subYear()->endOfYear())->count();
+
+        $abschluesse = $this->vertraegeNeu($f, $f->von, $f->bis)->count();
+        $kundenMitAbschluss = $this->kundenMitAbschluss($f, $f->von, $f->bis)->count();
+        $kundenMitAbschlussVor = $this->kundenMitAbschluss($f, $f->vergleichVon(), $f->vergleichBis())->count();
 
         $kundenNeu = $this->neueKunden($f, $f->von, $f->bis);
         $kundenVor = $this->neueKunden($f, $f->vergleichVon(), $f->vergleichBis());
+        $neuMitVertrag = $this->liste('neukunden_mit_vertrag', $f)->count();
+        $quote = $kundenNeu > 0 ? round($neuMitVertrag / $kundenNeu * 100, 1) : null;
 
         $wert = $this->vertragswert($f, $f->von, $f->bis);
         $wertVor = $this->vertragswert($f, $f->vergleichVon(), $f->vergleichBis());
 
         $verlaengert = $this->verlaengerungen($f, $f->von, $f->bis);
         $beendet = $this->beendetImZeitraum($f, $f->von, $f->bis);
-        $quote = ($verlaengert + $beendet) > 0 ? round($verlaengert / ($verlaengert + $beendet) * 100, 1) : null;
+        $verlQuote = ($verlaengert + $beendet) > 0 ? round($verlaengert / ($verlaengert + $beendet) * 100, 1) : null;
 
         $auslaufend = $this->auslaufend($f, 30);
         $ueberfaellig = $this->ueberfaellig($f);
@@ -140,6 +164,8 @@ class DashboardAnalyticsService
                 'trend_text' => 'vs. Vormonat',
                 'hinweis' => 'Abschlüsse im laufenden Kalendermonat',
                 'zeitraum_fest' => true,
+                'liste' => 'vertraege_neu',
+                'liste_zeitraum' => [$monatVon, $monatBis],
             ],
             [
                 'schluessel' => 'jahr',
@@ -148,8 +174,23 @@ class DashboardAnalyticsService
                 'format' => 'zahl',
                 'trend' => $this->trend($jahrJetzt, $jahrVor),
                 'trend_text' => 'vs. Vorjahr',
-                'hinweis' => 'Abschlüsse seit dem 1. Januar',
+                'hinweis' => 'Abschlüsse vom 1. Januar bis 31. Dezember',
                 'zeitraum_fest' => true,
+                'liste' => 'vertraege_neu',
+                'liste_zeitraum' => [$jahrVon, $jahrBis],
+            ],
+            [
+                'schluessel' => 'kunden_abschluss',
+                'label' => 'Kunden mit Abschluss',
+                'wert' => $kundenMitAbschluss,
+                'format' => 'zahl',
+                'trend' => $this->trend($kundenMitAbschluss, $kundenMitAbschlussVor),
+                'trend_text' => 'vs. Vorzeitraum',
+                // Die Frage "mit WIE VIELEN Kunden haben wir gearbeitet" ist
+                // eine andere als "wie viele Vertraege": ein Kunde mit drei
+                // Vertraegen ist EIN Kunde. Beide Zahlen stehen deshalb da.
+                'hinweis' => 'Jeder Kunde einmal gezählt – '.$abschluesse.' Verträge im gewählten Zeitraum',
+                'liste' => 'kunden_abschluss',
             ],
             [
                 'schluessel' => 'neukunden',
@@ -159,6 +200,20 @@ class DashboardAnalyticsService
                 'trend' => $this->trend($kundenNeu, $kundenVor),
                 'trend_text' => 'vs. Vorzeitraum',
                 'hinweis' => 'Im gewählten Zeitraum angelegt',
+                'liste' => 'neukunden',
+            ],
+            [
+                'schluessel' => 'abschlussquote',
+                'label' => 'Abschlussquote Neukunden',
+                'wert' => $quote ?? 0,
+                'format' => $quote === null ? 'leer' : 'prozent',
+                'trend' => null,
+                'trend_text' => $kundenNeu > 0
+                    ? $neuMitVertrag.' von '.$kundenNeu.' Neukunden mit Vertrag'
+                    : 'Keine Neukunden im Zeitraum',
+                'warnung' => $quote !== null && $kundenNeu - $neuMitVertrag > 0,
+                'hinweis' => ($kundenNeu - $neuMitVertrag).' Neukunden noch ohne Vertrag',
+                'liste' => 'neukunden_ohne_vertrag',
             ],
             [
                 'schluessel' => 'wert',
@@ -168,6 +223,7 @@ class DashboardAnalyticsService
                 'trend' => $this->trend($wert, $wertVor),
                 'trend_text' => 'vs. Vorzeitraum',
                 'hinweis' => 'Jahresbeitrag der Abschlüsse im Zeitraum – Beitrag des Kunden, nicht Ertrag',
+                'liste' => 'vertraege_neu',
             ],
             [
                 'schluessel' => 'verlaengerungen',
@@ -175,10 +231,11 @@ class DashboardAnalyticsService
                 'wert' => $verlaengert,
                 'format' => 'zahl',
                 'trend' => null,
-                'trend_text' => $quote !== null
-                    ? $this->zahl($quote, 1).' % Verlängerungsquote'
+                'trend_text' => $verlQuote !== null
+                    ? $this->zahl($verlQuote, 1).' % Verlängerungsquote'
                     : 'Keine Abläufe im Zeitraum',
                 'hinweis' => 'Ablauf im Zeitraum, Vertrag läuft weiter (stillschweigende Verlängerung)',
+                'liste' => 'verlaengert',
             ],
             [
                 'schluessel' => 'auslaufend',
@@ -191,6 +248,8 @@ class DashboardAnalyticsService
                     : 'Keine überfälligen Verträge',
                 'warnung' => $auslaufend > 0 || $ueberfaellig > 0,
                 'hinweis' => 'Aktive Verträge mit Ablauf in den nächsten 30 Tagen',
+                'liste' => 'auslaufend',
+                'ueberfaellig' => $ueberfaellig,
             ],
         ];
     }
@@ -428,7 +487,13 @@ class DashboardAnalyticsService
             $this->addieren($summen, $plz3, 'verlaengerungen', (int) $anzahl);
         }
 
-        $gesamtKunden = (int) array_sum(array_column($summen, 'kunden'));
+        // ANTEILE BEZIEHEN SICH AUF DIE KUNDEN AUF DER KARTE (F1, Betreiber-
+        // Befund 25.11.2026). Vorher stand "1.488 Kunden ausgewertet", obwohl
+        // 230 davon ohne PLZ gar nicht auf der Karte lagen, und NRW 22,6 %
+        // war 337 von 1.488 statt von 1.258. Jetzt: Basis = zugeordnete
+        // Kunden; die Restmenge steht getrennt und als Liste daneben.
+        $alleKunden = (int) array_sum(array_column($summen, 'kunden'));
+        $gesamtKunden = $alleKunden - $summen[Bundesland::UNBEKANNT]['kunden'];
 
         $laender = [];
         $top = [];
@@ -453,7 +518,10 @@ class DashboardAnalyticsService
             'max' => max(1, (int) max(array_column($summen, 'kunden'))),
             'top' => array_slice($top, 0, 5),
             'ohne_zuordnung' => $summen[Bundesland::UNBEKANNT]['kunden'],
+            // 'gesamt' = Kunden AUF der Karte (Basis der Anteile),
+            // 'alle' = einschliesslich der Kunden ohne auswertbare PLZ.
             'gesamt' => $gesamtKunden,
+            'alle' => $alleKunden,
         ];
     }
 
@@ -485,10 +553,13 @@ class DashboardAnalyticsService
         return [
             'gesamt' => $gesamt,
             'gruppen' => [
-                ['schluessel' => 'privat', 'label' => 'Privatkunden', 'wert' => $privat, 'basis' => $gesamt],
-                ['schluessel' => 'firma', 'label' => 'Firmenkunden', 'wert' => $firma, 'basis' => $gesamt],
-                ['schluessel' => 'neu', 'label' => 'Neue Kunden', 'wert' => $neu, 'basis' => $gesamt],
-                ['schluessel' => 'bestand', 'label' => 'Bestandskunden', 'wert' => max(0, $gesamt - $neu), 'basis' => $gesamt],
+                ['schluessel' => 'privat', 'label' => 'Privatkunden', 'wert' => $privat, 'basis' => $gesamt, 'liste' => 'kunden', 'filter' => ['kundentyp' => 'privat']],
+                ['schluessel' => 'firma', 'label' => 'Firmenkunden', 'wert' => $firma, 'basis' => $gesamt, 'liste' => 'kunden', 'filter' => ['kundentyp' => 'firma']],
+                ['schluessel' => 'neu', 'label' => 'Neue Kunden', 'wert' => $neu, 'basis' => $gesamt, 'liste' => 'neukunden', 'filter' => []],
+                // Bestand = VOR dem Zeitraum angelegt. Vorher "gesamt - neu":
+                // ein Kunde, der NACH dem Zeitraum angelegt wurde, war damit
+                // Bestandskunde - und die Liste dahinter haette nicht gepasst.
+                ['schluessel' => 'bestand', 'label' => 'Bestandskunden', 'wert' => $this->liste('kunden_bestand', $f)->count(), 'basis' => $gesamt, 'liste' => 'kunden_bestand', 'filter' => []],
             ],
             // Ohne erfassten Typ - ehrlich ausgewiesen statt still auf
             // "privat" gerechnet (die Summe muesste sonst nicht aufgehen).
@@ -511,18 +582,198 @@ class DashboardAnalyticsService
         return [
             'basis' => $basis,
             'zeilen' => [
-                ['schluessel' => 'aktiv', 'label' => 'Aktiv', 'wert' => $aktiv, 'ton' => 'gut',
+                ['schluessel' => 'aktiv', 'liste' => 'aktiv', 'label' => 'Aktiv', 'wert' => $aktiv, 'ton' => 'gut',
                     'hinweis' => 'Laufender Bestand'],
-                ['schluessel' => 'auslaufend', 'label' => 'Auslaufend', 'wert' => $auslaufend, 'ton' => 'warnung',
+                ['schluessel' => 'auslaufend', 'liste' => 'auslaufend', 'label' => 'Auslaufend', 'wert' => $auslaufend, 'ton' => 'warnung',
                     'hinweis' => 'Ablauf in 30 Tagen'],
-                ['schluessel' => 'verlaengert', 'label' => 'Verlängert', 'wert' => $verlaengert, 'ton' => 'info',
+                ['schluessel' => 'verlaengert', 'liste' => 'verlaengert', 'label' => 'Verlängert', 'wert' => $verlaengert, 'ton' => 'info',
                     'hinweis' => 'Ablauf im Zeitraum, läuft weiter'],
-                ['schluessel' => 'anbahnung', 'label' => 'In Bearbeitung', 'wert' => $anbahnung, 'ton' => 'neutral',
+                ['schluessel' => 'anbahnung', 'liste' => 'anbahnung', 'label' => 'In Bearbeitung', 'wert' => $anbahnung, 'ton' => 'neutral',
                     'hinweis' => 'Antrag noch nicht im Bestand'],
-                ['schluessel' => 'gekuendigt', 'label' => 'Gekündigt', 'wert' => $gekuendigt, 'ton' => 'schlecht',
+                ['schluessel' => 'gekuendigt', 'liste' => 'gekuendigt', 'label' => 'Gekündigt', 'wert' => $gekuendigt, 'ton' => 'schlecht',
                     'hinweis' => 'Kündigung im Zeitraum eingereicht'],
+                ['schluessel' => 'ueberfaellig', 'liste' => 'ueberfaellig', 'label' => 'Überfällig', 'wert' => $this->ueberfaellig($f), 'ton' => 'warnung',
+                    'hinweis' => 'Ablauf vorbei, weder Verlängerung noch Ende erfasst'],
             ],
+            // F7: welche Zeilen Teilmengen sind - sonst liest man die Liste
+            // als Summe, und sie geht nicht auf.
+            'erklaerung' => 'Auslaufend, Verlängert und Überfällig sind Teilmengen von „Aktiv“ bzw. Bewegungen im Zeitraum – die Zeilen ergeben keine Summe.',
         ];
+    }
+
+    // =================================================================
+    // Sparten im Zeitraum, Staedte, Gesellschaften, Werber (Berichte 2.0)
+    // =================================================================
+
+    /**
+     * Je Sparte: neue Vertraege, verschiedene Kunden und Vertragswert im
+     * Zeitraum - die Bewegung, waehrend sparten() den Bestand zeigt.
+     */
+    private function spartenImZeitraum(AnalyticsFilters $f): array
+    {
+        $zeilen = $this->vertraegeNeu($f, $f->von, $f->bis)
+            ->selectRaw('contracts.type as type, count(*) as anzahl, count(distinct contracts.customer_id) as kunden, '.$this->jahresbeitragSql().' as wert')
+            ->groupBy('contracts.type')->toBase()->get();
+
+        return $zeilen->map(function ($z) {
+            $cfg = Contract::TYPES[$z->type] ?? Contract::LEGACY_TYPES[$z->type] ?? null;
+
+            return [
+                'schluessel' => (string) $z->type,
+                'label' => $cfg['label'] ?? (string) $z->type,
+                'farbe' => $cfg['color'] ?? '#5F5E5A',
+                'anzahl' => (int) $z->anzahl,
+                'kunden' => (int) $z->kunden,
+                'wert' => round((float) $z->wert, 2),
+            ];
+        })->sortByDesc('anzahl')->values()->all();
+    }
+
+    /**
+     * Staedte-Rangliste: je Ort Kunden (Bestand im Filter), Neukunden,
+     * Kunden mit Abschluss, neue Vertraege und Vertragswert im Zeitraum.
+     *
+     * DER ORT IST DER ERFASSTE ORT, nicht aus der PLZ geraten. Zusammen-
+     * gefasst wird getrimmt und klein geschrieben - dieselbe Regel wie der
+     * Stadt-Filter (kundenfilter()), sonst fuehrte der Klick auf "Kiel" zu
+     * einer anderen Zahl. Kunden ohne Ort stehen getrennt ('ohne_ort').
+     */
+    private function staedte(AnalyticsFilters $f): array
+    {
+        $ort = 'trim(customers.address_city)';
+        $summen = [];
+        $ohneOrt = 0;
+
+        foreach ($this->kundenbasis($f)->selectRaw("{$ort} as ort, count(*) as anzahl")->groupByRaw($ort)->toBase()->get() as $z) {
+            if (trim((string) $z->ort) === '') {
+                $ohneOrt += (int) $z->anzahl;
+            } else {
+                $this->stadtAddieren($summen, (string) $z->ort, kunden: (int) $z->anzahl);
+            }
+        }
+        foreach ($this->liste('neukunden', $f)->selectRaw("{$ort} as ort, count(*) as anzahl")->groupByRaw($ort)->toBase()->get() as $z) {
+            $this->stadtAddieren($summen, (string) $z->ort, neukunden: (int) $z->anzahl);
+        }
+        foreach ($this->vertraegeNeu($f, $f->von, $f->bis)
+            ->selectRaw("{$ort} as ort, count(*) as anzahl, count(distinct contracts.customer_id) as kunden, ".$this->jahresbeitragSql().' as wert')
+            ->groupByRaw($ort)->toBase()->get() as $z) {
+            $this->stadtAddieren($summen, (string) $z->ort,
+                neueVertraege: (int) $z->anzahl,
+                kundenAbschluss: (int) $z->kunden,
+                wert: round((float) $z->wert, 2),
+            );
+        }
+
+        $liste = array_values($summen);
+        usort($liste, fn ($a, $b) => [$b['neue_vertraege'], $b['kunden']] <=> [$a['neue_vertraege'], $a['kunden']]);
+
+        return [
+            'zeilen' => array_slice($liste, 0, 20),
+            'anzahl_orte' => count($liste),
+            'ohne_ort' => $ohneOrt,
+        ];
+    }
+
+    /**
+     * Werte einer Stadt zuschlagen - Schluessel klein geschrieben (wie der
+     * Stadt-Filter), angezeigt wird die erste gesehene Schreibweise. Ohne
+     * Ort zaehlt nichts in die Rangliste (die Kunden ohne Ort stehen als
+     * eigene Zahl daneben).
+     *
+     * @param  array<string,array{name:string,kunden:int,neukunden:int,kunden_abschluss:int,neue_vertraege:int,wert:float}>  $summen
+     */
+    private function stadtAddieren(
+        array &$summen, string $name,
+        int $kunden = 0, int $neukunden = 0, int $kundenAbschluss = 0, int $neueVertraege = 0, float $wert = 0.0,
+    ): void {
+        $name = trim($name);
+        if ($name === '') {
+            return;
+        }
+        $key = mb_strtolower($name);
+        $zeile = $summen[$key] ?? ['name' => $name, 'kunden' => 0, 'neukunden' => 0, 'kunden_abschluss' => 0, 'neue_vertraege' => 0, 'wert' => 0.0];
+        $zeile['kunden'] += $kunden;
+        $zeile['neukunden'] += $neukunden;
+        $zeile['kunden_abschluss'] += $kundenAbschluss;
+        $zeile['neue_vertraege'] += $neueVertraege;
+        $zeile['wert'] += $wert;
+        $summen[$key] = $zeile;
+    }
+
+    /** Neue Vertraege je Gesellschaft im Zeitraum (Top 10). */
+    private function gesellschaften(AnalyticsFilters $f): array
+    {
+        $zeilen = $this->vertraegeNeu($f, $f->von, $f->bis)
+            ->selectRaw('trim(contracts.insurer) as name, count(*) as anzahl, count(distinct contracts.customer_id) as kunden, '.$this->jahresbeitragSql().' as wert')
+            ->groupByRaw('trim(contracts.insurer)')
+            ->orderByDesc('anzahl')->toBase()->get();
+
+        return $zeilen->map(fn ($z) => [
+            'name' => (string) $z->name,
+            'anzahl' => (int) $z->anzahl,
+            'kunden' => (int) $z->kunden,
+            'wert' => round((float) $z->wert, 2),
+        ])->all();
+    }
+
+    /**
+     * Rangliste der Mitarbeiter und Vermittler (WERBER des Kunden:
+     * customers.acquired_by bzw. acquired_by_partner_id). Das ist die
+     * gespeicherte Zuordnung, nach der auch die Provisionen gebucht werden
+     * - es wird nichts vermutet. Ohne Werber = eigene Zeile.
+     */
+    private function werberRangliste(AnalyticsFilters $f): array
+    {
+        $vertraege = $this->vertraegeNeu($f, $f->von, $f->bis)
+            ->selectRaw('customers.acquired_by as u, customers.acquired_by_partner_id as p, count(*) as anzahl, count(distinct contracts.customer_id) as kunden, '.$this->jahresbeitragSql().' as wert')
+            ->groupBy('customers.acquired_by', 'customers.acquired_by_partner_id')->toBase()->get();
+        $neukunden = $this->liste('neukunden', $f)
+            ->selectRaw('customers.acquired_by as u, customers.acquired_by_partner_id as p, count(*) as anzahl')
+            ->groupBy('customers.acquired_by', 'customers.acquired_by_partner_id')->toBase()->get();
+
+        $schluessel = fn ($z) => $z->u ? 'u:'.$z->u : ($z->p ? 'p:'.$z->p : 'keiner');
+        $zeilen = [];
+        $leer = ['neue_vertraege' => 0, 'kunden_abschluss' => 0, 'wert' => 0.0, 'neukunden' => 0];
+        foreach ($vertraege as $z) {
+            $k = $schluessel($z);
+            $zeilen[$k] = ($zeilen[$k] ?? $leer);
+            $zeilen[$k]['neue_vertraege'] += (int) $z->anzahl;
+            $zeilen[$k]['kunden_abschluss'] += (int) $z->kunden;
+            $zeilen[$k]['wert'] += round((float) $z->wert, 2);
+        }
+        foreach ($neukunden as $z) {
+            $k = $schluessel($z);
+            $zeilen[$k] = ($zeilen[$k] ?? $leer);
+            $zeilen[$k]['neukunden'] += (int) $z->anzahl;
+        }
+
+        $userIds = [];
+        $partnerIds = [];
+        foreach (array_keys($zeilen) as $k) {
+            if (str_starts_with($k, 'u:')) {
+                $userIds[] = (int) substr($k, 2);
+            } elseif (str_starts_with($k, 'p:')) {
+                $partnerIds[] = substr($k, 2);
+            }
+        }
+        $namenU = User::whereIn('id', $userIds)->pluck('name', 'id');
+        $namenP = Partner::whereIn('id', $partnerIds)->pluck('name', 'id');
+
+        $ergebnis = [];
+        foreach ($zeilen as $k => $z) {
+            $ergebnis[] = $z + [
+                'schluessel' => $k,
+                'art' => $k === 'keiner' ? null : (str_starts_with($k, 'u:') ? 'Mitarbeiter' : 'Partner'),
+                'name' => match (true) {
+                    $k === 'keiner' => 'Ohne Mitarbeiter/Vermittler',
+                    str_starts_with($k, 'u:') => $namenU[(int) substr($k, 2)] ?? 'Unbekannt',
+                    default => $namenP[substr($k, 2)] ?? 'Unbekannt',
+                },
+            ];
+        }
+        usort($ergebnis, fn ($a, $b) => [$b['neue_vertraege'], $b['neukunden']] <=> [$a['neue_vertraege'], $a['neukunden']]);
+
+        return $ergebnis;
     }
 
     // =================================================================
@@ -538,7 +789,7 @@ class DashboardAnalyticsService
      * Ohne Datengrundlage entsteht KEIN Satz (leerer Abschnitt statt
      * Fuellsaetzen wie "keine Auffaelligkeiten").
      */
-    private function insights(AnalyticsFilters $f, array $kpis, array $sparten, array $karte, array $kunden, array $status): array
+    private function insights(AnalyticsFilters $f, array $kpis, array $sparten, array $karte, array $kunden, array $status, array $staedte = [], array $werber = []): array
     {
         $insights = [];
         $kpi = collect($kpis)->keyBy('schluessel');
@@ -559,7 +810,8 @@ class DashboardAnalyticsService
             $insights[] = [
                 'ton' => 'info',
                 'text' => $spitze['name'].' hat mit '.$this->zahl($spitze['anteil'], 1).' % den höchsten Kundenanteil ('
-                    .$spitze['kunden'].' von '.$karte['gesamt'].' Kunden).',
+                    .$spitze['kunden'].' von '.$karte['gesamt'].' Kunden mit auswertbarer PLZ).',
+                'liste' => 'kunden', 'filter' => ['bundesland' => $spitze['kuerzel']],
             ];
         }
 
@@ -571,22 +823,56 @@ class DashboardAnalyticsService
             ];
         }
 
+        // Neukunden ohne Vertrag: die wichtigste Handlungsfrage ("wo
+        // verlieren wir Kunden?") - mit Zahl, die oben in der Kachel steht.
+        $quote = $kpi->get('abschlussquote');
+        $ohne = $this->liste('neukunden_ohne_vertrag', $f)->count();
+        if ($quote && $ohne > 0) {
+            $insights[] = [
+                'ton' => 'warnung',
+                'text' => $ohne.' der im Zeitraum angelegten Kunden haben noch keinen Vertrag ('.$quote['trend_text'].') – offene Kontakte prüfen.',
+                'liste' => 'neukunden_ohne_vertrag',
+            ];
+        }
+
+        $stadtSpitze = $staedte['zeilen'][0] ?? null;
+        if ($stadtSpitze && $stadtSpitze['neue_vertraege'] > 0) {
+            $insights[] = [
+                'ton' => 'info',
+                'text' => 'Die meisten Abschlüsse im Zeitraum kamen aus '.$stadtSpitze['name'].' ('
+                    .$stadtSpitze['neue_vertraege'].' Verträge mit '.$stadtSpitze['kunden_abschluss'].' Kunden).',
+                'liste' => 'vertraege_neu', 'filter' => ['stadt' => $stadtSpitze['name']],
+            ];
+        }
+
+        $werberSpitze = collect($werber)->first(fn ($w) => $w['schluessel'] !== 'keiner' && $w['neue_vertraege'] > 0);
+        if ($werberSpitze) {
+            $insights[] = [
+                'ton' => 'gut',
+                'text' => $werberSpitze['name'].' hat im Zeitraum die meisten Abschlüsse gebracht ('
+                    .$werberSpitze['neue_vertraege'].' Verträge, '.$werberSpitze['kunden_abschluss'].' Kunden).',
+                'liste' => 'vertraege_neu', 'filter' => ['werber' => $werberSpitze['schluessel']],
+            ];
+        }
+
         $auslaufend = $kpi->get('auslaufend');
         if ($auslaufend && $auslaufend['wert'] > 0) {
             $insights[] = [
                 'ton' => 'warnung',
                 'text' => $auslaufend['wert'].' aktive Verträge laufen in den nächsten 30 Tagen ab – '
                     .'jetzt ansprechen, solange die Kündigungsfrist noch läuft.',
+                'liste' => 'auslaufend',
             ];
         }
 
-        if ($karte['ohne_zuordnung'] > 0 && $karte['gesamt'] > 0) {
-            $anteil = round($karte['ohne_zuordnung'] / $karte['gesamt'] * 100, 1);
+        if ($karte['ohne_zuordnung'] > 0 && $karte['alle'] > 0) {
+            $anteil = round($karte['ohne_zuordnung'] / $karte['alle'] * 100, 1);
             if ($anteil >= 5) {
                 $insights[] = [
                     'ton' => 'warnung',
                     'text' => 'Bei '.$karte['ohne_zuordnung'].' Kunden ('.$this->zahl($anteil, 1)
                         .' %) fehlt eine auswertbare Postleitzahl – sie fehlen in der Karte.',
+                    'liste' => 'kunden', 'filter' => ['bundesland' => Bundesland::UNBEKANNT],
                 ];
             }
         }
@@ -600,7 +886,7 @@ class DashboardAnalyticsService
             ];
         }
 
-        return array_slice($insights, 0, 5);
+        return array_slice($insights, 0, 7);
     }
 
     // =================================================================
@@ -640,8 +926,40 @@ class DashboardAnalyticsService
         if ($f->vertragsstatus !== null) {
             $q->statusGroup($f->vertragsstatus);
         }
+        if ($f->gesellschaft !== null) {
+            $q->where('contracts.insurer', $f->gesellschaft);
+        }
+        $this->kundenfilter($q, $f);
 
         return $q;
+    }
+
+    /**
+     * Filter, die an der KUNDENAKTE haengen (Stadt, PLZ, Werber) - fuer
+     * Vertrags- und Kundenabfragen dieselbe Bedingung, sonst meinte
+     * "Kiel" in der Kundenzahl andere Menschen als in der Vertragszahl.
+     *
+     * Stadt: getrimmt und klein geschrieben verglichen - "Kiel " und
+     * "KIEL" sind derselbe Ort. Die Rangliste der Staedte fasst genauso
+     * zusammen (staedte()), damit ein Klick dieselbe Menge trifft.
+     */
+    private function kundenfilter(Builder $q, AnalyticsFilters $f): void
+    {
+        if ($f->stadt !== null) {
+            $q->whereRaw('lower(trim(customers.address_city)) = ?', [mb_strtolower(trim($f->stadt))]);
+        }
+        if ($f->plz !== null) {
+            $q->where('customers.address_zip', 'like', $f->plz.'%');
+        }
+        if ($f->werber !== null) {
+            if ($f->werber === 'keiner') {
+                $q->whereNull('customers.acquired_by')->whereNull('customers.acquired_by_partner_id');
+            } elseif (str_starts_with($f->werber, 'u:')) {
+                $q->where('customers.acquired_by', (int) substr($f->werber, 2));
+            } else {
+                $q->where('customers.acquired_by_partner_id', substr($f->werber, 2));
+            }
+        }
     }
 
     /**
@@ -670,7 +988,7 @@ class DashboardAnalyticsService
         // damit ueber denselben typisierten Vertrags-Builder wie alles andere
         // auf dieser Seite, `statusGroup()` ist die bekannte Scope-Methode und
         // nicht ein Aufruf auf "irgendeinem Model" im Inneren einer Closure.
-        if ($f->sparte !== null || $f->vertragsstatus !== null) {
+        if ($f->sparte !== null || $f->vertragsstatus !== null || $f->gesellschaft !== null) {
             $vertraege = Contract::query()->select('contracts.customer_id')->ownPortfolio();
             if ($f->sparte !== null) {
                 $vertraege->where('contracts.type', $f->sparte);
@@ -678,17 +996,135 @@ class DashboardAnalyticsService
             if ($f->vertragsstatus !== null) {
                 $vertraege->statusGroup($f->vertragsstatus);
             }
+            if ($f->gesellschaft !== null) {
+                $vertraege->where('contracts.insurer', $f->gesellschaft);
+            }
             $q->whereIn('customers.id', $vertraege);
         }
+        $this->kundenfilter($q, $f);
 
         return $q;
     }
 
-    private function abschluesse(AnalyticsFilters $f, Carbon $von, Carbon $bis): int
+    /**
+     * Vertraege mit ABSCHLUSS (Definition 1) in der Spanne.
+     *
+     * @return Builder<Contract>
+     */
+    private function vertraegeNeu(AnalyticsFilters $f, Carbon $von, Carbon $bis): Builder
     {
-        return (clone $this->vertragsbasis($f))
-            ->whereRaw(self::ABSCHLUSS.' between ? and ?', [$von->toDateString(), $bis->toDateString()])
-            ->count();
+        return $this->vertragsbasis($f)
+            ->whereRaw(self::ABSCHLUSS.' between ? and ?', [$von->toDateString(), $bis->toDateString()]);
+    }
+
+    /**
+     * Kunden mit mindestens einem Abschluss in der Spanne - jeder EINMAL,
+     * egal wie viele Vertraege. Gebaut als Kundenabfrage ueber die
+     * Vertragsmenge, damit Zahl und Namensliste dieselbe Menge sind.
+     *
+     * @return Builder<Customer>
+     */
+    private function kundenMitAbschluss(AnalyticsFilters $f, Carbon $von, Carbon $bis): Builder
+    {
+        $ids = $this->vertraegeNeu($f, $von, $bis)->select('contracts.customer_id');
+
+        return Customer::query()->whereIn('customers.id', $ids);
+    }
+
+    // =================================================================
+    // Detaillisten (Drill-down) - Berichte 2.0, 25.11.2026
+    // =================================================================
+
+    /**
+     * Jede Zahl der Seite fuehrt auf eine dieser Listen. Die Kachel zaehlt
+     * mit DERSELBEN Abfrage, die die Liste anzeigt (count() bzw. paginate()
+     * auf demselben Builder) - "Neue Kunden: 71" und die Liste dahinter
+     * koennen deshalb nicht auseinanderlaufen. Ein Test prueft das je Liste.
+     *
+     * 'art' sagt, ob die Liste Vertraege oder Kunden zeigt.
+     */
+    public const LISTEN = [
+        'vertraege_neu' => ['titel' => 'Neu abgeschlossene Verträge', 'art' => 'vertrag',
+            'erklaerung' => 'Abschluss im Zeitraum (Unterschrift, sonst Antrag, sonst Beginn, sonst Anlage).'],
+        'kunden_abschluss' => ['titel' => 'Kunden mit Vertragsabschluss', 'art' => 'kunde',
+            'erklaerung' => 'Kunden mit mindestens einem Abschluss im Zeitraum – jeder Kunde einmal.'],
+        'neukunden' => ['titel' => 'Neue Kunden', 'art' => 'kunde',
+            'erklaerung' => 'Im Zeitraum angelegte Kunden.'],
+        'neukunden_mit_vertrag' => ['titel' => 'Neue Kunden mit Vertrag', 'art' => 'kunde',
+            'erklaerung' => 'Im Zeitraum angelegt und mit mindestens einem Vertrag (eigener Bestand, jeder Status).'],
+        'neukunden_ohne_vertrag' => ['titel' => 'Neue Kunden ohne Vertrag', 'art' => 'kunde',
+            'erklaerung' => 'Im Zeitraum angelegt, bisher ohne Vertrag – offene Kontakte.'],
+        'kunden' => ['titel' => 'Kunden im Filter', 'art' => 'kunde',
+            'erklaerung' => 'Alle Kunden, auf die die Filter zutreffen (unabhängig vom Zeitraum).'],
+        'kunden_bestand' => ['titel' => 'Bestandskunden', 'art' => 'kunde',
+            'erklaerung' => 'Vor dem Zeitraum angelegte Kunden.'],
+        'aktiv' => ['titel' => 'Aktiver Bestand', 'art' => 'vertrag',
+            'erklaerung' => 'Heute laufende Verträge (auch „aktiv ab“ einem künftigen Tag).'],
+        'anbahnung' => ['titel' => 'In Bearbeitung', 'art' => 'vertrag',
+            'erklaerung' => 'Anträge, die noch nicht im Bestand sind.'],
+        'auslaufend' => ['titel' => 'Auslaufende Verträge', 'art' => 'vertrag',
+            'erklaerung' => 'Aktive Verträge mit Ablauf in den nächsten 30 Tagen.'],
+        'ueberfaellig' => ['titel' => 'Überfällige Verträge', 'art' => 'vertrag',
+            'erklaerung' => 'Ablaufdatum vorbei, Vertrag gilt weiter als aktiv – Verlängerung oder Ende ist nicht erfasst.'],
+        'verlaengert' => ['titel' => 'Verlängerte Verträge', 'art' => 'vertrag',
+            'erklaerung' => 'Ablauf im Zeitraum, Vertrag läuft weiter (abgeleitet, keine Meldung des Versicherers).'],
+        'gekuendigt' => ['titel' => 'Gekündigte Verträge', 'art' => 'vertrag',
+            'erklaerung' => 'Kündigung im Zeitraum eingereicht.'],
+    ];
+
+    /**
+     * Die Abfrage hinter einer Liste. Unbekannte Liste = Ausnahme: der
+     * Controller prueft vorher gegen LISTEN, hier waere es ein Programmfehler.
+     *
+     * @return Builder<Contract>|Builder<Customer>
+     */
+    public function liste(string $liste, AnalyticsFilters $f): Builder
+    {
+        $von = $f->von;
+        $bis = $f->bis;
+
+        return match ($liste) {
+            'vertraege_neu' => $this->vertraegeNeu($f, $von, $bis),
+            'kunden_abschluss' => $this->kundenMitAbschluss($f, $von, $bis),
+            'neukunden' => $this->kundenbasis($f)->whereBetween('customers.created_at', [$von, $bis]),
+            'neukunden_mit_vertrag' => $this->kundenbasis($f)->whereBetween('customers.created_at', [$von, $bis])
+                ->whereIn('customers.id', Contract::query()->select('contracts.customer_id')->ownPortfolio()),
+            'neukunden_ohne_vertrag' => $this->kundenbasis($f)->whereBetween('customers.created_at', [$von, $bis])
+                ->whereNotIn('customers.id', Contract::query()->select('contracts.customer_id')->ownPortfolio()),
+            'kunden' => $this->kundenbasis($f),
+            'kunden_bestand' => $this->kundenbasis($f)->where('customers.created_at', '<', $von),
+            'aktiv' => $this->vertragsbasis($f)->currentlyActive(),
+            'anbahnung' => $this->vertragsbasis($f)->inProgress(),
+            'auslaufend' => $this->auslaufendQuery($f, 30),
+            'ueberfaellig' => $this->vertragsbasis($f)
+                ->whereNotNull('contracts.end_date')
+                ->whereDate('contracts.end_date', '<', now()->toDateString())
+                ->currentlyActive(),
+            'verlaengert' => $this->vertragsbasis($f)
+                ->whereBetween('contracts.end_date', [$von->toDateString(), $bis->toDateString()])
+                ->whereIn('contracts.status', Contract::ACTIVE_STATUSES)
+                ->whereNull('contracts.cancellation_date'),
+            'gekuendigt' => $this->vertragsbasis($f)
+                ->whereBetween('contracts.cancellation_date', [$von->toDateString(), $bis->toDateString()]),
+            default => throw new \InvalidArgumentException('Unbekannte Liste: '.$liste),
+        };
+    }
+
+    /** Abschluss-Ausdruck fuer die Vertragsliste (Spalte + Sortierung). */
+    public static function abschlussSql(): string
+    {
+        return self::ABSCHLUSS;
+    }
+
+    /** Jahresbeitrag EINES Vertrags als SQL-Ausdruck (ohne Summe). */
+    public static function jahresbeitragZeileSql(): string
+    {
+        $faelle = '';
+        foreach (Contract::PREMIUM_INTERVALS as $schluessel => $cfg) {
+            $faelle .= " when '".$schluessel."' then ".(int) $cfg['per_year'];
+        }
+
+        return '(coalesce(contracts.premium_amount, 0) * (case contracts.premium_interval'.$faelle.' else 12 end))';
     }
 
     private function neueKunden(AnalyticsFilters $f, Carbon $von, Carbon $bis): int
@@ -732,21 +1168,22 @@ class DashboardAnalyticsService
 
     private function auslaufend(AnalyticsFilters $f, int $tage): int
     {
-        return (clone $this->vertragsbasis($f))
+        return $this->auslaufendQuery($f, $tage)->count();
+    }
+
+    /** @return Builder<Contract> */
+    private function auslaufendQuery(AnalyticsFilters $f, int $tage): Builder
+    {
+        return $this->vertragsbasis($f)
             ->whereNotNull('contracts.end_date')
             ->whereDate('contracts.end_date', '>=', now()->toDateString())
             ->whereDate('contracts.end_date', '<=', now()->addDays($tage)->toDateString())
-            ->currentlyActive()
-            ->count();
+            ->currentlyActive();
     }
 
     private function ueberfaellig(AnalyticsFilters $f): int
     {
-        return (clone $this->vertragsbasis($f))
-            ->whereNotNull('contracts.end_date')
-            ->whereDate('contracts.end_date', '<', now()->toDateString())
-            ->currentlyActive()
-            ->count();
+        return $this->liste('ueberfaellig', $f)->count();
     }
 
     /**
@@ -756,14 +1193,8 @@ class DashboardAnalyticsService
      */
     private function jahresbeitragSql(): string
     {
-        $faelle = '';
-        foreach (Contract::PREMIUM_INTERVALS as $schluessel => $cfg) {
-            $faelle .= " when '".$schluessel."' then ".(int) $cfg['per_year'];
-        }
-
         // Ohne erfasstes Intervall gilt - wie in yearlyPremium() - monatlich.
-        return 'sum(coalesce(contracts.premium_amount, 0) * (case contracts.premium_interval'
-            .$faelle.' else 12 end))';
+        return 'sum'.self::jahresbeitragZeileSql();
     }
 
     /** Deutsche Zahlenformatierung fuer Fliesstext in den Insights. */

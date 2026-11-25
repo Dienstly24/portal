@@ -1,8 +1,10 @@
 {{--
   EINE KENNZAHLENKACHEL. Erwartet $kpi in der Form, die
   DashboardAnalyticsService::kennzahlen() liefert:
-    schluessel, label, wert, format (zahl|euro), trend, trend_text,
-    hinweis, warnung?, zeitraum_fest?
+    schluessel, label, wert, format (zahl|euro|prozent|leer), trend,
+    trend_text, hinweis, warnung?, zeitraum_fest?
+  Optional $link: Ziel der Detailliste (Berichte 2.0) - dann ist die ganze
+  Kachel ein Link, und die Liste dahinter zeigt genau diese Zahl an Zeilen.
 
   BEWUSST OHNE SYMBOL. Sechs Kacheln mit sechs Emoji sind kein
   Informationsgewinn, sondern sechs bunte Flecken, die vom eigentlichen
@@ -12,14 +14,27 @@
   DER TREND WIRD NIE ERFUNDEN. Fehlt die Vergleichsbasis (Vorzeitraum = 0),
   liefert der Dienst keinen Prozentwert - dann steht hier "neu" statt eines
   rechnerisch richtigen, aber aussagelosen "+100 %".
+
+  DIE BASIS STEHT DABEI (F4, Befund 25.11.2026): "+324 % vs. Vorjahr" sah
+  nach einem Rekord aus und war 988 gegen 233 - vermutlich ein unvollstaendig
+  erfasstes Vorjahr. Mit der Vergleichszahl daneben sieht man das selbst,
+  statt dass die Seite raet, ab wann die Daten vollstaendig sind.
 --}}
 @php
-    $format = fn ($w) => ($kpi['format'] ?? 'zahl') === 'euro'
-        ? number_format((float) $w, 0, ',', '.').' €'
-        : number_format((float) $w, 0, ',', '.');
+    $fmt = $kpi['format'] ?? 'zahl';
+    $format = fn ($w) => match ($fmt) {
+        'euro' => number_format((float) $w, 0, ',', '.').' €',
+        'prozent' => number_format((float) $w, 1, ',', '.').' %',
+        'leer' => '–',
+        default => number_format((float) $w, 0, ',', '.'),
+    };
     $trend = $kpi['trend'] ?? null;
+    $basisText = ($trend && isset($trend['basis']))
+        ? ($fmt === 'euro' ? number_format((float) $trend['basis'], 0, ',', '.').' €' : number_format((float) $trend['basis'], 0, ',', '.'))
+        : null;
+    $tag = ! empty($link) ? 'a' : 'div';
 @endphp
-<div class="an-kpi {{ ($kpi['warnung'] ?? false) ? 'an-kpi-warn' : '' }}">
+<{{ $tag }} class="an-kpi {{ ($kpi['warnung'] ?? false) ? 'an-kpi-warn' : '' }}" @if(! empty($link)) href="{{ $link }}" title="Liste öffnen: {{ $kpi['label'] }}" @endif>
     <div class="an-kpi-label">{{ $kpi['label'] }}</div>
     <div class="an-kpi-wert">{{ $format($kpi['wert']) }}</div>
     <div class="an-kpi-fuss">
@@ -39,9 +54,12 @@
         @elseif($trend && $trend['richtung'] === 'neu')
             <span class="an-trend an-trend-neu">neu</span>
         @endif
-        <span>{{ $kpi['trend_text'] }}</span>
+        <span>{{ $kpi['trend_text'] }}@if($basisText !== null) ({{ $basisText }})@endif</span>
     </div>
     @if(! empty($kpi['hinweis']))
         <div class="an-kpi-hint">{{ $kpi['hinweis'] }}</div>
     @endif
-</div>
+    @if(! empty($link))
+        <div class="an-kpi-mehr">Liste anzeigen →</div>
+    @endif
+</{{ $tag }}>

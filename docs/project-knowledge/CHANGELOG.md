@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 25.11.2026 - Berichte 2.0: jede Zahl bis zum Kunden/Vertrag, Excel-Export, Staedte/Mitarbeiter/Gesellschaften (KI-133)
+
+- **Task**: Betreiber: "wir wissen nicht genau, mit wie vielen Kunden wir im Monat gearbeitet haben, aus welcher Sparte, welcher Stadt/welchem Bundesland, und welche Kunden Vertraege bekommen haben".
+- **Files Changed**: neu `App\Services\Reporting\BerichtsListe`, View `admin/reports_liste`, Test `BerichteDrillDownTest`; geaendert `DashboardAnalyticsService`, `AnalyticsFilters`, `ReportController`, `App\Support\Bundesland`, `admin/reports.blade.php`, `partials/analytics/{filter_bar,kpi_card,bar_list}`, `resources/css/analytics.css`, `routes/web.php`, `ReportsDashboardTest` (Kartenbasis); `CLAUDE.md`, Wissensbasis (`ROUTES_INVENTORY` neu erzeugt).
+- **Database Changes**: keine. **API Changes**: `GET admin/reports/liste` (alle Staff-Rollen, Portfolio-Scope; `?format=csv|xlsx` nur admin/manager).
+- **Potential Side Effects**: `karte.gesamt` meint jetzt die Kunden AUF der Karte (Anteile aendern sich, wenn Kunden ohne PLZ existieren); "Bestandskunden" = vor dem Zeitraum angelegt; Kachelzeile hat 8 statt 6 Kacheln (4 je Zeile).
+- **Tests Performed**: `BerichteDrillDownTest` (17 Faelle), Berichts-/CSP-/Design-Waechtertests, volle Suite (5 Fehler nur `SignaturQualitaetsmatrixTest` mangels `qpdf` in der Sitzungsumgebung), `pint`, `phpstan`; Headless-Chromium mit Demo-Daten: Kachel -> Liste gleiche Zahl, Monatsauswahl, Excel-Download, Telefonbreite ohne seitliches Scrollen, keine JS-Fehler.
+- **Result**: erledigt.
+
 ## 23.11.2026 - Handyfotos aufrichten, Fahrzeugschein vom echten Foto lesen (KI-132)
 
 - **Task**: Betreiber schickte ein echtes Fahrzeugschein-Foto: "erkenne die Datei".
