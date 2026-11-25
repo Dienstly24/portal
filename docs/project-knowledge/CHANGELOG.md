@@ -8,6 +8,16 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 25.11.2026 - Fehlerliste abgearbeitet: Provisionsimport, vergebene Vertragsnummer, SQL-Werte (KI-134, KI-135, KI-136)
+
+- **Task**: Betreiber schickte die 13 offenen Eintraege von `/admin/fehler`: "reparieren und PR".
+- **Files Changed**: `CommissionContractBuilder`, `DocumentIntakeService`, `SmartDocumentUploadController`, `admin/documents_inbox.blade.php`, `ErrorRecorder`; neu `App\Exceptions\VertragsnummerVergebenException`, Migration `2026_11_25_120000_fehlermeldungen_ohne_sql_werte`; Tests `ContractCommissionImportTest`, `SmartDocumentUploadTest`, `ErrorVisibilityTest`; `CLAUDE.md`, `KNOWN_ISSUES.md`.
+- **Database Changes**: Daten-Migration (bereinigt `error_events.message` bei Datenbank-Fehlern, keine Schemaaenderung). **API Changes**: Antworten der Eingangs-Zuordnung tragen zusaetzlich `contract_hinweis`.
+- **Potential Side Effects**: Ein Dokument mit einer Vertragsnummer, die an einer anderen Akte steht, wird weiterhin zugeordnet, erzeugt aber keinen Vertrag mehr (vorher 500). Datenbank-Meldungen in der Fehlerliste sind kuerzer.
+- **Bewusst NICHT im Code**: SMTP 451 (Ratelimit Hostinger), Rechte auf `storage/` (`UnableToCreateDirectory`, `touch()`), fehlendes GD, fehlende Spalte `require_email_verification` und die unbekannten Artisan-Befehle - Server-/Deploy-Zustand bzw. im aktuellen `main` bereits behoben; siehe PR-Beschreibung.
+- **Tests Performed**: siehe PR.
+- **Result**: erledigt, CI ausstehend.
+
 ## 25.11.2026 - Berichte 2.0: jede Zahl bis zum Kunden/Vertrag, Excel-Export, Staedte/Mitarbeiter/Gesellschaften (KI-133)
 
 - **Task**: Betreiber: "wir wissen nicht genau, mit wie vielen Kunden wir im Monat gearbeitet haben, aus welcher Sparte, welcher Stadt/welchem Bundesland, und welche Kunden Vertraege bekommen haben".

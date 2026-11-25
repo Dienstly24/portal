@@ -31,6 +31,9 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-136 | MEDIUM | security/legal | Fehlerliste `/admin/fehler`: Datenbank-Meldungen enthielten die eingesetzten Werte (Vertragsnummern, Kunden-IDs) | FIXED |
+| KI-135 | HIGH | correctness/usability | Dokumenten-Eingang: Vertragsnummer an einer anderen Akte bzw. abhaengiges Kind brach die Zuordnung mit 500 ab - im Stapel-Weg NACH dem Anlegen des Kunden | FIXED |
+| KI-134 | HIGH | correctness | Provisionsimport: zweite Zeile desselben Namens endete mit TypeError (Kunden-UUID aus dem Lauf-Gedaechtnis als "mehrdeutig" gelesen), Vertraege fehlten | FIXED |
 | KI-133 | MEDIUM | correctness/usability | Berichte: Karte rechnete Anteile auf alle Kunden inkl. ohne PLZ, "x ueberfaellig" ohne Liste, Ticket-Summe ohne unbekannte Status, Trend ohne Vergleichsbasis, keine Zahl bis zum Kunden/Vertrag aufrufbar | FIXED |
 | KI-132 | HIGH | correctness | Hochkant gespeicherte Handyfotos wurden seitlich per OCR gelesen (EXIF-Ausrichtung ignoriert) - echter Fahrzeugschein ergab fast keinen Text | FIXED |
 | KI-131 | HIGH | correctness | Kfz-Antrags-Zusammenfassung (KRAVAG): bei spaltenweiser OCR fehlten Name, IBAN, Beitrag, Tarif und Kilometerstand | FIXED |
@@ -179,6 +182,30 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-136 - Fehlerliste: SQL-Werte in der gespeicherten Meldung
+- **Category** security/legal · **Severity** MEDIUM · **Status** FIXED
+- **Location** `App\Support\ErrorRecorder::record`
+- **Description** Die Seite verspricht "nur technische Angaben". Laravel haengt an eine `QueryException` aber die SQL-Anweisung MIT eingesetzten Werten an, MySQL nennt den doppelten Wert selbst ("Duplicate entry '738015177'"). In der Liste standen Vertragsnummern und Kunden-UUIDs.
+- **Fix (25.11.2026)**: `ErrorRecorder::meldung()` speichert die Treiber-Meldung mit ausgeblendeten Werten plus die Anweisung mit PLATZHALTERN (`getSql()`); Migration `2026_11_25_120000_fehlermeldungen_ohne_sql_werte` bereinigt den Bestand. Die Werte stehen weiter nur in der Logdatei.
+- **Test** `ErrorVisibilityTest::test_datenbankfehler_ohne_eingesetzte_werte`
+- **Discovered** 25.11.2026 (Fehlerliste des Betreibers)
+
+### KI-135 - Dokumenten-Eingang: vergebene Vertragsnummer / abhaengiges Kind = 500er
+- **Category** correctness/usability · **Severity** HIGH · **Status** FIXED
+- **Location** `DocumentIntakeService::createContractFromExtraction`, `SmartDocumentUploadController` (assign, createCustomer, createCustomerFromDocuments, assignDocumentsToCustomer)
+- **Description** `contracts.contract_number` ist systemweit eindeutig, die Identitaets-Suche schaut nur in die EIGENE Akte. Nannte ein Dokument die Nummer eines Vertrags an einer anderen Akte, scheiterte `Contract::create` an der Unique-Sperre (Fehlerliste: `create_customer_batch` 16.11., `assign` 14.10.). Ebenso die `AbhaengigerKundeException` aus `Contract::saving` (29.10.). Im Stapel-Weg war der Kunde da schon angelegt und die Dokumente zugeordnet - der Mitarbeiter sah nur "Fehler".
+- **Fix (25.11.2026)**: vor dem Anlegen wird die Nummer systemweit geprueft (`VertragsnummerVergebenException`, nennt den anderen Kunden NIE); der Controller faengt beide fachlichen Ablehnungen (`vertraegeAnlegen`), die Zuordnung bleibt, es entsteht kein Vertrag, der Grund steht als `contract_hinweis` in der Erfolgsmeldung. Nie geraten: kein Umhaengen, keine Nummer weglassen.
+- **Test** `SmartDocumentUploadTest::test_vergebene_vertragsnummer_bricht_die_zuordnung_nicht_ab`
+- **Discovered** 25.11.2026 (Fehlerliste des Betreibers)
+
+### KI-134 - Provisionsimport: TypeError in `withContract()` (134 Auftreten)
+- **Category** correctness · **Severity** HIGH · **Status** FIXED
+- **Location** `CommissionContractBuilder::byExactName`
+- **Description** Das Lauf-Gedaechtnis haelt je Name `'ambiguous'`, `null` oder die Kunden-ID. Die ID ist eine UUID - also ebenfalls ein String, und `is_string()` gab sie als "mehrdeutig" zurueck. Ab der ZWEITEN Zeile desselben Namens landete die UUID als `$customer` in `withContract(Customer ...)`: TypeError, Bestaetigung brach ab, Vertraege fehlten.
+- **Fix (25.11.2026)**: nur `'ambiguous'`/`null` direkt zurueckgeben, sonst den Kunden laden.
+- **Test** `ContractCommissionImportTest::test_zwei_vertraege_desselben_neuen_kunden_in_einer_datei`
+- **Discovered** 25.11.2026 (Fehlerliste des Betreibers, letztes Auftreten 12.09.)
 
 ### KI-133 - Berichte: Zahlen nicht nachvollziehbar (Karte, Ueberfaellig, Tickets, Trend)
 - **Category** correctness/usability · **Severity** MEDIUM · **Status** FIXED

@@ -228,6 +228,33 @@ class ErrorVisibilityTest extends TestCase
     }
 
     /** Immer dieselbe Zeile - damit der Fingerabdruck stabil bleibt. */
+    /**
+     * KI-136: eine Datenbank-Meldung traegt die eingesetzten WERTE - in der
+     * Fehlerliste standen so Vertragsnummern und Kunden-IDs.
+     */
+    public function test_datenbankfehler_ohne_eingesetzte_werte(): void
+    {
+        $pdo = new \PDOException(
+            "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '738015177' "
+            ."for key 'contracts.contracts_contract_number_unique'"
+        );
+        $e = new \Illuminate\Database\QueryException(
+            'mysql',
+            'insert into `contracts` (`customer_id`, `contract_number`) values (?, ?)',
+            ['dba484ad-3e51-4367-b648-bb41181c98ab', '738015177'],
+            $pdo
+        );
+
+        ErrorRecorder::record($e);
+
+        $meldung = ErrorEvent::firstOrFail()->message;
+        $this->assertStringNotContainsString('738015177', $meldung);
+        $this->assertStringNotContainsString('dba484ad', $meldung);
+        // Was zur Fehlersuche gebraucht wird, bleibt stehen.
+        $this->assertStringContainsString('contracts_contract_number_unique', $meldung);
+        $this->assertStringContainsString('values (?, ?)', $meldung);
+    }
+
     private function immerGleicherFehler(): \RuntimeException
     {
         return new \RuntimeException('Immer derselbe Fehler');

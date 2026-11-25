@@ -2,6 +2,7 @@
 
 namespace App\Services\DocumentIntake;
 
+use App\Exceptions\VertragsnummerVergebenException;
 use App\Models\ActivityLog;
 use App\Models\Contract;
 use App\Models\ContractEnergyDetail;
@@ -1558,6 +1559,16 @@ class DocumentIntakeService
         if ($startDate === null && isset($ins['expected_start_within_days'])) {
             $startDate = ($document->created_at ?? now())
                 ->copy()->addDays((int) $ins['expected_start_within_days'])->toDateString();
+        }
+
+        // KI-135: die Vertragsnummer ist systemweit eindeutig. Die
+        // Identitaets-Suche oben schaut nur in DIESE Akte - steht die Nummer
+        // an einem anderen Kunden, endete das Anlegen frueher mit einem
+        // 500er. Jetzt eine verstaendliche Meldung, und es wird nichts
+        // angelegt (nie raten, welcher der beiden Kunden der richtige ist).
+        $nummer = trim((string) ($ins['contract_number'] ?? ''));
+        if ($nummer !== '' && Contract::where('contract_number', $nummer)->exists()) {
+            throw VertragsnummerVergebenException::fuer($nummer);
         }
 
         $contract = Contract::create([

@@ -282,7 +282,15 @@ class CommissionContractBuilder
         // dieses Gedaechtnis waere das je Zeile eine Datenbankabfrage.
         if (array_key_exists($needle, $this->nameCache)) {
             $cached = $this->nameCache[$needle];
-            return is_string($cached) ? $cached : ($cached === null ? null : Customer::with('user')->find($cached));
+            // Der Cache haelt 'ambiguous', null ODER die Kunden-ID - und die
+            // ID ist eine UUID, also ebenfalls ein String. Frueher wurde jeder
+            // String als "mehrdeutig" zurueckgegeben: die UUID landete als
+            // $customer in withContract() und JEDE weitere Zeile desselben
+            // Namens endete mit einem TypeError (134 Auftreten, KI-134).
+            if ($cached === 'ambiguous' || $cached === null) {
+                return $cached;
+            }
+            return Customer::with('user')->find($cached);
         }
 
         $matches = Customer::query()

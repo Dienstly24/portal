@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\AbhaengigerKundeException;
+use App\Exceptions\VertragsnummerVergebenException;
 use App\Jobs\AnalyzeDocumentJob;
 use App\Models\ActivityLog;
 use App\Models\Contract;
@@ -395,11 +397,11 @@ class SmartDocumentUploadController extends Controller
 
         $contract = null;
         $weitere = [];
+        $vertragHinweis = null;
         if ($request->boolean('create_contract')) {
-            $contract = $this->intake->createContractFromExtraction($document, $customer, auth()->id());
             // Weitere Vertraege im selben Dokument (z.B. ADAC-Mitgliedschaft
             // im Kfz-Antrag) gleich mit anlegen.
-            $weitere = $this->intake->createWeitereVertraege($document, $customer, auth()->id());
+            [$contract, $weitere, $vertragHinweis] = $this->vertraegeAnlegen($document, $customer);
             // Zaehlerfoto: der abgelesene Stand gehoert IMMER in die
             // Verbrauchshistorie - auch wenn der Mitarbeiter zusaetzlich
             // "Vertrag anlegen" gewaehlt hat (sonst lief die Erfassung nur im
@@ -431,6 +433,7 @@ class SmartDocumentUploadController extends Controller
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
             'weitere_contract_ids' => array_map(fn ($c) => $c->id, $weitere),
+            'contract_hinweis' => $vertragHinweis,
             'invited' => $invited,
         ]);
     }
@@ -501,11 +504,11 @@ class SmartDocumentUploadController extends Controller
 
         $contract = null;
         $weitere = [];
+        $vertragHinweis = null;
         if ($request->boolean('create_contract')) {
-            $contract = $this->intake->createContractFromExtraction($document, $customer, auth()->id());
             // Weitere Vertraege im selben Dokument (z.B. ADAC-Mitgliedschaft
             // im Kfz-Antrag) gleich mit anlegen.
-            $weitere = $this->intake->createWeitereVertraege($document, $customer, auth()->id());
+            [$contract, $weitere, $vertragHinweis] = $this->vertraegeAnlegen($document, $customer);
         }
 
         // Vertrag aus dem Dokument angelegt -> neuen Kunden automatisch einladen
@@ -523,6 +526,7 @@ class SmartDocumentUploadController extends Controller
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
             'weitere_contract_ids' => array_map(fn ($c) => $c->id, $weitere),
+            'contract_hinweis' => $vertragHinweis,
             'invited' => $invited,
         ]);
     }
@@ -751,14 +755,11 @@ class SmartDocumentUploadController extends Controller
         // Zusammengefuehrtes Ergebnis auf das erste Dokument beziehen.
         $primary = $documents->first();
         $applied = $this->intake->applyExtractedToCustomer($primary, $customer, $request->input('apply_fields', []), auth()->id(), $merged);
-        $contract = $request->boolean('create_contract')
-            ? $this->intake->createContractFromExtraction($primary, $customer, auth()->id(), $merged)
-            : null;
         // Andere Sparten des Vorgangs (z.B. Kfz + ADAC-Mitgliedschaft) als
         // eigene Vertraege - nie in den Hauptvertrag gemischt.
-        $weitere = $request->boolean('create_contract')
-            ? $this->intake->createWeitereVertraege($primary, $customer, auth()->id(), $merged)
-            : [];
+        [$contract, $weitere, $vertragHinweis] = $request->boolean('create_contract')
+            ? $this->vertraegeAnlegen($primary, $customer, $merged)
+            : [null, [], null];
 
         // Vertrag aus dem Dokumenten-Buendel angelegt -> Kunden automatisch
         // einladen (still uebersprungen, wenn keine echte E-Mail vorliegt).
@@ -792,6 +793,7 @@ class SmartDocumentUploadController extends Controller
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
             'weitere_contract_ids' => array_map(fn ($c) => $c->id, $weitere),
+            'contract_hinweis' => $vertragHinweis,
             'invited' => $invited,
             'documents' => $documents->count(),
             'health' => $health,
@@ -867,9 +869,9 @@ class SmartDocumentUploadController extends Controller
 
         $contract = null;
         $weitere = [];
+        $vertragHinweis = null;
         if ($request->boolean('create_contract')) {
-            $contract = $this->intake->createContractFromExtraction($primary, $customer, auth()->id(), $merged);
-            $weitere = $this->intake->createWeitereVertraege($primary, $customer, auth()->id(), $merged);
+            [$contract, $weitere, $vertragHinweis] = $this->vertraegeAnlegen($primary, $customer, $merged);
         }
         // Jedes Dokument an einen vorhandenen Vertrag des Kunden haengen
         // (Identitaet: Vertrags-Nr./FIN/MaLo ...), Zaehlerfotos in die
@@ -894,6 +896,7 @@ class SmartDocumentUploadController extends Controller
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
             'weitere_contract_ids' => array_map(fn ($c) => $c->id, $weitere),
+            'contract_hinweis' => $vertragHinweis,
             'invited' => $invited,
             'documents' => $documents->count(),
         ]);
@@ -1541,6 +1544,39 @@ class SmartDocumentUploadController extends Controller
             'contract_id' => $document->contract_id,
             'match' => $internal ? $this->scrubMatch($extracted['match'] ?? null) : null,
         ];
+    }
+
+    /**
+     * Vertrag (und weitere Vertraege) aus dem Dokument anlegen - ohne dass
+     * eine FACHLICHE Ablehnung die Zuordnung mit einem 500er abbricht.
+     *
+     * KI-135: steht die Vertragsnummer schon an einer anderen Akte oder ist
+     * der Kunde ein abhaengiges Kind (KI-096), endete der Aufruf frueher als
+     * Serverfehler - im Stapel-Weg sogar NACHDEM der Kunde angelegt und die
+     * Dokumente zugeordnet waren. Der Mitarbeiter sah "Fehler" und wusste
+     * nicht, was schon passiert war. Jetzt bleibt die Zuordnung bestehen,
+     * es entsteht kein Vertrag, und der Grund steht in der Erfolgsmeldung.
+     *
+     * @param  array<string, mixed>|null  $merged
+     * @return array{0: ?Contract, 1: list<Contract>, 2: ?string}
+     */
+    private function vertraegeAnlegen(Document $document, Customer $customer, ?array $merged = null): array
+    {
+        $hinweise = [];
+        $contract = null;
+        $weitere = [];
+        try {
+            $contract = $this->intake->createContractFromExtraction($document, $customer, auth()->id(), $merged);
+        } catch (VertragsnummerVergebenException|AbhaengigerKundeException $e) {
+            $hinweise[] = $e->getMessage();
+        }
+        try {
+            $weitere = $this->intake->createWeitereVertraege($document, $customer, auth()->id(), $merged);
+        } catch (VertragsnummerVergebenException|AbhaengigerKundeException $e) {
+            $hinweise[] = $e->getMessage();
+        }
+
+        return [$contract, $weitere, $hinweise === [] ? null : implode(' ', array_unique($hinweise))];
     }
 
     /** Letzten KI-Vorschlag zu diesem Dokument als entschieden markieren. */

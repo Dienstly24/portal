@@ -6,6 +6,7 @@ use App\Models\ErrorEvent;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Schema;
@@ -78,8 +79,9 @@ class ErrorRecorder
 
             $eintrag->fill([
                 'exception_class' => $e::class,
-                // Gekuerzt: eine Meldung kann Datenbank-Ausschnitte enthalten.
-                'message' => mb_substr($e->getMessage(), 0, 500),
+                // Bereinigt und gekuerzt: eine Datenbank-Meldung traegt sonst
+                // die eingesetzten WERTE (Vertragsnummer, Kunden-ID ...).
+                'message' => mb_substr(self::meldung($e), 0, 500),
                 'file' => mb_substr((string) $e->getFile(), 0, 500),
                 'line' => $e->getLine(),
                 'route' => self::currentRoute(),
@@ -105,6 +107,38 @@ class ErrorRecorder
         } catch (Throwable $ignored) {
             // Bewusst still: aus einem Fehler darf nie ein zweiter werden.
         }
+    }
+
+    /**
+     * Meldung OHNE eingesetzte Werte (KI-136, 25.11.2026).
+     *
+     * Laravel haengt an eine QueryException die SQL-Anweisung MIT den
+     * eingesetzten Werten an ("... values (dba484ad-..., 738015177, ...)"),
+     * und MySQL nennt den doppelten Wert selbst ("Duplicate entry
+     * '738015177'"). So standen Vertragsnummern und Kunden-IDs in der
+     * Fehlerliste - entgegen der Regel "keine personenbezogenen Inhalte".
+     * Uebrig bleiben die Meldung des Treibers, Tabelle/Spalten und die
+     * Anweisung mit PLATZHALTERN: genug, um den Defekt zu finden. Die Werte
+     * selbst stehen weiterhin nur in der Logdatei.
+     */
+    public static function meldung(Throwable $e): string
+    {
+        if (! $e instanceof QueryException) {
+            return $e->getMessage();
+        }
+
+        $treiber = $e->getPrevious()?->getMessage() ?? $e->getMessage();
+        // Falls der Treiber selbst schon "(Connection: ..., SQL: ...)" traegt.
+        $treiber = preg_replace('/\s*\(Connection:.*$/su', '', $treiber) ?? $treiber;
+        $treiber = self::werteAusblenden($treiber);
+
+        return trim($treiber).' (SQL: '.$e->getSql().')';
+    }
+
+    /** Werte in Treiber-Meldungen ("Duplicate entry 'X'", "value: 'X'") ausblenden. */
+    public static function werteAusblenden(string $text): string
+    {
+        return preg_replace("/\\b(entry|value:?)(\\s+)'[^']*'/iu", "$1$2'***'", $text) ?? $text;
     }
 
     /** Ist das ein Defekt - oder nur normales Nutzerverhalten? */
