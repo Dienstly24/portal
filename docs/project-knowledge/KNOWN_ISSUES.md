@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-133 | MEDIUM | correctness/usability | Berichte: Karte rechnete Anteile auf alle Kunden inkl. ohne PLZ, "x ueberfaellig" ohne Liste, Ticket-Summe ohne unbekannte Status, Trend ohne Vergleichsbasis, keine Zahl bis zum Kunden/Vertrag aufrufbar | FIXED |
 | KI-132 | HIGH | correctness | Hochkant gespeicherte Handyfotos wurden seitlich per OCR gelesen (EXIF-Ausrichtung ignoriert) - echter Fahrzeugschein ergab fast keinen Text | FIXED |
 | KI-131 | HIGH | correctness | Kfz-Antrags-Zusammenfassung (KRAVAG): bei spaltenweiser OCR fehlten Name, IBAN, Beitrag, Tarif und Kilometerstand | FIXED |
 | KI-130 | HIGH | usability | Dokumenten-Eingang: Fahrzeugschein-Foto ohne Parser; Kunde/Vertrag wurde ueber FIN oder Kennzeichen nur vorgeschlagen, nie automatisch zugeordnet | FIXED |
@@ -178,6 +179,14 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-133 - Berichte: Zahlen nicht nachvollziehbar (Karte, Ueberfaellig, Tickets, Trend)
+- **Category** correctness/usability · **Severity** MEDIUM · **Status** FIXED
+- **Location** `DashboardAnalyticsService`, `ReportController::index`, `admin/reports.blade.php`, `partials/analytics/kpi_card`
+- **Description** Betreiber-Ansicht 25.11.2026: "1.488 Kunden ausgewertet", gleichzeitig "230 ohne PLZ nicht enthalten" - die Anteile (NRW 22,6 %) bezogen sich auf alle 1.488 (F1). "8 bereits ueberfaellig", die Tabelle zeigte nur 2 auslaufende, die 8 waren nirgends aufrufbar (F2). Vorgaenge: 9 gesamt, Status-Zeilen ergaben 8 - ein Status ausserhalb der vier fiel still heraus (F3). "+324 % vs. Vorjahr" ohne die Vergleichszahl - ein unvollstaendig erfasstes Vorjahr sah wie ein Rekord aus (F4). Und keine Zahl liess sich bis zu den Kunden/Vertraegen dahinter oeffnen.
+- **Fix (25.11.2026)**: Karte mit `gesamt` (auf der Karte) und `alle`; Liste `ueberfaellig`; Zeile "Anderer / kein Status"; Vergleichszahl an jeder Trend-Angabe; Drill-down-Listen ueber dieselbe Abfrage wie die Kachel (siehe CLAUDE.md "BERICHTE 2.0").
+- **Test** `BerichteDrillDownTest` (F1-F4 scheitern ohne den Fix), `ReportsDashboardTest::test_karte_weist_kunden_ohne_plz_getrennt_aus` angepasst
+- **Discovered** 25.11.2026 (Betreiber)
 
 ### KI-132 - Handyfoto seitlich gelesen: EXIF-Ausrichtung, Graustufen, Fahrzeugschein ohne Beschriftungen
 - **Category** correctness · **Severity** HIGH · **Status** FIXED

@@ -30,6 +30,9 @@
 --}}
 @php
     $zahl = fn ($w, $n = 0) => number_format((float) $w, $n, ',', '.');
+    // DRILL-DOWN (Berichte 2.0): jede Zahl fuehrt auf die Liste genau
+    // dieser Datensaetze - mit derselben Filterauswahl wie die Seite.
+    $listeUrl = fn (string $liste, array $filter = [], ?array $zeitraum = null) => route('admin.reports.liste', $f->listeQuery($liste, $filter, $zeitraum));
 @endphp
 
 <div class="page-header an-head">
@@ -47,12 +50,12 @@
     </div>
 </div>
 
-@include('admin.partials.analytics.filter_bar', ['f' => $f])
+@include('admin.partials.analytics.filter_bar', ['f' => $f, 'auswahl' => $auswahl])
 
 {{-- ============ 1. Kennzahlen ============ --}}
 <div class="an-kpis">
     @foreach($daten['kpis'] as $kpi)
-        @include('admin.partials.analytics.kpi_card', ['kpi' => $kpi])
+        @include('admin.partials.analytics.kpi_card', ['kpi' => $kpi, 'link' => $listeUrl($kpi['liste'], [], $kpi['liste_zeitraum'] ?? null)])
     @endforeach
 </div>
 <div class="muted-xs" style="margin:-14px 0 22px;line-height:1.55;">
@@ -61,6 +64,7 @@
     „Diesen Monat“ und „Dieses Jahr“ tragen den Zeitraum im Namen und bleiben deshalb fest;
     die übrigen Kacheln folgen der Auswahl oben. Ein Vertrag zählt zum Zeitpunkt seines
     <strong>Abschlusses</strong> (Unterschrift, sonst Antrag, sonst Beginn, sonst Anlage) – nicht zum Tag des Imports.
+    In Klammern steht die Zahl des Vergleichszeitraums. <strong>Jede Zahl lässt sich anklicken</strong> und zeigt die Kunden bzw. Verträge dahinter.
 </div>
 
 {{-- ============ 2. Vertragsentwicklung + Sparten ============ --}}
@@ -97,6 +101,7 @@
                 'eintraege' => collect($daten['sparten'])->map(fn ($s) => [
                     'label' => $s['label'], 'wert' => $s['anzahl'],
                     'anteil' => $s['anteil'], 'farbe' => $s['farbe'],
+                    'link' => $listeUrl('aktiv', ['sparte' => $s['schluessel']]),
                 ])->all(),
                 'basis' => collect($daten['sparten'])->max('anzahl') ?: 1,
                 'leer' => 'Keine aktiven Verträge im gewählten Filter.',
@@ -112,7 +117,12 @@
             <div class="an-card-title">Kundenverteilung in Deutschland</div>
             <div class="an-card-sub">Farbintensität = Kunden je Bundesland. Ein Klick filtert die gesamte Seite auf dieses Land.</div>
         </div>
-        <div class="muted-xs">{{ $zahl($daten['karte']['gesamt']) }} Kunden ausgewertet</div>
+        <div class="muted-xs">
+            <a class="an-zahl-link" href="{{ $listeUrl('kunden') }}">{{ $zahl($daten['karte']['gesamt']) }} Kunden auf der Karte</a>
+            @if($daten['karte']['ohne_zuordnung'] > 0)
+                · <a class="an-zahl-link" href="{{ $listeUrl('kunden', ['bundesland' => \App\Support\Bundesland::UNBEKANNT]) }}">{{ $zahl($daten['karte']['ohne_zuordnung']) }} ohne auswertbare PLZ</a>
+            @endif
+        </div>
     </div>
     <div class="an-grid-karte">
         <div class="an-karte-feld" id="karteFeld">
@@ -124,8 +134,9 @@
             </div>
             <div class="an-karte-quelle">
                 Bundesland aus der Postleitzahl abgeleitet – an einzelnen Leitbereichsgrenzen näherungsweise.
+                Anteile beziehen sich auf die {{ $zahl($daten['karte']['gesamt']) }} Kunden mit auswertbarer PLZ.
                 @if($daten['karte']['ohne_zuordnung'] > 0)
-                    <strong>{{ $zahl($daten['karte']['ohne_zuordnung']) }}</strong> Kunden ohne auswertbare PLZ sind nicht enthalten.
+                    <strong>{{ $zahl($daten['karte']['ohne_zuordnung']) }}</strong> Kunden ohne auswertbare PLZ sind nicht enthalten (Liste über den Link oben).
                 @endif
                 Kartenumrisse: <a href="https://www.npmjs.com/package/&#64;svg-maps/germany" rel="noopener">&#64;svg-maps/germany</a>, CC BY 4.0.
             </div>
@@ -149,13 +160,155 @@
     </div>
 </div>
 
+{{-- ============ 3b. Städte + Sparten im Zeitraum (Berichte 2.0) ============ --}}
+<div class="an-grid-zwei">
+    <div class="an-card">
+        <div class="an-card-head">
+            <div>
+                <div class="an-card-title">Top Städte</div>
+                <div class="an-card-sub">Nach neuen Verträgen im Zeitraum – erfasster Wohnort, nicht aus der PLZ geraten</div>
+            </div>
+            <div class="muted-xs">
+                {{ $zahl($daten['staedte']['anzahl_orte']) }} Orte
+                @if($daten['staedte']['ohne_ort'] > 0)
+                    · {{ $zahl($daten['staedte']['ohne_ort']) }} Kunden ohne Ort
+                @endif
+            </div>
+        </div>
+        @if($daten['staedte']['zeilen'] === [])
+            <div class="an-leer">Keine Kunden mit erfasstem Ort im gewählten Filter.</div>
+        @else
+        <div class="scroll-x">
+        <table class="an-tabelle">
+            <thead><tr><th>Stadt</th><th class="z">Kunden</th><th class="z">Neukunden</th><th class="z">Kunden mit Abschluss</th><th class="z">Neue Verträge</th><th class="z">Vertragswert</th></tr></thead>
+            <tbody>
+            @foreach($daten['staedte']['zeilen'] as $stadt)
+                <tr>
+                    <td><a href="{{ route('admin.reports', $f->alsQuery(['stadt' => $stadt['name']])) }}" title="Ganze Seite auf {{ $stadt['name'] }} filtern" style="font-weight:600;">{{ $stadt['name'] }}</a></td>
+                    <td class="z"><a class="an-zahl-link" href="{{ $listeUrl('kunden', ['stadt' => $stadt['name']]) }}">{{ $zahl($stadt['kunden']) }}</a></td>
+                    <td class="z"><a class="an-zahl-link" href="{{ $listeUrl('neukunden', ['stadt' => $stadt['name']]) }}">{{ $zahl($stadt['neukunden']) }}</a></td>
+                    <td class="z"><a class="an-zahl-link" href="{{ $listeUrl('kunden_abschluss', ['stadt' => $stadt['name']]) }}">{{ $zahl($stadt['kunden_abschluss']) }}</a></td>
+                    <td class="z"><a class="an-zahl-link" href="{{ $listeUrl('vertraege_neu', ['stadt' => $stadt['name']]) }}">{{ $zahl($stadt['neue_vertraege']) }}</a></td>
+                    <td class="z">{{ $zahl($stadt['wert']) }} €</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+        </div>
+        @endif
+    </div>
+
+    <div class="an-card">
+        <div class="an-card-head">
+            <div>
+                <div class="an-card-title">Abschlüsse nach Sparte</div>
+                <div class="an-card-sub">Neue Verträge im Zeitraum – Verträge, verschiedene Kunden und Jahresbeitrag</div>
+            </div>
+        </div>
+        @if($daten['sparten_zeitraum'] === [])
+            <div class="an-leer">Keine Abschlüsse im gewählten Zeitraum.</div>
+        @else
+        <div class="scroll-x">
+        <table class="an-tabelle">
+            <thead><tr><th>Sparte</th><th class="z">Verträge</th><th class="z">Kunden</th><th class="z">Vertragswert</th></tr></thead>
+            <tbody>
+            @foreach($daten['sparten_zeitraum'] as $sp)
+                <tr>
+                    <td><span class="an-status-punkt" style="display:inline-block;background:{{ $sp['farbe'] }};margin-right:6px;"></span>{{ $sp['label'] }}</td>
+                    <td class="z"><a class="an-zahl-link" href="{{ $listeUrl('vertraege_neu', ['sparte' => $sp['schluessel']]) }}">{{ $zahl($sp['anzahl']) }}</a></td>
+                    <td class="z"><a class="an-zahl-link" href="{{ $listeUrl('kunden_abschluss', ['sparte' => $sp['schluessel']]) }}">{{ $zahl($sp['kunden']) }}</a></td>
+                    <td class="z">{{ $zahl($sp['wert']) }} €</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+        </div>
+        @endif
+    </div>
+</div>
+
+{{-- ============ 3c. Mitarbeiter/Vermittler + Gesellschaften ============ --}}
+<div class="an-grid-zwei">
+    <div class="an-card">
+        <div class="an-card-head">
+            <div>
+                <div class="an-card-title">Mitarbeiter &amp; Vermittler</div>
+                <div class="an-card-sub">Nach gespeichertem Werber des Kunden – dieselbe Zuordnung wie bei den Provisionen</div>
+            </div>
+        </div>
+        @if($daten['werber'] === [])
+            <div class="an-leer">Keine Abschlüsse und keine Neukunden im gewählten Zeitraum.</div>
+        @else
+        <div class="scroll-x">
+        <table class="an-tabelle">
+            <thead><tr><th>Name</th><th class="z">Neukunden</th><th class="z">Kunden mit Abschluss</th><th class="z">Neue Verträge</th><th class="z">Vertragswert</th></tr></thead>
+            <tbody>
+            @foreach($daten['werber'] as $w)
+                <tr>
+                    <td><a href="{{ route('admin.reports', $f->alsQuery(['werber' => $w['schluessel']])) }}" title="Ganze Seite auf {{ $w['name'] }} filtern" style="font-weight:600;">{{ $w['name'] }}</a>@if($w['art'])<div class="an-quelle">{{ $w['art'] }}</div>@endif</td>
+                    <td class="z"><a class="an-zahl-link" href="{{ $listeUrl('neukunden', ['werber' => $w['schluessel']]) }}">{{ $zahl($w['neukunden']) }}</a></td>
+                    <td class="z"><a class="an-zahl-link" href="{{ $listeUrl('kunden_abschluss', ['werber' => $w['schluessel']]) }}">{{ $zahl($w['kunden_abschluss']) }}</a></td>
+                    <td class="z"><a class="an-zahl-link" href="{{ $listeUrl('vertraege_neu', ['werber' => $w['schluessel']]) }}">{{ $zahl($w['neue_vertraege']) }}</a></td>
+                    <td class="z">{{ $zahl($w['wert']) }} €</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+        </div>
+        @endif
+    </div>
+
+    <div class="an-card">
+        <div class="an-card-head">
+            <div>
+                <div class="an-card-title">Gesellschaften</div>
+                <div class="an-card-sub">Neue Verträge im Zeitraum je Versicherer/Versorger</div>
+            </div>
+        </div>
+        @if($daten['gesellschaften'] === [])
+            <div class="an-leer">Keine Abschlüsse im gewählten Zeitraum.</div>
+        @else
+        <div class="scroll-x">
+        <table class="an-tabelle">
+            <thead><tr><th>Gesellschaft</th><th class="z">Verträge</th><th class="z">Kunden</th><th class="z">Vertragswert</th></tr></thead>
+            <tbody>
+            @foreach(array_slice($daten['gesellschaften'], 0, 15) as $g)
+                <tr>
+                    <td>
+                        @if($g['name'] !== '')
+                            <a href="{{ route('admin.reports', $f->alsQuery(['gesellschaft' => $g['name']])) }}" style="font-weight:600;">{{ $g['name'] }}</a>
+                        @else
+                            <span class="muted-xs">Ohne Gesellschaft</span>
+                        @endif
+                    </td>
+                    <td class="z">
+                        @if($g['name'] !== '')
+                            <a class="an-zahl-link" href="{{ $listeUrl('vertraege_neu', ['gesellschaft' => $g['name']]) }}">{{ $zahl($g['anzahl']) }}</a>
+                        @else
+                            {{ $zahl($g['anzahl']) }}
+                        @endif
+                    </td>
+                    <td class="z">{{ $zahl($g['kunden']) }}</td>
+                    <td class="z">{{ $zahl($g['wert']) }} €</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+        </div>
+        @if(count($daten['gesellschaften']) > 15)
+            <div class="muted-xs" style="margin-top:10px;">{{ count($daten['gesellschaften']) - 15 }} weitere Gesellschaften – über den Filter „Gesellschaft“ einzeln auswertbar.</div>
+        @endif
+        @endif
+    </div>
+</div>
+
 {{-- ============ 4. Kundenstruktur / Vertragsstatus / Vorgänge ============ --}}
 <div class="an-grid-drei">
     <div class="an-card">
         <div class="an-card-head">
             <div>
                 <div class="an-card-title">Kundenstruktur</div>
-                <div class="an-card-sub">{{ $zahl($daten['kunden']['gesamt']) }} Kunden im Zugriff</div>
+                <div class="an-card-sub">{{ $zahl($daten['kunden']['gesamt']) }} Kunden im Zugriff – Anteile beziehen sich auf diese Zahl</div>
             </div>
             {{-- Der Weg zum Neukunden-Bericht war auf der Vorgaengerseite eine
                  Kachel; er bleibt erhalten, nur an der passenden Karte. --}}
@@ -168,6 +321,7 @@
                     'wert' => $g['wert'],
                     'anteil' => $g['basis'] > 0 ? round($g['wert'] / $g['basis'] * 100, 1) : 0,
                     'farbe' => $g['schluessel'] === 'firma' ? 'var(--status-info)' : ($g['schluessel'] === 'neu' ? 'var(--gold)' : 'var(--emerald)'),
+                    'link' => $listeUrl($g['liste'], $g['filter']),
                 ])->all(),
                 'basis' => max(1, $daten['kunden']['gesamt']),
                 'leer' => 'Keine Kunden im gewählten Filter.',
@@ -188,12 +342,13 @@
             </div>
         </div>
         @foreach($daten['status']['zeilen'] as $zeile)
-            <div class="an-status-zeile">
+            <a class="an-status-zeile" href="{{ $listeUrl($zeile['liste']) }}" title="Liste öffnen: {{ $zeile['label'] }}">
                 <span class="an-status-name"><span class="an-status-punkt an-punkt-{{ $zeile['ton'] }}"></span>{{ $zeile['label'] }}</span>
                 <span class="an-status-wert">{{ $zahl($zeile['wert']) }}</span>
                 <span class="an-status-hint">{{ $zeile['hinweis'] }}</span>
-            </div>
+            </a>
         @endforeach
+        <div class="muted-xs" style="margin-top:10px;">{{ $daten['status']['erklaerung'] }}</div>
     </div>
 
     <div class="an-card">
@@ -225,10 +380,17 @@
     </div>
     <div class="an-insights">
         @foreach($daten['insights'] as $insight)
-            <div class="an-insight">
-                <span class="an-insight-strich an-strich-{{ $insight['ton'] }}"></span>
-                <span>{{ $insight['text'] }}</span>
-            </div>
+            @if(! empty($insight['liste']))
+                <a class="an-insight" href="{{ $listeUrl($insight['liste'], $insight['filter'] ?? []) }}" title="Liste dazu öffnen">
+                    <span class="an-insight-strich an-strich-{{ $insight['ton'] }}"></span>
+                    <span>{{ $insight['text'] }}</span>
+                </a>
+            @else
+                <div class="an-insight">
+                    <span class="an-insight-strich an-strich-{{ $insight['ton'] }}"></span>
+                    <span>{{ $insight['text'] }}</span>
+                </div>
+            @endif
         @endforeach
     </div>
 </div>
@@ -241,9 +403,15 @@
             <div class="an-card-title">Auslaufende Verträge</div>
             <div class="an-card-sub">Aktive Verträge mit Ablauf in den nächsten 30 Tagen</div>
         </div>
-        @if($warnings > 0)
-            <span class="badge badge-danger">{{ $zahl($warnings) }} überfällig</span>
-        @endif
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            {{-- F2 (Befund 25.11.2026): "8 überfällig" stand da, die Tabelle
+                 zeigte aber nur die zwei auslaufenden. Die ueberfaelligen
+                 haben jetzt eine eigene Liste. --}}
+            @if($warnings > 0)
+                <a class="badge badge-danger" href="{{ route('admin.reports.liste', ['liste' => 'ueberfaellig']) }}" title="Überfällige Verträge anzeigen">{{ $zahl($warnings) }} überfällig →</a>
+            @endif
+            <a class="card-link" href="{{ route('admin.reports.liste', ['liste' => 'auslaufend']) }}">Alle auslaufenden →</a>
+        </div>
     </div>
     <div class="scroll-x">
     <table>

@@ -194,6 +194,30 @@ class Bundesland
     }
 
     /**
+     * Alle dreistelligen PLZ-Anfaenge, die die Karte einem Land zuordnet
+     * (als Zeichenketten, siehe praefixe()). Abgeleitet aus ausPlz() selbst,
+     * nicht aus einer zweiten Tabelle - damit "ohne Zuordnung" und die
+     * Laender nie auseinanderlaufen.
+     *
+     * @return list<string>
+     */
+    public static function zugeordneteDreierPraefixe(): array
+    {
+        static $liste = null;
+        if ($liste === null) {
+            $liste = [];
+            for ($i = 0; $i < 1000; $i++) {
+                $drei = str_pad((string) $i, 3, '0', STR_PAD_LEFT);
+                if (self::ausPlz($drei.'00') !== self::UNBEKANNT) {
+                    $liste[] = $drei;
+                }
+            }
+        }
+
+        return $liste;
+    }
+
+    /**
      * Einen Query auf ein Bundesland einschraenken (Spalte mit der PLZ).
      * Wird von Kunden- UND Vertragsabfragen benutzt, damit der Kartenfilter
      * ueberall dieselbe Menge meint.
@@ -206,6 +230,20 @@ class Bundesland
         // naechsten Aufrufer.
         if (! in_array($spalte, ['customers.address_zip', 'address_zip'], true)) {
             throw new \InvalidArgumentException('Unzulaessige PLZ-Spalte: '.$spalte);
+        }
+
+        // "Ohne Bundesland" (Berichte 2.0, 25.11.2026): GENAU die Menge, die
+        // die Karte als "ohne Zuordnung" zaehlt. Die Karte gruppiert ueber
+        // die ersten drei Stellen und ordnet sie mit ausPlz() zu - die
+        // Gegenmenge muss deshalb ueber dieselben drei Stellen laufen, sonst
+        // zeigte die Liste hinter "230 ohne PLZ" eine andere Zahl als 230.
+        if ($kuerzel === self::UNBEKANNT) {
+            $bekannt = self::zugeordneteDreierPraefixe();
+
+            return $query->where(function ($w) use ($bekannt, $spalte) {
+                $w->whereNull($spalte)
+                    ->orWhereNotIn(DB::raw("substr({$spalte}, 1, 3)"), $bekannt);
+            });
         }
 
         $p = self::praefixe($kuerzel);

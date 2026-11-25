@@ -3189,6 +3189,54 @@ Versicherers gehen jedem Standardwert vor.
   `resources/css/analytics.css` (nur diese Seite laedt sie) - kein Hex einer
   Markenfarbe, alles aus `brand.css`.
 - Tests: `ReportsDashboardTest` (Abnahmefaelle 1-11).
+- **BERICHTE 2.0 - DRILL-DOWN (Betreiber-Auftrag 25.11.2026)**: "wir
+  wissen nicht genau, mit wie vielen Kunden wir im Monat gearbeitet haben -
+  und mit WELCHEN". JEDE ZAHL IST EIN LINK auf `/admin/reports/liste?liste=...`
+  (`ReportController::liste`, View `admin/reports_liste`, Zeilen aus
+  `App\Services\Reporting\BerichtsListe`). Die Liste laeuft ueber
+  `DashboardAnalyticsService::liste()` - DIESELBE Abfrage, mit der die Kachel
+  zaehlt (Registry `LISTEN`: vertraege_neu, kunden_abschluss, neukunden,
+  neukunden_mit/ohne_vertrag, kunden, kunden_bestand, aktiv, anbahnung,
+  auslaufend, ueberfaellig, verlaengert, gekuendigt). Zahl = Zeilen = Export
+  ist ein Test (`BerichteDrillDownTest`). Neue Liste = Eintrag in `LISTEN`
+  + Arm in `liste()`, nie eine zweite Abfrage in der Vorlage.
+  **Kunden mit Abschluss** zaehlt jeden Kunden EINMAL (ein Kunde mit drei
+  Vertraegen = 1), die Vertragszahl steht daneben. **Abschlussquote** =
+  Neukunden mit mindestens einem Vertrag (eigener Bestand, jeder Status) /
+  Neukunden; die Liste dahinter sind die Neukunden OHNE Vertrag.
+  **Feste Kacheln** (diesen Monat / dieses Jahr) geben ihrer Liste die
+  GANZE Spanne mit (`liste_zeitraum`, bis 31.12.) - sonst zaehlte die
+  Kachel einen Vertrag mit Beginn am 20.12., die Liste "bis heute" nicht.
+  **Filter neu**: Gestern, (letzte) Woche, letzter Monat, Quartal, letztes
+  Jahr, Monatsauswahl (`?monat=JJJJ-MM`), Stadt (getrimmt + klein
+  geschrieben verglichen - dieselbe Regel wie die Staedte-Rangliste), PLZ
+  (nur Ziffern, als Anfang), Gesellschaft, Werber (`u:<id>`/`p:<uuid>`/
+  `keiner`, die gespeicherte Zuordnung wie bei den Provisionen - nichts
+  vermutet) und Bundesland `unbekannt` (= genau die Kunden, die die Karte
+  "ohne Zuordnung" zaehlt; `Bundesland::filterQuery` nutzt dafuer
+  `zugeordneteDreierPraefixe()`, abgeleitet aus `ausPlz()`).
+  **Neue Abschnitte**: Top-Staedte, Abschluesse nach Sparte (Vertraege/Kunden/
+  Wert im Zeitraum), Mitarbeiter & Vermittler, Gesellschaften. Der Ort ist
+  der ERFASSTE Ort, nie aus der PLZ geraten; Kunden ohne Ort stehen getrennt.
+  **Befunde behoben**: F1 Karte - Anteile beziehen sich auf die Kunden AUF
+  der Karte (`karte.gesamt`), `karte.alle` schliesst die ohne PLZ ein (vorher
+  "1.488 ausgewertet" bei 230 nicht enthaltenen); F2 die "x ueberfaellig"
+  haben eine Liste; F3 Vorgaenge mit unbekanntem Status stehen als
+  "Anderer / kein Status" (Teile = Ganzes); F4 jede Trend-Angabe nennt die
+  Vergleichszahl in Klammern ("vs. Vorjahr (233)") - ein unvollstaendiges
+  Vorjahr wird damit sichtbar, statt dass die Seite raet, ab wann Daten
+  vollstaendig sind; F5/F7 Basis der Anteile bzw. Teilmengen-Hinweis im
+  Vertragsstatus. "Bestandskunden" = vor dem Zeitraum angelegt (vorher
+  gesamt - neu).
+  **Export** Excel (XlsxWriter) und CSV (BOM, Semikolon, Formelschutz) der
+  VOLLSTAENDIGEN Liste, nur admin/manager (wie `/admin/export`); jeder
+  Export steht im ActivityLog `report_list_export` mit Liste, Filter und
+  Zeilenzahl - ohne Namen. Ansehen darf jede Rolle ihr Portfolio.
+  Suche/Sortierung (Whitelist `BerichtsListe::SORTIERUNG`) schraenken nur
+  die Anzeige ein; die Seite nennt "x von y".
+  **Offen (spaetere Phasen)**: Provision je Vertrag/Mitarbeiter in Liste
+  und Ranglisten (Recht `provisionen-verwalten`), Klick auf Diagrammbalken,
+  Monatsbericht als PDF/automatischer Versand, Vergleich Vorjahreszeitraum.
 
 ## Omnichannel-Messaging Phase B (Betreiber-Auftrag 06.09.2026)
 

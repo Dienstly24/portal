@@ -3,7 +3,8 @@
   (Sparten, Kundenstruktur, spaeter beliebige weitere).
 
   Erwartet:
-    $eintraege  Liste aus ['label', 'wert', 'anteil' (0-100), 'farbe'?]
+    $eintraege  Liste aus ['label', 'wert', 'anteil' (0-100), 'farbe'?, 'link'?]
+                ('link' = Detailliste hinter dem Balken, Berichte 2.0)
     $basis      Bezugswert fuer die Balkenlaenge (Standard: groesster Wert)
     $leer       Text, wenn nichts da ist
 
@@ -17,7 +18,7 @@
 @endphp
 @forelse($eintraege as $e)
     @php $laenge = $basis > 0 ? min(100, round($e['wert'] / $basis * 100, 1)) : 0; @endphp
-    <div>
+    <{{ ! empty($e['link']) ? 'a' : 'div' }} @if(! empty($e['link'])) class="an-bar-zeile" href="{{ $e['link'] }}" title="Liste öffnen: {{ $e['label'] }}" @endif>
         <div class="an-bar-kopf">
             <span class="an-bar-name">{{ $e['label'] }}</span>
             <span class="an-bar-zahl">
@@ -28,7 +29,7 @@
         <div class="an-bar-spur">
             <div class="an-bar-fuellung" style="width:{{ $laenge }}%;background:{{ $e['farbe'] ?? 'var(--emerald)' }};"></div>
         </div>
-    </div>
+    </{{ ! empty($e['link']) ? 'a' : 'div' }}>
 @empty
     <div class="an-leer">{{ $leer ?? 'Keine Daten im gewählten Zeitraum.' }}</div>
 @endforelse

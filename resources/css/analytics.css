@@ -61,7 +61,7 @@
  * Hierarchie ist Absicht: Label klein -> Zahl gross -> Vergleich klein.
  * Wer die Seite fuenf Sekunden ansieht, soll die ZAHL sehen.
  * ------------------------------------------------------------------ */
-.an-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 24px; }
+.an-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
 .an-kpi {
     position: relative; background: var(--surface); border: 1px solid var(--line);
     border-radius: 12px; padding: 16px 18px 15px; overflow: hidden;
@@ -164,12 +164,42 @@
 
 .an-leer { padding: 26px 0; text-align: center; color: var(--ink-soft); font-size: 13px; }
 
+/* --- Drill-down (Berichte 2.0): jede Zahl ist ein Link --------------- */
+a.an-kpi { display: block; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; }
+a.an-kpi:hover { border-color: var(--emerald); box-shadow: var(--tiefe-schatten-hover); }
+a.an-kpi:hover .an-kpi-wert { color: var(--emerald); }
+.an-kpi-mehr { font-size: 11px; font-weight: 600; color: var(--emerald); margin-top: 8px; }
+.an-zahl-link { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ink-soft); font-variant-numeric: tabular-nums; }
+.an-zahl-link:hover { color: var(--emerald); border-bottom-color: var(--emerald); }
+a.an-bar-zeile { display: block; text-decoration: none; color: inherit; }
+a.an-bar-zeile:hover .an-bar-name { color: var(--emerald); }
+a.an-status-zeile { text-decoration: none; color: inherit; }
+a.an-status-zeile:hover .an-status-name { color: var(--emerald); }
+a.an-insight { text-decoration: none; color: inherit; }
+a.an-insight:hover { border-color: var(--emerald); }
+.an-tabelle { width: 100%; border-collapse: collapse; font-size: 13px; }
+.an-tabelle th { text-align: left; font-size: 11.5px; font-weight: 600; color: var(--ink-soft); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.an-tabelle td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.an-tabelle td.z, .an-tabelle th.z { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.an-tabelle tr:last-child td { border-bottom: none; }
+.an-tabelle th a { color: inherit; text-decoration: none; }
+.an-tabelle th a:hover { color: var(--ink); }
+.an-quelle { font-size: 11px; color: var(--ink-soft); }
+.an-grid-zwei { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.an-grid-zwei > * { min-width: 0; }
+.an-filter input.an-text { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; background: var(--surface); color: var(--ink); font-family: inherit; width: 120px; }
+.an-liste-kopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+@media print {
+    .sidebar, .topbar, .an-filter, .an-liste-aktionen, .pagination, nav { display: none !important; }
+    .an-card { border: none; padding: 0; }
+}
+
 /* --- Mitwachsen: desktop-first, aber auf dem Telefon benutzbar ------- */
-@media (max-width: 1400px) {
+@media (max-width: 1200px) {
     .an-kpis { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 1100px) {
-    .an-grid-haupt, .an-grid-karte { grid-template-columns: 1fr; }
+    .an-grid-haupt, .an-grid-karte, .an-grid-zwei { grid-template-columns: 1fr; }
     .an-grid-drei { grid-template-columns: 1fr 1fr; }
     .an-insights { grid-template-columns: 1fr; }
 }

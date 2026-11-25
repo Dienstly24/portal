@@ -74,8 +74,9 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Tests `ActivityTrackingTest`, `ActivityReportTest` · Status **ACTIVE**
 
 ### F-010 Berichte & Auswertungs-Dashboard, Neukunden-Bericht
-- C `ReportController`; S `Reporting/*`; V `admin/reports*`, `partials/analytics/*`; `App\Support\Bundesland`
-- Tests `ReportsDashboardTest`, `NewCustomerReportTest`, `LeistungsmessungTest` · Status **ACTIVE**
+- C `ReportController`; S `Reporting/*` (inkl. `BerichtsListe`, Detaillisten-Registry `DashboardAnalyticsService::LISTEN`); V `admin/reports*`, `admin/reports_liste`, `partials/analytics/*`; `App\Support\Bundesland`
+- Seit 25.11.2026 (Berichte 2.0): jede Zahl fuehrt auf ihre Detailliste `/admin/reports/liste` (+ Excel/CSV, nur admin/manager); Filter Stadt/PLZ/Gesellschaft/Werber/Monat; Ranglisten Staedte, Sparten im Zeitraum, Mitarbeiter & Vermittler, Gesellschaften
+- Tests `ReportsDashboardTest`, `BerichteDrillDownTest`, `NewCustomerReportTest`, `LeistungsmessungTest` · Status **ACTIVE**
 
 ## B. Dokumente
 

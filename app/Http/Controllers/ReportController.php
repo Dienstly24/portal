@@ -12,11 +12,16 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Provision\ContractProvisionService;
 use App\Services\Reporting\AnalyticsFilters;
+use App\Services\Reporting\BerichtsListe;
 use App\Services\Reporting\DashboardAnalyticsService;
 use App\Support\Bundesland;
+use App\Support\LocalTime;
+use App\Support\XlsxWriter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use League\Csv\EscapeFormula;
+use League\Csv\Writer;
 
 class ReportController extends Controller
 {
@@ -66,15 +71,26 @@ class ReportController extends Controller
         $ticketZahlen = $cf(Ticket::whereBetween('created_at', [$f->von, $f->bis]))
             ->selectRaw('status, count(*) as anzahl')->groupBy('status')->pluck('anzahl', 'status');
         $ticketGesamt = (int) $ticketZahlen->sum();
-        $tickets = [
-            'gesamt' => $ticketGesamt,
-            'zeilen' => collect($ticketStatus)->map(fn ($cfg, $key) => [
-                'label' => $cfg[0],
-                'wert' => (int) ($ticketZahlen[$key] ?? 0),
-                'anteil' => $ticketGesamt > 0 ? round(((int) ($ticketZahlen[$key] ?? 0)) / $ticketGesamt * 100, 1) : 0.0,
-                'farbe' => $cfg[1],
-            ])->values()->all(),
-        ];
+        $zeilen = collect($ticketStatus)->map(fn ($cfg, $key) => [
+            'label' => $cfg[0],
+            'wert' => (int) ($ticketZahlen[$key] ?? 0),
+            'anteil' => $ticketGesamt > 0 ? round(((int) ($ticketZahlen[$key] ?? 0)) / $ticketGesamt * 100, 1) : 0.0,
+            'farbe' => $cfg[1],
+        ])->values();
+        // F3 (Befund 25.11.2026): "9 Vorgaenge insgesamt", die Status ergaben
+        // 8. Ein Vorgang mit einem Status ausserhalb der vier (oder ohne)
+        // fiel still heraus. Jetzt steht der Rest als eigene Zeile da - die
+        // Teile ergeben immer das Ganze.
+        $rest = $ticketGesamt - (int) $zeilen->sum('wert');
+        if ($rest > 0) {
+            $zeilen->push([
+                'label' => 'Anderer / kein Status',
+                'wert' => $rest,
+                'anteil' => round($rest / $ticketGesamt * 100, 1),
+                'farbe' => 'var(--status-danger)',
+            ]);
+        }
+        $tickets = ['gesamt' => $ticketGesamt, 'zeilen' => $zeilen->all()];
 
         // Handlungsliste: bald ablaufende Vertraege. Bewusst gedeckelt -
         // bei grossem Bestand soll die Seite nicht mit der Liste wachsen;
@@ -97,7 +113,129 @@ class ReportController extends Controller
             ->ownPortfolio()
             ->count();
 
-        return view('admin.reports', compact('f', 'daten', 'karteLinks', 'tickets', 'expiring', 'expiringTotal', 'warnings'));
+        $auswahl = $this->filterAuswahl($ids);
+
+        return view('admin.reports', compact('f', 'daten', 'karteLinks', 'tickets', 'expiring', 'expiringTotal', 'warnings', 'auswahl'));
+    }
+
+    /**
+     * Auswahllisten der Filterleiste: Gesellschaften aus dem EIGENEN Bestand
+     * des sichtbaren Portfolios (keine fremde Gesellschaft als Option, die
+     * nur in einem nicht sichtbaren Vertrag steht) und die Werber - die
+     * gespeicherte Zuordnung, nach der auch Provisionen gebucht werden.
+     *
+     * @param  array<int,mixed>|null  $ids
+     */
+    private function filterAuswahl(?array $ids): array
+    {
+        $gesellschaften = Contract::query()->ownPortfolio()
+            ->when($ids !== null, fn ($q) => $q->whereIn('contracts.customer_id', $ids))
+            ->whereNotNull('contracts.insurer')->where('contracts.insurer', '!=', '')
+            ->selectRaw('distinct trim(contracts.insurer) as name')
+            ->orderBy('name')->limit(300)->pluck('name')->filter()->values()->all();
+
+        $werber = User::whereIn('role', ['admin', 'manager', 'support', 'employee'])->orderBy('name')->get(['id', 'name'])
+            ->map(fn ($u) => ['schluessel' => 'u:'.$u->id, 'name' => $u->name])
+            ->concat(Partner::orderBy('name')->get(['id', 'name'])
+                ->map(fn ($p) => ['schluessel' => 'p:'.$p->id, 'name' => $p->name.' (Partner)']))
+            ->values()->all();
+
+        return ['gesellschaften' => $gesellschaften, 'werber' => $werber];
+    }
+
+    /**
+     * DETAILLISTE hinter einer Zahl der Berichtsseite (Berichte 2.0,
+     * 25.11.2026). Dieselbe Filterauswahl wie die Seite, dazu ?liste=...
+     * - die Abfrage ist dieselbe, mit der die Kachel zaehlt.
+     *
+     * Portfolio-Scope wie auf der Uebersicht: ein Mitarbeiter sieht hier nie
+     * einen Kunden, den er in der Kundenliste nicht sieht.
+     */
+    public function liste(Request $request)
+    {
+        $liste = (string) $request->get('liste');
+        abort_unless(array_key_exists($liste, DashboardAnalyticsService::LISTEN), 404);
+
+        $f = AnalyticsFilters::ausRequest($request);
+        $dienst = new DashboardAnalyticsService($this->visibleCustomerIds());
+        $bericht = new BerichtsListe($dienst, $f, $liste);
+
+        $suche = $request->filled('q') ? mb_substr((string) $request->get('q'), 0, 100) : null;
+        $sortierung = (string) $request->get('sort');
+        $richtung = $request->get('dir') === 'asc' ? 'asc' : 'desc';
+
+        $format = $request->get('format');
+        if (in_array($format, ['csv', 'xlsx'], true)) {
+            // Wie der Kunden-Export (/admin/export): nur Verwaltung. Ansehen
+            // darf jede Rolle ihr Portfolio - eine Datei mit Kundenlisten
+            // verlaesst dagegen das System.
+            abort_unless(in_array(auth()->user()->role, ['admin', 'manager'], true), 403);
+
+            return $this->listeExport($bericht, $f, $format, $suche, $sortierung, $richtung);
+        }
+
+        $gesamt = $bericht->gesamt();
+        $seite = $bericht->seite($suche, $sortierung, $richtung);
+        $info = DashboardAnalyticsService::LISTEN[$liste];
+
+        $auswahl = $this->filterAuswahl($this->visibleCustomerIds());
+        $darfExport = in_array(auth()->user()->role, ['admin', 'manager'], true);
+
+        return view('admin.reports_liste', compact('f', 'bericht', 'liste', 'info', 'gesamt', 'seite', 'suche', 'sortierung', 'richtung', 'auswahl', 'darfExport'));
+    }
+
+    /**
+     * Export der VOLLSTAENDIGEN Liste (nicht nur der Seite). Excel ueber den
+     * eigenen XlsxWriter (Textzellen als inlineStr - nie als Formel), CSV
+     * Excel-tauglich: BOM, Semikolon, Formelschutz. Jeder Export steht im
+     * ActivityLog (DSGVO: wer hat wann welche Kundenliste gezogen) - mit
+     * Liste, Filter und Zeilenzahl, ohne einen einzigen Namen.
+     */
+    private function listeExport(BerichtsListe $bericht, AnalyticsFilters $f, string $format, ?string $suche, string $sortierung, string $richtung)
+    {
+        $zeilen = [];
+        $bericht->abfrage($suche, $sortierung, $richtung)->chunk(500, function ($modelle) use ($bericht, &$zeilen) {
+            foreach ($bericht->zeilen($modelle) as $z) {
+                $zeilen[] = $bericht->exportZeile($z);
+            }
+        });
+
+        $titel = DashboardAnalyticsService::LISTEN[$bericht->liste]['titel'];
+        $dateiname = 'dienstly24-'.str_replace('_', '-', $bericht->liste).'-'.$f->von->format('Y-m-d').'-bis-'.$f->bis->format('Y-m-d');
+
+        ActivityLog::record('report_list_export', 'report', null, [
+            'liste' => $bericht->liste,
+            'format' => $format,
+            'zeilen' => count($zeilen),
+            'filter' => $f->alsQuery(),
+        ]);
+
+        $kopf = [
+            [$titel.' · '.$f->zeitraumText()],
+            ['Filter: '.(collect($f->chips())->map(fn ($c) => $c['label'].' = '.$c['wert'])->implode(', ') ?: 'keine')
+                .' · Erstellt '.LocalTime::for(now())?->format('d.m.Y H:i').' von '.(auth()->user()->name ?? '')],
+            [''],
+            $bericht->exportKopf(),
+        ];
+
+        if ($format === 'xlsx' && XlsxWriter::available()) {
+            return response(XlsxWriter::create(mb_substr($titel, 0, 31), array_merge($kopf, $zeilen)), 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="'.$dateiname.'.xlsx"',
+            ]);
+        }
+
+        $csv = Writer::createFromString('');
+        $csv->setDelimiter(';');
+        $csv->addFormatter(new EscapeFormula);
+        $csv->insertAll(array_map(fn ($zeile) => array_map(
+            fn ($w) => is_float($w) ? number_format($w, 2, ',', '') : $w, $zeile
+        ), array_merge($kopf, $zeilen)));
+
+        return response("\xEF\xBB\xBF".$csv->toString(), 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$dateiname.'.csv"',
+        ]);
     }
 
     /**
