@@ -1165,6 +1165,29 @@ class ContractCommissionImportTest extends TestCase
         $this->assertSame((string) $existing->id, (string) Contract::sole()->customer_id);
     }
 
+    public function test_zwei_vertraege_desselben_neuen_kunden_in_einer_datei(): void
+    {
+        // KI-134: die zweite Zeile desselben Namens holte den frisch
+        // angelegten Kunden aus dem Lauf-Gedaechtnis - dort steht seine
+        // UUID, und die wurde als "mehrdeutig" (String) zurueckgegeben.
+        // Ergebnis war ein TypeError in withContract() statt des Vertrags.
+        $csv = $this->poolCsv([
+            ['kunde' => 'VN NASSER, OMAR KHALED', 'extern' => '2793227640', 'intern' => 'V19613073'],
+            ['kunde' => 'VN NASSER, OMAR KHALED', 'extern' => '2793227641', 'intern' => 'V19613074'],
+        ]);
+
+        $import = $this->service()->confirm(
+            $this->service()->analyze($this->file($csv), 'abrechnung.csv'),
+            null,
+            buildContracts: true
+        );
+
+        $this->assertSame(1, Customer::count());
+        $this->assertSame(2, Contract::count());
+        $this->assertSame(2, $import->contracts_created);
+        $this->assertSame(1, Contract::query()->distinct()->count('customer_id'));
+    }
+
     public function test_ohne_kundennamen_wird_nichts_angelegt(): void
     {
         // Der Export des Vergleichsportals hat gar keine Namensspalte.

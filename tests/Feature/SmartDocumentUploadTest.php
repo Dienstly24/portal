@@ -407,6 +407,53 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertSame('rechnung.pdf', $pdf->file_name);
     }
 
+    /**
+     * KI-135: die Vertragsnummer steht schon an einer ANDEREN Akte. Frueher
+     * endete die Zuordnung mit einem 500er (UniqueConstraintViolation) -
+     * jetzt bleibt sie bestehen, es entsteht kein zweiter Vertrag, und der
+     * Mitarbeiter liest den Grund in der Erfolgsmeldung.
+     */
+    public function test_vergebene_vertragsnummer_bricht_die_zuordnung_nicht_ab(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/police.pdf', '%PDF-1.4');
+
+        $fremd = $this->makeCustomer();
+        Contract::create([
+            'customer_id' => $fremd->id, 'contract_number' => '738015177',
+            'type' => 'kfz', 'insurer' => 'Allianz', 'status' => 'active',
+        ]);
+
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'contract',
+            'file_name' => 'Police.pdf',
+            'file_path' => 'documents/eingang/police.pdf',
+            'disk' => 'local',
+            'visibility' => 'internal',
+            'ai_status' => 'done',
+            'ai_type' => 'kfz_vertrag',
+            'ai_confidence' => 92,
+            'ai_extracted' => [
+                'versicherung' => ['insurer' => 'Allianz', 'contract_number' => '738015177', 'sparte' => 'kfz'],
+            ],
+        ]);
+        $customer = $this->makeCustomer();
+
+        $response = $this->actingAs($this->makeAdmin())->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'create_contract' => 1,
+        ]);
+
+        $response->assertOk()->assertJson(['ok' => true, 'contract_id' => null]);
+        $this->assertStringContainsString('738015177', (string) $response->json('contract_hinweis'));
+        // Der andere Kunde wird nie genannt.
+        $this->assertStringNotContainsString((string) $fremd->customer_number, (string) $response->json('contract_hinweis'));
+        $this->assertSame((string) $customer->id, (string) $doc->fresh()->customer_id);
+        $this->assertSame(1, Contract::where('contract_number', '738015177')->count());
+        $this->assertSame(0, Contract::where('customer_id', $customer->id)->count());
+    }
+
     public function test_assign_endpoint_moves_document_applies_fields_and_creates_contract(): void
     {
         Storage::fake('local');

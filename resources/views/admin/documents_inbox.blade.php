@@ -1314,6 +1314,12 @@ window.docReview = (function() {
         if (data.invited) {
             sub += ' 📧 Einladung zum Portal wurde automatisch an den Kunden versendet.';
         }
+        // KI-135: Zuordnung hat geklappt, der Vertrag aber nicht (Nummer an
+        // einer anderen Akte, abhaengiges Kind) - der Grund gehoert sichtbar
+        // in die Erfolgsmeldung, nicht in einen 500er.
+        if (data.contract_hinweis) {
+            sub += ' ⚠️ ' + data.contract_hinweis;
+        }
         el('review-success-msg').textContent = '✅ ' + msg;
         el('review-success-sub').textContent = sub;
         el('review-success-link').href = data.customer_url || '#';

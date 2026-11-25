@@ -240,6 +240,12 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Zeichen), Datei/Zeile, Routenname bzw. Pfad OHNE Query-String, Methode,
   Status, zuletzt betroffener Nutzer. NIE Formularfelder, Query-Parameter,
   Header, Cookies oder IP (Test sichert das ab).
+  **Auch keine SQL-WERTE** (KI-136, 25.11.2026): Laravel haengt an eine
+  `QueryException` die Anweisung MIT eingesetzten Werten an, MySQL nennt den
+  doppelten Wert selbst - so standen Vertragsnummern und Kunden-IDs in der
+  Liste. `ErrorRecorder::meldung()` speichert die Treiber-Meldung mit
+  ausgeblendeten Werten (`Duplicate entry '***'`) plus die Anweisung mit
+  PLATZHALTERN (`getSql()`); die Werte stehen nur in der Logdatei.
 - **Das Aufzeichnen darf nie selbst fehlschlagen** - jeder Fehler darin
   wird geschluckt, sonst wuerde aus einem Fehler ein zweiter und die
   Fehlerseite erreichte den Nutzer nie.
@@ -1998,7 +2004,18 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   `content_hash` neu - `documentReplace` nutzt denselben Weg, vorher blieb
   der alte Hash stehen), "Vorhandene ueberspringen", "Beide behalten".
   Fremde Akten werden NIE erwaehnt. Die Liste markiert die spaetere Kopie
-  mit "Doppelt". Anhangsnamen nach RFC 2047 ("=?UTF-8?B?...?=") dekodiert
+  mit "Doppelt".
+- **Vertragsnummer an einer ANDEREN Akte** (KI-135, 25.11.2026):
+  `contracts.contract_number` ist systemweit eindeutig, die
+  Identitaets-Suche schaut aber nur in die eigene Akte. Frueher endete die
+  Zuordnung dann mit einem 500er - im Stapel-Weg NACH dem Anlegen des
+  Kunden. Jetzt wirft `createContractFromExtraction` vor dem Anlegen
+  `VertragsnummerVergebenException` (nennt den anderen Kunden nie), und
+  `SmartDocumentUploadController::vertraegeAnlegen` faengt sie zusammen mit
+  der `AbhaengigerKundeException` (KI-096): Zuordnung bleibt, kein Vertrag,
+  Grund als `contract_hinweis` in der Erfolgsmeldung. Nie raten - kein
+  Umhaengen, keine Nummer weglassen. Neue Zuordnungswege benutzen
+  `vertraegeAnlegen`, nicht die Service-Methoden direkt. Anhangsnamen nach RFC 2047 ("=?UTF-8?B?...?=") dekodiert
   `App\Support\Dateiname` (KI-127). Test: `DoppeltesHochladenTest`.
   **BESTAND BEREINIGEN** (KI-128): `DokumentDublettenService` legt Kopien
   mit GLEICHEM INHALT in DERSELBEN Akte in den Papierkorb
