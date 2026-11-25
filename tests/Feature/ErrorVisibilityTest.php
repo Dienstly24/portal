@@ -8,6 +8,7 @@ use App\Services\SystemHealthService;
 use App\Support\ErrorRecorder;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Session\TokenMismatchException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -238,7 +239,7 @@ class ErrorVisibilityTest extends TestCase
             "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '738015177' "
             ."for key 'contracts.contracts_contract_number_unique'"
         );
-        $e = new \Illuminate\Database\QueryException(
+        $e = new QueryException(
             'mysql',
             'insert into `contracts` (`customer_id`, `contract_number`) values (?, ?)',
             ['dba484ad-3e51-4367-b648-bb41181c98ab', '738015177'],

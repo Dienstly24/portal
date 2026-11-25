@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\DB;
  * Abgeschnitten wird ab "(Connection:" - dort beginnt Laravels Anhang mit
  * der ausgefuellten SQL-Anweisung. Nicht rueckgaengig zu machen (gewollt).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         DB::table('error_events')
