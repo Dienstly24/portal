@@ -241,7 +241,7 @@ class ReportController extends Controller
                 'kunden' => $gruppe->pluck('customer_id')->unique()->count(),
                 'antraege' => $gruppe->where('stage', Contract::STAGE_ANTRAG)->count(),
                 'jahresbeitrag' => round($gruppe->sum(fn (Contract $c) => $c->yearlyPremium()), 2),
-                'zeilen' => $gruppe->sortBy(fn (Contract $c) => mb_strtolower($c->customer?->user?->name ?? 'zzz'))->values(),
+                'zeilen' => $gruppe->sortBy(fn (Contract $c) => mb_strtolower($c->customer->user->name ?? 'zzz'))->values(),
             ];
         }
         // Groesste Sparte zuerst - die Frage ist "woher kam das Geschaeft".
