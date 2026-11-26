@@ -908,12 +908,6 @@ parameters:
 			path: app/Services/CommissionImport/CommissionContractBuilder.php
 
 		-
-			message: '#^Strict comparison using \=\=\= between null and null will always evaluate to true\.$#'
-			identifier: identical.alwaysTrue
-			count: 1
-			path: app/Services/CommissionImport/CommissionContractBuilder.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>customer_number" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1

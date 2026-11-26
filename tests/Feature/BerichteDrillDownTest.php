@@ -373,9 +373,14 @@ class BerichteDrillDownTest extends TestCase
 
         $log = ActivityLog::where('action', 'report_list_export')->get();
         $this->assertCount(2, $log);
-        $this->assertSame($anzahl, $log->first()->meta['zeilen']);
+        // Den CSV-Eintrag GEZIELT waehlen: ohne Sortierung liefert MySQL die
+        // beiden Eintraege in beliebiger Reihenfolge - first() traf dort
+        // mal den XLSX-Eintrag (andere Liste, andere Zeilenzahl).
+        $csvLog = $log->firstWhere(fn ($eintrag) => ($eintrag->meta['liste'] ?? null) === 'vertraege_neu');
+        $this->assertNotNull($csvLog);
+        $this->assertSame($anzahl, $csvLog->meta['zeilen']);
         // Protokoll ohne Namen (Datenminimierung).
-        $this->assertStringNotContainsString('Anna', json_encode($log->first()->meta));
+        $this->assertStringNotContainsString('Anna', json_encode($log->pluck('meta')->all()));
     }
 
     public function test_mitarbeiter_sieht_nur_sein_portfolio_und_darf_nicht_exportieren(): void
