@@ -41,9 +41,11 @@
         <h1 class="page-title">Berichte &amp; Analysen</h1>
         <div class="page-sub">Leistungskennzahlen, Vertragsentwicklung und Kundenanalyse</div>
     </div>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a href="{{ route('admin.reports') }}" class="rep-tab rep-tab-active">Übersicht</a>
+        <a href="{{ route('admin.reports.monat') }}" class="rep-tab">Monatsübersicht</a>
         <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab">Neukunden</a>
+        <a href="{{ route('admin.contracts') }}" class="rep-tab">📄 Verträge</a>
         @can('provisionen-verwalten')
             <a href="{{ route('admin.provisions') }}" class="rep-tab">Vermittler-Provisionen</a>
         @endcan

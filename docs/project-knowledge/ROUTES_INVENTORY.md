@@ -334,6 +334,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/provisionsmanagement/vertrag/{id}/nachverfolgung` | admin.provisionsmanagement.followup | auth role:staff can:provisionen-verwalten |
 | GET | `admin/reports` | admin.reports | auth role:staff |
 | GET | `admin/reports/liste` | admin.reports.liste | auth role:staff |
+| GET | `admin/reports/monat` | admin.reports.monat | auth role:staff |
 | GET | `admin/reports/neukunden` | admin.reports.neukunden | auth role:staff |
 | POST | `admin/reports/neukunden/{id}/sichtbarkeit` | admin.reports.neukunden.sichtbarkeit | auth role:staff role:admin,manager |
 | POST | `admin/reports/neukunden/{id}/werber` | admin.reports.neukunden.werber | auth role:staff role:admin,manager |

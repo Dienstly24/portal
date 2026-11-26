@@ -3251,6 +3251,26 @@ Versicherers gehen jedem Standardwert vor.
   Zeilenzahl - ohne Namen. Ansehen darf jede Rolle ihr Portfolio.
   Suche/Sortierung (Whitelist `BerichtsListe::SORTIERUNG`) schraenken nur
   die Anzeige ein; die Seite nennt "x von y".
+  **VERTRAEGE + BERICHTE ZUSAMMEN (26.11.2026)**: "Berichte & Analyse"
+  steht in der SEITENLEISTE (Gruppe Kunden, nach "Verträge") statt in den
+  Einstellungen - dort oeffnete sie niemand. Die Vertragsliste hat Filter
+  Sparte / Gesellschaft (nur aus sichtbaren Vertraegen) / Stufe
+  ("Nur Antraege" = `stage antrag`; "Ohne offene Antraege" = Stufe Vertrag
+  ODER Altbestand ohne Stufe - der Altbestand wird nie zum Antrag erklaert) /
+  Abschluss im Monat (DIESELBE Definition wie die Berichte,
+  `DashboardAnalyticsService::abschlussSql()`), dazu Kennzahlen der
+  GEZEIGTEN Menge (Vertraege, Kunden, Jahresbeitrag, davon Antraege) aus
+  demselben Builder wie die Liste. Filter reisen bei jedem Reiter-Link mit;
+  "Berichte & Analyse" und "Monatsuebersicht" nehmen Sparte/Gesellschaft/
+  Monat mit. Der Zaehler "Aktiver Bestand" bleibt bewusst unveraendert
+  (Antraege zaehlen weiter dazu, sind aber jetzt sichtbar getrennt).
+  **Monatsuebersicht** `/admin/reports/monat` (`ReportController::monat`):
+  je Sparte Vertraege, Kunden, Antraege, Jahresbeitrag und - aufklappbar per
+  `<details>` - die Namen mit Gesellschaft, Abschlusstag und Status;
+  Vergleich zum Vormonat mit Vergleichszahl. Zahlen aus
+  `DashboardAnalyticsService::liste()` (Test: Monatsuebersicht = Berichtsliste);
+  Namensliste bei 3000 gedeckelt MIT Hinweis. Excel je Sparte nur
+  admin/manager (ueber `reports.liste`). Tests: `VertraegeUndMonatsberichtTest`.
   **Offen (spaetere Phasen)**: Provision je Vertrag/Mitarbeiter in Liste
   und Ranglisten (Recht `provisionen-verwalten`), Klick auf Diagrammbalken,
   Monatsbericht als PDF/automatischer Versand, Vergleich Vorjahreszeitraum.

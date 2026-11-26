@@ -22,12 +22,25 @@
     }
     $h = $hinweise[$gruppe] ?? $hinweise['alle'];
     $anzahl = $contracts->total();
+    // Sachfilter reisen bei JEDEM Link mit (Reiter, Herkunft, Suche) - sonst
+    // verliert ein Klick auf "In Bearbeitung" die eben gewaehlte Sparte.
+    $fq = array_filter($filter);
+    $mitFilter = fn (array $extra) => array_filter(array_merge($fq, $extra), fn ($v) => $v !== null && $v !== '');
+    $hatFilter = $fq !== [];
     $wort = $anzahl === 1 ? ($reiter[$gruppe][1] ?? 'Vertrag') : ($reiter[$gruppe][2] ?? 'Verträge');
 @endphp
 
-<div class="page-header">
-    <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Verträge</span></div>
-    <h1 class="page-title">Verträge</h1>
+<div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div>
+        <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Verträge</span></div>
+        <h1 class="page-title">Verträge</h1>
+    </div>
+    {{-- Der Weg in die Auswertung steht DORT, wo gearbeitet wird
+         (Betreiber-Auftrag 26.11.2026) - und nimmt die Auswahl mit. --}}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="{{ route('admin.reports.monat', array_filter(['monat' => $filter['abschluss']])) }}" class="btn btn-ghost btn-sm">🗓 Monatsübersicht</a>
+        <a href="{{ route('admin.reports', $berichtQuery) }}" class="btn btn-primary btn-sm">📊 Berichte &amp; Analyse</a>
+    </div>
 </div>
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;">
@@ -36,11 +49,12 @@
     <form method="GET" action="{{ route('admin.contracts') }}" style="position:relative;flex:1;max-width:500px;">
         <input type="hidden" name="gruppe" value="{{ $gruppe }}">
         <input type="hidden" name="herkunft" value="{{ $herkunft }}">
+        @foreach($fq as $fk => $fv)<input type="hidden" name="{{ $fk }}" value="{{ $fv }}">@endforeach
         <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);">🔍</span>
         <input type="text" name="q" value="{{ $suche }}" placeholder="Verträge durchsuchen"
             style="width:100%;padding:11px 14px 11px 42px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;" aria-label="Verträge durchsuchen">
         @if($suche !== '')
-        <a href="{{ route('admin.contracts', ['gruppe' => $gruppe, 'herkunft' => $herkunft]) }}" title="Suche zurücksetzen"
+        <a href="{{ route('admin.contracts', $mitFilter(['gruppe' => $gruppe, 'herkunft' => $herkunft])) }}" title="Suche zurücksetzen"
             style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);text-decoration:none;font-size:16px;">✕</a>
         @endif
     </form>
@@ -56,7 +70,7 @@
      COUNT-Abfragen und folgen der Suche. --}}
 <div class="tab-row">
     @foreach($reiter as $key => $texte)
-    <a href="{{ route('admin.contracts', array_filter(['gruppe' => $key, 'herkunft' => $herkunft, 'q' => $suche])) }}"
+    <a href="{{ route('admin.contracts', $mitFilter(['gruppe' => $key, 'herkunft' => $herkunft, 'q' => $suche])) }}"
         class="tab {{ $gruppe === $key ? 'active' : '' }}">
         {{ $texte[0] }} ({{ $zaehler[$key] ?? 0 }})
     </a>
@@ -67,7 +81,7 @@
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;font-size:13px;">
     <span class="muted-xs">Herkunft:</span>
     @foreach(['eigen' => '🤝 Eigenbestand', 'fremd' => '📁 Fremdbestand', 'alle' => 'Alle'] as $hk => $hl)
-    <a href="{{ route('admin.contracts', array_filter(['gruppe' => $gruppe, 'herkunft' => $hk, 'q' => $suche])) }}"
+    <a href="{{ route('admin.contracts', $mitFilter(['gruppe' => $gruppe, 'herkunft' => $hk, 'q' => $suche])) }}"
         class="btn btn-sm {{ $herkunft === $hk ? 'btn-primary' : 'btn-ghost' }}"
         title="{{ $hk === 'eigen' ? 'Von uns vermittelte und übernommene Verträge' : ($hk === 'fremd' ? 'Nicht über uns vermittelt – nur Dokumentation' : 'Eigen- und Fremdbestand') }}">{{ $hl }} ({{ $herkunftZaehler[$hk] ?? 0 }})</a>
     @endforeach
@@ -76,6 +90,60 @@
 
 <div style="font-size:12.5px;border-radius:8px;padding:10px 14px;margin-bottom:16px;line-height:1.55;
     background:{{ $h[1] }};border:1px solid {{ $h[2] }};color:{{ $h[3] }};">{{ $h[0] }}</div>
+
+{{-- Filterleiste: Sparte, Gesellschaft, Stufe, Abschlussmonat. Ein
+     normales GET-Formular - jeder Stand ist ein teilbarer Link. --}}
+<form method="GET" action="{{ route('admin.contracts') }}" class="vf-leiste" aria-label="Verträge filtern">
+    <input type="hidden" name="gruppe" value="{{ $gruppe }}">
+    <input type="hidden" name="herkunft" value="{{ $herkunft }}">
+    @if($suche !== '')<input type="hidden" name="q" value="{{ $suche }}">@endif
+    <label class="vf-feld"><span>Sparte</span>
+        <select name="sparte">
+            <option value="">Alle Sparten</option>
+            @foreach(\App\Models\Contract::TYPES as $tk => $tcfg)
+            <option value="{{ $tk }}" @selected($filter['sparte'] === $tk)>{{ $tcfg['icon'] }} {{ $tcfg['label'] }}</option>
+            @endforeach
+        </select>
+    </label>
+    <label class="vf-feld"><span>Gesellschaft</span>
+        <select name="gesellschaft">
+            <option value="">Alle Gesellschaften</option>
+            @foreach($gesellschaften as $gs)
+            <option value="{{ $gs }}" @selected($filter['gesellschaft'] === $gs)>{{ $gs }}</option>
+            @endforeach
+        </select>
+    </label>
+    <label class="vf-feld"><span>Stufe</span>
+        <select name="stufe">
+            <option value="">Alle</option>
+            <option value="bestaetigt" @selected($filter['stufe'] === 'bestaetigt')>Ohne offene Anträge</option>
+            <option value="antrag" @selected($filter['stufe'] === 'antrag')>Nur Anträge (warten auf Bestätigung)</option>
+        </select>
+    </label>
+    <label class="vf-feld"><span>Abschluss im Monat</span>
+        <input type="month" name="abschluss" value="{{ $filter['abschluss'] }}" data-datum-nativ>
+    </label>
+    <div class="vf-knoepfe">
+        <button type="submit" class="btn btn-primary btn-sm">Filtern</button>
+        @if($hatFilter)
+        <a href="{{ route('admin.contracts', array_filter(['gruppe' => $gruppe, 'herkunft' => $herkunft, 'q' => $suche])) }}" class="btn btn-ghost btn-sm">Filter zurücksetzen</a>
+        @endif
+    </div>
+</form>
+
+{{-- Kennzahlen der GEZEIGTEN Menge - dieselbe Abfrage wie die Liste. --}}
+<div class="vf-kennzahlen">
+    <div class="vf-kz"><div class="vf-kz-wert">{{ number_format($kennzahlen['vertraege'], 0, ',', '.') }}</div><div class="vf-kz-label">Verträge</div></div>
+    <div class="vf-kz"><div class="vf-kz-wert">{{ number_format($kennzahlen['kunden'], 0, ',', '.') }}</div><div class="vf-kz-label">Kunden</div></div>
+    <div class="vf-kz"><div class="vf-kz-wert">{{ number_format($kennzahlen['jahresbeitrag'], 2, ',', '.') }} €</div><div class="vf-kz-label">Jahresbeitrag (Kundenbeitrag, nicht unser Ertrag)</div></div>
+    <div class="vf-kz">
+        <div class="vf-kz-wert">{{ number_format($kennzahlen['antraege'], 0, ',', '.') }}</div>
+        <div class="vf-kz-label">davon Anträge – warten auf Bestätigung</div>
+        @if($kennzahlen['antraege'] > 0 && $filter['stufe'] !== 'antrag')
+        <a href="{{ route('admin.contracts', $mitFilter(['gruppe' => $gruppe, 'herkunft' => $herkunft, 'q' => $suche, 'stufe' => 'antrag'])) }}" class="muted-2xs">anzeigen →</a>
+        @endif
+    </div>
+</div>
 
 <div style="font-size:14px;font-weight:700;margin-bottom:14px;">
     {{ $anzahl }} {{ $wort }}@if($suche !== '') <span style="font-weight:500;color:var(--ink-soft);">für „{{ $suche }}"</span>@endif
@@ -137,7 +205,7 @@
         </tr>
         @empty
         <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-soft);">
-            @if($suche !== '')Keine Verträge zu „{{ $suche }}" in dieser Gruppe.@else Keine Verträge in dieser Gruppe.@endif
+            @if($suche !== '')Keine Verträge zu „{{ $suche }}" in dieser Gruppe.@elseif($hatFilter) Keine Verträge für diese Filter in dieser Gruppe.@else Keine Verträge in dieser Gruppe.@endif
         </td></tr>
         @endforelse
         </tbody>
@@ -171,6 +239,16 @@
    aktiven Vertraegen zu verwechseln (ausgegraut + Textkennzeichen). */
 .contract-row-historic{background:#F3F0E8;}
 .contract-row-historic td{opacity:.72;}
+.vf-leiste{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;padding:12px 14px;
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;}
+.vf-feld{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--ink-soft);min-width:0;flex:1 1 160px;}
+.vf-feld select,.vf-feld input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink);width:100%;min-width:0;}
+.vf-knoepfe{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.vf-kennzahlen{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;}
+.vf-kz{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0;}
+.vf-kz-wert{font-size:20px;font-weight:800;color:var(--ink);}
+.vf-kz-label{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+@media (max-width:760px){.vf-kennzahlen{grid-template-columns:repeat(2,minmax(0,1fr));}}
 .contract-histflag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.02em;
     text-transform:uppercase;color:#5F6B62;background:#EAE6DA;border:1px solid #E0DCD0;
     border-radius:6px;padding:1px 6px;white-space:nowrap;}
