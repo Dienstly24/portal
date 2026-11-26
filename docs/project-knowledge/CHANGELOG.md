@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 26.11.2026 - Sicherheitsupdate Symfony 7.4.24 (Deploy-Blocker)
+
+- **Task**: `composer audit` auf `main` meldete 5 neue Advisories vom 25.11.2026 (symfony/http-kernel CVE-2026-133743, symfony/mailer CVE-2026-133751/-133755, symfony/routing CVE-2026-133746/-133754); der Audit-Job liess den Deploy von PR 432/433 ueberspringen.
+- **Files Changed**: `composer.lock` (Patch-Versionen innerhalb 7.4: http-kernel/http-foundation/routing 7.4.23 -> 7.4.24, mailer/mime/var-dumper 7.4.22 -> 7.4.24, egulias/email-validator 4.0.4 -> 4.0.5).
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: keine erwartet (Patch-Releases). Nebenbei am 25.11.2026 in PR 432: league/csv 9.29.0 -> 9.29.1 (GHSA-m9j4-54gj-jvf8).
+- **Tests Performed**: `composer audit --locked` lokal ohne Befund; Testsuite in CI.
+- **Result**: erledigt, CI ausstehend.
+
 ## 25.11.2026 - Fehlerliste abgearbeitet: Provisionsimport, vergebene Vertragsnummer, SQL-Werte (KI-134, KI-135, KI-136)
 
 - **Task**: Betreiber schickte die 13 offenen Eintraege von `/admin/fehler`: "reparieren und PR".
