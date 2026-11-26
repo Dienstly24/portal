@@ -125,13 +125,24 @@ class ContractController extends Controller
             'antraege' => (int) $gezeigt()->where('stage', Contract::STAGE_ANTRAG)->count(),
         ];
 
-        // Auswahl der Gesellschaften: nur aus Vertraegen, die dieser Nutzer
-        // sehen darf - keine Gesellschaft als Option, die nur in einem
-        // fremden Portfolio steht.
-        $gesellschaften = Contract::query()
+        // Auswahl der Gesellschaften als FACETTE: nur Gesellschaften, die in
+        // der aktuellen Ansicht vorkommen (Reiter, Herkunft, Suche, uebrige
+        // Filter - nur die Gesellschaft selbst nicht, sonst stuende dort
+        // immer genau eine). Damit erscheint weder eine Gesellschaft aus
+        // einem fremden Portfolio noch eine aus einem anderen Reiter - ein
+        // beendeter Vertrag stuende sonst als Option im "Aktiven Bestand".
+        $gesellschaften = $this->mitVertragsFilter(Contract::query(), array_merge($filter, ['gesellschaft' => null]))
             ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))
+            ->originFilter($herkunft)
+            ->search($suche)
+            ->statusGroup($gruppe === 'alle' ? null : $gruppe)
             ->whereNotNull('insurer')->where('insurer', '!=', '')
             ->distinct()->orderBy('insurer')->limit(300)->pluck('insurer')->all();
+        // Die gewaehlte bleibt waehlbar, auch wenn sie in dieser Ansicht
+        // gerade nichts trifft (sonst springt die Auswahl still zurueck).
+        if ($filter['gesellschaft'] !== null && ! in_array($filter['gesellschaft'], $gesellschaften, true)) {
+            $gesellschaften[] = $filter['gesellschaft'];
+        }
 
         // Weg in die Auswertung MIT derselben Auswahl: Sparte, Gesellschaft
         // und Monat gelten dort unveraendert.
