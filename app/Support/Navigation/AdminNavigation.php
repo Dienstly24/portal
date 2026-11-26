@@ -214,6 +214,12 @@ final class AdminNavigation
             ['kunden', 'Kunden', 'admin.customers', 'users', ['admin.customers*', 'admin.customer*', 'admin.family.*']],
             ['interessenten', 'Interessenten', 'admin.leads.index', 'lead', ['admin.leads*']],
             ['vertraege', 'Verträge', 'admin.contracts', 'contract', ['admin.contracts*', 'admin.contract.*']],
+            // Berichte gehoeren NEBEN die Vertraege (Betreiber-Auftrag
+            // 26.11.2026): in den Einstellungen sah sie im Alltag niemand,
+            // und die Frage "wie viele Kunden diesen Monat, aus welcher
+            // Sparte" stellt der Betrieb jeden Monat. Die Route ist fuer
+            // jede Personalrolle offen (Portfolio-Scope im Dienst).
+            ['berichte', 'Berichte & Analyse', 'admin.reports', 'chart', ['admin.reports*']],
             ['aenderungen', 'Änderungsanträge', 'admin.change_requests', 'change', ['admin.change_requests*', 'admin.change_notifications*'], 'change_requests'],
         ]));
     }
@@ -258,14 +264,10 @@ final class AdminNavigation
             $items[] = ['vergleichsportale', 'Vergleichsportale', 'admin.tarifrechner', 'calculator', ['admin.tarifrechner*']];
         }
 
-        // Berichte darf jede Staff-Rolle sehen (die Route ist offen).
-        $items[] = ['berichte', 'Berichte', 'admin.reports', 'chart', ['admin.reports*']];
-
-        // Ohne Verwaltungsrolle bleiben nur die Berichte - dann waere
-        // "Vertrieb" eine Ueberschrift ueber etwas anderem.
-        $label = $this->isManagement() ? 'Vertrieb' : 'Auswertung';
-
-        return new NavGroup('vertrieb', $label, $this->items($items), openByDefault: false);
+        // Die Berichte stehen seit 26.11.2026 in der Seitenleiste (Gruppe
+        // Kunden) - hier nicht mehr doppelt. Ohne Verwaltungsrolle ist die
+        // Gruppe damit leer und erscheint nicht.
+        return new NavGroup('vertrieb', 'Vertrieb', $this->items($items), openByDefault: false);
     }
 
     /**

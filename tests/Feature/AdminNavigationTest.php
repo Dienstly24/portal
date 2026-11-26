@@ -89,7 +89,9 @@ class AdminNavigationTest extends TestCase
 
         $keys = fn (NavGroup $g) => array_map(fn ($i) => $i->key, $g->items);
 
-        $this->assertSame(['kunden', 'interessenten', 'vertraege', 'aenderungen'], $keys($groups['kunden']));
+        // "Berichte & Analyse" steht seit 26.11.2026 neben den Vertraegen
+        // (Betreiber-Auftrag: in den Einstellungen sah sie niemand).
+        $this->assertSame(['kunden', 'interessenten', 'vertraege', 'berichte', 'aenderungen'], $keys($groups['kunden']));
         $this->assertSame(['eingang', 'anforderungen', 'signaturen'], $keys($groups['dokumente']));
         // Die Kanal-Punkte kommen aus der DATENBANK, nicht aus dem Code:
         // "Kundenchat" ist der Portal-Kanal, jeder weitere aktive Kanal
@@ -99,7 +101,7 @@ class AdminNavigationTest extends TestCase
         $this->assertSame(['kundenchat', 'tickets', 'anfragen', 'email', 'team'], $keys($groups['postfach']));
         $this->assertSame(['aufgaben', 'termine'], $keys($groups['mein-tag']));
 
-        $this->assertSame(['provisionen', 'partner', 'vergleichsportale', 'berichte'], $keys($settings['vertrieb']));
+        $this->assertSame(['provisionen', 'partner', 'vergleichsportale'], $keys($settings['vertrieb']));
         $this->assertSame(
             ['leistungsseiten', 'medien', 'werbung', 'banner', 'facebook_bewertungen', 'newsletter', 'ankuendigungen'],
             $keys($settings['marketing'])
@@ -196,7 +198,13 @@ class AdminNavigationTest extends TestCase
         // Grund, warum die Seitenleiste nicht wieder auf 31 Punkte waechst.
         // Wer den naechsten Punkt anlegt, muss erneut hier vorbei und
         // begruenden, warum er in den taeglichen Arbeitsweg gehoert.
-        $this->assertLessThanOrEqual(16, $sichtbar);
+        //
+        // 17 statt 16 seit 26.11.2026: "Berichte & Analyse" kam aus den
+        // Einstellungen neben die Vertraege. Begruendung des Betreibers: die
+        // Monatsfrage "wie viele Kunden, aus welcher Sparte, welche Kunden"
+        // gehoert zum Arbeitsweg, und in den Einstellungen oeffnete sie
+        // niemand. Wieder um genau EINS angehoben.
+        $this->assertLessThanOrEqual(17, $sichtbar);
     }
 
     // ------------------------------------------------- Badges (Fall 5-7)
@@ -254,6 +262,20 @@ class AdminNavigationTest extends TestCase
 
         $this->assertArrayNotHasKey('administration', $this->settingsGroups($user));
         $this->assertArrayHasKey('postfach', $this->navGroups($user));
+    }
+
+    public function test_berichte_stehen_fuer_jede_personalrolle_in_der_seitenleiste(): void
+    {
+        foreach (['admin', 'manager', 'support', 'employee'] as $rolle) {
+            $user = User::factory()->create(['role' => $rolle]);
+            $kunden = array_map(fn ($i) => $i->key, $this->navGroups($user)['kunden']->items);
+            $this->assertContains('berichte', $kunden, "Rolle {$rolle} muss die Berichte in der Seitenleiste sehen.");
+
+            // ... und nicht ein zweites Mal in den Einstellungen.
+            foreach ($this->nav($user)->settingsGroups() as $group) {
+                $this->assertNotContains('berichte', array_map(fn ($i) => $i->key, $group->items));
+            }
+        }
     }
 
     public function test_kein_menuepunkt_fuehrt_in_ein_403(): void

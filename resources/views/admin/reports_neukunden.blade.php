@@ -7,8 +7,9 @@
 </div>
 
 {{-- Bericht-Tabs --}}
-<div style="display:flex;gap:8px;margin-bottom:20px;">
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
     <a href="{{ route('admin.reports') }}" class="rep-tab">Übersicht</a>
+    <a href="{{ route('admin.reports.monat') }}" class="rep-tab">Monatsübersicht</a>
     <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab rep-tab-active">Neukunden</a>
     @if($darfProvisionen)
     <a href="{{ route('admin.provisions') }}" class="rep-tab">Vermittler-Provisionen</a>

@@ -27,6 +27,9 @@ class ReportController extends Controller
 {
     use ScopesCustomerAccess;
 
+    /** Obergrenze der Monatsuebersicht (siehe monat()). */
+    private const MONAT_MAX_ZEILEN = 3000;
+
     /**
      * Auswertungs-Dashboard "Berichte & Analysen" (Betreiber-Auftrag
      * 06.09.2026).
@@ -182,6 +185,86 @@ class ReportController extends Controller
         $darfExport = in_array(auth()->user()->role, ['admin', 'manager'], true);
 
         return view('admin.reports_liste', compact('f', 'bericht', 'liste', 'info', 'gesamt', 'seite', 'suche', 'sortierung', 'richtung', 'auswahl', 'darfExport'));
+    }
+
+    /**
+     * MONATSUEBERSICHT (Betreiber-Auftrag 26.11.2026): "wir wollen jeden
+     * Monat wissen, wie viele Kunden wir hatten, aus welcher Sparte - und
+     * WELCHE Kunden".
+     *
+     * Die Seite rechnet nicht selbst: Vertraege, Kunden und Neukunden kommen
+     * aus DashboardAnalyticsService::liste() - denselben Abfragen, mit denen
+     * die Kacheln der Berichtsseite zaehlen und die Detaillisten anzeigen.
+     * "Abschluss im November" bedeutet hier also genau dasselbe wie dort
+     * (Unterschrift -> Antrag -> Beginn -> Anlage). Eigener Bestand, kein
+     * Fremdvertrag; Portfolio-Scope wie ueberall.
+     *
+     * Gruppiert wird in PHP nach der Sparte. Ein Monat hat Dutzende bis
+     * wenige Hundert Abschluesse - zur Sicherheit wird bei MAX_ZEILEN
+     * gedeckelt und die Seite sagt das ausdruecklich (eine still gekuerzte
+     * Liste liesse den Monat kleiner aussehen, als er war).
+     */
+    public function monat(Request $request)
+    {
+        $monatWert = (string) $request->get('monat', '');
+        if (! preg_match('/^(\d{4})-(\d{2})$/', $monatWert, $m) || (int) $m[2] < 1 || (int) $m[2] > 12) {
+            $monatWert = now()->format('Y-m');
+        }
+        $monat = Carbon::createFromFormat('Y-m-d', $monatWert.'-01')->startOfMonth();
+        $vormonat = $monat->copy()->subMonthNoOverflow();
+
+        $filterFuer = fn (Carbon $m) => AnalyticsFilters::ausRequest(new Request([
+            'zeitraum' => 'monatswahl', 'monat' => $m->format('Y-m'),
+        ]));
+        $f = $filterFuer($monat);
+        $fVor = $filterFuer($vormonat);
+        $dienst = new DashboardAnalyticsService($this->visibleCustomerIds());
+
+        $vertraegeGesamt = $dienst->liste('vertraege_neu', $f)->count();
+        $vertraege = $dienst->liste('vertraege_neu', $f)
+            ->select('contracts.*')
+            ->selectRaw(DashboardAnalyticsService::abschlussSql().' as abschluss_datum')
+            ->with('customer.user')
+            ->orderBy('contracts.type')
+            ->limit(self::MONAT_MAX_ZEILEN)
+            ->get();
+        $gekuerzt = $vertraegeGesamt > $vertraege->count();
+
+        $sparten = [];
+        foreach ($vertraege->groupBy('type') as $typ => $gruppe) {
+            $cfg = Contract::TYPES[$typ] ?? ['label' => (string) $typ, 'icon' => '📄'];
+            $sparten[] = [
+                'typ' => (string) $typ,
+                'label' => $cfg['label'],
+                'icon' => $cfg['icon'],
+                'vertraege' => $gruppe->count(),
+                'kunden' => $gruppe->pluck('customer_id')->unique()->count(),
+                'antraege' => $gruppe->where('stage', Contract::STAGE_ANTRAG)->count(),
+                'jahresbeitrag' => round($gruppe->sum(fn (Contract $c) => $c->yearlyPremium()), 2),
+                'zeilen' => $gruppe->sortBy(fn (Contract $c) => mb_strtolower($c->customer->user->name ?? 'zzz'))->values(),
+            ];
+        }
+        // Groesste Sparte zuerst - die Frage ist "woher kam das Geschaeft".
+        usort($sparten, fn ($a, $b) => [$b['vertraege'], $a['label']] <=> [$a['vertraege'], $b['label']]);
+
+        $zahlen = [
+            'vertraege' => $vertraegeGesamt,
+            'kunden' => $dienst->liste('kunden_abschluss', $f)->count(),
+            'neukunden' => $dienst->liste('neukunden', $f)->count(),
+            'neukunden_ohne_vertrag' => $dienst->liste('neukunden_ohne_vertrag', $f)->count(),
+            'jahresbeitrag' => round($vertraege->sum(fn (Contract $c) => $c->yearlyPremium()), 2),
+            'antraege' => $vertraege->where('stage', Contract::STAGE_ANTRAG)->count(),
+            'vor_vertraege' => $dienst->liste('vertraege_neu', $fVor)->count(),
+            'vor_kunden' => $dienst->liste('kunden_abschluss', $fVor)->count(),
+            'vor_neukunden' => $dienst->liste('neukunden', $fVor)->count(),
+        ];
+
+        $darfExport = in_array(auth()->user()->role, ['admin', 'manager'], true);
+        $istAktuell = $monat->isSameMonth(now());
+
+        return view('admin.reports_monat', compact(
+            'monat', 'vormonat', 'f', 'sparten', 'zahlen', 'gekuerzt', 'darfExport', 'istAktuell'
+        ));
     }
 
     /**

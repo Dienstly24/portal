@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 26.11.2026 - Vertraege und Berichte zusammengefuehrt: Filter, Kennzahlen, Monatsuebersicht, Berichte in der Seitenleiste
+
+- **Task**: Betreiber: "jeden Monat wissen, wie viele Kunden, aus welcher Sparte, mit Namen" - und die Berichte lagen in den Einstellungen, wo sie niemand oeffnete.
+- **Files Changed**: `Admin\ContractController::contracts` (+ `vertragsFilter`, `mitVertragsFilter`), `ReportController::monat`, neu `admin/reports_monat.blade.php`, `admin/contracts.blade.php`, Reiter in `admin/reports.blade.php` und `admin/reports_neukunden.blade.php`, `AdminNavigation` (Berichte in Gruppe Kunden), `routes/web.php`; Tests `VertraegeUndMonatsberichtTest` (neu), `AdminNavigationTest`; `CLAUDE.md`, `FEATURE_MAP.md`, `ROUTES_INVENTORY.md`.
+- **Database Changes**: keine. **API Changes**: `GET admin/reports/monat` (alle Staff-Rollen, Portfolio-Scope); `admin/contracts` nimmt `sparte`, `gesellschaft`, `stufe`, `abschluss`.
+- **Potential Side Effects**: Seitenleiste hat einen Punkt mehr (Grenze im Test 16 -> 17); "Berichte" steht nicht mehr in den Einstellungen; fuer Mitarbeiter ohne Verwaltungsrolle entfaellt die Untergruppe "Auswertung" dort.
+- **Tests Performed**: CI (lokal kein `composer install` moeglich).
+- **Result**: erledigt, CI ausstehend.
+
 ## 26.11.2026 - Sicherheitsupdate Symfony 7.4.24 (Deploy-Blocker)
 
 - **Task**: `composer audit` auf `main` meldete 5 neue Advisories vom 25.11.2026 (symfony/http-kernel CVE-2026-133743, symfony/mailer CVE-2026-133751/-133755, symfony/routing CVE-2026-133746/-133754); der Audit-Job liess den Deploy von PR 432/433 ueberspringen.

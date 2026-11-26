@@ -21,6 +21,7 @@ use App\Services\ContractSwitchService;
 use App\Services\Energy\MeterReadingService;
 use App\Services\Kfz\SfReferenceService;
 use App\Services\Kfz\SfReferenceValidator;
+use App\Services\Reporting\DashboardAnalyticsService;
 use App\Services\VehicleOverlapGuard;
 use App\Services\Vermittler\VermittlerLinkService;
 use App\Services\Vertrag\VertragBeteiligteService;
@@ -79,7 +80,13 @@ class ContractController extends Controller
             ? (string) $request->query('herkunft')
             : 'eigen';
 
-        $basis = fn (?string $h = null) => Contract::query()
+        // Sachfilter (Betreiber-Auftrag 26.11.2026: "wie viele Vertraege,
+        // aus welcher Sparte, bei welcher Gesellschaft, in welchem Monat").
+        // Alles wird gegen eine bekannte Menge GEPRUEFT; ein unbekannter
+        // Wert wird verworfen statt in die Abfrage gereicht.
+        $filter = $this->vertragsFilter($request);
+
+        $basis = fn (?string $h = null) => $this->mitVertragsFilter(Contract::query(), $filter)
             ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))
             ->originFilter($h ?? $herkunft)
             ->search($suche);
@@ -105,7 +112,108 @@ class ContractController extends Controller
             ->paginate(50)
             ->withQueryString();
 
-        return view('admin.contracts', compact('contracts', 'gruppe', 'suche', 'zaehler', 'herkunft', 'herkunftZaehler'));
+        // Kennzahlen der GEZEIGTEN Menge (Gruppe + Herkunft + Suche + Filter).
+        // Reine Aggregat-Abfragen auf demselben Builder wie die Liste - die
+        // Zahl oben ist damit immer die Zahl der Zeilen darunter.
+        $gezeigt = fn () => $basis()->statusGroup($gruppe === 'alle' ? null : $gruppe);
+        $kennzahlen = [
+            'vertraege' => $contracts->total(),
+            'kunden' => (int) $gezeigt()->distinct()->count('customer_id'),
+            'jahresbeitrag' => round((float) $gezeigt()
+                ->selectRaw('sum'.DashboardAnalyticsService::jahresbeitragZeileSql().' as wert')
+                ->value('wert'), 2),
+            'antraege' => (int) $gezeigt()->where('stage', Contract::STAGE_ANTRAG)->count(),
+        ];
+
+        // Auswahl der Gesellschaften als FACETTE: nur Gesellschaften, die in
+        // der aktuellen Ansicht vorkommen (Reiter, Herkunft, Suche, uebrige
+        // Filter - nur die Gesellschaft selbst nicht, sonst stuende dort
+        // immer genau eine). Damit erscheint weder eine Gesellschaft aus
+        // einem fremden Portfolio noch eine aus einem anderen Reiter - ein
+        // beendeter Vertrag stuende sonst als Option im "Aktiven Bestand".
+        $gesellschaften = $this->mitVertragsFilter(Contract::query(), array_merge($filter, ['gesellschaft' => null]))
+            ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))
+            ->originFilter($herkunft)
+            ->search($suche)
+            ->statusGroup($gruppe === 'alle' ? null : $gruppe)
+            ->whereNotNull('insurer')->where('insurer', '!=', '')
+            ->distinct()->orderBy('insurer')->limit(300)->pluck('insurer')->all();
+        // Die gewaehlte bleibt waehlbar, auch wenn sie in dieser Ansicht
+        // gerade nichts trifft (sonst springt die Auswahl still zurueck).
+        if ($filter['gesellschaft'] !== null && ! in_array($filter['gesellschaft'], $gesellschaften, true)) {
+            $gesellschaften[] = $filter['gesellschaft'];
+        }
+
+        // Weg in die Auswertung MIT derselben Auswahl: Sparte, Gesellschaft
+        // und Monat gelten dort unveraendert.
+        $berichtQuery = array_filter([
+            'sparte' => $filter['sparte'],
+            'gesellschaft' => $filter['gesellschaft'],
+            'monat' => $filter['abschluss'],
+        ]);
+
+        return view('admin.contracts', compact(
+            'contracts', 'gruppe', 'suche', 'zaehler', 'herkunft', 'herkunftZaehler',
+            'filter', 'kennzahlen', 'gesellschaften', 'berichtQuery'
+        ));
+    }
+
+    /**
+     * Sachfilter der Vertragsliste aus der Anfrage - validiert.
+     *
+     * @return array{sparte:?string,gesellschaft:?string,stufe:?string,abschluss:?string}
+     */
+    private function vertragsFilter(Request $request): array
+    {
+        $sparte = (string) $request->query('sparte', '');
+        $gesellschaft = trim((string) $request->query('gesellschaft', ''));
+        $stufe = (string) $request->query('stufe', '');
+        $abschluss = (string) $request->query('abschluss', '');
+
+        return [
+            'sparte' => in_array($sparte, Contract::typeKeys(), true) ? $sparte : null,
+            'gesellschaft' => ($gesellschaft !== '' && mb_strlen($gesellschaft) <= 120) ? $gesellschaft : null,
+            'stufe' => in_array($stufe, ['antrag', 'bestaetigt'], true) ? $stufe : null,
+            'abschluss' => (preg_match('/^(\d{4})-(\d{2})$/', $abschluss, $m) && (int) $m[2] >= 1 && (int) $m[2] <= 12)
+                ? $abschluss : null,
+        ];
+    }
+
+    /**
+     * Die Sachfilter als Abfrage-Bedingungen.
+     *
+     * "Abschluss im Monat" nutzt DIESELBE Definition wie die Berichte
+     * (Unterschrift -> Antrag -> Beginn -> Anlage,
+     * DashboardAnalyticsService::abschlussSql()) - sonst zeigte die
+     * Vertragsliste fuer "November" andere Vertraege als der Bericht.
+     *
+     * "bestaetigt" heisst: KEIN offener Antrag (Stufe Vertrag ODER
+     * Altbestand ohne Stufe) - der Altbestand traegt die Angabe nicht, er
+     * wird nicht zum Antrag erklaert.
+     *
+     * @param  array{sparte:?string,gesellschaft:?string,stufe:?string,abschluss:?string}  $filter
+     */
+    private function mitVertragsFilter($query, array $filter)
+    {
+        if ($filter['sparte'] !== null) {
+            $query->where('contracts.type', $filter['sparte']);
+        }
+        if ($filter['gesellschaft'] !== null) {
+            $query->where('contracts.insurer', $filter['gesellschaft']);
+        }
+        if ($filter['stufe'] === 'antrag') {
+            $query->where('contracts.stage', Contract::STAGE_ANTRAG);
+        } elseif ($filter['stufe'] === 'bestaetigt') {
+            $query->where(fn ($w) => $w->whereNull('contracts.stage')->orWhere('contracts.stage', '!=', Contract::STAGE_ANTRAG));
+        }
+        if ($filter['abschluss'] !== null) {
+            $monat = Carbon::createFromFormat('Y-m-d', $filter['abschluss'].'-01')->startOfMonth();
+            $query->whereRaw(DashboardAnalyticsService::abschlussSql().' between ? and ?', [
+                $monat->toDateString(), $monat->copy()->endOfMonth()->toDateString(),
+            ]);
+        }
+
+        return $query;
     }
 
     /**
