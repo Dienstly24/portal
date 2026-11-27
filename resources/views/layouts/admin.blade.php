@@ -43,7 +43,7 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .sidebar-logo img{height:38px;width:auto;object-fit:contain;}
 .nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;color:rgba(255,255,255,.7);font-size:13.5px;text-decoration:none;transition:.15s;position:relative;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
-.nav-item.active{background:rgba(255,255,255,.1);color:#fff;font-weight:600;}
+.nav-item.active{background:linear-gradient(135deg,var(--emerald-bright),var(--emerald-deep));color:#fff;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.25);}
 .nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold-soft);border-radius:0 3px 3px 0;}
 .nav-icon{width:18px;height:18px;opacity:.8;flex:none;}
 .nav-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -192,8 +192,8 @@ table tr:hover td{background:#EDEAE0;}
 <button class="admin-mobile-btn" type="button" id="am-btn" aria-label="Menü öffnen" aria-controls="admin-sidebar" aria-expanded="false">☰</button>
 <div class="admin-overlay" id="admin-overlay" hidden></div>
 <div class="sidebar" id="admin-sidebar">
-    {{-- Kompakte Marke wie bei grossen Panels (nur das D-Symbol) --}}
-    <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::logoSymbolLight() }}" alt="Dienstly24" style="height:42px;width:auto;"></a></div>
+    {{-- Volle Wortmarke (Betreiber-Vorlage 27.11.2026): gruenes D, Schrift weiss --}}
+    <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::sidebarLogo() }}" alt="Dienstly24" width="380" height="132" style="height:58px;width:auto;display:block;"></a></div>
     {{-- Navigation: Struktur in App\Support\Navigation\AdminNavigation --}}
     <x-admin.sidebar-nav />
     <div class="sidebar-foot">
@@ -211,15 +211,6 @@ table tr:hover td{background:#EDEAE0;}
     </div>
 </div>
 <div class="header">
-    <a href="{{ route('admin.dashboard') }}" title="Dienstly24" class="header-logo" style="flex:none;margin-right:6px;">{{-- Kopfzeilen-Logo in ANZEIGEGROESSE (Audit 15.09.2026): hier lag
-         das volle 720x254-Bild mit 124 kB, dargestellt auf 30 px Hoehe -
-         auf jeder Seite der Beraterwelt. logo-header.png ist dasselbe
-         Bild in 255x90 (24 kB), also dreifache Pixeldichte fuer eine
-         30-px-Zeile. Ein im Admin hinterlegtes Marken-Logo
-         (BrandAssets) hat weiterhin Vorrang - dann bestimmt der
-         Betreiber das Bild. width/height verhindern das Springen des
-         Layouts waehrend des Ladens. --}}
-        <img src="{{ \App\Support\BrandAssets::logoDark() === '/images/logo-transparent.png' ? '/images/logo-header.png' : \App\Support\BrandAssets::logoDark() }}" alt="Dienstly24" width="255" height="90" style="height:30px;width:auto;display:block;"></a>
     <div class="header-search">
         <span class="search-icon">🔍</span>
         <input type="text" id="global-search" placeholder="Suche nach Kunden, Verträge, Tickets..."

@@ -128,20 +128,23 @@ class AssetLadungTest extends TestCase
             .implode("\n", $ueberfluessig));
     }
 
-    /** Das Kopfzeilen-Logo hat Anzeigegroesse, nicht Druckgroesse. */
-    public function test_kopfzeilen_logo_ist_nicht_uebergross(): void
+    /**
+     * Das Logo der Seitenleiste hat Anzeigegroesse, nicht Druckgroesse
+     * (seit 27.11.2026 steht die Wortmarke dort statt in der Kopfzeile).
+     */
+    public function test_seitenleisten_logo_ist_nicht_uebergross(): void
     {
-        $datei = public_path('images/logo-header.png');
+        $datei = public_path('images/logo-sidebar.png');
 
         $this->assertFileExists($datei);
         $this->assertLessThan(40 * 1024, File::size($datei),
-            'Ein Logo, das auf 30 px Hoehe erscheint, braucht keine 124 kB.');
+            'Ein Logo, das auf 44 px Hoehe erscheint, braucht keine 124 kB.');
 
         [$breite, $hoehe] = getimagesize($datei);
-        $this->assertLessThanOrEqual(120, $hoehe,
+        $this->assertLessThanOrEqual(140, $hoehe,
             'Dreifache Anzeigehoehe genuegt auch fuer dichte Bildschirme.');
 
         $this->actingAs($this->admin())->get('/admin')->assertOk()
-            ->assertSee('/images/logo-header.png', false);
+            ->assertSee('/images/logo-sidebar.png', false);
     }
 }

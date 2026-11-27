@@ -37,75 +37,15 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 
 @include('admin.partials.kunde_kopf', ['customer' => $customer, 'aktiveVertraege' => $aktiveVertraege])
 
-{{-- Portal-Status (echter Zustand statt "aktiv/inaktiv"-Raten) --}}
-@php $portalUser = $customer->user; $ps = $customer->portalStatus(); @endphp
-{{-- Kompakt: eine Zeile mit Status, Details aufklappbar (Vorlage 27.11.2026). --}}
-<details class="card kk-portal" id="kk-portal" style="margin-bottom:16px;padding:12px 18px;">
-    <summary class="kk-portal-zeile">
-        <span style="font-weight:700;">🌐 Portal-Zugang</span>
-        <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:2px 10px;font-size:12px;font-weight:600;">{{ $ps['label'] }}</span>
-        <span class="kk-portal-mehr">Details anzeigen</span>
-    </summary>
-    <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:12px;">
-        <div style="min-width:260px;">
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-                <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:3px 12px;font-size:12.5px;font-weight:600;">{{ $ps['label'] }}</span>
-                <span style="font-size:12.5px;color:var(--ink-soft);">Account vorhanden: <strong>{{ $portalUser && $portalUser->hasRealEmail() ? 'Ja' : 'Nein' }}</strong></span>
-                <span style="font-size:12.5px;color:var(--ink-soft);">Passwort gesetzt: <strong>{{ $portalUser?->portal_password_set_at ? 'Ja' : 'Nein' }}</strong></span>
-            </div>
-            <div style="display:grid;grid-template-columns:auto auto;gap:2px 18px;font-size:12.5px;color:var(--ink-soft);">
-                <span>Einladung gesendet:</span><strong>{{ $portalUser?->invitation_sent_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</strong>
-                {{-- Bewusst "Passwort eingerichtet" statt "Account aktiviert": das
-                     Startpasswort setzt das SYSTEM beim Einladungsversand - ob der
-                     Kunde aktiv wurde, zeigt erst "Erster Login". --}}
-                <span>Passwort eingerichtet:</span><strong>{{ $portalUser?->portal_password_set_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</strong>
-                <span>Erster Login:</span><strong>{{ $portalUser?->first_login_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</strong>
-                <span>Letzter Login:</span><strong>{{ $portalUser?->last_login_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</strong>
-            </div>
-            @if(!$customer->birth_date)
-            <div style="margin-top:10px;background:#FEF3C7;border:1px solid #F0E0B0;border-radius:8px;padding:9px 12px;font-size:12.5px;color:#92400E;line-height:1.55;max-width:520px;">
-                ⚠ <strong>Kein Geburtsdatum hinterlegt:</strong> Die Einladung enthält dann <strong>kein Startpasswort</strong>
-                (Regel: Geburtsdatum TT.MM.JJJJ), sondern nur einen zeitlich begrenzten Link zum Passwort-Setzen –
-                viele Kunden aktivieren den Zugang so nie.
-                <a href="{{ route('admin.customer.edit', $customer->id) }}" style="color:#92400E;font-weight:700;">Geburtsdatum jetzt ergänzen →</a>
-            </div>
-            @endif
-        </div>
-        @if(auth()->user()->role === 'admin')
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
-            <form method="POST" action="{{ route('admin.customer.portal.invite', $customer->id) }}"
-                data-confirm="{{ $customer->birth_date
-                    ? 'Einladung mit Startpasswort (Geburtsdatum TT.MM.JJJJ) an den Kunden senden?'
-                    : 'ACHTUNG: Kein Geburtsdatum hinterlegt! Die Einladung enthaelt dann KEIN Startpasswort, nur einen zeitlich begrenzten Passwort-Link. Besser zuerst das Geburtsdatum ergaenzen (Bearbeiten). Trotzdem jetzt senden?' }}');">
-                @csrf<button type="submit" class="btn btn-emerald btn-sm">📧 Einladung senden</button>
-            </form>
-            <form method="POST" action="{{ route('admin.customer.portal.reset_link', $customer->id) }}">
-                @csrf<button type="submit" class="btn btn-ghost btn-sm">🔑 Reset-Link senden</button>
-            </form>
-            <form method="POST" action="{{ route('admin.customer.portal.reset', $customer->id) }}"
-                data-h-submit="1ad1ce2c1c">
-                @csrf<button type="submit" class="btn btn-ghost btn-sm">↺ Portal zurücksetzen</button>
-            </form>
-            <form method="POST" action="{{ route('admin.customer.portal.toggle', $customer->id) }}"
-                data-confirm="{{ ($portalUser?->is_active ?? true) ? 'Portal-Login für diesen Kunden deaktivieren?' : 'Portal-Login wieder aktivieren?' }}">
-                @csrf<button type="submit" class="btn btn-ghost btn-sm">{{ ($portalUser?->is_active ?? true) ? '🚫 Deaktivieren' : '✅ Aktivieren' }}</button>
-            </form>
-        </div>
-        @endif
-    </div>
-</details>
 
 {{-- Tab-Navigation (Kundenprofil) --}}
 <style>
-.cust-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;margin-bottom:18px;overflow-x:auto;scrollbar-width:thin;}
-.cust-tab{flex:1;text-align:center;padding:10px 14px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;text-decoration:none;transition:.15s;border:none;background:none;}
-.cust-tab:hover{background:var(--canvas);color:var(--ink);}
-.cust-tab.active{background:linear-gradient(180deg,var(--emerald-bright),var(--emerald-deep));color:#fff;box-shadow:0 2px 6px rgba(23,166,91,.35);}
-.kk-portal-zeile{display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;list-style:none;}
-.kk-portal-zeile::-webkit-details-marker{display:none;}
-.kk-portal-mehr{margin-left:auto;font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:4px 12px;}
-.kk-portal-mehr::after{content:' ▾';}
-.kk-portal[open] .kk-portal-mehr::after{content:' ▴';}
+.cust-tabs{display:flex;gap:0;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px;margin-bottom:18px;overflow-x:auto;scrollbar-width:thin;box-shadow:0 1px 3px rgba(19,26,23,.05);}
+.cust-tab{flex:1 0 auto;text-align:center;padding:11px 12px;border-radius:12px;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap;text-decoration:none;transition:.15s;border:none;background:none;position:relative;}
+.cust-tab+.cust-tab::before{content:'';position:absolute;left:0;top:25%;bottom:25%;width:1px;background:var(--line);}
+.cust-tab.active::before,.cust-tab.active+.cust-tab::before{display:none;}
+.cust-tab:hover{background:var(--canvas);}
+.cust-tab.active{background:linear-gradient(180deg,var(--emerald-bright),var(--emerald-deep));color:#fff;box-shadow:0 4px 12px rgba(23,166,91,.35);}
 .chat-bubble{max-width:75%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;}
 .chat-row{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;}
 .chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
@@ -117,18 +57,18 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 </div>
 @endif
 <div class="cust-tabs">
-    <button type="button" class="cust-tab active" data-tab="tab-uebersicht" data-h-click="d2815a66b5">📄 Übersicht</button>
+    <button type="button" class="cust-tab active" data-tab="tab-uebersicht" data-h-click="d2815a66b5">🏠 Übersicht</button>
     <button type="button" id="cust-tab-familie" class="cust-tab" data-tab="tab-familie" data-h-click="bd7b7fc256">👨‍👩‍👦 Familie <span style="opacity:.7;">({{ $customer->family->count() + $familie['all']->count() }})</span></button>
     {{-- Zaehler nennt AKTIV und GESAMT getrennt: die Registerkarte enthaelt
          auch die Historie, der aktive Bestand ist aber die fuehrende Zahl. --}}
-    <button type="button" class="cust-tab" data-tab="tab-vertraege" data-h-click="9e4bdc2fb5">📑 Verträge <span style="opacity:.7;">({{ $aktiveVertraege->count() }} aktiv @if($customer->contracts->count() !== $aktiveVertraege->count())/ {{ $customer->contracts->count() }} gesamt @endif)</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-vertraege" data-h-click="9e4bdc2fb5">📑 Verträge <span style="opacity:.7;" title="{{ $customer->contracts->count() }} gesamt">({{ $aktiveVertraege->count() }} aktiv)</span></button>
     <button type="button" class="cust-tab" data-tab="tab-dokumente" data-h-click="bced4692cd">📎 Dokumente <span style="opacity:.7;">({{ $customer->documents->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-tickets" data-h-click="4448baa374">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-kommunikation" data-h-click="5e908ed579">🧭 Kommunikation <span style="opacity:.7;">({{ $conversationTimeline->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-nachrichten" data-h-click="16a5892592">📨 Nachrichten <span style="opacity:.7;">({{ $customerMessages->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-intern" data-h-click="91f0bd31dc">💬 Intern <span style="opacity:.7;">({{ $internalChat->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-notizen" data-h-click="dbd72c2ee1">📝 Notizen</button>
-    <button type="button" class="cust-tab" data-tab="tab-verlauf" data-h-click="8eed7ed30f">🔄 Verlauf</button>
+    <button type="button" class="cust-tab" data-tab="tab-verlauf" data-h-click="8eed7ed30f">🕘 Änderungen</button>
 </div>
 <div class="tab-section" id="tab-uebersicht">
 {{-- Kundendaten in Karten + Status/Schnellaktionen (Layout 27.11.2026). --}}
@@ -1510,13 +1450,6 @@ document.addEventListener('DOMContentLoaded', filterContracts);
 </div>
 @endif
 
-<div style="display:flex;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);">
-    <a href="{{ route('admin.customer.merge', $customer->id) }}" class="btn btn-ghost">🔀 Mit Duplikat zusammenführen</a>
-    <form method="POST" action="{{ route('admin.customers.delete', $customer->id) }}" data-confirm="Kunde {{ $customer->user?->name }} wirklich ENDGÜLTIG löschen? Alle Verträge, Tickets und Dokumente gehen verloren!" data-confirm-2="Wirklich sicher? Diese Aktion kann NICHT rückgängig gemacht werden." style="margin:0;">
-        @csrf @method('DELETE')
-        <button type="submit" class="btn btn-ghost" style="color:#A32D2D;border-color:#A32D2D;">🗑 Kunde löschen</button>
-    </form>
-</div>
 
 
 <script @cspNonce>
