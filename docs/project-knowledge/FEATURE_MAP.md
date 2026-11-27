@@ -322,6 +322,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 
 ### F-106 Kundendaten-Uebersicht mit Kopierfunktion
 - Support `Kundendatenblatt` (Bereiche + Text fuer "Alle Kundendaten kopieren"); V `admin/partials/kundendaten` (in `admin/customer_show`, ersetzt "Persoenliche Daten" + "Kranken-, Renten- & Steuerdaten"); Route `POST admin/customers/{id}/daten-kopiert` (`AdminController::customerDataCopied`, ActivityLog `customer_data_copied`, nur Feldname); Command `kunden:hausnummer-nachtragen`
+- Layout (27.11.2026): V `admin/partials/kunde_kopf`, `admin/partials/kundendaten_zeile`
 - Tests `KundendatenUndHausnummerTest`, `AnschriftTrennenTest` · Status **ACTIVE** (27.11.2026) · Issues KI-137
 
 ## J. Entfernt / tot
