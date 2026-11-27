@@ -1,6 +1,6 @@
 # Routen-Inventar (generiert)
 
-Generiert am 25.11.2026 aus `php artisan route:list --json` (561 Routen).
+Generiert am 27.11.2026 aus `php artisan route:list --json` (566 Routen).
 **Nicht von Hand pflegen** - neu erzeugen mit `scripts/wissensbasis-routen.php` (Aufruf siehe Dateikopf).
 Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintraegen gilt der ENGSTE (alle muessen passen).
 
@@ -54,6 +54,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/commissions/{id}/reject` | admin.commissions.reject | auth role:staff can:provisionen-verwalten |
 | GET | `admin/contracts` | admin.contracts | auth role:staff |
 | GET | `admin/contracts/create/{customerId}` | admin.contract.create | auth role:staff |
+| POST | `admin/contracts/export` | admin.contracts.export | auth role:staff role:admin,manager |
 | GET | `admin/contracts/new` | admin.contract.new | auth role:staff |
 | POST | `admin/contracts/{customerId}` | admin.contract.store | auth role:staff |
 | PUT | `admin/contracts/{id}` | admin.contract.update | auth role:staff |
@@ -87,6 +88,7 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | PUT | `admin/customers/{id}` | admin.customer.update | auth role:staff |
 | DELETE | `admin/customers/{id}` | admin.customers.delete | auth role:staff role:admin |
 | POST | `admin/customers/{id}/betreuer` | admin.customers.betreuer | auth role:staff role:admin,manager |
+| POST | `admin/customers/{id}/daten-kopiert` | admin.customer.data_copied | auth role:staff throttle:60,1 |
 | POST | `admin/customers/{id}/documents` | admin.customer.document.store | auth role:staff |
 | POST | `admin/customers/{id}/documents/duplikate-bereinigen` | admin.customer.documents.dedupe | auth role:staff role:admin,manager |
 | GET | `admin/customers/{id}/edit` | admin.customer.edit | auth role:staff |
@@ -203,6 +205,8 @@ Schutz: `staff` = role:admin,manager,support,employee; bei mehreren role-Eintrae
 | POST | `admin/inquiries` | admin.inquiries.store | auth role:staff role:admin,manager,support |
 | GET | `admin/inquiries/create` | admin.inquiries.create | auth role:staff role:admin,manager,support |
 | GET | `admin/interessenten` | admin.leads.index | auth role:staff |
+| POST | `admin/interessenten/{id}/kunde` | admin.leads.convert | auth role:staff |
+| POST | `admin/interessenten/{id}/zustaendig` | admin.leads.assign | auth role:staff |
 | DELETE | `admin/internal-messages/{id}` | admin.internal.destroy | auth role:staff |
 | GET | `admin/interne-provisionen` | admin.commissions_internal.index | auth role:staff can:provisionen-verwalten |
 | GET | `admin/interne-provisionen/export` | admin.commissions_internal.export | auth role:staff can:provisionen-verwalten |

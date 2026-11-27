@@ -325,6 +325,13 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Layout (27.11.2026): V `admin/partials/kunde_kopf`, `admin/partials/kundendaten_zeile`, `admin/partials/portal_zugang`; Seitenleisten-Logo `BrandAssets::sidebarLogo()`
 - Tests `KundendatenUndHausnummerTest`, `AnschriftTrennenTest` · Status **ACTIVE** (27.11.2026) · Issues KI-137
 
+### F-107 UI-Modernisierung: Dashboard-Zentrale, Vertragsliste, Interessenten
+- Service `App\Services\Dashboard\DashboardUebersicht` (Kennzahlen, Vertraege je Monat, Sparten, meine Aufgaben, offene Signaturen, neueste Kunden; Provisionen NUR role admin); V `admin/dashboard`, Komponenten `x-admin.kpi`, `x-admin.symbol`
+- Vertragsliste: Sortierung (`?sort=&richtung=`, Whitelist), Spaltenwahl (Browser), Mehrfachauswahl + Export `POST admin/contracts/export` (`ContractController::exportContracts`, admin/manager, ActivityLog `contracts_export`)
+- Interessenten: Filter Quelle/Zustaendig/Kunde, `POST admin/interessenten/{id}/zustaendig` (`assignLead`), `POST admin/interessenten/{id}/kunde` (`convertLead`, Duplikatschutz)
+- Layout: schmale Seitenleiste (`nav-schmal`), Rueckmeldungen als Toast (`ui.js` Abschnitt 10), Auswahl/Spalten (`ui.js` Abschnitt 11); Bausteine in `components.css`
+- Tests `UiModernisierungTest`, `ImprovementRoundTest` · Status **ACTIVE** (27.11.2026)
+
 ## J. Entfernt / tot
 
 ### F-099 AI-Workflow-Engine

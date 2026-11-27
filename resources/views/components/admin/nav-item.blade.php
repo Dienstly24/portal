@@ -4,6 +4,7 @@
 <a href="{{ $item->url }}"
    class="nav-item {{ $active ? 'active' : '' }}"
    data-nav-key="{{ $item->key }}"
+   title="{{ $item->label }}"
    @if($active) aria-current="page" @endif>
     <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         @foreach(\App\Support\Navigation\NavIcons::paths($item->icon) as $d)

@@ -153,21 +153,71 @@
     </div>
 </div>
 
-<div style="font-size:14px;font-weight:700;margin-bottom:14px;">
-    {{ $anzahl }} {{ $wort }}@if($suche !== '') <span style="font-weight:500;color:var(--ink-soft);">für „{{ $suche }}"</span>@endif
+@php
+    // Sortierung (UI-Modernisierung 27.11.2026): Spaltenkopf = Link, der
+    // die aktuelle Ansicht mitnimmt; zweiter Klick dreht die Richtung.
+    $basisQuery = $mitFilter(['gruppe' => $gruppe, 'herkunft' => $herkunft, 'q' => $suche]);
+    $sortLink = function (string $key, string $text) use ($basisQuery, $sortierung, $richtung) {
+        $aktiv = $sortierung === $key;
+        $neu = $aktiv ? ($richtung === 'asc' ? 'desc' : 'asc') : ($key === 'neu' ? 'desc' : 'asc');
+        $pfeil = $aktiv ? ($richtung === 'asc' ? '▲' : '▼') : '↕';
+        $url = route('admin.contracts', $basisQuery + ['sort' => $key, 'richtung' => $neu]);
+        return '<a class="sortier'.($aktiv ? ' aktiv' : '').'" href="'.e($url).'"'.($aktiv ? ' aria-sort="'.($richtung === 'asc' ? 'ascending' : 'descending').'"' : '').'>'.e($text).' <span class="sortier-pfeil" aria-hidden="true">'.$pfeil.'</span></a>';
+    };
+    $darfExport = in_array(auth()->user()->role, ['admin', 'manager'], true);
+    $spalten = ['kunde' => 'VN / Versichert', 'laufzeit' => 'Beginn / Ablauf', 'status' => 'Status', 'nummer' => 'VSNR / V-NR'];
+@endphp
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+    <div style="font-size:14px;font-weight:700;">
+        {{ $anzahl }} {{ $wort }}@if($suche !== '') <span style="font-weight:500;color:var(--ink-soft);">für „{{ $suche }}"</span>@endif
+    </div>
+    <div class="kopf-aktionen">
+        <details class="spalten-wahl">
+            <summary class="btn btn-ghost btn-sm" style="list-style:none;">⚙ Spalten</summary>
+            <div class="spalten-wahl-panel" data-spalten="vertraege" data-spalten-tabelle="contracts-table">
+                <div class="muted-2xs">Angezeigte Spalten (wird in diesem Browser gemerkt)</div>
+                @foreach($spalten as $sk => $sl)
+                <label><input type="checkbox" value="{{ $sk }}" checked> {{ $sl }}</label>
+                @endforeach
+            </div>
+        </details>
+        @if($darfExport && $anzahl > 0)
+        <form method="POST" action="{{ route('admin.contracts.export') }}" style="display:flex;gap:6px;">
+            @csrf
+            <input type="hidden" name="alle" value="1">
+            @foreach($basisQuery + ['sort' => $sortierung, 'richtung' => $richtung] as $ek => $ev)<input type="hidden" name="{{ $ek }}" value="{{ $ev }}">@endforeach
+            <button type="submit" name="format" value="xlsx" class="btn btn-ghost btn-sm" title="Alle {{ $anzahl }} Treffer dieser Ansicht als Excel">⬇ Excel ({{ $anzahl }})</button>
+            <button type="submit" name="format" value="csv" class="btn btn-ghost btn-sm" title="Alle Treffer als CSV">CSV</button>
+        </form>
+        @endif
+    </div>
 </div>
 
-<div class="card card-flush">
-    <table id="contracts-table">
+@if($darfExport)
+{{-- Mehrfachauswahl: die Kaestchen gehoeren zu diesem Formular (form=...).
+     Der Server prueft jede Kennung gegen das Portfolio. --}}
+<form method="POST" action="{{ route('admin.contracts.export') }}" id="vertrag-auswahl" class="auswahl-leiste" data-auswahl-leiste="vertraege" hidden>
+    @csrf
+    <span class="auswahl-zahl"><span data-auswahl-zahl>0</span> ausgewählt</span>
+    <button type="submit" name="format" value="xlsx" class="btn btn-primary btn-sm">⬇ Auswahl als Excel</button>
+    <button type="submit" name="format" value="csv" class="btn btn-ghost btn-sm">CSV</button>
+    <button type="button" class="btn btn-ghost btn-sm" data-auswahl-aufheben>Auswahl aufheben</button>
+</form>
+@endif
+
+<div class="card card-flush tabelle-wrap">
+    <table id="contracts-table" data-auswahl="vertraege">
         <thead>
-            <tr style="background:#F8F9FA;">
-                <th style="padding:12px 20px;width:48px;"></th>
-                <th style="padding:12px 8px;">Versicherung</th>
-                <th>VN / Versichert</th>
-                <th>Beginn / Ablauf</th>
-                <th>Status</th>
-                <th>VSNR / V-NR</th>
-                <th></th>
+            <tr style="background:var(--surface-soft);">
+                @if($darfExport)<th class="zelle-wahl"><input type="checkbox" data-auswahl-alle aria-label="Alle Verträge dieser Seite auswählen"></th>@endif
+                <th style="padding:12px 20px;width:48px;">{!! $sortLink('sparte', 'Sparte') !!}</th>
+                <th style="padding:12px 8px;">{!! $sortLink('gesellschaft', 'Versicherung') !!}</th>
+                <th data-spalte="kunde">{!! $sortLink('kunde', 'VN / Versichert') !!}</th>
+                <th data-spalte="laufzeit">{!! $sortLink('beginn', 'Beginn') !!} / {!! $sortLink('ablauf', 'Ablauf') !!}</th>
+                <th data-spalte="status">Status</th>
+                <th data-spalte="nummer">{!! $sortLink('nummer', 'VSNR / V-NR') !!}</th>
+                <th style="text-align:right;">{!! $sortLink('neu', 'Angelegt') !!}</th>
             </tr>
         </thead>
         <tbody>
@@ -178,6 +228,7 @@
             $cHistoric = $cGroup === \App\Models\Contract::GROUP_HISTORY;
         @endphp
         <tr class="contract-row{{ $cHistoric ? ' contract-row-historic' : '' }}{{ $c->isExternal() ? ' contract-row-fremd' : '' }}" data-status="{{ $c->status }}" data-group="{{ $cGroup }}">
+            @if($darfExport)<td class="zelle-wahl"><input type="checkbox" name="vertraege[]" value="{{ $c->id }}" form="vertrag-auswahl" data-auswahl-zeile aria-label="Vertrag auswählen"></td>@endif
             <td style="padding:14px 20px;">
                 <div style="width:40px;height:40px;border-radius:10px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:20px;">{{ $c->typeIcon() }}</div>
             </td>
@@ -187,13 +238,13 @@
                 @if($c->successor)<div class="muted-2xs">↪ Ersetzt durch: {{ $c->successor->insurer }}</div>@endif
                 @if($c->predecessor)<div class="muted-2xs">↩ Ersetzt: {{ $c->predecessor->insurer }}@if($c->predecessor->isExternal()) (Fremdvertrag)@endif</div>@endif
             </td>
-            <td style="font-size:13px;">{{ $c->customer?->user?->name ?? '—' }}</td>
-            <td class="muted-sm">
+            <td style="font-size:13px;" data-spalte="kunde">@if($c->customer)<a href="{{ route('admin.customer', $c->customer_id) }}" style="color:inherit;text-decoration:none;font-weight:600;">{{ $c->customer->user?->name ?? '—' }}</a>@if($c->customer->customer_number)<div class="muted-2xs">{{ $c->customer->customer_number }}</div>@endif @else — @endif</td>
+            <td class="muted-sm" data-spalte="laufzeit">
                 @if($c->start_date)<div>{{ \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') }}</div>@endif
                 @if($c->end_date)<div>{{ \Carbon\Carbon::parse($c->end_date)->format('d.m.Y') }}</div>@endif
             </td>
             @php $st = $c->displayStatus(); @endphp
-            <td>
+            <td data-spalte="status">
                 <span class="badge badge-{{ $st['badge'] }} nowrap">{{ $st['label'] }}</span>
                 {{-- Klare Kennzeichnung: gehoert NICHT zum aktiven Bestand. --}}
                 @if($st['historic'])
@@ -203,16 +254,17 @@
                 @endif
                 @include('admin.partials.contract_stage_badge', ['contract' => $c])
             </td>
-            <td>
+            <td data-spalte="nummer">
                 <div style="font-size:13px;font-weight:600;">{{ $c->contract_number ?: '—' }}</div>
+                @if($c->reference_number)<div class="muted-2xs">Ref. {{ $c->reference_number }}</div>@endif
             </td>
-            <td style="padding-right:20px;white-space:nowrap;">
+            <td style="padding-right:20px;white-space:nowrap;text-align:right;">
                 <a href="{{ route('admin.contract.edit', $c->id) }}" class="btn btn-ghost btn-sm">Bearbeiten</a>
                 <a href="{{ route('admin.customer', $c->customer_id) }}" class="btn btn-ghost btn-sm">Kunde</a>
             </td>
         </tr>
         @empty
-        <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-soft);">
+        <tr><td colspan="{{ $darfExport ? 8 : 7 }}" style="text-align:center;padding:40px;color:var(--ink-soft);">
             @if($suche !== '')Keine Verträge zu „{{ $suche }}" in dieser Gruppe.@elseif($hatFilter) Keine Verträge für diese Filter in dieser Gruppe.@else Keine Verträge in dieser Gruppe.@endif
         </td></tr>
         @endforelse
@@ -252,11 +304,6 @@
 .vf-monat a:hover{text-decoration:underline;}
 .vf-monat-titel{font-weight:700;}
 .vf-monat-mehr{margin-left:auto;color:var(--ink-soft) !important;}
-.vf-leiste{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;padding:12px 14px;
-    background:var(--surface);border:1px solid var(--line);border-radius:10px;}
-.vf-feld{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--ink-soft);min-width:0;flex:1 1 160px;}
-.vf-feld select,.vf-feld input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink);width:100%;min-width:0;}
-.vf-knoepfe{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .vf-kennzahlen{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;}
 .vf-kz{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0;}
 .vf-kz-wert{font-size:20px;font-weight:800;color:var(--ink);}

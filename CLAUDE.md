@@ -5702,6 +5702,56 @@ neue Seitenfassung derselben Idee.
 - Offen: Erwaehnung in der Datenschutzerklaerung (Rechtsseite, Anwalt).
 - Tests: `FacebookBewertungenTest`.
 
+## UI-Modernisierung der Beraterwelt (Betreiber-Auftrag 27.11.2026)
+
+- **Verbessern, nicht umbauen**: Hintergrund bleibt warmes Beige
+  (`--canvas`), keine Funktion entfernt, keine DB-Aenderung, Rechte
+  unveraendert. Neue Bausteine stehen in `components.css` (Abschnitt
+  "UI-Modernisierung"): `.kpi`/`x-admin.kpi` (Kennzahl-Kachel, ganze Kachel
+  ist ein Link), `x-admin.symbol` (Linien-Symbole aus `NavIcons` statt
+  Emoji), `.liste-zeile`, `.initialen`, `.punkt-*`, `.trend-*`,
+  `.dash-raster`, `.vf-leiste` (Filterleiste, vorher je Seite neu),
+  `.toast-stapel`, `th a.sortier`, `.auswahl-leiste`, `.spalten-wahl`.
+- **Dashboard rechnet nicht selbst** (`App\Services\Dashboard\DashboardUebersicht`):
+  jede Kachel nutzt dieselbe Abfrage wie die Liste, auf die sie fuehrt
+  ("Neue Kunden (Monat)" = `DashboardAnalyticsService::liste('neukunden')`).
+  Trend ohne Vergleichsbasis = "neu", nie "+100 %". **Provisionen (Monat)
+  NUR bei role === 'admin'** (Betreiber-Vorgabe) - auch ein Manager mit
+  `provisionen-verwalten` sieht die Kachel nicht; fuer andere wird die
+  Summe gar nicht berechnet. Summe = `CommissionAnalytics::sums()` netto
+  des laufenden Monats. Das Sparten-Diagramm zaehlte vorher den GESAMTEN
+  Bestand ohne Portfolio-Scope (ein Mitarbeiter sah fremde Zahlen) - jetzt
+  Portfolio + aktive Vertraege, EINE gruppierte Abfrage. Ein Klick auf einen
+  Monatsbalken oeffnet die Berichtsliste dieses Monats.
+- **Vertragsliste**: Sortierung per Link (`sort` aus Whitelist, fester
+  Zweitschluessel `contracts.id`, Kunde per Unterabfrage statt Join - die
+  Kennzahlen-Abfragen bleiben unberuehrt); Spaltenwahl nur im Browser
+  (reine Ansicht, nie Berechtigung); Mehrfachauswahl + Export Excel/CSV
+  der Auswahl oder ALLER Treffer der Ansicht (`admin.contracts.export`,
+  nur admin/manager an Route UND Controller, Kennungen gegen das Portfolio,
+  ActivityLog `contracts_export` ohne Namen).
+- **Interessenten**: Filter Quelle/Zustaendig/Kunde, Kennzahlen als
+  Filter-Links, Zuweisung (`admin.leads.assign`, nur aktives Personal; einen
+  schon FREMD zugewiesenen Fall verteilt nur admin/manager neu) und "In
+  Kunden umwandeln" (`admin.leads.convert`): bewusste Aktion,
+  `CustomerAutoCreationService` mit Duplikatschutz - gehoert die E-Mail
+  schon einem Kunden oder findet der Abgleich einen, wird NICHTS angelegt
+  (Name nur, wenn im eigenen Portfolio). Der Lead bleibt als Herkunft
+  (`ai_leads.customer_id`).
+- **Layout**: schmale Seitenleiste (Knopf neben dem Logo, `html.nav-schmal`,
+  gemerkt in localStorage, VOR dem ersten Zeichnen gesetzt; nur ab 901 px;
+  Menuepunkte tragen `title` als Tooltip). Rueckmeldungen nach Aktionen
+  oben rechts (`ui.js` Abschnitt 10): Erfolg verschwindet nach 6 s, Fehler
+  und Warnungen bleiben bis zum Schliessen.
+- Tests: `UiModernisierungTest`; `ImprovementRoundTest` prueft
+  "Zuletzt geoeffnete Kunden" jetzt im eigenen Abschnitt
+  (`data-zuletzt-geoeffnet`), weil das Dashboard zusaetzlich "Neueste
+  Kunden" zeigt.
+- Offen (bewusst nicht in diesem PR): PDF-Export der Vertragsliste,
+  Aktivitaeten-Feed (ActivityLog-Aktionen haben keine lesbaren Texte),
+  Angleichung von Dokumenten-Eingang und Aufgabenliste an die neuen
+  Bausteine.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

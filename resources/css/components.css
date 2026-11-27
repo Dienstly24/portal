@@ -237,3 +237,101 @@
    haelt die Ecken rund; waagerecht setzt responsive.css `auto`. */
 .card-head-bar { padding: 16px 20px; font-weight: 700; border-bottom: 1px solid var(--line); }
 .modal-close { position: absolute; top: 16px; right: 16px; border: none; background: none; font-size: 20px; cursor: pointer; }
+
+/* =================================================================
+ * UI-Modernisierung 27.11.2026 - gemeinsame Bausteine der Beraterwelt
+ * (Kennzahl-Kacheln, Listen-Karten, Initialen, Rueckmeldungen,
+ * sortierbare Spalten, Mehrfachauswahl). Gleiche Farbregel wie oben:
+ * Smaragd = Aktion, Gold = Akzent, Ampelfarben aus --status-*.
+ * ================================================================= */
+.kopf-zeile { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+.kopf-zeile .page-header { margin-bottom: 0; }
+.kopf-aktionen { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.kpi-raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.kpi {
+    display: flex; flex-direction: column; gap: 6px; min-width: 0;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 18px; text-decoration: none; color: inherit; position: relative;
+    box-shadow: 0 1px 2px rgba(22, 33, 28, .04);
+    transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+a.kpi:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--emerald) 45%, var(--line)); box-shadow: 0 8px 20px rgba(22, 33, 28, .08); }
+a.kpi:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
+.kpi-kopf { display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+.kpi-symbol { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex: none; background: var(--emerald-soft); color: var(--emerald-deep); }
+.kpi-symbol svg { width: 18px; height: 18px; }
+.kpi-symbol-gold { background: color-mix(in srgb, var(--gold) 18%, var(--surface)); color: color-mix(in srgb, var(--gold) 70%, var(--ink)); }
+.kpi-symbol-info { background: color-mix(in srgb, var(--status-info) 12%, var(--surface)); color: var(--status-info); }
+.kpi-symbol-warn { background: color-mix(in srgb, var(--status-warning) 14%, var(--surface)); color: color-mix(in srgb, var(--status-warning) 80%, var(--ink)); }
+.kpi-wert { font-size: 28px; font-weight: 800; line-height: 1.1; color: var(--ink); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.kpi-unter { font-size: 12px; color: var(--ink-soft); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.kpi-mehr { position: absolute; bottom: 12px; inset-inline-end: 14px; color: var(--ink-soft); opacity: 0; transition: opacity .12s; font-size: 14px; }
+a.kpi:hover .kpi-mehr { opacity: 1; }
+.kpi-nur-admin { margin-inline-start: auto; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: color-mix(in srgb, var(--gold) 70%, var(--ink)); }
+.trend { display: inline-flex; align-items: center; gap: 2px; font-weight: 700; font-size: 11.5px; padding: 1px 7px; border-radius: 999px; }
+.trend-hoch { background: color-mix(in srgb, var(--status-success) 13%, var(--surface)); color: var(--emerald-deep); }
+.trend-runter { background: color-mix(in srgb, var(--status-danger) 12%, var(--surface)); color: color-mix(in srgb, var(--status-danger) 85%, var(--ink)); }
+.trend-gleich, .trend-neu { background: var(--surface-soft); color: var(--ink-soft); }
+.warn-text { color: color-mix(in srgb, var(--status-danger) 85%, var(--ink)); font-weight: 600; }
+
+.dash-raster { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
+.dash-raster > * { min-width: 0; margin-bottom: 0; }
+.dash-8 { grid-column: span 8; } .dash-6 { grid-column: span 6; } .dash-4 { grid-column: span 4; } .dash-12 { grid-column: span 12; }
+@media (max-width: 1180px) { .dash-8, .dash-4 { grid-column: span 6; } }
+@media (max-width: 860px) { .dash-8, .dash-6, .dash-4 { grid-column: span 12; } }
+
+.liste-zeile { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; min-width: 0; }
+.liste-zeile:last-child { border-bottom: none; }
+a.liste-zeile:hover .liste-titel { color: var(--emerald-deep); }
+.liste-inhalt { flex: 1; min-width: 0; }
+.liste-titel { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.liste-unter { font-size: 12px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.liste-ende { flex: none; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
+.leer-hinweis { padding: 18px 4px; font-size: 13.5px; color: var(--ink-soft); text-align: center; }
+.initialen {
+    width: 36px; height: 36px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--emerald-deep); background: var(--emerald-soft);
+}
+.initialen-sm { width: 30px; height: 30px; font-size: 11.5px; }
+
+.punkt { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; background: var(--line); }
+.punkt-rot { background: var(--status-danger); } .punkt-gelb { background: var(--status-warning); } .punkt-gruen { background: var(--status-success); } .punkt-blau { background: var(--status-info); }
+
+/* Rueckmeldung nach einer Aktion: oben rechts, Erfolg verschwindet nach
+   einigen Sekunden von selbst, Fehler bleiben stehen bis man sie
+   schliesst (ui.js Abschnitt "Rueckmeldungen"). Ohne JavaScript bleibt
+   die Meldung einfach stehen - nichts geht verloren. */
+.toast-stapel { position: fixed; top: calc(var(--header-h, 64px) + 12px); inset-inline-end: 18px; z-index: 400; display: flex; flex-direction: column; gap: 10px; width: min(420px, calc(100vw - 24px)); pointer-events: none; }
+.toast-stapel .alert { pointer-events: auto; margin: 0; display: flex; align-items: flex-start; gap: 10px; box-shadow: 0 10px 28px rgba(22, 33, 28, .16); animation: toast-ein .22s ease-out; }
+.toast-stapel .alert.toast-weg { opacity: 0; transform: translateY(-6px); transition: opacity .3s, transform .3s; }
+.toast-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast-zu { flex: none; background: none; border: none; cursor: pointer; font-size: 16px; line-height: 1; color: inherit; opacity: .6; padding: 0 2px; }
+.toast-zu:hover { opacity: 1; }
+@keyframes toast-ein { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .toast-stapel .alert { animation: none; } }
+
+/* Sortierbare Spaltenkoepfe: ein normaler Link - Stand bleibt teilbar. */
+th a.sortier { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+th a.sortier:hover { color: var(--ink); }
+th a.sortier .sortier-pfeil { opacity: .35; font-size: 10px; }
+th a.sortier.aktiv { color: var(--emerald-deep); }
+th a.sortier.aktiv .sortier-pfeil { opacity: 1; }
+
+/* Mehrfachauswahl + Spaltenwahl */
+.auswahl-leiste { position: sticky; top: calc(var(--header-h, 64px) + 8px); z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 12px; border-radius: 12px; background: var(--graphite-deep); color: var(--surface); box-shadow: 0 8px 22px rgba(22, 33, 28, .2); }
+.auswahl-leiste .btn-ghost { background: transparent; color: var(--surface); border: 1px solid color-mix(in srgb, var(--surface) 35%, transparent); box-shadow: none; }
+.auswahl-zahl { font-weight: 700; margin-inline-end: auto; }
+.spalten-wahl { position: relative; }
+.spalten-wahl-panel { position: absolute; inset-inline-end: 0; top: calc(100% + 6px); z-index: 40; min-width: 220px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; box-shadow: 0 12px 30px rgba(22, 33, 28, .14); display: grid; gap: 6px; font-size: 13px; }
+.spalten-wahl-panel label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.tabelle-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+td.zelle-wahl, th.zelle-wahl { width: 36px; padding-inline: 14px 4px; }
+
+/* Filterleiste ueber Listen (Vertraege, Interessenten): ein GET-Formular,
+   jeder Stand ist ein teilbarer Link. Vorher je Seite neu definiert. */
+.vf-leiste { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 14px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.vf-feld { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--ink-soft); min-width: 0; flex: 1 1 160px; }
+.vf-feld select, .vf-feld input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
+.vf-knoepfe { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
