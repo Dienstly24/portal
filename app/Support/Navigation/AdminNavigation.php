@@ -213,13 +213,10 @@ final class AdminNavigation
         return new NavGroup('kunden', 'Kunden', $this->items([
             ['kunden', 'Kunden', 'admin.customers', 'users', ['admin.customers*', 'admin.customer*', 'admin.family.*']],
             ['interessenten', 'Interessenten', 'admin.leads.index', 'lead', ['admin.leads*']],
-            ['vertraege', 'Verträge', 'admin.contracts', 'contract', ['admin.contracts*', 'admin.contract.*']],
-            // Berichte gehoeren NEBEN die Vertraege (Betreiber-Auftrag
-            // 26.11.2026): in den Einstellungen sah sie im Alltag niemand,
-            // und die Frage "wie viele Kunden diesen Monat, aus welcher
-            // Sparte" stellt der Betrieb jeden Monat. Die Route ist fuer
-            // jede Personalrolle offen (Portfolio-Scope im Dienst).
-            ['berichte', 'Berichte & Analyse', 'admin.reports', 'chart', ['admin.reports*']],
+            // EIN Bereich (Betreiber-Auftrag 27.11.2026): Analyse, Monats-
+            // uebersicht und Neukunden sind Reiter der Vertraege, kein
+            // eigener Menuepunkt - der Punkt bleibt auf allen markiert.
+            ['vertraege', 'Verträge', 'admin.contracts', 'contract', ['admin.contracts*', 'admin.contract.*', 'admin.reports*']],
             ['aenderungen', 'Änderungsanträge', 'admin.change_requests', 'change', ['admin.change_requests*', 'admin.change_notifications*'], 'change_requests'],
         ]));
     }

@@ -198,4 +198,56 @@ class VertraegeUndMonatsberichtTest extends TestCase
         $this->actingAs($this->admin())->get(route('admin.reports.monat', ['monat' => '2026-11']))
             ->assertOk()->assertSee('format=xlsx', false);
     }
+
+    // ------------------------------------------------ Ein Bereich (27.11.2026)
+
+    public function test_vertragsliste_zeigt_diesen_monat_wie_die_analyse(): void
+    {
+        $this->bestand();
+        $admin = $this->admin();
+
+        $antwort = $this->actingAs($admin)->get(route('admin.contracts'))->assertOk();
+        $monat = $antwort->viewData('monatZahlen');
+
+        $liste = fn (string $l) => $this->actingAs($admin)->get(route('admin.reports.liste', [
+            'liste' => $l, 'zeitraum' => 'monatswahl', 'monat' => '2026-11',
+        ]))->assertOk()->viewData('gesamt');
+
+        $this->assertSame(3, $monat['vertraege']);
+        $this->assertSame($liste('vertraege_neu'), $monat['vertraege']);
+        $this->assertSame($liste('kunden_abschluss'), $monat['kunden']);
+        $this->assertSame($liste('neukunden'), $monat['neukunden']);
+        $antwort->assertSee($monat['links']['vertraege']);
+    }
+
+    public function test_alle_seiten_des_bereichs_tragen_dieselben_reiter(): void
+    {
+        $admin = $this->admin();
+
+        foreach ([
+            route('admin.contracts'),
+            route('admin.reports'),
+            route('admin.reports.monat'),
+            route('admin.reports.neukunden'),
+            route('admin.reports.liste', ['liste' => 'vertraege_neu']),
+        ] as $url) {
+            $antwort = $this->actingAs($admin)->get($url)->assertOk();
+            $antwort->assertSee('aria-label="Bereich Verträge"', false);
+            $antwort->assertSee(route('admin.contracts'));
+            $antwort->assertSee(route('admin.reports.monat'));
+            $antwort->assertSee(route('admin.reports.neukunden'));
+        }
+    }
+
+    public function test_mitarbeiter_sieht_monatszahlen_nur_aus_seinem_portfolio(): void
+    {
+        $this->bestand();
+        $mitarbeiter = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+
+        $monat = $this->actingAs($mitarbeiter)->get(route('admin.contracts'))->assertOk()->viewData('monatZahlen');
+
+        $this->assertSame(0, $monat['vertraege']);
+        $this->assertSame(0, $monat['kunden']);
+        $this->assertSame(0, $monat['neukunden']);
+    }
 }

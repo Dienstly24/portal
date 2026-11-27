@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 27.11.2026 - Vertraege und Analyse als EIN Bereich
+
+- **Task**: Betreiber: Vertraege und Bericht/Analyse sollen ein System sein - aus dem Vertragsbereich heraus alles sehen (neue Kunden, neue Vertraege usw.).
+- **Files Changed**: neu `admin/partials/vertraege_bereich.blade.php` (Reiter), eingebunden in `admin/contracts`, `admin/reports`, `admin/reports_monat`, `admin/reports_neukunden`, `admin/reports_liste`; `Admin\ContractController::contracts` ("Diesen Monat"); `AdminNavigation` (Menuepunkt Berichte entfernt, `admin.reports*` markiert Vertraege); Tests `VertraegeUndMonatsberichtTest` (+3), `AdminNavigationTest`, `ReportsDashboardTest`; `CLAUDE.md`, `FEATURE_MAP.md`.
+- **Database Changes**: keine. **API Changes**: keine (alle Routen unveraendert).
+- **Potential Side Effects**: Seitenleiste wieder 16 Punkte; Seitentitel der Analyse heisst "Verträge – Analyse".
+- **Tests Performed**: CI (lokal kein `composer install` moeglich).
+- **Result**: erledigt, CI ausstehend.
+
 ## 26.11.2026 - Vertraege und Berichte zusammengefuehrt: Filter, Kennzahlen, Monatsuebersicht, Berichte in der Seitenleiste
 
 - **Task**: Betreiber: "jeden Monat wissen, wie viele Kunden, aus welcher Sparte, mit Namen" - und die Berichte lagen in den Einstellungen, wo sie niemand oeffnete.

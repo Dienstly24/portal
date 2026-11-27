@@ -30,17 +30,25 @@
     $wort = $anzahl === 1 ? ($reiter[$gruppe][1] ?? 'Vertrag') : ($reiter[$gruppe][2] ?? 'Verträge');
 @endphp
 
-<div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-    <div>
-        <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Verträge</span></div>
-        <h1 class="page-title">Verträge</h1>
-    </div>
-    {{-- Der Weg in die Auswertung steht DORT, wo gearbeitet wird
-         (Betreiber-Auftrag 26.11.2026) - und nimmt die Auswahl mit. --}}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="{{ route('admin.reports.monat', array_filter(['monat' => $filter['abschluss']])) }}" class="btn btn-ghost btn-sm">🗓 Monatsübersicht</a>
-        <a href="{{ route('admin.reports', $berichtQuery) }}" class="btn btn-primary btn-sm">📊 Berichte &amp; Analyse</a>
-    </div>
+<div class="page-header">
+    <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Verträge</span></div>
+    <h1 class="page-title">Verträge</h1>
+</div>
+
+{{-- EIN Bereich: Liste, Analyse, Monatsuebersicht, Neukunden (27.11.2026). --}}
+@include('admin.partials.vertraege_bereich', [
+    'aktiv' => 'liste',
+    'analyseQuery' => $berichtQuery,
+    'monatQuery' => array_filter(['monat' => $filter['abschluss']]),
+])
+
+{{-- Dieser Monat auf einen Blick - dieselben Abfragen wie die Analyse. --}}
+<div class="vf-monat">
+    <span class="vf-monat-titel">{{ $monatZahlen['titel'] }}:</span>
+    <a href="{{ $monatZahlen['links']['vertraege'] }}"><strong>{{ number_format($monatZahlen['vertraege'], 0, ',', '.') }}</strong> neue Verträge</a>
+    <a href="{{ $monatZahlen['links']['kunden'] }}"><strong>{{ number_format($monatZahlen['kunden'], 0, ',', '.') }}</strong> Kunden mit Abschluss</a>
+    <a href="{{ $monatZahlen['links']['neukunden'] }}"><strong>{{ number_format($monatZahlen['neukunden'], 0, ',', '.') }}</strong> neue Kunden</a>
+    <a href="{{ route('admin.reports.monat') }}" class="vf-monat-mehr">nach Sparte und Namen →</a>
 </div>
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;">
@@ -239,6 +247,11 @@
    aktiven Vertraegen zu verwechseln (ausgegraut + Textkennzeichen). */
 .contract-row-historic{background:#F3F0E8;}
 .contract-row-historic td{opacity:.72;}
+.vf-monat{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:13px;margin:-6px 0 16px;padding:10px 14px;border-radius:10px;background:var(--emerald-soft);border:1px solid var(--line);}
+.vf-monat a{color:var(--ink);text-decoration:none;}
+.vf-monat a:hover{text-decoration:underline;}
+.vf-monat-titel{font-weight:700;}
+.vf-monat-mehr{margin-left:auto;color:var(--ink-soft) !important;}
 .vf-leiste{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;padding:12px 14px;
     background:var(--surface);border:1px solid var(--line);border-radius:10px;}
 .vf-feld{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--ink-soft);min-width:0;flex:1 1 160px;}

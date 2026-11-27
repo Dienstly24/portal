@@ -3271,6 +3271,15 @@ Versicherers gehen jedem Standardwert vor.
   `DashboardAnalyticsService::liste()` (Test: Monatsuebersicht = Berichtsliste);
   Namensliste bei 3000 gedeckelt MIT Hinweis. Excel je Sparte nur
   admin/manager (ueber `reports.liste`). Tests: `VertraegeUndMonatsberichtTest`.
+  **EIN BEREICH (27.11.2026)**: Vertraege, Analyse, Monatsuebersicht und
+  Neukunden sind REITER desselben Bereichs
+  (`admin/partials/vertraege_bereich`, auf allen fuenf Seiten inkl. der
+  Detaillisten; Provisionen als Nebenreiter nur mit dem Recht). Der eigene
+  Menuepunkt "Berichte & Analyse" ist wieder weg, "Vertraege" bleibt auf
+  `admin.reports*` markiert (Seitenleiste zurueck auf 16). Die
+  Vertragsliste zeigt "Diesen Monat": neue Vertraege, Kunden mit
+  Abschluss, neue Kunden - aus `DashboardAnalyticsService::liste()` (Test:
+  gleich der Berichtsliste), jede Zahl ein Link auf ihre Liste.
   **Offen (spaetere Phasen)**: Provision je Vertrag/Mitarbeiter in Liste
   und Ranglisten (Recht `provisionen-verwalten`), Klick auf Diagrammbalken,
   Monatsbericht als PDF/automatischer Versand, Vergleich Vorjahreszeitraum.

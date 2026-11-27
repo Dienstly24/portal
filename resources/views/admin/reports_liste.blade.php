@@ -26,7 +26,8 @@
     <div>
         <div class="breadcrumb">
             <a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span>
-            <a href="{{ route('admin.reports', $f->alsQuery()) }}">Berichte &amp; Analysen</a><span class="breadcrumb-sep">›</span>
+            <a href="{{ route('admin.contracts') }}">Verträge</a><span class="breadcrumb-sep">›</span>
+            <a href="{{ route('admin.reports', $f->alsQuery()) }}">Analyse</a><span class="breadcrumb-sep">›</span>
             <span>{{ $info['titel'] }}</span>
         </div>
         <h1 class="page-title">{{ $info['titel'] }}: {{ $zahl($gesamt) }}</h1>
@@ -41,6 +42,7 @@
         <button type="button" class="btn btn-ghost btn-sm" data-h-click="berichtDrucken">Drucken</button>
     </div>
 </div>
+@include('admin.partials.vertraege_bereich', ['aktiv' => 'analyse', 'analyseQuery' => $f->alsQuery()])
 
 @include('admin.partials.analytics.filter_bar', ['f' => $f, 'ziel' => 'admin.reports.liste', 'extra' => $extra, 'auswahl' => $auswahl])
 

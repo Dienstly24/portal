@@ -90,7 +90,7 @@ class ReportsDashboardTest extends TestCase
 
         $antwort->assertOk();
         foreach ([
-            'Berichte &amp; Analysen',
+            'Verträge – Analyse',
             'Leistungskennzahlen, Vertragsentwicklung und Kundenanalyse',
             'Verträge diesen Monat', 'Verträge dieses Jahr', 'Neue Kunden',
             'Vertragswert', 'Verlängerungen', 'Auslaufende Verträge',

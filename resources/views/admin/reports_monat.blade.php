@@ -23,20 +23,17 @@
 
 <div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;">
     <div>
-        <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.reports') }}">Berichte</a><span class="breadcrumb-sep">›</span><span>Monatsübersicht</span></div>
+        <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.contracts') }}">Verträge</a><span class="breadcrumb-sep">›</span><span>Monatsübersicht</span></div>
         <h1 class="page-title">Monatsübersicht {{ $monatName }}</h1>
         <div class="page-sub">Abgeschlossene Verträge und Kunden je Sparte – eigener Bestand, Abschluss = Unterschrift, sonst Antrag, sonst Beginn, sonst Anlage.</div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="{{ route('admin.contracts') }}" class="btn btn-ghost btn-sm">📄 Zu den Verträgen</a>
-    </div>
 </div>
 
-<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-    <a href="{{ route('admin.reports') }}" class="rep-tab">Übersicht</a>
-    <a href="{{ route('admin.reports.monat') }}" class="rep-tab rep-tab-active">Monatsübersicht</a>
-    <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab">Neukunden</a>
-</div>
+@include('admin.partials.vertraege_bereich', [
+    'aktiv' => 'monat',
+    'analyseQuery' => ['zeitraum' => 'monatswahl', 'monat' => $monat->format('Y-m')],
+    'monatQuery' => ['monat' => $monat->format('Y-m')],
+])
 
 {{-- Monat waehlen: Pfeile + Monatsfeld (GET, jeder Monat ist ein Link). --}}
 <form method="GET" action="{{ route('admin.reports.monat') }}" class="mo-nav">
@@ -165,8 +162,6 @@
 <p class="muted-2xs" style="margin-top:8px;">„Kunden“ zählt jeden Kunden einmal je Sparte; in „Gesamt“ einmal insgesamt – ein Kunde mit Kfz und Haftpflicht steht in beiden Sparten, aber nur einmal in der Summe.</p>
 
 <style>
-.rep-tab{padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:var(--tiefe-hell);box-shadow:var(--tiefe-schatten);font-size:13px;font-weight:600;color:var(--ink);text-decoration:none;white-space:nowrap;}
-.rep-tab-active{background:var(--tiefe-graphit);color:#fff;border-color:transparent;box-shadow:var(--tiefe-schatten-aktiv);}
 .mo-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
 .mo-nav input{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;}
 .mo-kz-reihe{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px;}

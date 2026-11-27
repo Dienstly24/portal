@@ -1,20 +1,12 @@
 @extends('layouts.admin')
 @section('content')
 <div class="page-header">
-    <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.reports') }}">Berichte</a><span class="breadcrumb-sep">›</span><span>Neukunden</span></div>
+    <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.contracts') }}">Verträge</a><span class="breadcrumb-sep">›</span><span>Neukunden</span></div>
     <h1 class="page-title">Neukunden-Bericht</h1>
     <div class="page-sub">Wer wurde wann angelegt, von wem geworben, bei welcher Gesellschaft - mit Direkteinstieg in jede Kundenakte.</div>
 </div>
 
-{{-- Bericht-Tabs --}}
-<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
-    <a href="{{ route('admin.reports') }}" class="rep-tab">Übersicht</a>
-    <a href="{{ route('admin.reports.monat') }}" class="rep-tab">Monatsübersicht</a>
-    <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab rep-tab-active">Neukunden</a>
-    @if($darfProvisionen)
-    <a href="{{ route('admin.provisions') }}" class="rep-tab">Vermittler-Provisionen</a>
-    @endif
-</div>
+@include('admin.partials.vertraege_bereich', ['aktiv' => 'neukunden'])
 
 {{-- Zeitraum: Monatsblaettern + freier Zeitraum --}}
 <div class="card" style="margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">

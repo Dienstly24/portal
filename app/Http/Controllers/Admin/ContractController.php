@@ -21,6 +21,7 @@ use App\Services\ContractSwitchService;
 use App\Services\Energy\MeterReadingService;
 use App\Services\Kfz\SfReferenceService;
 use App\Services\Kfz\SfReferenceValidator;
+use App\Services\Reporting\AnalyticsFilters;
 use App\Services\Reporting\DashboardAnalyticsService;
 use App\Services\VehicleOverlapGuard;
 use App\Services\Vermittler\VermittlerLinkService;
@@ -152,9 +153,27 @@ class ContractController extends Controller
             'monat' => $filter['abschluss'],
         ]);
 
+        // Dieser Monat auf einen Blick (27.11.2026) - DIESELBEN Abfragen wie
+        // Analyse und Monatsuebersicht, damit keine zweite Zaehlweise
+        // entsteht. Portfolio-Scope ueber $ids wie in der Liste.
+        $monatQuery = ['zeitraum' => 'monatswahl', 'monat' => now()->format('Y-m')];
+        $monatFilter = AnalyticsFilters::ausRequest(new Request($monatQuery));
+        $dienst = new DashboardAnalyticsService($ids);
+        $monatZahlen = [
+            'titel' => 'Diesen Monat ('.now()->locale('de')->translatedFormat('F Y').')',
+            'vertraege' => $dienst->liste('vertraege_neu', $monatFilter)->count(),
+            'kunden' => $dienst->liste('kunden_abschluss', $monatFilter)->count(),
+            'neukunden' => $dienst->liste('neukunden', $monatFilter)->count(),
+            'links' => [
+                'vertraege' => route('admin.reports.liste', ['liste' => 'vertraege_neu'] + $monatQuery),
+                'kunden' => route('admin.reports.liste', ['liste' => 'kunden_abschluss'] + $monatQuery),
+                'neukunden' => route('admin.reports.liste', ['liste' => 'neukunden'] + $monatQuery),
+            ],
+        ];
+
         return view('admin.contracts', compact(
             'contracts', 'gruppe', 'suche', 'zaehler', 'herkunft', 'herkunftZaehler',
-            'filter', 'kennzahlen', 'gesellschaften', 'berichtQuery'
+            'filter', 'kennzahlen', 'gesellschaften', 'berichtQuery', 'monatZahlen'
         ));
     }
 
