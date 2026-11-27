@@ -8,6 +8,7 @@ use App\Models\Document;
 use App\Models\User;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\DocumentIntake\DocumentIntakeService;
+use App\Support\Kundendatenblatt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -193,7 +194,7 @@ class KundendatenUndHausnummerTest extends TestCase
         $kunde = $this->gemeldeterKunde();
         $kunde->forceFill(['iban' => 'DE89370400440532013000', 'birth_date' => '1990-03-12'])->save();
 
-        $text = \App\Support\Kundendatenblatt::alsText($kunde->refresh());
+        $text = Kundendatenblatt::alsText($kunde->refresh());
 
         $this->assertStringContainsString('Vorname: Loay', $text);
         $this->assertStringContainsString('Geburtsdatum: 12.03.1990', $text);

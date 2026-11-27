@@ -27,7 +27,7 @@ final class Kundendatenblatt
     public static function bereiche(Customer $customer): array
     {
         $user = $customer->user;
-        $name = trim((string) ($user?->name ?? ''));
+        $name = trim((string) ($user->name ?? ''));
         // Dieselbe Trennung wie im Bearbeiten-Formular - die Uebersicht darf
         // nichts anderes zeigen, als dort gespeichert wird.
         $teile = $name !== '' ? explode(' ', $name, 2) : [];
@@ -100,7 +100,7 @@ final class Kundendatenblatt
      */
     public static function alsText(Customer $customer): string
     {
-        $name = trim((string) ($customer->user?->name ?? ''));
+        $name = trim((string) ($customer->user->name ?? ''));
         $zeilen = ['Kundendaten'.($name !== '' ? ' – '.$name : '').($customer->customer_number ? ' (Kd.-Nr. '.$customer->customer_number.')' : '')];
         foreach (self::bereiche($customer) as $bereich) {
             $gefuellt = array_filter($bereich['felder'], fn ($f) => $f['kopie'] !== '');
@@ -144,7 +144,7 @@ final class Kundendatenblatt
         $eff = $customer->effectiveContact('address');
         $voll = $eff['value'] !== '' ? $eff['value'] : trim((string) $customer->address);
         $teile = array_map('trim', explode(',', $voll));
-        [$strasse, $nummer] = Anschrift::trenne($teile[0] ?? '', null);
+        [$strasse, $nummer] = Anschrift::trenne($teile[0], null);
         $plz = $ort = '';
         if (isset($teile[1]) && preg_match('/^(\d{4,5})\s+(.+)$/u', $teile[1], $m)) {
             [$plz, $ort] = [$m[1], trim($m[2])];

@@ -2,12 +2,12 @@
 
 namespace App\Services\CustomerCreation;
 
-use App\Support\Anschrift;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\CustomerNumberGenerator;
 use App\Services\Matching\CustomerMatchingService;
+use App\Support\Anschrift;
 use App\Support\GermanPhone;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -68,19 +68,17 @@ class CustomerAutoCreationService
             // Strasse und Hausnummer getrennt speichern - dieselbe Regel wie im
             // Dokumenten-Eingang und im Bearbeiten-Formular. Ein Aufrufer, der
             // "Koetzer Weg 12" als Strasse liefert, verliert die Nummer nicht.
-            [$data['street'], $data['house_number']] = Anschrift::trenne(
+            [$strasse, $hausnummer] = Anschrift::trenne(
                 $data['street'] ?? null, $data['house_number'] ?? null
             );
+            $strasse = is_string($strasse) && $strasse !== '' ? $strasse : null;
+            $hausnummer = is_scalar($hausnummer) && (string) $hausnummer !== '' ? (string) $hausnummer : null;
 
             // Zusammengesetzte Alt-Adresse (Kompatibilität) aus strukturierten
             // Feldern - MIT Hausnummer. Frueher fehlte sie hier ("Koetzer Weg,
             // 89312 Guenzburg"), und das Bearbeiten-Formular las genau diese
             // Spalte: dort stand "Nr." leer (Meldung 27.11.2026).
-            $strassenzeile = Anschrift::strassenzeile(
-                is_string($data['street'] ?? null) ? $data['street'] : null,
-                is_scalar($data['house_number'] ?? null) ? (string) $data['house_number'] : null,
-                null
-            )['zeile'];
+            $strassenzeile = Anschrift::strassenzeile($strasse, $hausnummer, null)['zeile'];
             $address = $data['address'] ?? trim(
                 trim($strassenzeile.', '.($data['zip'] ?? '').' '.($data['city'] ?? '')),
                 ', '
@@ -102,8 +100,8 @@ class CustomerAutoCreationService
                 'email2' => $data['email2'] ?? null,
                 'gender' => $data['gender'] ?? null,
                 'address' => $address !== '' ? $address : null,
-                'address_street' => $data['street'] ?? null,
-                'address_house_number' => $data['house_number'] ?? null,
+                'address_street' => $strasse,
+                'address_house_number' => $hausnummer,
                 'address_zip' => $data['zip'] ?? null,
                 'address_city' => $data['city'] ?? null,
                 'company_name' => $data['company_name'] ?? null,

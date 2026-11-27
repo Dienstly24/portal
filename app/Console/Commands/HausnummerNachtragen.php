@@ -85,7 +85,7 @@ class HausnummerNachtragen extends Command
             return ['strasse', (string) $s, $n, ''];
         }
 
-        $alt = trim(explode(',', (string) $kunde->address)[0] ?? '');
+        $alt = trim(explode(',', (string) $kunde->address)[0]);
         [$as, $an] = Anschrift::trenne($alt, null);
         if (is_string($an) && $an !== '' && Anschrift::schluessel((string) $as) === Anschrift::schluessel($strasse)) {
             return ['alt_adresse', $strasse, $an, ''];
