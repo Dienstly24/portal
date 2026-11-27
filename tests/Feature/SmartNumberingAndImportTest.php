@@ -179,7 +179,11 @@ class SmartNumberingAndImportTest extends TestCase
         $this->assertStringNotContainsString('@dienstly24.internal', $customer->user->email);
         $this->assertSame('Mohamad Abbas', $customer->user->name);
         $this->assertSame('2514017', $customer->customer_number);
-        $this->assertSame('Warthestr. 4 A', $customer->address_street);
+        // Strasse und Hausnummer werden getrennt gespeichert (Anschrift::trenne,
+        // 27.11.2026) - die Anzeige setzt sie wieder zusammen.
+        $this->assertSame('Warthestr.', $customer->address_street);
+        $this->assertSame('4 A', $customer->address_house_number);
+        $this->assertStringStartsWith('Warthestr. 4 A, 47169 Duisburg', $customer->fullAddress());
         $this->assertSame('47169', $customer->address_zip);
         $this->assertSame('Duisburg', $customer->address_city);
         // Eindeutige Handynummer landet im Feld "Handy" (mobile), nicht im

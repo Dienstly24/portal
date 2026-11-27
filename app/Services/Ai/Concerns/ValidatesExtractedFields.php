@@ -7,6 +7,7 @@ use App\Models\Contract;
 use App\Models\ContractVehicleDetail;
 use App\Models\MeterReading;
 use App\Services\Ai\KrankenkasseType;
+use App\Support\Anschrift;
 use App\Support\PersonenName;
 
 /**
@@ -88,40 +89,10 @@ trait ValidatesExtractedFields
      */
     private function splitStreetAndHouseNumber(mixed $street, mixed $houseNumber): array
     {
-        if (! is_string($street)) {
-            return [$street, $houseNumber];
-        }
-        $trimmed = trim($street);
-        if ($trimmed === '') {
-            return [$street, $houseNumber];
-        }
-
-        // Hausnummer am Ende: "23", "21 b", "21b", "12-14", "12/1".
-        $pattern = '/^(.*\p{L}.*?)[\s,]+(\d{1,4}\s?[a-zA-Z]?(?:\s*[-\/]\s*\d{1,4}\s?[a-zA-Z]?)?)$/u';
-        if (! preg_match($pattern, $trimmed, $m)) {
-            return [$street, $houseNumber];
-        }
-        $streetPart = rtrim(trim($m[1]), ',');
-        $numberPart = trim((string) preg_replace('/\s+/', ' ', $m[2]));
-        if ($streetPart === '') {
-            return [$street, $houseNumber];
-        }
-
-        $existing = is_string($houseNumber) ? trim($houseNumber) : '';
-        if ($existing === '') {
-            return [$streetPart, $numberPart];
-        }
-
-        // Nummer steht doppelt (Strasse UND eigenes Feld) - nur wenn beide
-        // dieselbe Nummer meinen, wird sie aus der Strasse entfernt. Bei
-        // ABWEICHUNG bleibt alles unveraendert: dann wird nicht geraten,
-        // welche der beiden Angaben stimmt.
-        $normalize = fn (string $v): string => mb_strtolower((string) preg_replace('/[\s.\-\/]/', '', $v));
-        if ($normalize($existing) === $normalize($numberPart)) {
-            return [$streetPart, $existing];
-        }
-
-        return [$street, $houseNumber];
+        // Die Regel selbst steht in App\Support\Anschrift::trenne() - dieselbe
+        // Stelle benutzt das Bearbeiten-Formular der Kundenakte. Zwei Fassungen
+        // derselben Regel liefen frueher auseinander.
+        return Anschrift::trenne($street, $houseNumber);
     }
 
     /**

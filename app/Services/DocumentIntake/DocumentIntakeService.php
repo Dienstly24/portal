@@ -21,6 +21,7 @@ use App\Services\Matching\MatchResult;
 use App\Services\Notifications\NotificationService;
 use App\Services\Relationships\CustomerRelationshipService;
 use App\Services\VehicleOverlapGuard;
+use App\Support\Anschrift;
 use App\Support\Facades\Notify;
 use App\Support\FamilienName;
 use App\Support\FinVerlesen;
@@ -389,6 +390,13 @@ class DocumentIntakeService
             }
         }
 
+        // Die Anschrift ist ein BLOCK: Strasse, Hausnummer, PLZ und Ort kommen
+        // aus demselben Dokument. Feldweise gemischt konnte die Strasse aus dem
+        // einen und die Hausnummer aus einem anderen Dokument stammen - eine
+        // Anschrift, die es nicht gibt. Ergaenzt wird nur aus Dokumenten mit
+        // DERSELBEN Strasse (z.B. Ausweis ohne Nummer + Antrag mit Nummer).
+        $merged['person'] = $this->anschriftAlsBlock($merged['person'], $personFirst);
+
         // Kunden-Hinweise aus dem Dokumenttext (KI-122) aller Dokumente
         // zusammenfuehren - je Kunde der hoechste Score.
         /** @var array<string, array<string, mixed>> $imText */
@@ -433,6 +441,46 @@ class DocumentIntakeService
         }
 
         return $merged;
+    }
+
+    /**
+     * @param  array<string, mixed>  $person  feldweise zusammengefuehrt
+     * @return array<string, mixed>
+     */
+    private function anschriftAlsBlock(array $person, Collection $docs): array
+    {
+        $felder = ['street', 'house_number', 'zip', 'city'];
+        $block = null;
+        foreach ($docs as $doc) {
+            $daten = $doc->getAttribute('ai_extracted');
+            $p = is_array($daten) && is_array($daten['person'] ?? null) ? $daten['person'] : [];
+            if (trim((string) ($p['street'] ?? '')) === '') {
+                continue;
+            }
+            if ($block === null) {
+                $block = array_intersect_key($p, array_flip($felder));
+                continue;
+            }
+            if (Anschrift::schluessel((string) $p['street']) !== Anschrift::schluessel((string) $block['street'])) {
+                continue;
+            }
+            foreach ($felder as $f) {
+                if (blank($block[$f] ?? null) && filled($p[$f] ?? null)) {
+                    $block[$f] = $p[$f];
+                }
+            }
+        }
+        if ($block === null) {
+            return $person; // kein Dokument mit Strasse - feldweise wie bisher
+        }
+        foreach ($felder as $f) {
+            unset($person[$f]);
+            if (filled($block[$f] ?? null)) {
+                $person[$f] = $block[$f];
+            }
+        }
+
+        return $person;
     }
 
     /**
@@ -1407,11 +1455,35 @@ class DocumentIntakeService
                 // Bewusst KEIN reines email2: die gelesene Adresse soll primaer
                 // die Haupt-Login-Adresse werden (Portal-Zugang), sonst email2.
                 'email2' => $applyEmail($person['email'] ?? null),
-                'address' => (function () use ($set, $person): void {
+                'address' => (function () use ($set, $person, $customer, &$updates): void {
+                    // Die Anschrift ist ein BLOCK. Felder einzeln zu fuellen
+                    // haengte frueher die Hausnummer des Dokuments an eine
+                    // ANDERE, schon erfasste Strasse - eine Anschrift, die es
+                    // nicht gibt. Ergaenzt wird nur, wenn die Akte noch keine
+                    // Strasse hat oder es DIESELBE Strasse ist; vorhandene
+                    // Werte werden nie ueberschrieben.
+                    $neu = trim((string) ($person['street'] ?? ''));
+                    $alt = trim((string) $customer->address_street);
+                    if ($alt !== '' && $neu !== '' && Anschrift::schluessel($alt) !== Anschrift::schluessel($neu)) {
+                        return;
+                    }
                     $set('address_street', $person['street'] ?? null);
                     $set('address_house_number', $person['house_number'] ?? null);
                     $set('address_zip', $person['zip'] ?? null);
                     $set('address_city', $person['city'] ?? null);
+                    // Alt-Spalte `address` nur ergaenzen, wenn sie leer ist.
+                    if (blank($customer->address)) {
+                        $strasse = Anschrift::strassenzeile(
+                            $updates['address_street'] ?? $customer->address_street,
+                            $updates['address_house_number'] ?? $customer->address_house_number,
+                            $customer->address_house_suffix
+                        )['zeile'];
+                        $ort = trim(($updates['address_zip'] ?? $customer->address_zip ?? '').' '.($updates['address_city'] ?? $customer->address_city ?? ''));
+                        $zeile = implode(', ', array_filter([$strasse, $ort], fn ($p) => $p !== ''));
+                        if ($zeile !== '') {
+                            $updates['address'] = $zeile;
+                        }
+                    }
                 })(),
                 'health_insurance' => (function () use ($set, $health): void {
                     $set('health_insurance_company', $health['health_insurance_company'] ?? null);

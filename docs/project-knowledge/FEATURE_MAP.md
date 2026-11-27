@@ -320,6 +320,10 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - S `Dokumente\DokumentDublettenService`; M `DokumentPapierkorb`; Commands `dokumente:duplikate-bereinigen` (Probelauf ohne `--ausfuehren`), `dokumente:papierkorb-leeren` (taeglich 03:50); C `Admin\CustomerDocumentController` (`duplikateBereinigen`, `papierkorbWiederherstellen`, nur admin/manager); V `admin/customer_show` (Reiter Dokumente); Migration `2026_11_23_120000_dokument_papierkorb`
 - Tests `DokumentDuplikateBereinigenTest` · Status **ACTIVE** (23.11.2026, KI-128)
 
+### F-106 Kundendaten-Uebersicht mit Kopierfunktion
+- Support `Kundendatenblatt` (Bereiche + Text fuer "Alle Kundendaten kopieren"); V `admin/partials/kundendaten` (in `admin/customer_show`, ersetzt "Persoenliche Daten" + "Kranken-, Renten- & Steuerdaten"); Route `POST admin/customers/{id}/daten-kopiert` (`AdminController::customerDataCopied`, ActivityLog `customer_data_copied`, nur Feldname); Command `kunden:hausnummer-nachtragen`
+- Tests `KundendatenUndHausnummerTest`, `AnschriftTrennenTest` · Status **ACTIVE** (27.11.2026) · Issues KI-137
+
 ## J. Entfernt / tot
 
 ### F-099 AI-Workflow-Engine

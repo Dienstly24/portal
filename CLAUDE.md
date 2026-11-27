@@ -1595,6 +1595,37 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Notbehelf "erstes Wort" und der Vertrag entstand unter dem Versicherer
   "Cosmos" mit dem Tarif "Direkt Basis mit Werkstattbindung".
   Tests: `HausnummerTrennungTest`.
+- **Hausnummer ging in der KUNDENAKTE verloren, nicht in der Erkennung**
+  (Betreiber-Meldung 27.11.2026, KI-137): "Koetzer Weg" in der Akte, "Nr."
+  leer. Die Erkennung trennte richtig und die Anlage schrieb
+  `address_house_number` - aber das BEARBEITEN-FORMULAR las nur die
+  Alt-Spalte `address`, die die Anlage als "Strasse, PLZ Ort" OHNE Nummer
+  setzte. Jedes Speichern schrieb die leere Nummer zurueck (Datenverlust).
+  Jetzt: **die strukturierten Spalten sind die Wahrheit**
+  (`AdminController::formAddress`, `address` nur Rueckfall fuer
+  Altbestand). **`App\Support\Anschrift::trenne()` ist die EINE
+  Trennregel** (Dokumente, KI, OCR, Formular; zusaetzlich "Nr. 12",
+  "Str.25", Komma am Ende) - `splitStreetAndHouseNumber` ruft sie nur noch
+  auf. Die Anschrift ist ein BLOCK: Uebernahme aus einem Dokument und
+  `mergeExtractions` ergaenzen Nummer/PLZ/Ort nur bei DERSELBEN Strasse
+  (vorher konnte die Nummer eines Dokuments an der Strasse eines anderen
+  haengen). Bestand: `php artisan kunden:hausnummer-nachtragen`
+  (Probelauf; `--ausfuehren`) - Quelle Strassenfeld, Alt-Spalte bei
+  gleicher Strasse oder genau EINE Nummer aus den Dokumenten der Akte;
+  mehrdeutig/unbelegt bleibt leer. Test: `KundendatenUndHausnummerTest`.
+- **Kundendaten-Uebersicht mit Kopieren** (Betreiber-Auftrag 27.11.2026):
+  Karte "Kundendaten" oben in der Uebersicht der Kundenakte
+  (`admin/partials/kundendaten`, Quelle `App\Support\Kundendatenblatt`):
+  Persoenliche Daten, Adresse (voll + Einzelteile), Bankverbindung,
+  Weitere (Krankenkasse, KV-/RV-Nr., Steuer-ID, Beruf ...). Je Feld
+  "kopieren", oben "Alle Kundendaten kopieren" ("Label: Wert", nur
+  gefuellte Felder). Kopiert wird IMMER der Originalwert (`data-kopie`),
+  nie die Anzeige; sensible Werte sind verdeckt (Auge zum Aufdecken).
+  Sichtbar fuer jeden, der die Akte oeffnen darf - dieselbe Regel wie das
+  Bearbeiten-Formular, das alle Werte im Klartext zeigt. Kopieren und
+  Aufdecken SENSIBLER Werte und "Alle kopieren" stehen im ActivityLog
+  (`customer_data_copied`, nur Feldname). Ein Bankname wird nicht gezeigt:
+  die Akte fuehrt keinen (nichts ableiten).
 - **Der Kontakt-Screenshot darf nicht an seiner Darstellung scheitern**
   (Lehre 21.08.2026, gemeldet): Derselbe Kontaktzettel (Name + zwei Daten,
   Anschrift, Handynummer, E-Mail, IBAN) wurde als Screenshot einmal erkannt

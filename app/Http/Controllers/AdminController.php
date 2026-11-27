@@ -29,6 +29,7 @@ use App\Services\Matching\DuplicateDetectionService;
 use App\Services\Portal\PortalAccessService;
 use App\Services\Relationships\CustomerRelationshipService;
 use App\Services\Vertrag\VertragBeteiligteService;
+use App\Support\Anschrift;
 use App\Support\FamilienAlter;
 use App\Support\GermanPhone;
 use App\Support\PasswordPolicy;
@@ -574,9 +575,26 @@ class AdminController extends Controller
     public function customerEdit($id) {
         $this->authorizeCustomerAccess($id);
         $customer = Customer::with('user')->findOrFail($id);
-        $addr = $this->splitAddress($customer->address);
+        $addr = $this->formAddress($customer);
         $partners = Partner::active()->orderBy('name')->get(['id', 'name']);
         return view('admin.customer_edit', compact('customer', 'addr', 'partners'));
+    }
+
+    /**
+     * Protokolliert, dass in der Kundendaten-Uebersicht ein SENSIBLER Wert
+     * (Bankdaten, KV-/RV-Nummer, Steuer-ID) kopiert oder aufgedeckt wurde
+     * bzw. "Alle Kundendaten kopieren" benutzt wurde. Gespeichert wird nur
+     * der Feldname - nie der Wert. Zugriff wie die Kundenakte selbst.
+     */
+    public function customerDataCopied(Request $request, $id) {
+        $this->authorizeCustomerAccess($id);
+        $feld = (string) $request->input('feld', '');
+        if (! preg_match('/^(angezeigt:)?[a-z0-9_]{1,40}$/', $feld)) {
+            return response()->json(['ok' => false], 422);
+        }
+        ActivityLog::record('customer_data_copied', 'customer', (string) $id, ['feld' => $feld]);
+
+        return response()->json(['ok' => true]);
     }
 
     public function customerUpdate(Request $request, $id) {
@@ -668,7 +686,9 @@ class AdminController extends Controller
         // schreiben, wenn im Formular eine Adresse eingegeben wurde - sonst
         // erscheinen die Felder im Portal leer.
         if ($addressChanged) {
-            $data = array_merge($data, $this->addressColumns($request));
+            // Der Zusatz steht im Formular mit im Feld "Nr." (formAddress) -
+            // ihn daneben stehen zu lassen ergaebe "12 a a".
+            $data = array_merge($data, $this->addressColumns($request), ['address_house_suffix' => null]);
         }
 
         // Nur Spalten speichern, die in der Tabelle wirklich existieren
@@ -767,7 +787,8 @@ class AdminController extends Controller
     }
 
     private function buildAddress(Request $request): ?string {
-        $line1 = trim(($request->street ?? '').' '.($request->street_nr ?? ''));
+        $cols = $this->addressColumns($request);
+        $line1 = trim(($cols['address_street'] ?? '').' '.($cols['address_house_number'] ?? ''));
         $line2 = trim(($request->plz ?? '').' '.($request->city ?? ''));
         $line3 = trim($request->country ?? '');
         $parts = array_filter([$line1, $line2, $line3], fn ($p) => $p !== '');
@@ -780,11 +801,62 @@ class AdminController extends Controller
      * Adressen im Portal sofort sichtbar und nicht leer.
      */
     private function addressColumns(Request $request): array {
+        // Steht die Nummer im Strassenfeld ("Koetzer Weg 12") und das Feld
+        // "Nr." ist leer, wird sie abgetrennt - dieselbe Regel wie im
+        // Dokumenten-Eingang (Anschrift::trenne). Sonst ginge sie beim
+        // naechsten Speichern verloren.
+        [$street, $nr] = Anschrift::trenne(
+            trim((string) $request->street) ?: null,
+            trim((string) $request->street_nr) ?: null
+        );
+
         return [
-            'address_street' => $request->street ?: null,
-            'address_house_number' => $request->street_nr ?: null,
+            'address_street' => $street ?: null,
+            'address_house_number' => $nr ?: null,
             'address_zip' => $request->plz ?: null,
             'address_city' => $request->city ?: null,
+        ];
+    }
+
+    /**
+     * Vorbelegung des Adressblocks im Bearbeiten-Formular.
+     *
+     * URSACHE der gemeldeten leeren Hausnummer (27.11.2026): das Formular las
+     * NUR die alte Sammelspalte `address` und zerlegte sie neu. Die Kunden-
+     * anlage aus dem Dokumenten-Eingang schreibt die Anschrift aber in die
+     * STRUKTURIERTEN Spalten (address_street/address_house_number ...) und
+     * setzte `address` als "Strasse, PLZ Ort" OHNE Nummer. Ergebnis: im
+     * Formular stand "Koetzer Weg" und "Nr." leer, und wer dann speicherte,
+     * schrieb die leere Nummer zurueck - die richtig erkannte Hausnummer war
+     * damit endgueltig weg. Die strukturierten Spalten sind die Wahrheit
+     * (Kundenakte, Portal, Haushalt lesen sie); `address` ist nur Rueckfall
+     * fuer Altbestand ohne strukturierte Anschrift.
+     */
+    private function formAddress(Customer $customer): array {
+        $legacy = $this->splitAddress($customer->address);
+        $hatStruktur = filled($customer->address_street) || filled($customer->address_zip) || filled($customer->address_city);
+        if (! $hatStruktur) {
+            return $legacy;
+        }
+
+        [$street, $nr] = Anschrift::trenne($customer->address_street, $customer->address_house_number);
+        $nr = trim((string) $nr);
+        if ($nr !== '' && filled($customer->address_house_suffix)) {
+            $nr .= ' '.trim((string) $customer->address_house_suffix);
+        }
+        // Altbestand: die Nummer stand nur in der Sammelspalte - nur
+        // uebernehmen, wenn es DIESELBE Strasse ist (nie raten).
+        if ($nr === '' && $legacy['street_nr'] !== ''
+            && Anschrift::schluessel((string) $street) === Anschrift::schluessel($legacy['street'])) {
+            $nr = $legacy['street_nr'];
+        }
+
+        return [
+            'street' => (string) $street,
+            'street_nr' => $nr,
+            'plz' => (string) ($customer->address_zip ?? ''),
+            'city' => (string) ($customer->address_city ?? ''),
+            'country' => $legacy['country'],
         ];
     }
 

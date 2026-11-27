@@ -31,6 +31,7 @@ Stand 23.09.2026 nach der ersten Reparaturrunde (Branch `claude/zen-sagan-xmewba
 | KI-117 | MEDIUM | cost/correctness | OCR (Seitenanalyse PSM 3) verlor auf Kartenfotos fast alle Felder - Gesundheitskarte lief zur KI | FIXED |
 | KI-118 | MEDIUM | correctness | Gesundheitskarten-Parser: exakte Ueberschrift verlangt, Beschriftungs-Rauschen als Name, Vornamen+Geburtsdatum in einer Zeile nicht gelesen | FIXED |
 | KI-119 | HIGH | legal/security | Kundenportal offen ohne Erlaubnis nach 34d GewO - globale serverseitige Sperre, Gast-Chat ohne Anmeldung | FIXED |
+| KI-137 | HIGH | correctness/data-loss | Hausnummer: Bearbeiten-Formular las nur die Alt-Spalte `address` (bei Neuanlage aus Dokumenten OHNE Nummer); Speichern loeschte die richtig erkannte Hausnummer | FIXED |
 | KI-136 | MEDIUM | security/legal | Fehlerliste `/admin/fehler`: Datenbank-Meldungen enthielten die eingesetzten Werte (Vertragsnummern, Kunden-IDs) | FIXED |
 | KI-135 | HIGH | correctness/usability | Dokumenten-Eingang: Vertragsnummer an einer anderen Akte bzw. abhaengiges Kind brach die Zuordnung mit 500 ab - im Stapel-Weg NACH dem Anlegen des Kunden | FIXED |
 | KI-134 | HIGH | correctness | Provisionsimport: zweite Zeile desselben Namens endete mit TypeError (Kunden-UUID aus dem Lauf-Gedaechtnis als "mehrdeutig" gelesen), Vertraege fehlten | FIXED |
@@ -182,6 +183,14 @@ und PHPStan) auf `main` gruen ist.
 - **Location** `.github/workflows/deploy.yml` (Job `deploy`: `appleboy/ssh-action@v1.2.5`; ausserdem `shivammathur/setup-php@v2`)
 - **Description** Ein Tag ist verschiebbar: wird das Fremd-Repository uebernommen, laeuft fremder Code mit `SSH_PRIVATE_KEY` und Root-Deploy auf dem Produktionsserver. Abhilfe: auf vollstaendigen Commit-SHA pinnen (Dependabot aktualisiert SHA-Pins) oder den SSH-Schritt ohne Fremd-Action schreiben. Nicht in diesem PR geaendert: der SHA muss gegen GitHub geprueft werden, das war in der Audit-Umgebung nicht erreichbar.
 - **Discovered** 12.11.2026
+
+### KI-137 - Hausnummer geht in der Kundenakte verloren
+- **Category** correctness/data-loss · **Severity** HIGH · **Status** FIXED
+- **Location** `AdminController::customerEdit/customerUpdate` (`splitAddress`), `CustomerAutoCreationService::createFromUnmatched`, `DocumentIntakeService::applyExtractedToCustomer`/`mergeExtractions`
+- **Description** Gemeldet: nach dem Hochladen "Koetzer Weg" in der Akte, Feld "Nr." leer, obwohl das Dokument "Koetzer Weg 12" nennt. Die Erkennung trennte richtig und die Anlage schrieb `address_house_number`. Das Bearbeiten-Formular las aber NUR die Alt-Spalte `address`, und die Anlage setzte diese als "Strasse, PLZ Ort" OHNE Nummer - im Formular stand "Nr." leer, und jedes Speichern schrieb die leere Nummer zurueck (Datenverlust). Dazu: feldweise Uebernahme/Zusammenfuehrung konnte Strasse und Nummer aus ZWEI verschiedenen Anschriften mischen.
+- **Fix (27.11.2026)**: Formular liest die strukturierten Spalten (`formAddress`, Alt-Spalte nur Rueckfall); `Anschrift::trenne()` ist die EINE Trennregel (auch "Nr. 12", "Str.25", Komma am Ende) fuer Dokumente, KI, OCR und Formular; Anlage schreibt die Nummer auch in `address`; Anschrift wird als BLOCK uebernommen/zusammengefuehrt (nur bei gleicher Strasse ergaenzt). Bestand: `kunden:hausnummer-nachtragen` (Probelauf, `--ausfuehren`), nur belegte Nummern, nie ueberschreiben.
+- **Test** `KundendatenUndHausnummerTest`, `tests/Unit/AnschriftTrennenTest.php`
+- **Discovered** 27.11.2026 (Betreiber-Screenshot)
 
 ### KI-136 - Fehlerliste: SQL-Werte in der gespeicherten Meldung
 - **Category** security/legal · **Severity** MEDIUM · **Status** FIXED
