@@ -1647,8 +1647,9 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Test). Kopier-Symbole je Zeile erscheinen beim Ueberfahren (Touch:
   immer). Reiter "Verlauf" heisst "Aenderungen". Seitenleiste der
   Beraterwelt: volle Wortmarke `BrandAssets::sidebarLogo()`
-  (`public/images/logo-sidebar.png`, gruenes D + weisse Schrift, aus
-  `logo.png` erzeugt; ein Admin-Logo im Slot logo-hell hat Vorrang),
+  (`public/images/logo-sidebar.png`, flach: D oben gruen, Schwung unten
+  und Schrift weiss, aus `logo-white.png` erzeugt - die Gem-Textur von
+  `logo.png` wirkte klein verrauscht; Datei-Wechsel per `?v=` am Bild; ein Admin-Logo im Slot logo-hell hat Vorrang),
   die Wortmarke in der Kopfzeile entfaellt; aktiver Menuepunkt gruen.
 - **Der Kontakt-Screenshot darf nicht an seiner Darstellung scheitern**
   (Lehre 21.08.2026, gemeldet): Derselbe Kontaktzettel (Name + zwei Daten,

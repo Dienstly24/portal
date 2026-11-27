@@ -193,7 +193,7 @@ table tr:hover td{background:#EDEAE0;}
 <div class="admin-overlay" id="admin-overlay" hidden></div>
 <div class="sidebar" id="admin-sidebar">
     {{-- Volle Wortmarke (Betreiber-Vorlage 27.11.2026): gruenes D, Schrift weiss --}}
-    <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::sidebarLogo() }}" alt="Dienstly24" width="380" height="132" style="height:58px;width:auto;display:block;"></a></div>
+    <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::sidebarLogo() }}{{ str_starts_with(\App\Support\BrandAssets::sidebarLogo(), '/images/') ? '?v=2' : '' }}" alt="Dienstly24" width="380" height="132" style="height:58px;width:auto;display:block;"></a></div>
     {{-- Navigation: Struktur in App\Support\Navigation\AdminNavigation --}}
     <x-admin.sidebar-nav />
     <div class="sidebar-foot">
