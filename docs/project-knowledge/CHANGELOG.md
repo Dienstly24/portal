@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 27.11.2026 - UI-Modernisierung der Beraterwelt (ein PR)
+
+- Task: Betreiber-Auftrag "ein Stil fuer das ganze System, verbessern statt umbauen"; Hintergrund bleibt warmes Beige, Provisionen auf dem Dashboard nur fuer den Admin.
+- Files: `App\Services\Dashboard\DashboardUebersicht` (neu), `AdminController::dashboard`, `Admin\ContractController` (Sortierung, `exportContracts`), `AiAssistantController` (`leads`, `assignLead`, `convertLead`), `routes/web.php` (3 Routen), V `admin/dashboard`, `admin/contracts`, `admin/ai_leads`, `layouts/admin`, Komponenten `admin/kpi`, `admin/symbol`, `admin/nav-item` (Tooltip), `resources/css/components.css`, `resources/js/ui.js`; Tests `UiModernisierungTest` (neu), `ImprovementRoundTest` (prueft jetzt den Abschnitt "Zuletzt geoeffnet").
+- Components: Dashboard, Vertragsliste, Interessenten, Beraterwelt-Layout. DB: keine. API: 3 neue POST-Routen.
+- Side effects: Erfolgsmeldungen stehen oben rechts und verschwinden nach 6 s (Fehler/Warnungen bleiben). Das Sparten-Diagramm zaehlt jetzt NUR das Portfolio und nur aktive Vertraege (vorher gesamter Bestand inkl. fremder Kunden). Neue Routen erscheinen im Routen-Inventar.
+- Tests: volle Suite gruen bis auf 6 Signaturtests ohne lokales qpdf (CI hat qpdf); `composer lint`/`composer stan` gruen; Chromium Desktop 1440 px + iPhone 13 ohne horizontales Scrollen und ohne JS-Fehler (Dashboard, Vertraege, Interessenten, schmale Leiste, Mehrfachauswahl).
+- Result: ACTIVE.
+
 ## 27.11.2026 - Seitenleisten-Logo flach nach Vorlage
 
 - Task: Betreiber-Vorlage fuer das Logo der Beraterwelt-Seitenleiste.

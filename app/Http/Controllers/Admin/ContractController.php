@@ -13,6 +13,7 @@ use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\MeterReading;
+use App\Models\User;
 use App\Models\VehicleClaim;
 use App\Models\VehicleSfReference;
 use App\Rules\Fahrgestellnummer;
@@ -26,11 +27,14 @@ use App\Services\Reporting\DashboardAnalyticsService;
 use App\Services\VehicleOverlapGuard;
 use App\Services\Vermittler\VermittlerLinkService;
 use App\Services\Vertrag\VertragBeteiligteService;
+use App\Support\XlsxWriter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use League\Csv\EscapeFormula;
+use League\Csv\Writer;
 
 /**
  * Vertraege in der Beraterwelt (ARCH-5, aus AdminController herausgeloest).
@@ -106,10 +110,13 @@ class ContractController extends Controller
             $herkunftZaehler[$h] = $basis($h)->statusGroup($gruppe === 'alle' ? null : $gruppe)->count();
         }
 
-        $contracts = $basis()
+        // Sortierung (UI-Modernisierung 27.11.2026): nur bekannte Spalten,
+        // Standard bleibt "zuletzt angelegt". Ein normaler Link - der Stand
+        // ist teilbar und uebersteht das Blaettern.
+        [$sortierung, $richtung] = $this->listenSortierung($request);
+        $contracts = $this->sortiereVertraege($basis()
             ->with(['customer.user', 'successor', 'predecessor'])
-            ->statusGroup($gruppe === 'alle' ? null : $gruppe)
-            ->latest()
+            ->statusGroup($gruppe === 'alle' ? null : $gruppe), $sortierung, $richtung)
             ->paginate(50)
             ->withQueryString();
 
@@ -173,8 +180,141 @@ class ContractController extends Controller
 
         return view('admin.contracts', compact(
             'contracts', 'gruppe', 'suche', 'zaehler', 'herkunft', 'herkunftZaehler',
-            'filter', 'kennzahlen', 'gesellschaften', 'berichtQuery', 'monatZahlen'
+            'filter', 'kennzahlen', 'gesellschaften', 'berichtQuery', 'monatZahlen',
+            'sortierung', 'richtung'
         ));
+    }
+
+    /** Sortierbare Spalten der Vertragsliste: Schluessel => Spalte (null = Sonderfall). */
+    private const SORTIERUNG = [
+        'neu' => 'contracts.created_at',
+        'sparte' => 'contracts.type',
+        'gesellschaft' => 'contracts.insurer',
+        'beginn' => 'contracts.start_date',
+        'ablauf' => 'contracts.end_date',
+        'nummer' => 'contracts.contract_number',
+        'kunde' => null,
+    ];
+
+    /** @return array{0:string,1:string} */
+    private function listenSortierung(Request $request): array
+    {
+        $sortierung = (string) $request->query('sort', 'neu');
+        $sortierung = array_key_exists($sortierung, self::SORTIERUNG) ? $sortierung : 'neu';
+        $standard = $sortierung === 'neu' ? 'desc' : 'asc';
+        $richtung = in_array($request->query('richtung'), ['asc', 'desc'], true) ? (string) $request->query('richtung') : $standard;
+
+        return [$sortierung, $richtung];
+    }
+
+    private function sortiereVertraege($query, string $sortierung, string $richtung)
+    {
+        if ($sortierung === 'kunde') {
+            // Kundenname steht am Benutzer - Unterabfrage statt Join, damit
+            // die Kennzahlen-Abfragen auf demselben Builder unberuehrt bleiben.
+            $query->orderBy(
+                User::select('users.name')
+                    ->join('customers', 'customers.user_id', '=', 'users.id')
+                    ->whereColumn('customers.id', 'contracts.customer_id')
+                    ->limit(1),
+                $richtung
+            );
+        } else {
+            $query->orderBy(self::SORTIERUNG[$sortierung], $richtung);
+        }
+
+        // Fester Zweitschluessel: bei gleichem Wert sonst wechselnde
+        // Reihenfolge zwischen den Seiten (ein Vertrag auf zwei Seiten).
+        return $query->orderBy('contracts.id');
+    }
+
+    /**
+     * Export der Vertragsliste (UI-Modernisierung 27.11.2026): die
+     * AUSGEWAEHLTEN Vertraege oder ALLE Treffer der aktuellen Ansicht
+     * (Reiter, Herkunft, Suche, Filter) - als Excel oder CSV.
+     *
+     * Nur admin/manager (Route + hier), wie jeder Export von Kundendaten.
+     * Jede Kennung wird gegen das Portfolio geprueft: eine fremde ID im
+     * Formular trifft einfach nichts. Protokolliert im ActivityLog mit
+     * Anzahl und Filter, OHNE einen Namen.
+     */
+    public function exportContracts(Request $request)
+    {
+        abort_unless(in_array(auth()->user()->role, ['admin', 'manager'], true), 403);
+
+        $ids = $this->visibleCustomerIds();
+        $format = $request->input('format') === 'csv' ? 'csv' : 'xlsx';
+        $auswahl = collect((array) $request->input('vertraege', []))
+            ->filter(fn ($v) => is_string($v) && $v !== '')->unique()->take(5000)->values()->all();
+
+        $query = Contract::query()->with('customer.user')
+            ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids));
+
+        if ($request->boolean('alle')) {
+            $gruppen = [Contract::GROUP_ACTIVE, Contract::GROUP_PENDING, Contract::GROUP_HISTORY, 'alle'];
+            $gruppe = in_array($request->input('gruppe'), $gruppen, true) ? (string) $request->input('gruppe') : Contract::GROUP_ACTIVE;
+            $herkunft = in_array($request->input('herkunft'), ['eigen', 'fremd', 'alle'], true) ? (string) $request->input('herkunft') : 'eigen';
+            $filterRequest = new Request($request->only(['sparte', 'gesellschaft', 'stufe', 'abschluss']));
+            $this->mitVertragsFilter($query, $this->vertragsFilter($filterRequest))
+                ->originFilter($herkunft)
+                ->search(trim((string) $request->input('q', '')))
+                ->statusGroup($gruppe === 'alle' ? null : $gruppe);
+            $beschreibung = ['umfang' => 'alle', 'gruppe' => $gruppe, 'herkunft' => $herkunft];
+        } else {
+            if ($auswahl === []) {
+                return back()->with('error', 'Bitte zuerst Verträge auswählen.');
+            }
+            $query->whereIn('id', $auswahl);
+            $beschreibung = ['umfang' => 'auswahl'];
+        }
+
+        [$sortierung, $richtung] = $this->listenSortierung(new Request($request->only(['sort', 'richtung'])));
+        $kopf = ['Kundennummer', 'Kunde', 'Sparte', 'Gesellschaft', 'Vertragsnummer', 'Referenz-Nr.',
+            'Status', 'Stufe', 'Herkunft', 'Beginn', 'Ablauf', 'Beitrag', 'Zahlweise', 'Jahresbeitrag'];
+        $zeilen = [];
+        $this->sortiereVertraege($query, $sortierung, $richtung)->limit(10000)->get()->each(function (Contract $c) use (&$zeilen) {
+            $intervall = Contract::PREMIUM_INTERVALS[$c->premium_interval] ?? null;
+            $zeilen[] = [
+                (string) ($c->customer->customer_number ?? ''),
+                (string) ($c->customer->user->name ?? ''),
+                $c->typeLabel(),
+                (string) $c->insurer,
+                (string) $c->contract_number,
+                (string) $c->reference_number,
+                (string) ($c->displayStatus()['label'] ?? $c->status),
+                $c->stage === Contract::STAGE_ANTRAG ? 'Antrag' : ($c->stage ? 'Vertrag' : ''),
+                $c->isExternal() ? 'Fremdvertrag' : 'Eigenbestand',
+                $c->start_date ? Carbon::parse($c->start_date)->format('d.m.Y') : '',
+                $c->end_date ? Carbon::parse($c->end_date)->format('d.m.Y') : '',
+                $c->premium_amount !== null ? (float) $c->premium_amount : '',
+                (string) ($intervall['label'] ?? ''),
+                $c->premium_amount !== null ? round((float) $c->premium_amount * (int) ($intervall['per_year'] ?? 12), 2) : '',
+            ];
+        });
+
+        ActivityLog::record('contracts_export', 'contract', null, $beschreibung + [
+            'format' => $format, 'zeilen' => count($zeilen),
+        ]);
+
+        $dateiname = 'dienstly24-vertraege-'.now()->format('Y-m-d');
+        if ($format === 'xlsx' && XlsxWriter::available()) {
+            return response(XlsxWriter::create('Verträge', array_merge([$kopf], $zeilen)), 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="'.$dateiname.'.xlsx"',
+            ]);
+        }
+
+        $csv = Writer::createFromString('');
+        $csv->setDelimiter(';');
+        $csv->addFormatter(new EscapeFormula);
+        $csv->insertAll(array_map(fn ($zeile) => array_map(
+            fn ($w) => is_float($w) ? number_format($w, 2, ',', '') : $w, $zeile
+        ), array_merge([$kopf], $zeilen)));
+
+        return response("\xEF\xBB\xBF".$csv->toString(), 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$dateiname.'.csv"',
+        ]);
     }
 
     /**

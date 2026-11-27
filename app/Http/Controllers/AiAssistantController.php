@@ -14,12 +14,16 @@ use App\Models\AiOffer;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\Ai\Assistant\EmployeeAssistantService;
 use App\Services\Ai\Assistant\KnowledgeBase;
 use App\Services\Ai\Assistant\Sales\ConversationJournal;
 use App\Services\Ai\Assistant\Sales\ConversationState;
+use App\Services\CustomerCreation\CustomerAutoCreationService;
+use App\Services\CustomerCreation\DuplicateCustomerException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Mitarbeiter-Steuerung des KI-Kundenassistenten (Spezifikation
@@ -636,16 +640,137 @@ class AiAssistantController extends Controller
     /** Interessenten aus dem Website-Assistenten (Abschnitt 20). */
     public function leads(Request $request)
     {
-        $leads = AiLead::query()
-            ->when($request->filled('zustand'), fn ($q) => $q->where('state', $request->string('zustand')))
+        // Filter (UI-Modernisierung 27.11.2026): Zustand, Quelle, Zustaendig.
+        // Unbekannte Werte werden verworfen, nicht in die Abfrage gereicht.
+        $zustand = $request->string('zustand')->toString();
+        $zustand = array_key_exists($zustand, ConversationState::LABELS) ? $zustand : '';
+        $quellen = AiLead::query()->whereNotNull('source')->distinct()->orderBy('source')->pluck('source')->all();
+        $quelle = in_array($request->query('quelle'), $quellen, true) ? (string) $request->query('quelle') : '';
+        $zustaendig = (string) $request->query('zustaendig', '');
+        $zustaendig = $zustaendig === 'ich' || $zustaendig === 'niemand' || ctype_digit($zustaendig) ? $zustaendig : '';
+        $kunde = in_array($request->query('kunde'), ['offen', 'umgewandelt'], true) ? (string) $request->query('kunde') : '';
+
+        $leads = AiLead::query()->with(['employee', 'customer.user'])
+            ->when($zustand !== '', fn ($q) => $q->where('state', $zustand))
+            ->when($quelle !== '', fn ($q) => $q->where('source', $quelle))
+            ->when($zustaendig === 'ich', fn ($q) => $q->where('assigned_employee_id', auth()->id()))
+            ->when($zustaendig === 'niemand', fn ($q) => $q->whereNull('assigned_employee_id'))
+            ->when(ctype_digit($zustaendig), fn ($q) => $q->where('assigned_employee_id', (int) $zustaendig))
+            ->when($kunde === 'offen', fn ($q) => $q->whereNull('customer_id'))
+            ->when($kunde === 'umgewandelt', fn ($q) => $q->whereNotNull('customer_id'))
             ->latest()
             ->paginate(25)
             ->withQueryString();
 
         return view('admin.ai_leads', [
             'leads' => $leads,
-            'zustand' => $request->string('zustand')->toString(),
+            'zustand' => $zustand,
+            'quelle' => $quelle,
+            'quellen' => $quellen,
+            'zustaendig' => $zustaendig,
+            'kunde' => $kunde,
+            'mitarbeiter' => $this->aktivesPersonal(),
+            'zaehler' => [
+                'gesamt' => AiLead::count(),
+                'offen' => AiLead::whereNull('customer_id')->count(),
+                'ohne_zustaendig' => AiLead::whereNull('assigned_employee_id')->whereNull('customer_id')->count(),
+                'umgewandelt' => AiLead::whereNotNull('customer_id')->count(),
+            ],
         ]);
+    }
+
+    /** Zustaendigen Mitarbeiter fuer einen Interessenten setzen (oder loesen). */
+    public function assignLead(Request $request, string $id)
+    {
+        $lead = AiLead::findOrFail($id);
+        // Ein Interessent hat keinen Kunden-Eigentuemer (die Liste ist fuer
+        // alle Personalrollen offen). Geschuetzt wird die ZUSTAENDIGKEIT:
+        // einen Fall, der schon einem anderen gehoert, verteilt nur die
+        // Leitung neu - sonst nimmt man ihn dem Kollegen still weg.
+        $user = auth()->user();
+        abort_unless(
+            in_array($user->role, ['admin', 'manager'], true)
+                || $lead->assigned_employee_id === null
+                || $lead->assigned_employee_id === $user->id,
+            403,
+            'Dieser Interessent ist bereits einem anderen Mitarbeiter zugewiesen.'
+        );
+        $daten = $request->validate([
+            'assigned_employee_id' => ['nullable', 'integer',
+                Rule::exists('users', 'id')->where(fn ($q) => $q
+                    ->whereIn('role', ['admin', 'manager', 'support', 'employee'])->where('is_active', true))],
+        ]);
+        $lead->forceFill(['assigned_employee_id' => $daten['assigned_employee_id'] ?? null])->save();
+
+        ActivityLog::record('lead_assigned', 'ai_lead', $lead->id, ['assigned_employee_id' => $lead->assigned_employee_id]);
+
+        return back()->with('success', $lead->assigned_employee_id ? 'Zuständigkeit gespeichert.' : 'Zuständigkeit entfernt.');
+    }
+
+    /**
+     * Interessent -> Kunde (UI-Modernisierung 27.11.2026). Eine bewusste
+     * Mitarbeiter-Aktion, nie automatisch: der Besucher ist nicht
+     * identifiziert. Es gilt der Duplikatschutz der Kundenanlage - findet
+     * der Abgleich einen vorhandenen Kunden, wird NICHTS angelegt, sondern
+     * auf ihn hingewiesen (und nur genannt, wenn er im eigenen Portfolio
+     * liegt). Der Lead bleibt als Herkunft bestehen.
+     */
+    public function convertLead(string $id, CustomerAutoCreationService $anlage)
+    {
+        $lead = AiLead::findOrFail($id);
+        if ($lead->customer_id) {
+            return redirect()->route('admin.customer', $lead->customer_id)->with('success', 'Dieser Interessent ist bereits Kunde.');
+        }
+
+        $kontakt = $lead->contactData();
+        $name = trim((string) ($kontakt['name'] ?? ''));
+        if ($name === '') {
+            return back()->with('error', 'Ohne Namen kann kein Kunde angelegt werden. Bitte den Interessenten zuerst kontaktieren.');
+        }
+        $email = filter_var($kontakt['email'] ?? null, FILTER_VALIDATE_EMAIL) ?: null;
+        if ($email !== null && ($konto = User::where('email', $email)->first())) {
+            // Die Adresse gehoert schon einem Konto: ein KUNDE mit dieser
+            // Adresse ist ein Treffer (nichts anlegen); ein Personalkonto
+            // nicht - dann wird nur die Adresse weggelassen.
+            $treffer = Customer::where('user_id', $konto->id)->first();
+            if ($treffer) {
+                return back()->with('warning', auth()->user()->canAccessCustomer($treffer->id)
+                    ? 'Es gibt bereits einen Kunden mit dieser E-Mail-Adresse: '.$konto->name.' ('.($treffer->customer_number ?: 'ohne Nummer').'). Es wurde kein neuer Kunde angelegt.'
+                    : 'Es gibt bereits einen passenden Kunden außerhalb Ihres Bestands. Es wurde kein neuer Kunde angelegt - bitte an die Teamleitung wenden.');
+            }
+            $email = null;
+        }
+
+        try {
+            $kunde = $anlage->createFromUnmatched(array_filter([
+                'full_name' => $name,
+                'email' => $email,
+                'phone' => trim((string) ($kontakt['phone'] ?? '')) ?: null,
+            ]), 'website', auth()->id());
+        } catch (DuplicateCustomerException $e) {
+            $treffer = $e->matchResult->customer;
+            if ($treffer && auth()->user()->canAccessCustomer($treffer->id)) {
+                return back()->with('warning', 'Es gibt bereits einen passenden Kunden: '.($treffer->user->name ?? 'Kundenakte').
+                    ' ('.($treffer->customer_number ?: 'ohne Nummer').'). Es wurde kein neuer Kunde angelegt - bitte die vorhandene Akte prüfen.');
+            }
+
+            return back()->with('warning', 'Es gibt bereits einen passenden Kunden außerhalb Ihres Bestands. Es wurde kein neuer Kunde angelegt - bitte an die Teamleitung wenden.');
+        }
+
+        $lead->forceFill([
+            'customer_id' => $kunde->id,
+            'assigned_employee_id' => $lead->assigned_employee_id ?? auth()->id(),
+        ])->save();
+        ActivityLog::record('lead_converted', 'ai_lead', $lead->id, ['customer_id' => $kunde->id]);
+
+        return redirect()->route('admin.customer', $kunde->id)
+            ->with('success', 'Kunde aus dem Interessenten angelegt. Bitte Anschrift und Geburtsdatum ergänzen.');
+    }
+
+    private function aktivesPersonal()
+    {
+        return User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
+            ->where('is_active', true)->orderBy('name')->get(['id', 'name']);
     }
 
     private function authorizedCustomer($customerId): Customer

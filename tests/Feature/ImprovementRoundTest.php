@@ -25,6 +25,19 @@ class ImprovementRoundTest extends TestCase
         return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 6))]);
     }
 
+    /** Nur der Abschnitt "Zuletzt geoeffnete Kunden" (das Dashboard zeigt seit
+     *  27.11.2026 zusaetzlich "Neueste Kunden"). */
+    private function zuletzt($res): string
+    {
+        $html = $res->getContent();
+        $start = strpos($html, 'data-zuletzt-geoeffnet');
+        $ende = strpos($html, '/zuletzt-geoeffnet');
+        $this->assertNotFalse($start);
+        $this->assertNotFalse($ende);
+
+        return substr($html, $start, $ende - $start);
+    }
+
     // Punkt 1: "Zuletzt geöffnete Kunden" zeigt nur, was der Mitarbeiter selbst
     // geoeffnet hat - und nur aus dem eigenen Portfolio.
     public function test_employee_dashboard_shows_only_own_opened_customers(): void
@@ -35,14 +48,15 @@ class ImprovementRoundTest extends TestCase
         $mine->betreuer()->attach($employee->id);
 
         // Vor dem Oeffnen ist die Liste leer.
-        $this->actingAs($employee)->get(route('admin.dashboard'))->assertOk()
-            ->assertDontSee($mine->user->name);
+        $this->assertStringNotContainsString($mine->user->name,
+            $this->zuletzt($this->actingAs($employee)->get(route('admin.dashboard'))->assertOk()));
 
         // Nach dem Oeffnen der eigenen Akte erscheint sie.
         $this->actingAs($employee)->get(route('admin.customer', $mine->id))->assertOk();
 
         $res = $this->actingAs($employee)->get(route('admin.dashboard'))->assertOk();
-        $res->assertSee($mine->user->name);
+        $this->assertStringContainsString($mine->user->name, $this->zuletzt($res));
+        // Ein fremder Kunde erscheint NIRGENDS auf dem Dashboard (Portfolio).
         $res->assertDontSee($foreign->user->name);
     }
 
@@ -56,8 +70,9 @@ class ImprovementRoundTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.customer', $a->id))->assertOk();
 
-        $this->actingAs($admin)->get(route('admin.dashboard'))
-            ->assertOk()->assertSee($a->user->name)->assertDontSee($b->user->name);
+        $abschnitt = $this->zuletzt($this->actingAs($admin)->get(route('admin.dashboard'))->assertOk());
+        $this->assertStringContainsString($a->user->name, $abschnitt);
+        $this->assertStringNotContainsString($b->user->name, $abschnitt);
     }
 
     // Kernfix: Oeffnen aktualisiert die Reihenfolge sofort (zuletzt geoeffnet
@@ -73,14 +88,14 @@ class ImprovementRoundTest extends TestCase
         $this->actingAs($admin)->get(route('admin.customer', $b->id))->assertOk();
 
         // Zuletzt geoeffnet: b vor a.
-        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()
-            ->assertSeeInOrder([$b->user->name, $a->user->name]);
+        $abschnitt = $this->zuletzt($this->actingAs($admin)->get(route('admin.dashboard'))->assertOk());
+        $this->assertLessThan(strpos($abschnitt, $a->user->name), strpos($abschnitt, $b->user->name));
 
         // a erneut oeffnen -> a wieder oben.
         $this->travel(2)->minutes();
         $this->actingAs($admin)->get(route('admin.customer', $a->id))->assertOk();
-        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()
-            ->assertSeeInOrder([$a->user->name, $b->user->name]);
+        $abschnitt = $this->zuletzt($this->actingAs($admin)->get(route('admin.dashboard'))->assertOk());
+        $this->assertLessThan(strpos($abschnitt, $b->user->name), strpos($abschnitt, $a->user->name));
     }
 
     // Punkt 2: Dashboard-Karten verlinken auf die Übersichten

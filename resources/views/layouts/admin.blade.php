@@ -29,6 +29,10 @@
      Felder damit). Gross ist nur Chart.js, und das kommt jetzt je
      Seite. --}}
 <script src="/js/brand.js"></script>
+{{-- Schmale Seitenleiste (UI-Modernisierung 27.11.2026): der gemerkte
+     Zustand wird VOR dem ersten Zeichnen gesetzt, sonst springt die
+     Leiste bei jedem Seitenaufruf von breit auf schmal. --}}
+<script @cspNonce>try{if(localStorage.getItem('nav-schmal')==='1')document.documentElement.classList.add('nav-schmal');}catch(e){}</script>
 @stack('charts')
 <style>
 /* Markenfarben: resources/css/brand.css (UX-1).
@@ -177,6 +181,32 @@ table tr:hover td{background:#EDEAE0;}
    onmouseover-Handler (Audit SEC-4) - Darstellung gehoert ohnehin
    nicht in ein Ereignis-Attribut. */
 .gs-treffer:hover{background:#F7F5EF;}
+/* Schmale Seitenleiste (UI-Modernisierung 27.11.2026): nur Symbole, der
+   Name steht als Tooltip am Punkt. Nur ab Rechnerbreite - darunter ist die
+   Leiste ohnehin eine Schublade. Alle Gruppen sind dann offen: eine
+   zugeklappte Gruppe ohne sichtbare Ueberschrift waere unerreichbar. */
+.nav-schmal-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:rgba(255,255,255,.7);cursor:pointer;flex:none;}
+.nav-schmal-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.nav-schmal-btn svg{width:16px;height:16px;transition:transform .18s;}
+.sidebar-logo{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.sidebar-logo-symbol{display:none;}
+@media (min-width: 901px) {
+    html.nav-schmal{--sidebar-w:76px;}
+    .nav-schmal .sidebar-logo{flex-direction:column;padding:14px 10px;}
+    .nav-schmal .sidebar-logo-voll{display:none !important;}
+    .nav-schmal .sidebar-logo-symbol{display:block;height:34px;width:34px;}
+    .nav-schmal .nav-schmal-btn svg{transform:rotate(180deg);}
+    .nav-schmal .nav-item{justify-content:center;padding:11px 0;}
+    .nav-schmal .nav-label,.nav-schmal .nav-group-header,.nav-schmal .user-row > div:last-child,.nav-schmal .logout-btn{display:none;}
+    .nav-schmal .nav-group.collapsed .nav-group-body{display:block;}
+    .nav-schmal .nav-group-body::before{display:none;}
+    .nav-schmal .nav-group + .nav-group{border-top:1px solid rgba(255,255,255,.07);}
+    .nav-schmal .nav-badge{position:absolute;top:4px;right:12px;margin:0;padding:0 5px;font-size:9.5px;}
+    .nav-schmal .nav-icon{width:20px;height:20px;}
+    .nav-schmal .sidebar-foot{padding:14px 0;display:flex;justify-content:center;}
+    .nav-schmal .nav-sep{margin:10px 14px;}
+}
+@media (max-width: 900px){.nav-schmal-btn{display:none;}}
 </style>
     @include('partials.favicon')
     {{--
@@ -193,7 +223,12 @@ table tr:hover td{background:#EDEAE0;}
 <div class="admin-overlay" id="admin-overlay" hidden></div>
 <div class="sidebar" id="admin-sidebar">
     {{-- Volle Wortmarke (Betreiber-Vorlage 27.11.2026): gruenes D, Schrift weiss --}}
-    <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::sidebarLogo() }}{{ str_starts_with(\App\Support\BrandAssets::sidebarLogo(), '/images/') ? '?v=2' : '' }}" alt="Dienstly24" width="380" height="132" style="height:58px;width:auto;display:block;"></a></div>
+    <div class="sidebar-logo">
+        <a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img class="sidebar-logo-voll" src="{{ \App\Support\BrandAssets::sidebarLogo() }}{{ str_starts_with(\App\Support\BrandAssets::sidebarLogo(), '/images/') ? '?v=2' : '' }}" alt="Dienstly24" width="380" height="132" style="height:58px;width:auto;display:block;"><img class="sidebar-logo-symbol" src="/images/logo-icon-white.png" alt="" width="34" height="34"></a>
+        <button type="button" class="nav-schmal-btn" id="nav-schmal-btn" aria-label="Seitenleiste schmal/breit umschalten" title="Seitenleiste ein-/ausklappen" aria-pressed="false">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+        </button>
+    </div>
     {{-- Navigation: Struktur in App\Support\Navigation\AdminNavigation --}}
     <x-admin.sidebar-nav />
     <div class="sidebar-foot">
@@ -239,9 +274,17 @@ table tr:hover td{background:#EDEAE0;}
 </div>
 <div class="main">
     <div class="main-inner">
-        @if(session('success'))<div class="alert alert-success" role="status">✓ {{ session('success') }}</div>@endif
-        @if(session('error'))<div class="alert alert-error" role="alert">✗ {{ session('error') }}</div>@endif
-        @if(session('warning'))<div class="alert alert-warning" role="status">⚠ {{ session('warning') }}</div>@endif
+        {{-- Rueckmeldung nach jeder Aktion (UI-Modernisierung 27.11.2026):
+             oben rechts statt am Seitenanfang - wer unten gespeichert hat,
+             sieht sie sofort. Erfolg verschwindet nach einigen Sekunden,
+             Fehler und Warnungen bleiben stehen (ui.js "Rueckmeldungen"). --}}
+        @if(session('success') || session('error') || session('warning'))
+        <div class="toast-stapel" data-toasts>
+            @if(session('success'))<div class="alert alert-success" role="status" data-toast-auto><span aria-hidden="true">✓</span><span class="toast-text">{{ session('success') }}</span><button type="button" class="toast-zu" data-toast-zu aria-label="Meldung schließen">×</button></div>@endif
+            @if(session('error'))<div class="alert alert-error" role="alert"><span aria-hidden="true">✗</span><span class="toast-text">{{ session('error') }}</span><button type="button" class="toast-zu" data-toast-zu aria-label="Meldung schließen">×</button></div>@endif
+            @if(session('warning'))<div class="alert alert-warning" role="status"><span aria-hidden="true">⚠</span><span class="toast-text">{{ session('warning') }}</span><button type="button" class="toast-zu" data-toast-zu aria-label="Meldung schließen">×</button></div>@endif
+        </div>
+        @endif
         @include('partials.feldfehler')
         @yield('content')
     </div>
@@ -379,6 +422,18 @@ document.addEventListener('visibilitychange', function() {
     /* Zurueck auf Rechnerbreite: die Schublade ist dort fest, ein
        zurueckgebliebenes Overlay wuerde die Seite sperren. */
     window.addEventListener('resize',function(){ if(window.innerWidth>900) closeNav(); });
+
+    /* Schmale Seitenleiste umschalten und merken. */
+    var schmal=document.getElementById('nav-schmal-btn');
+    if(schmal){
+        var html=document.documentElement;
+        schmal.setAttribute('aria-pressed', html.classList.contains('nav-schmal') ? 'true' : 'false');
+        schmal.addEventListener('click',function(){
+            var an=html.classList.toggle('nav-schmal');
+            schmal.setAttribute('aria-pressed', an ? 'true' : 'false');
+            try{ localStorage.setItem('nav-schmal', an ? '1' : '0'); }catch(e){}
+        });
+    }
 })();
 
 /* Dialoge (.d24-modal): Klick auf den Hintergrund und ESC schliessen.

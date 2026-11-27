@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Services\CustomerConversationService;
 use App\Services\CustomerDeletionService;
 use App\Services\CustomerNumberGenerator;
+use App\Services\Dashboard\DashboardUebersicht;
 use App\Services\Dokumente\DokumentDublettenService;
 use App\Services\Family\FamilyRelationService;
 use App\Services\Haushalt\HaushaltService;
@@ -49,7 +50,17 @@ class AdminController extends Controller
 
     public function dashboard() {
         $ids = $this->visibleCustomerIds();
+        // Verwaltungszentrale (UI-Modernisierung 27.11.2026): Kennzahlen und
+        // Listen kommen aus EINEM Dienst, der dieselben Abfragen benutzt wie
+        // die Seiten, auf die sie verlinken.
+        $uebersicht = new DashboardUebersicht($ids, auth()->user());
         return view('admin.dashboard', [
+            'kennzahlen' => $uebersicht->kennzahlen(),
+            'vertragsVerlauf' => $uebersicht->vertraegeJeMonat(),
+            'sparten' => $uebersicht->sparten(),
+            'meineAufgaben' => $uebersicht->meineAufgaben(),
+            'offeneSignaturen' => $uebersicht->offeneSignaturen(),
+            'neuesteKunden' => $uebersicht->neuesteKunden(),
             'totalCustomers' => $ids === null ? Customer::count() : count($ids),
             // AKTIVE Vertraege = Contract::currentlyActive() (eine Quelle):
             // gekuendigte, abgelaufene und beendete Vertraege zaehlen nie mit,

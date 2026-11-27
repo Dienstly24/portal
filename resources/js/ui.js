@@ -590,3 +590,102 @@ function bedienungStarten() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bedienungStarten);
 else bedienungStarten();
+
+/* -----------------------------------------------------------------
+ * 10. Rueckmeldungen (UI-Modernisierung 27.11.2026)
+ *
+ * Die Meldungen nach einer Aktion stehen oben rechts (.toast-stapel).
+ * Erfolg verschwindet nach einigen Sekunden von selbst, Fehler und
+ * Warnungen bleiben, bis man sie schliesst - eine Warnung, die sich
+ * selbst wegraeumt, liest niemand. Zeigt die Maus auf die Meldung,
+ * bleibt sie stehen.
+ * ----------------------------------------------------------------- */
+function toastSchliessen(el) {
+    if (!el || el.classList.contains('toast-weg')) return;
+    el.classList.add('toast-weg');
+    setTimeout(() => {
+        const stapel = el.parentElement;
+        el.remove();
+        if (stapel && stapel.matches('[data-toasts]') && !stapel.children.length) stapel.remove();
+    }, 320);
+}
+document.addEventListener('click', (event) => {
+    const zu = event.target.closest('[data-toast-zu]');
+    if (zu) toastSchliessen(zu.closest('.alert'));
+});
+function toastsStarten() {
+    document.querySelectorAll('[data-toast-auto]').forEach((el) => {
+        let uhr = setTimeout(() => toastSchliessen(el), 6000);
+        el.addEventListener('mouseenter', () => clearTimeout(uhr));
+        el.addEventListener('mouseleave', () => { uhr = setTimeout(() => toastSchliessen(el), 2500); });
+    });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', toastsStarten);
+else toastsStarten();
+
+/* -----------------------------------------------------------------
+ * 11. Tabellen: Mehrfachauswahl und Spaltenwahl
+ *
+ * Mehrfachauswahl: <table data-auswahl="name"> mit Kaestchen
+ * [data-auswahl-alle] im Kopf und [data-auswahl-zeile] je Zeile; die
+ * Leiste [data-auswahl-leiste="name"] erscheint ab einer Auswahl und
+ * zeigt die Anzahl in [data-auswahl-zahl]. Die Kaestchen tragen
+ * form="..." - abgeschickt wird ein normales Formular, der Server
+ * prueft jede Kennung selbst.
+ *
+ * Spaltenwahl: [data-spalten="schluessel"] am Panel, Kaestchen mit
+ * value = Spaltenname; Zellen tragen data-spalte="name". Gemerkt je
+ * Liste im Browser (reine Ansichtssache, nie Berechtigung).
+ * ----------------------------------------------------------------- */
+function auswahlStarten() {
+    document.querySelectorAll('table[data-auswahl]').forEach((tabelle) => {
+        const name = tabelle.dataset.auswahl;
+        const leiste = document.querySelector(`[data-auswahl-leiste="${name}"]`);
+        const alle = tabelle.querySelector('[data-auswahl-alle]');
+        const zeilen = () => [...tabelle.querySelectorAll('[data-auswahl-zeile]')];
+        const aktualisieren = () => {
+            const gewaehlt = zeilen().filter((c) => c.checked).length;
+            if (leiste) {
+                leiste.hidden = gewaehlt === 0;
+                const zahl = leiste.querySelector('[data-auswahl-zahl]');
+                if (zahl) zahl.textContent = String(gewaehlt);
+            }
+            if (alle) {
+                alle.checked = gewaehlt > 0 && gewaehlt === zeilen().length;
+                alle.indeterminate = gewaehlt > 0 && gewaehlt < zeilen().length;
+            }
+        };
+        alle?.addEventListener('change', () => { zeilen().forEach((c) => { c.checked = alle.checked; }); aktualisieren(); });
+        tabelle.addEventListener('change', (e) => { if (e.target.matches('[data-auswahl-zeile]')) aktualisieren(); });
+        leiste?.querySelector('[data-auswahl-aufheben]')?.addEventListener('click', () => {
+            zeilen().forEach((c) => { c.checked = false; });
+            aktualisieren();
+        });
+        aktualisieren();
+    });
+
+    document.querySelectorAll('[data-spalten]').forEach((panel) => {
+        const schluessel = 'spalten:' + panel.dataset.spalten;
+        const tabelle = document.getElementById(panel.dataset.spaltenTabelle || '');
+        if (!tabelle) return;
+        let versteckt = [];
+        try { versteckt = JSON.parse(localStorage.getItem(schluessel) || '[]'); } catch (e) { versteckt = []; }
+        const anwenden = () => {
+            tabelle.querySelectorAll('[data-spalte]').forEach((z) => {
+                z.hidden = versteckt.includes(z.dataset.spalte);
+            });
+        };
+        panel.querySelectorAll('input[type=checkbox]').forEach((c) => {
+            c.checked = !versteckt.includes(c.value);
+            c.addEventListener('change', () => {
+                versteckt = versteckt.filter((v) => v !== c.value);
+                if (!c.checked) versteckt.push(c.value);
+                try { localStorage.setItem(schluessel, JSON.stringify(versteckt)); } catch (e) { /* nur Ansicht */ }
+                anwenden();
+            });
+        });
+        anwenden();
+    });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', auswahlStarten);
+else auswahlStarten();

@@ -464,6 +464,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 
     // Verträge
     Route::get('/contracts', [AdminContractController::class, 'contracts'])->name('contracts');
+    // Export der Vertragsliste (Auswahl oder alle Treffer) - nur admin/manager.
+    Route::post('/contracts/export', [AdminContractController::class, 'exportContracts'])->name('contracts.export')->middleware('role:admin,manager');
     Route::get('/contracts/new', [AdminContractController::class, 'contractNew'])->name('contract.new');
     // Vertragsherkunft (28.09.2026). Eigener Pfad /vertragsherkunft/... statt
     // /contracts/... - ein POST dort wuerde sonst von contract.store als
@@ -849,6 +851,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Interessenten aus dem Website-Assistenten.
     Route::get('/interessenten', [AiAssistantController::class, 'leads'])
         ->name('leads.index');
+    Route::post('/interessenten/{id}/zustaendig', [AiAssistantController::class, 'assignLead'])->name('leads.assign');
+    Route::post('/interessenten/{id}/kunde', [AiAssistantController::class, 'convertLead'])->name('leads.convert');
 
     /*
     | Wissensbasis des Assistenten: was hier steht, sagt die KI ALLEN
