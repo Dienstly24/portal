@@ -33,7 +33,7 @@ final class Anschrift
      * punkt ohne Leerzeichen ("Musterstr.25") und ein abschliessendes
      * Komma/Semikolon aus der Dokumentzeile ("Koetzer Weg 12,").
      */
-    private const NUMMER_ZUM_TRENNEN = '/^(.*\p{L}.*?)(?:[\s,]+(?:(?:haus)?nr\.?|hausnummer)?\s*|(?<=\.))(\d{1,4}\s?[a-zA-Z]?(?:\s*[-\/]\s*\d{1,4}\s?[a-zA-Z]?)?)$/iu';
+    private const NUMMER_ZUM_TRENNEN = '/^(.*?\p{L}.*?)(?:[\s,]+(?:(?:haus)?nr\.?|hausnummer)?\s*|(?<=\.))(\d{1,4}\s?[a-zA-Z]?(?:\s*[-\/]\s*\d{1,4}\s?[a-zA-Z]?)?)$/iu';
 
     /**
      * Strasse und Hausnummer trennen. KONSERVATIV:

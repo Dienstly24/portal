@@ -35,7 +35,7 @@ class KundendatenUndHausnummerTest extends TestCase
 
     private function kunde(array $felder = []): Customer
     {
-        $user = User::factory()->create(['role' => 'customer', 'name' => 'Loay Alzaher', 'email' => 'loay@example.com']);
+        $user = User::factory()->create(['role' => 'customer', 'name' => 'Loay Alzaher', 'email' => 'loay'.Str::random(6).'@example.com']);
 
         return Customer::create($felder + ['user_id' => $user->id, 'customer_number' => '26'.random_int(10000, 99999)]);
     }
@@ -178,7 +178,7 @@ class KundendatenUndHausnummerTest extends TestCase
         foreach (['Persönliche Daten', 'Adresse', 'Bankverbindung', 'Weitere Kundendaten'] as $bereich) {
             $this->assertStringContainsString($bereich, $html);
         }
-        foreach (['Loay', 'Alzaher', '12.03.1990', $kunde->customer_number, 'loay@example.com', 'alternativ@example.com',
+        foreach (['Loay', 'Alzaher', '12.03.1990', $kunde->customer_number, $kunde->user->email, 'alternativ@example.com',
             '040 123456', '01793934074', 'Kötzer Weg 12, 89312 Günzburg', 'Postfach 12, 89312 Günzburg', 'TK', 'Gesetzlich'] as $wert) {
             $this->assertStringContainsString(e($wert), $html, $wert);
         }
