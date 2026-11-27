@@ -409,6 +409,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::put('/customers/notes/{id}/done', [AdminController::class, 'noteMarkDone'])->name('customer.note.done');
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');
+    // Kundendaten-Uebersicht: Kopieren/Anzeigen sensibler Werte protokollieren (nur Feldname).
+    Route::post('/customers/{id}/daten-kopiert', [AdminController::class, 'customerDataCopied'])
+        ->middleware('throttle:60,1')->name('customer.data_copied');
     Route::put('/customers/{id}', [AdminController::class, 'customerUpdate'])->name('customer.update');
     // Kundenlöschung: NUR admin (employee/manager/support können nicht löschen)
     Route::delete('/customers/{id}', [AdminController::class, 'destroyCustomer'])->name('customers.delete')->middleware('role:admin');

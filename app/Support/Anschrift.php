@@ -25,6 +25,54 @@ final class Anschrift
     private const NUMMER_AM_ENDE = '/^(.*\p{L}.*?)[\s,]+(\d{1,4}\s?[a-zA-Z]?(?:\s*[-\/]\s*\d{1,4}\s?[a-zA-Z]?)?)$/u';
 
     /**
+     * Hausnummer am Ende einer Strassenzeile - die EINE Regel fuer das
+     * TRENNEN (Dokumenten-Eingang, KI-Antwort, OCR, Bearbeiten-Formular).
+     *
+     * Erlaubt zusaetzlich zu NUMMER_AM_ENDE: "Nr."/"Hausnr." vor der Nummer
+     * ("Koetzer Weg Nr. 12"), eine Nummer direkt hinter einem Abkuerzungs-
+     * punkt ohne Leerzeichen ("Musterstr.25") und ein abschliessendes
+     * Komma/Semikolon aus der Dokumentzeile ("Koetzer Weg 12,").
+     */
+    private const NUMMER_ZUM_TRENNEN = '/^(.*\p{L}.*?)(?:[\s,]+(?:(?:haus)?nr\.?|hausnummer)?\s*|(?<=\.))(\d{1,4}\s?[a-zA-Z]?(?:\s*[-\/]\s*\d{1,4}\s?[a-zA-Z]?)?)$/iu';
+
+    /**
+     * Strasse und Hausnummer trennen. KONSERVATIV:
+     * - getrennt wird nur, wenn vor der Nummer ein Buchstaben-Teil steht
+     *   ("23" allein wird nie zu einer Strasse ohne Namen),
+     * - "Strasse des 17. Juni" endet auf Buchstaben und bleibt ganz,
+     * - steht die Nummer schon im eigenen Feld und ist dieselbe, wird sie nur
+     *   aus der Strasse entfernt; WIDERSPRECHEN sich beide, bleibt alles wie
+     *   erfasst - geraten wird nie, welche stimmt.
+     *
+     * @return array{0: mixed, 1: mixed} [Strasse, Hausnummer]
+     */
+    public static function trenne(mixed $strasse, mixed $nummer): array
+    {
+        if (! is_string($strasse)) {
+            return [$strasse, $nummer];
+        }
+        $bereinigt = rtrim(trim($strasse), " \t,;");
+        if ($bereinigt === '' || ! preg_match(self::NUMMER_ZUM_TRENNEN, $bereinigt, $m)) {
+            return [$strasse, $nummer];
+        }
+        $strassenteil = rtrim(trim($m[1]), ',');
+        $nummerTeil = trim((string) preg_replace('/\s+/', ' ', $m[2]));
+        if ($strassenteil === '' || ! preg_match('/\p{L}/u', $strassenteil)) {
+            return [$strasse, $nummer];
+        }
+
+        $vorhanden = is_string($nummer) ? trim($nummer) : (is_int($nummer) ? (string) $nummer : '');
+        if ($vorhanden === '') {
+            return [$strassenteil, $nummerTeil];
+        }
+        if (self::nummernSchluessel($vorhanden) === self::nummernSchluessel($nummerTeil)) {
+            return [$strassenteil, $vorhanden];
+        }
+
+        return [$strasse, $nummer];
+    }
+
+    /**
      * Strassenzeile aus den drei Feldern.
      *
      * @return array{zeile: string, fall: string} fall: 'sauber' | 'doppelt'

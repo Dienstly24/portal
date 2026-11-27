@@ -266,30 +266,12 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     </div>
 </div>
 
-<div class="grid-2">
+{{-- Kundendaten auf einen Blick (ersetzt "Persönliche Daten" und die
+     Karte "Kranken-, Renten- & Steuerdaten"): alle Angaben ohne
+     Bearbeiten-Modus, je Feld kopierbar. --}}
+@include('admin.partials.kundendaten', ['customer' => $customer])
 
-{{-- Persönliche Daten --}}
-<div class="card">
-    <div class="card-title" style="margin-bottom:16px;">Persönliche Daten</div>
-    <table style="width:100%;font-size:14px;">
-        {{-- Kontaktdaten eines abhaengigen Familienmitglieds: eigener Wert
-             schlaegt IMMER den geerbten. Geerbte Werte werden NICHT in die
-             Kindakte kopiert, sondern hier gelesen - eine Kopie waere ab dem
-             ersten Umzug still falsch. --}}
-        @php $famTel = $customer->effectiveContact('phone'); $famAdr = $customer->effectiveContact('address'); @endphp
-        <tr><td style="color:var(--ink-soft);padding:8px 0;width:130px;">Telefon</td><td>{{ $famTel['value'] !== '' ? $famTel['value'] : '—' }}
-            @if($famTel['inherited'])<span style="font-size:11px;background:#FEF3C7;color:#92400E;border-radius:999px;padding:1px 8px;margin-left:6px;">vom Elternteil übernommen</span>@endif</td></tr>
-        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Adresse</td><td style="border-top:1px solid var(--line);">{{ $famAdr['value'] !== '' ? $famAdr['value'] : ($customer->address ?? '—') }}
-            @if($famAdr['inherited'])<span style="font-size:11px;background:#FEF3C7;color:#92400E;border-radius:999px;padding:1px 8px;margin-left:6px;">vom Elternteil übernommen</span>@endif</td></tr>
-        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">IBAN</td><td style="border-top:1px solid var(--line);">{{ $customer->iban ? '••••' . substr($customer->iban,-4) : '—' }}</td></tr>
-        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Geburtsdatum</td><td style="border-top:1px solid var(--line);">{{ $customer->birth_date ? \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') : '—' }}</td></tr>
-        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Familienstand</td><td style="border-top:1px solid var(--line);">{{ $customer->marital_status ?? '—' }}</td></tr>
-        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Sprache</td><td style="border-top:1px solid var(--line);">{{ strtoupper($customer->preferred_lang) }}</td></tr>
-        @if($customer->company_name)
-        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Firma</td><td style="border-top:1px solid var(--line);">{{ $customer->company_name }} @if($customer->company_type)<span class="muted-xs">({{ $customer->company_type }})</span>@endif</td></tr>
-        @endif
-    </table>
-</div>
+<div class="grid-2">
 
 {{-- Familie (Ehepartner/Kinder): auf einen Blick sichtbar, ob der Kunde
      eine Familie hinterlegt hat und wer dazugehoert. Voller Datensatz je
@@ -384,20 +366,6 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 @endif
 
 @include('admin.partials.linked_customers', ['customer' => $customer, 'verknuepft' => $verknuepft])
-
-{{-- Kundenakte: Kranken-/Renten-/Steuerdaten (sensibel, verschlüsselt gespeichert) --}}
-<div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0;">🏥 Kranken-, Renten- & Steuerdaten</div>
-        <span style="font-size:11.5px;background:#EAF2FB;color:#185FA5;border:1px solid #CFE2F5;padding:3px 10px;border-radius:999px;">🔐 Verschlüsselt gespeichert</span>
-    </div>
-    <div class="item-row"><span class="muted-sm">Versicherungsart</span><span style="font-size:13.5px;font-weight:600;">{{ ['gesetzlich'=>'Gesetzlich','privat'=>'Privat'][$customer->health_insurance_type] ?? '—' }}</span></div>
-    <div class="item-row"><span class="muted-sm">Krankenkasse</span><span style="font-size:13.5px;font-weight:600;">{{ $customer->health_insurance_company ?? '—' }}</span></div>
-    <div class="item-row"><span class="muted-sm">KV-Nummer</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->health_insurance_number ?? '—' }}</span></div>
-    <div class="item-row"><span class="muted-sm">Rentenversicherungsnr.</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->pension_insurance_number ?? '—' }}</span></div>
-    <div class="item-row"><span class="muted-sm">Steuer-ID</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->tax_id ?? '—' }}</span></div>
-    <p style="font-size:11.5px;color:var(--ink-soft);margin-top:10px;">Bearbeitung über „Kunde bearbeiten" – jede Änderung wird auditiert.</p>
-</div>
 
 {{-- E-Mail-Verlauf (Priorität 8: alle Informationen am Kunden verbunden) --}}
 @php

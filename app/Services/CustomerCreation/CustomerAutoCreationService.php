@@ -2,6 +2,7 @@
 
 namespace App\Services\CustomerCreation;
 
+use App\Support\Anschrift;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\User;
@@ -64,9 +65,24 @@ class CustomerAutoCreationService
                 'role' => 'customer',
             ]);
 
-            // Zusammengesetzte Alt-Adresse (Kompatibilität) aus strukturierten Feldern.
+            // Strasse und Hausnummer getrennt speichern - dieselbe Regel wie im
+            // Dokumenten-Eingang und im Bearbeiten-Formular. Ein Aufrufer, der
+            // "Koetzer Weg 12" als Strasse liefert, verliert die Nummer nicht.
+            [$data['street'], $data['house_number']] = Anschrift::trenne(
+                $data['street'] ?? null, $data['house_number'] ?? null
+            );
+
+            // Zusammengesetzte Alt-Adresse (Kompatibilität) aus strukturierten
+            // Feldern - MIT Hausnummer. Frueher fehlte sie hier ("Koetzer Weg,
+            // 89312 Guenzburg"), und das Bearbeiten-Formular las genau diese
+            // Spalte: dort stand "Nr." leer (Meldung 27.11.2026).
+            $strassenzeile = Anschrift::strassenzeile(
+                is_string($data['street'] ?? null) ? $data['street'] : null,
+                is_scalar($data['house_number'] ?? null) ? (string) $data['house_number'] : null,
+                null
+            )['zeile'];
             $address = $data['address'] ?? trim(
-                trim(($data['street'] ?? '').', '.($data['zip'] ?? '').' '.($data['city'] ?? '')),
+                trim($strassenzeile.', '.($data['zip'] ?? '').' '.($data['city'] ?? '')),
                 ', '
             );
 
