@@ -31,78 +31,81 @@
     ]]);
 @endphp
 
-<div class="page-header">
-    <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Aufgaben</span></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+{{-- Kopf, Kennzahlen, Reiter und Filter im gemeinsamen Stil der
+     Beraterwelt (UI-Modernisierung 27.11.2026). Jede Kachel ist ein Link auf
+     genau den Filter, dessen Treffer sie zaehlt. --}}
+<div class="kopf-zeile">
+    <div class="page-header">
+        <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Aufgaben</span></div>
         <h1 class="page-title">Aufgaben</h1>
-        <button data-h-click="e98173f7fb" class="btn btn-emerald">+ Aufgabe erstellen</button>
+        <div class="page-sub">Wiedervorlagen, Rückrufe und To-dos – Ihre und die Ihrer Kunden.</div>
+    </div>
+    <div class="kopf-aktionen">
+        <button type="button" data-h-click="e98173f7fb" class="btn btn-primary"><x-admin.symbol name="task" :size="16" /> Aufgabe erstellen</button>
     </div>
 </div>
 
-<div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:20px;flex-wrap:wrap;">
+<div class="kpi-raster">
+    <x-admin.kpi label="Meine offenen" :wert="$counts['mine'] ?? 0" symbol="task" :href="route('admin.tasks', ['tab' => 'mine'])" />
+    <x-admin.kpi label="Heute fällig" :wert="$counts['today'] ?? 0" symbol="calendar" ton="info" :href="route('admin.tasks', ['tab' => 'mine', 'due' => 'today'])" />
+    <x-admin.kpi label="Überfällig" :wert="$counts['overdue'] ?? 0" symbol="alert" ton="warn" :href="route('admin.tasks', ['tab' => 'mine', 'due' => 'overdue'])">
+        @if(($counts['overdue'] ?? 0) > 0)<span class="warn-text">bitte zuerst erledigen</span>@else<span>nichts überfällig</span>@endif
+    </x-admin.kpi>
+    <x-admin.kpi label="Kunden-Aufgaben" :wert="$counts['customer'] ?? 0" symbol="users" ton="gold" :href="route('admin.tasks', ['tab' => 'customer'])">
+        <span>offen, mit Kundenbezug</span>
+    </x-admin.kpi>
+</div>
+
+<div class="tab-row">
     @foreach(['mine'=>'Meine Aufgaben','customer'=>'Kunden-Aufgaben','done'=>'Erledigte Aufgaben'] as $key=>$label)
-    <a href="{{ route('admin.tasks', ['tab'=>$key]) }}"
-        style="padding:12px 20px;text-decoration:none;font-size:14px;font-weight:{{ $tab===$key?'700':'500' }};color:{{ $tab===$key?'var(--graphite)':'var(--ink-soft)' }};border-bottom:2px solid {{ $tab===$key?'var(--emerald)':'transparent' }};margin-bottom:-2px;display:flex;align-items:center;gap:7px;">
-        {{ $label }}
-        @if($key !== 'done' && ($counts[$key] ?? 0) > 0)
-        <span style="background:{{ $tab===$key?'var(--emerald)':'#E5E1D5' }};color:{{ $tab===$key?'#fff':'var(--ink-soft)' }};border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">{{ $counts[$key] }}</span>
-        @endif
+    <a href="{{ route('admin.tasks', ['tab'=>$key]) }}" class="tab {{ $tab===$key ? 'active' : '' }}">
+        {{ $label }}@if($key !== 'done' && ($counts[$key] ?? 0) > 0)<span class="tab-count">{{ $counts[$key] }}</span>@endif
     </a>
     @endforeach
 </div>
 
 @if($tab === 'mine' && $counts['overdue'] > 0 && request('due') !== 'overdue')
-<a href="{{ route('admin.tasks', ['tab'=>'mine','due'=>'overdue']) }}" style="display:flex;align-items:center;gap:10px;background:#F9E3E3;border:1px solid #E8B9B9;border-radius:10px;padding:11px 16px;margin-bottom:18px;text-decoration:none;color:#A32D2D;font-size:13.5px;font-weight:600;">
+<a href="{{ route('admin.tasks', ['tab'=>'mine','due'=>'overdue']) }}" class="alert alert-error aufgaben-hinweis">
     ⚠️ {{ $counts['overdue'] }} {{ $counts['overdue'] === 1 ? 'Aufgabe ist' : 'Aufgaben sind' }} überfällig – jetzt anzeigen →
 </a>
 @endif
 
-<div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;">
-    <form method="GET" action="{{ route('admin.tasks') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-        <input type="hidden" name="tab" value="{{ $tab }}">
-        @if(request('customer'))<input type="hidden" name="customer" value="{{ request('customer') }}">@endif
-        @if($tab !== 'done')
-        <div>
-            <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;font-weight:600;">Status</label>
-            <select name="status" data-h-change="df663d9750" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:130px;" aria-label="Status">
-                <option value="">Alle</option>
-                <option value="open" {{ request('status')==='open'?'selected':'' }}>Offen</option>
-                <option value="in_progress" {{ request('status')==='in_progress'?'selected':'' }}>In Bearbeitung</option>
-            </select>
+<form method="GET" action="{{ route('admin.tasks') }}" class="vf-leiste" aria-label="Aufgaben filtern">
+    <input type="hidden" name="tab" value="{{ $tab }}">
+    @if(request('customer'))<input type="hidden" name="customer" value="{{ request('customer') }}">@endif
+    @if($tab !== 'done')
+    <label class="vf-feld"><span>Status</span>
+        <select name="status" data-h-change="df663d9750" aria-label="Status">
+            <option value="">Alle</option>
+            <option value="open" {{ request('status')==='open'?'selected':'' }}>Offen</option>
+            <option value="in_progress" {{ request('status')==='in_progress'?'selected':'' }}>In Bearbeitung</option>
+        </select>
+    </label>
+    @endif
+    <label class="vf-feld"><span>Aufgabentyp</span>
+        <select name="type" data-h-change="df663d9750" aria-label="Aufgabentyp">
+            <option value="">Alle</option>
+            @foreach(\App\Models\Task::TYPES as $tKey => $tDef)
+            <option value="{{ $tKey }}" {{ request('type')===$tKey?'selected':'' }}>{{ $tDef['icon'] }} {{ $tDef['label'] }}</option>
+            @endforeach
+        </select>
+    </label>
+    @if($tab !== 'done')
+    <div class="vf-feld" style="flex:0 1 auto;"><span>Fällig</span>
+        <div class="faellig-wahl" role="group" aria-label="Fälligkeit">
+            @foreach(['today'=>'Heute','overdue'=>'Überfällig','7'=>'7 Tage','14'=>'14 Tage',''=>'Alle'] as $val=>$lbl)
+            <button type="submit" name="due" value="{{ $val }}" class="{{ request('due','')===$val ? 'aktiv' : '' }}" @if(request('due','')===$val) aria-pressed="true" @endif>{{ $lbl }}</button>
+            @endforeach
         </div>
-        @endif
-        <div>
-            <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;font-weight:600;">Aufgabentyp</label>
-            <select name="type" data-h-change="df663d9750" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:140px;" aria-label="Aufgabentyp">
-                <option value="">Alle</option>
-                @foreach(\App\Models\Task::TYPES as $tKey => $tDef)
-                <option value="{{ $tKey }}" {{ request('type')===$tKey?'selected':'' }}>{{ $tDef['icon'] }} {{ $tDef['label'] }}</option>
-                @endforeach
-            </select>
-        </div>
-        @if($tab !== 'done')
-        <div>
-            <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;font-weight:600;">Fällig</label>
-            <div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;">
-                @foreach(['today'=>'Heute','overdue'=>'Überfällig','7'=>'7 Tage','14'=>'14 Tage',''=>'Alle'] as $val=>$lbl)
-                <button type="submit" name="due" value="{{ $val }}"
-                    style="padding:8px 13px;border:none;font-size:13px;cursor:pointer;background:{{ request('due','')===$val?'var(--emerald)':'#fff' }};color:{{ request('due','')===$val?'#fff':'var(--ink)' }};white-space:nowrap;">
-                    {{ $lbl }}
-                </button>
-                @endforeach
-            </div>
-        </div>
-        @endif
-        <div>
-            <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;font-weight:600;">Suche</label>
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Titel, Kunde, Nummer…"
-                style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:190px;background:#fff;" aria-label="Suche">
-        </div>
-        @if(request()->hasAny(['status','type','due','q','customer']) && (request('status') || request('type') || request('due') || request('q') || request('customer')))
-        <a href="{{ route('admin.tasks', ['tab'=>$tab]) }}" style="font-size:12.5px;color:var(--ink-soft);padding:9px 4px;">✕ Filter zurücksetzen</a>
-        @endif
-    </form>
-</div>
+    </div>
+    @endif
+    <label class="vf-feld"><span>Suche</span>
+        <input type="text" name="q" value="{{ request('q') }}" placeholder="Titel, Kunde, Nummer…" aria-label="Suche">
+    </label>
+    @if(request('status') || request('type') || request('due') || request('q') || request('customer'))
+    <div class="vf-knoepfe"><a href="{{ route('admin.tasks', ['tab'=>$tab]) }}" class="btn btn-ghost btn-sm">✕ Filter zurücksetzen</a></div>
+    @endif
+</form>
 
 @if($filterCustomer)
 <div style="display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 8px 6px 14px;font-size:13px;margin-bottom:16px;">
@@ -111,7 +114,7 @@
 </div>
 @endif
 
-<div style="font-size:14px;font-weight:700;margin-bottom:14px;">Aufgaben ({{ $tasks->total() }})</div>
+<div class="liste-anzahl">{{ $tasks->total() }} {{ $tasks->total() === 1 ? 'Aufgabe' : 'Aufgaben' }}</div>
 
 @if(session('aufgaben_rueckgaengig'))
 {{-- Rueckgaengig nach einer Sammelaktion (15 Minuten, nur der Ausloeser). --}}
@@ -182,51 +185,51 @@
 @endif
 
 @if($tasks->isEmpty())
-<div class="card" style="text-align:center;padding:48px 24px;color:var(--ink-soft);">
-    <div style="font-size:34px;margin-bottom:10px;">✅</div>
+<div class="card leer-karte">
+    <div class="leer-symbol"><x-admin.symbol name="task" :size="26" /></div>
     <div style="font-weight:600;color:var(--ink);margin-bottom:6px;">Keine Aufgaben gefunden</div>
     <div style="font-size:13px;margin-bottom:18px;">Lege eine Aufgabe oder Wiedervorlage an – z. B. „Kunde in 14 Tagen nachfassen".</div>
-    <button data-h-click="e98173f7fb" class="btn btn-emerald">+ Aufgabe erstellen</button>
+    <button type="button" data-h-click="e98173f7fb" class="btn btn-primary">+ Aufgabe erstellen</button>
 </div>
 @else
 <div style="display:flex;flex-direction:column;gap:10px;">
 @foreach($tasks as $t)
 @php
-$priorityColor = ['high'=>'#F9E3E3','medium'=>'#FEF3C7','low'=>'var(--emerald-soft)'];
-$priorityText = ['high'=>'#A32D2D','medium'=>'#92400E','low'=>'var(--emerald)'];
+// Prioritaet als Abzeichen (Ampel aus components.css, keine Hex-Werte).
+$priorityBadge = ['high'=>'badge-danger','medium'=>'badge-pending','low'=>'badge-active'];
 $overdue = $t->isOverdue();
 $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'icon'=>'📌'];
 @endphp
-<div class="card sammel-karte" id="task-{{ $t->id }}" style="padding:16px 20px;margin:0;{{ $overdue ? 'border-left:4px solid #C25454;' : '' }}">
+<div class="card sammel-karte aufgabe-karte{{ $overdue ? ' aufgabe-ueberfaellig' : '' }}{{ $t->status === 'done' ? ' aufgabe-erledigt' : '' }}" id="task-{{ $t->id }}">
     <div style="display:flex;align-items:center;gap:14px;">
         <input type="checkbox" form="sammel-form" name="ids[]" value="{{ $t->id }}" data-sammel-item aria-label="Aufgabe auswählen: {{ $t->title }}">
-        <div style="width:40px;height:40px;border-radius:10px;background:{{ $overdue ? '#F9E3E3' : '#EDEAE0' }};display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;" title="{{ $typeDef['label'] }}">
+        <div class="aufgabe-typ" title="{{ $typeDef['label'] }}">
             {{ $typeDef['icon'] }}
         </div>
         <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <span style="font-weight:700;font-size:14px;">{{ $t->title }}</span>
-                <span style="background:{{ $priorityColor[$t->priority] ?? '#EDEAE0' }};color:{{ $priorityText[$t->priority] ?? 'var(--ink-soft)' }};font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;">{{ \App\Models\Task::PRIORITIES[$t->priority] ?? $t->priority }}</span>
+                <span class="badge {{ $priorityBadge[$t->priority] ?? 'badge-closed' }}">{{ \App\Models\Task::PRIORITIES[$t->priority] ?? $t->priority }}</span>
                 @if($t->due_date)
-                <span style="font-size:12px;color:{{ $overdue ? '#A32D2D' : 'var(--ink-soft)' }};font-weight:{{ $overdue ? '700' : '400' }};">
+                <span class="aufgabe-datum{{ $overdue ? ' warn-text' : '' }}">
                     📅 {{ $t->due_date->format('d.m.Y') }}
                 </span>
                 @if($overdue)
-                <span style="background:#A32D2D;color:#fff;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;">Überfällig · {{ $t->due_date->diffInDays(today()) }} Tg.</span>
+                <span class="etikett etikett-rot">Überfällig · {{ $t->due_date->diffInDays(today()) }} Tg.</span>
                 @elseif($t->due_date->isToday())
-                <span style="background:#E6F1FB;color:#185FA5;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;">Heute</span>
+                <span class="etikett etikett-blau">Heute</span>
                 @elseif($t->due_date->isTomorrow())
-                <span style="background:#EDEAE0;color:var(--ink-soft);padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;">Morgen</span>
+                <span class="etikett">Morgen</span>
                 @endif
                 @endif
                 @if($t->status === 'done' && $t->completed_at)
-                <span style="background:var(--emerald-soft);color:#0F7A43;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;">✓ Erledigt {{ $t->completed_at->lokal()->format('d.m.Y') }}</span>
+                <span class="etikett etikett-gruen">✓ Erledigt {{ $t->completed_at->lokal()->format('d.m.Y') }}</span>
                 @endif
             </div>
             @if($t->description)<div style="font-size:13px;color:var(--ink-soft);margin-top:3px;overflow:hidden;text-overflow:ellipsis;">{{ \Illuminate\Support\Str::limit($t->description, 160) }}</div>@endif
             <div style="font-size:12px;color:var(--ink-soft);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
                 @if($t->customer)
-                <a href="{{ route('admin.customer', $t->customer_id) }}" style="color:var(--ink);text-decoration:none;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-weight:600;">👤 {{ $t->customer->user?->name ?? $t->customer->customer_number }}</a>
+                <a href="{{ route('admin.customer', $t->customer_id) }}" class="aufgabe-kunde"><span class="initialen initialen-xs">{{ \Illuminate\Support\Str::of($t->customer->user?->name ?? '?')->explode(' ')->filter()->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') ?: '?' }}</span>{{ $t->customer->user?->name ?? $t->customer->customer_number }}</a>
                 @endif
                 <span>Zugewiesen: {{ $t->assignedTo?->name ?? '—' }}</span>
                 @if($t->createdBy && $t->created_by !== $t->assigned_to)
@@ -236,13 +239,13 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                 <a href="{{ route('admin.email_inbox.show', $t->email_message_id) }}" style="color:var(--graphite);font-weight:600;">✉️ E-Mail öffnen</a>
                 @endif
                 @if($t->auto_email_status === 'pending')
-                <span style="background:#F5EFDD;color:#8A7635;border-radius:999px;padding:2px 10px;font-weight:600;" title="Wird automatisch an den Kunden gesendet">⏱️ E-Mail geplant {{ $t->auto_email_send_on?->format('d.m.Y') }}</span>
+                <span class="etikett etikett-gold" title="Wird automatisch an den Kunden gesendet">⏱️ E-Mail geplant {{ $t->auto_email_send_on?->format('d.m.Y') }}</span>
                 @elseif($t->auto_email_status === 'sent')
-                <span style="background:var(--emerald-soft);color:#0F7A43;border-radius:999px;padding:2px 10px;font-weight:600;" title="{{ $t->auto_email_subject }}">✉️✓ E-Mail gesendet {{ $t->auto_email_sent_at?->lokal()->format('d.m.Y') }}</span>
+                <span class="etikett etikett-gruen" title="{{ $t->auto_email_subject }}">✉️✓ E-Mail gesendet {{ $t->auto_email_sent_at?->lokal()->format('d.m.Y') }}</span>
                 @elseif($t->auto_email_status === 'failed')
-                <span style="background:#F9E3E3;color:#A32D2D;border-radius:999px;padding:2px 10px;font-weight:600;" title="{{ $t->auto_email_error }}">⚠️ E-Mail fehlgeschlagen</span>
+                <span class="etikett etikett-rot" title="{{ $t->auto_email_error }}">⚠️ E-Mail fehlgeschlagen</span>
                 @elseif($t->auto_email_status === 'skipped')
-                <span style="background:#EDEAE0;color:var(--ink-soft);border-radius:999px;padding:2px 10px;font-weight:600;" title="{{ $t->auto_email_error }}">✉️ E-Mail übersprungen</span>
+                <span class="etikett" title="{{ $t->auto_email_error }}">✉️ E-Mail übersprungen</span>
                 @endif
             </div>
         </div>

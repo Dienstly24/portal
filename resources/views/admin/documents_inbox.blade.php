@@ -1,15 +1,43 @@
 @extends('layouts.admin')
 @section('content')
-<div class="page-header">
-    <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Dokumenten-Eingang</span></div>
-    <div>
-        <h1 class="page-title">⚡ Dokumenten-Eingang (KI)</h1>
-        <div class="page-sub">Dokumente hochladen oder hierher ziehen – die KI erkennt den Typ, liest die Daten und schlägt den passenden Kunden vor.</div>
+{{-- Kopf + Kennzahlen im gemeinsamen Stil (UI-Modernisierung 27.11.2026).
+     Die Zahlen stammen aus der Liste DIESER Seite (keine zweite Abfrage) und
+     springen zu ihrem Abschnitt. --}}
+@php
+    $eingangAnzahl = $inboxDocuments->count();
+    $eingangLaeuft = $inboxDocuments->filter(fn ($d) => $d->aiInProgress())->count();
+    $eingangFreigabe = $inboxDocuments->filter(fn ($d) => (bool) $d->ki_freigabe_offen)->count();
+    $eingangVorgaenge = collect($batchGroups ?? [])->count();
+@endphp
+<div class="kopf-zeile">
+    <div class="page-header">
+        <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Dokumenten-Eingang</span></div>
+        <h1 class="page-title">Dokumenten-Eingang</h1>
+        <div class="page-sub">Dokumente hochladen oder hierher ziehen – das System erkennt den Typ, liest die Daten und schlägt den passenden Kunden vor.</div>
+    </div>
+    <div class="kopf-aktionen">
+        <a href="{{ route('admin.document_requests') }}" class="btn btn-ghost btn-sm"><x-admin.symbol name="inbox" :size="16" /> Anforderungen</a>
+        <button type="button" class="btn btn-primary btn-sm" data-dropzone-oeffnen><x-admin.symbol name="contract" :size="16" /> Dokumente hochladen</button>
     </div>
 </div>
 
+<div class="kpi-raster">
+    <x-admin.kpi label="Nicht zugeordnet" :wert="$eingangAnzahl" symbol="inbox" :ton="$eingangAnzahl > 0 ? 'warn' : ''" href="#eingang">
+        <span>{{ $eingangAnzahl > 0 ? 'warten auf Zuordnung' : 'alles erledigt' }}</span>
+    </x-admin.kpi>
+    <x-admin.kpi label="Vorgänge" :wert="$eingangVorgaenge" symbol="log" ton="info" href="#eingang">
+        <span>gemeinsam hochgeladen</span>
+    </x-admin.kpi>
+    <x-admin.kpi label="Wird analysiert" :wert="$eingangLaeuft" symbol="clock" href="#eingang">
+        <span>aktualisiert sich selbst</span>
+    </x-admin.kpi>
+    <x-admin.kpi label="KI-Freigabe offen" :wert="$eingangFreigabe" symbol="brain" ton="gold" href="#eingang">
+        <span>kostenlos nicht vollständig gelesen</span>
+    </x-admin.kpi>
+</div>
+
 @if(!$aiEnabled)
-<div style="background:#FEF3C7;color:#92400E;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
+<div class="alert alert-warning" style="display:block;">
     ⚠ KI-Analyse ist nicht konfiguriert (<code>ANTHROPIC_API_KEY</code> fehlt). Uploads werden gespeichert, aber nicht automatisch analysiert.
 </div>
 @elseif(!($providerEnabled ?? true))
@@ -19,7 +47,7 @@
      Vertraege, die die KI braucht, werden NICHT vollstaendig gelesen. Das ist
      genau das Symptom "Vertraege werden nicht mehr erkannt" - der Hinweis
      macht die Ursache sofort sichtbar. --}}
-<div style="background:#FEF3C7;color:#92400E;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
+<div class="alert alert-warning" style="display:block;">
     ⚠ Die <strong>KI-Analyse ist derzeit ausgeschaltet</strong> – nur die kostenlose Basiserkennung (OCR/Textebene und bekannte Formulare) läuft.
     Komplexe oder neue <strong>Verträge werden dann nicht mehr automatisch vollständig erkannt</strong>.
     Ursache prüfen: gültiger <code>ANTHROPIC_API_KEY</code> und <code>AI_DOCUMENT_PROVIDER=claude</code> in der Server-<code>.env</code>
@@ -31,9 +59,8 @@
 <div class="card" style="margin-bottom:20px;">
     {{-- Tastaturbedienbar (Audit A11Y-2): role=button + tabindex + Enter/Space --}}
     <div id="inbox-dropzone" role="button" tabindex="0" aria-label="Dateien zum Hochladen auswaehlen oder hierher ziehen"
-        data-h-keydown="66dc0af444"
-        style="border:2px dashed var(--line);border-radius:12px;padding:30px;text-align:center;cursor:pointer;transition:.15s;">
-        <div style="font-size:34px;margin-bottom:6px;" aria-hidden="true">📥</div>
+        data-h-keydown="66dc0af444" class="ablagezone">
+        <div class="ablagezone-symbol" aria-hidden="true"><x-admin.symbol name="inbox" :size="26" /></div>
         <div style="font-size:14px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--emerald);font-weight:600;">durchsuchen</span></div>
         <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, WEBP · max. 10 MB pro Datei · mehrere Bilder werden zu EINEM Dokument gebündelt</div>
         <input type="file" id="inbox-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Dokumente zum Hochladen auswählen" style="display:none;">
@@ -56,8 +83,8 @@
     $batchIds = collect($batchGroups ?? [])->flatMap(fn ($g) => $g->pluck('id'))->all();
     $singleDocuments = $inboxDocuments->reject(fn ($d) => in_array($d->id, $batchIds, true));
 @endphp
-<div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+<div class="card" id="eingang" style="padding:0;overflow:hidden;margin-bottom:24px;">
+    <div class="card-head-bar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <span>Nicht zugeordnet ({{ $inboxDocuments->count() }})</span>
         @if($inboxDocuments->count() > 0)
         <label style="margin-inline-start:auto;font-weight:500;font-size:12.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
@@ -69,20 +96,20 @@
     {{-- Vorgaenge: gemeinsam hochgeladene Dateien gehoeren zu EINEM Kunden --}}
     @foreach(($batchGroups ?? []) as $batchId => $groupDocs)
     @php $meta = $batchData[$batchId] ?? null; @endphp
-    <div style="margin:14px 16px;border:1.5px solid #185FA5;border-radius:12px;overflow:hidden;" data-batch="{{ $batchId }}">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 16px;background:#E6F1FB;">
-            <div style="font-weight:700;font-size:13.5px;color:#185FA5;">
+    <div class="vorgang-box" data-batch="{{ $batchId }}">
+        <div class="vorgang-kopf">
+            <div class="vorgang-titel">
                 🗂 Ein Vorgang · {{ $groupDocs->count() }} Dokumente (gemeinsam hochgeladen)
             </div>
             <div>
                 @if($meta && !empty($meta['conflicts']))
-                    <span class="badge" style="background:#FBE9E9;color:#B3261E;">⚠ {{ implode(' ', $meta['conflicts']) }}</span>
+                    <span class="badge badge-danger">⚠ {{ implode(' ', $meta['conflicts']) }}</span>
                 @elseif($meta && $meta['ready'] && $meta['has_name'])
                     <button type="button" class="btn btn-emerald btn-sm" data-h-click="stapel-oeffnen" data-batch="{{ $batchId }}">
                         Neuen Kunden aus allen {{ $groupDocs->count() }} anlegen
                     </button>
                 @elseif($meta && !$meta['ready'])
-                    <span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ Analyse läuft noch…</span>
+                    <span class="badge badge-pending">⏳ Analyse läuft noch…</span>
                 @endif
                 @if($meta && $meta['ready'] && empty($meta['conflicts']))
                     {{-- Bestandskunde bringt neue Unterlagen: alle Dokumente des
@@ -103,7 +130,7 @@
         @include('admin.partials.inbox_doc_row', ['doc' => $doc])
     @empty
         @if(($batchGroups ?? collect())->isEmpty())
-        <div style="padding:22px 20px;color:var(--ink-soft);font-size:13.5px;">📭 Keine unzugeordneten Dokumente – alles erledigt.</div>
+        <div class="leer-hinweis" style="padding:26px 20px;">📭 Keine unzugeordneten Dokumente – alles erledigt.</div>
         @endif
     @endforelse
 </div>
@@ -137,7 +164,7 @@
 <div class="card card-flush">
     <div class="card-head-bar">🤝 Eingelesene Vermittler-Vorgangslisten</div>
     <div class="scroll-x">
-    <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+    <table class="tabelle-schlicht">
         <thead>
             <tr style="text-align:start;color:var(--ink-soft);font-size:12px;">
                 <th style="text-align:start;padding:10px 20px;">Datei</th>
@@ -176,7 +203,7 @@
 <div class="card card-flush">
     <div class="card-head-bar">Zuletzt analysiert &amp; zugeordnet</div>
     <div class="scroll-x">
-    <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+    <table class="tabelle-schlicht">
         <thead>
             <tr style="text-align:start;color:var(--ink-soft);font-size:12px;">
                 <th style="text-align:start;padding:10px 20px;">Dokument</th>
@@ -198,9 +225,9 @@
                     @if($doc->contract?->isExternal())<div><span class="origin-badge origin-badge-fremd" title="Zugeordneter Vertrag wurde nicht über uns vermittelt – zuständig: {{ $doc->contract->responsibleParty() }}">📁 Fremdvertrag</span></div>@endif
                 </td>
                 <td style="padding:10px 12px;">
-                    @if($doc->aiInProgress())<span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ läuft</span>
-                    @elseif($doc->ai_status === 'done')<span class="badge" style="background:var(--emerald-soft);color:var(--emerald-deep);">✓ analysiert</span>
-                    @elseif($doc->ai_status === 'failed')<span class="badge" style="background:#FBE9E9;color:#B3261E;">Fehler</span>
+                    @if($doc->aiInProgress())<span class="badge badge-pending">⏳ läuft</span>
+                    @elseif($doc->ai_status === 'done')<span class="badge badge-active">✓ analysiert</span>
+                    @elseif($doc->ai_status === 'failed')<span class="badge badge-danger">Fehler</span>
                     @endif
                 </td>
                 <td style="padding:10px 20px;color:var(--ink-soft);">{{ $doc->created_at->lokal()->format('d.m.Y H:i') }}</td>
@@ -1674,11 +1701,15 @@ window.docReview = (function() {
 
     dz.addEventListener('click', function() { input.click(); });
     input.addEventListener('change', function() { uploadFiles(this.files); this.value = ''; });
+    // Knopf "Dokumente hochladen" im Seitenkopf oeffnet dieselbe Dateiauswahl.
+    document.querySelectorAll('[data-dropzone-oeffnen]').forEach(function (k) {
+        k.addEventListener('click', function () { input.click(); });
+    });
     ['dragover', 'dragenter'].forEach(function(ev) {
-        dz.addEventListener(ev, function(e) { e.preventDefault(); dz.style.borderColor = 'var(--emerald)'; dz.style.background = 'var(--surface)'; });
+        dz.addEventListener(ev, function(e) { e.preventDefault(); dz.classList.add('ablagezone-aktiv'); });
     });
     ['dragleave', 'drop'].forEach(function(ev) {
-        dz.addEventListener(ev, function(e) { e.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; });
+        dz.addEventListener(ev, function(e) { e.preventDefault(); dz.classList.remove('ablagezone-aktiv'); });
     });
     dz.addEventListener('drop', function(e) { e.preventDefault(); uploadFiles(e.dataTransfer.files); });
 

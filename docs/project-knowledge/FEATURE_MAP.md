@@ -330,7 +330,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Vertragsliste: Sortierung (`?sort=&richtung=`, Whitelist), Spaltenwahl (Browser), Mehrfachauswahl + Export `POST admin/contracts/export` (`ContractController::exportContracts`, admin/manager, ActivityLog `contracts_export`)
 - Interessenten: Filter Quelle/Zustaendig/Kunde, `POST admin/interessenten/{id}/zustaendig` (`assignLead`), `POST admin/interessenten/{id}/kunde` (`convertLead`, Duplikatschutz)
 - Layout: schmale Seitenleiste (`nav-schmal`), Rueckmeldungen als Toast (`ui.js` Abschnitt 10), Auswahl/Spalten (`ui.js` Abschnitt 11); Bausteine in `components.css`
-- Tests `UiModernisierungTest`, `ImprovementRoundTest` · Status **ACTIVE** (27.11.2026)
+- Aufgaben + Dokumenten-Eingang angeglichen (Kacheln, Reiter, Filterleiste, Karten); `TaskController` liefert `counts.today`
+- Tests `UiModernisierungTest`, `ImprovementRoundTest`, `EingangUndAufgabenDesignTest` · Status **ACTIVE** (27.11.2026)
 
 ## J. Entfernt / tot
 

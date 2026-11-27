@@ -13,13 +13,14 @@
         $dupCustomerName = $dupOrig->customer?->user?->name ?? $dupOrig->customer?->customer_number;
     }
 @endphp
-<div style="padding:16px 20px;border-bottom:1px solid var(--line);" data-doc-row="{{ $doc->id }}" data-doc-status="{{ $doc->ai_status }}">
+<div class="eingang-zeile" data-doc-row="{{ $doc->id }}" data-doc-status="{{ $doc->ai_status }}">
     <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start;">
         <div style="min-width:260px;flex:1;display:flex;gap:10px;align-items:flex-start;">
             <input type="checkbox" class="inbox-select" value="{{ $doc->id }}" data-doc-name="{{ $doc->file_name }}" title="Auswaehlen, um mehrere Dokumente zu EINEM Kunden zusammenzufuehren (z.B. Ausweis-Vorderseite + Rueckseite + Antrag)." style="margin-top:3px;cursor:pointer;">
-            <div style="flex:1;">
-                <div style="font-weight:600;font-size:14px;">
-                    📄 <a href="{{ route('admin.documents.download', $doc->id) }}?view=1" target="_blank" title="Ueberfahren zeigt eine Schnellvorschau, Klick oeffnet"
+            <span class="eingang-datei" aria-hidden="true"><x-admin.symbol name="contract" :size="18" /></span>
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:14px;overflow-wrap:anywhere;">
+                    <a href="{{ route('admin.documents.download', $doc->id) }}?view=1" target="_blank" title="Ueberfahren zeigt eine Schnellvorschau, Klick oeffnet"
                         data-preview-url="{{ route('admin.documents.download', $doc->id) }}?view=1" data-preview-name="{{ $doc->file_name }}">{{ $doc->file_name }}</a>
                     @if($doc->page_count)<span style="font-weight:400;color:var(--ink-soft);font-size:12.5px;"> · {{ $doc->page_count }} Seiten</span>@endif
                 </div>
@@ -28,18 +29,18 @@
                 </div>
                 <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                     @if($doc->aiInProgress())
-                        <span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ Wird analysiert…</span>
+                        <span class="badge badge-pending">⏳ Wird analysiert…</span>
                     @elseif($doc->ai_status === 'done')
-                        <span class="badge" style="background:var(--emerald-soft);color:var(--emerald-deep);">✓ {{ $doc->aiTypeLabel() ?? 'Erkannt' }}</span>
-                        @if($doc->ai_confidence !== null)<span class="badge" style="background:#EEF0F3;color:var(--ink-soft);">{{ $doc->ai_confidence }}% sicher</span>@endif
-                        @if($doc->ai_source === 'ocr')<span class="badge" style="background:#FEF3C7;color:#92400E;" title="Ohne KI-Anbieter erkannt (Tesseract-OCR) - Ergebnis bitte besonders sorgfaeltig pruefen.">OCR, ohne KI</span>@endif
-                        @if($doc->ai_source === 'template')<span class="badge" style="background:#E6F1FB;color:#185FA5;" title="Bekanntes Formular per fester Regel gelesen - gratis, ohne KI.">📄 Vorlage, gratis</span>@endif
-                        @if($doc->ai_source === 'ai')<span class="badge" style="background:#F3E8FF;color:#6B21A8;" title="Mit dem KI-Anbieter (Claude) gelesen - kostenpflichtig.">🤖 KI, kostenpflichtig</span>@endif
-                        @if($doc->ki_freigabe_offen)<span class="badge" style="background:#FEF6E7;color:#8A5A00;border:1px solid #E4A11B;" title="Kostenlos nicht vollstaendig gelesen. Die KI wurde NICHT automatisch aufgerufen - Freigabe ueber den Knopf 'Mit KI analysieren'.">💰 KI empfohlen – wartet auf Freigabe</span>@endif
+                        <span class="badge badge-active">✓ {{ $doc->aiTypeLabel() ?? 'Erkannt' }}</span>
+                        @if($doc->ai_confidence !== null)<span class="etikett">{{ $doc->ai_confidence }}% sicher</span>@endif
+                        @if($doc->ai_source === 'ocr')<span class="etikett etikett-gelb" title="Ohne KI-Anbieter erkannt (Tesseract-OCR) - Ergebnis bitte besonders sorgfaeltig pruefen.">OCR, ohne KI</span>@endif
+                        @if($doc->ai_source === 'template')<span class="etikett etikett-blau" title="Bekanntes Formular per fester Regel gelesen - gratis, ohne KI.">📄 Vorlage, gratis</span>@endif
+                        @if($doc->ai_source === 'ai')<span class="etikett etikett-lila" title="Mit dem KI-Anbieter (Claude) gelesen - kostenpflichtig.">🤖 KI, kostenpflichtig</span>@endif
+                        @if($doc->ki_freigabe_offen)<span class="etikett etikett-gold" title="Kostenlos nicht vollstaendig gelesen. Die KI wurde NICHT automatisch aufgerufen - Freigabe ueber den Knopf 'Mit KI analysieren'.">💰 KI empfohlen – wartet auf Freigabe</span>@endif
                     @elseif($doc->ai_status === 'failed')
-                        <span class="badge" style="background:#FBE9E9;color:#B3261E;">Analyse fehlgeschlagen</span>
+                        <span class="badge badge-danger">Analyse fehlgeschlagen</span>
                     @else
-                        <span class="badge" style="background:#EEF0F3;color:var(--ink-soft);">Ohne Analyse</span>
+                        <span class="badge badge-closed">Ohne Analyse</span>
                     @endif
                 </div>
                 @if($dupOrig)

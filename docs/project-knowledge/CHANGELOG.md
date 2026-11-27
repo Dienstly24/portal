@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 27.11.2026 - Aufgaben und Dokumenten-Eingang im gemeinsamen Design
+
+- Task: Betreiber-Wunsch, beide Seiten an das neue Design der Beraterwelt anzugleichen.
+- Files: V `admin/tasks`, `admin/documents_inbox`, `admin/partials/inbox_doc_row`; `TaskController` (`counts.today`); `resources/css/components.css`; Test `EingangUndAufgabenDesignTest` (neu); CLAUDE.md, FEATURE_MAP.
+- Components: Aufgaben, Dokumenten-Eingang. DB/API: keine.
+- Side effects: Knopf "Dokumente hochladen" im Kopf oeffnet dieselbe Dateiauswahl wie die Ablagezone. Funktionen, Formulare und Texte unveraendert.
+- Tests: volle Suite gruen bis auf die 6 Signaturtests ohne lokales qpdf (CI hat qpdf); `composer lint`/`composer stan` gruen; Chromium Desktop 1440 px + iPhone 13 ohne horizontales Scrollen und ohne JS-Fehler.
+- Result: ACTIVE.
+
 ## 27.11.2026 - UI-Modernisierung der Beraterwelt (ein PR)
 
 - Task: Betreiber-Auftrag "ein Stil fuer das ganze System, verbessern statt umbauen"; Hintergrund bleibt warmes Beige, Provisionen auf dem Dashboard nur fuer den Admin.

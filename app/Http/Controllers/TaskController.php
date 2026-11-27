@@ -68,6 +68,10 @@ class TaskController extends Controller
                 ->when($vids !== null, fn ($qq) => $qq->whereIn('customer_id', $vids))->count(),
             'overdue' => Task::where('assigned_to', $user->id)->open()
                 ->whereDate('due_date', '<', today())->count(),
+            // Kachel "Heute faellig" (UI 27.11.2026) - dieselbe Bedingung wie
+            // der Filter due=today, damit Zahl und Liste uebereinstimmen.
+            'today' => Task::where('assigned_to', $user->id)->open()
+                ->whereDate('due_date', today())->count(),
         ];
 
         // Vorbelegter Kunde (z. B. Button "Aufgabe" in der Kundenakte).
