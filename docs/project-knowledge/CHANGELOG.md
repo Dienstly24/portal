@@ -13,7 +13,7 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 - **Task**: Betreiber: Hausnummer bleibt nach dem Dokumenten-Upload leer; Kundendaten nur ueber "Bearbeiten" sichtbar - gewuenscht Uebersicht mit Kopierfunktion und "Alle Kundendaten kopieren".
 - **Files Changed**: `Support\Anschrift` (`trenne`), `Ai\Concerns\ValidatesExtractedFields`, `AdminController` (`formAddress`, `addressColumns`, `customerDataCopied`), `CustomerAutoCreationService`, `DocumentIntakeService` (`anschriftAlsBlock`, Adress-Block bei der Uebernahme), neu `Support\Kundendatenblatt`, `admin/partials/kundendaten.blade.php`, `admin/customer_show.blade.php`, `Console\Commands\HausnummerNachtragen`, `routes/web.php`; Tests `KundendatenUndHausnummerTest`, `AnschriftTrennenTest`; `CLAUDE.md`, `KNOWN_ISSUES.md` (KI-137), `FEATURE_MAP.md` (F-106), `ROUTES_INVENTORY.md`.
 - **Database Changes**: keine (Bestand per `kunden:hausnummer-nachtragen --ausfuehren`, nur ergaenzen). **API Changes**: `POST admin/customers/{id}/daten-kopiert` (Portfolio-Scope, throttle 60/min).
-- **Potential Side Effects**: Karten "Persoenliche Daten" und "Kranken-, Renten- & Steuerdaten" sind in der neuen Karte aufgegangen; Bearbeiten-Formular zeigt die strukturierte Anschrift; Speichern leert `address_house_suffix` (steht im Feld "Nr." mit).
+- **Potential Side Effects**: Karten "Persoenliche Daten" und "Kranken-, Renten- & Steuerdaten" sind in der neuen Karte aufgegangen; Bearbeiten-Formular zeigt die strukturierte Anschrift; Speichern leert `address_house_suffix` (steht im Feld "Nr." mit); auch der CSV-Import trennt jetzt "Warthestr. 4 A" in Strasse + Hausnummer.
 - **Tests Performed**: siehe PR.
 - **Result**: erledigt.
 
