@@ -176,7 +176,7 @@ class KundendatenUndHausnummerTest extends TestCase
         $html = $this->actingAs($this->admin())->get(route('admin.customer', $kunde->id))->assertOk()->getContent();
 
         $this->assertStringContainsString('Alle Kundendaten kopieren', $html);
-        foreach (['Persönliche Daten', 'Adresse', 'Bankverbindung', 'Weitere Kundendaten'] as $bereich) {
+        foreach (['Persönliche Daten', 'Adresse', 'Bankverbindung', 'Versicherung &amp; weitere Daten', 'Schnellaktionen'] as $bereich) {
             $this->assertStringContainsString($bereich, $html);
         }
         foreach (['Loay', 'Alzaher', '12.03.1990', $kunde->customer_number, $kunde->user->email, 'alternativ@example.com',
@@ -185,7 +185,8 @@ class KundendatenUndHausnummerTest extends TestCase
         }
         // Kopie = ORIGINALWERT (ohne Leerzeichen), Anzeige bleibt verdeckt.
         $this->assertStringContainsString('data-kopie="DE89370400440532013000"', $html);
-        $this->assertStringContainsString('•••• 3000', $html);
+        $this->assertStringContainsString('DE•••••• 3000', $html);
+        $this->assertStringContainsString('IBAN •••• 3000', $html);
         $this->assertStringContainsString('data-kopie="12"', $html);
     }
 

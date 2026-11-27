@@ -1626,6 +1626,15 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Aufdecken SENSIBLER Werte und "Alle kopieren" stehen im ActivityLog
   (`customer_data_copied`, nur Feldname). Ein Bankname wird nicht gezeigt:
   die Akte fuehrt keinen (nichts ableiten).
+  **Neues Layout (27.11.2026, Betreiber-Vorlage "modernes CRM")**: Kopf
+  `admin/partials/kunde_kopf` (Initialen statt Foto - die Akte fuehrt keine
+  Fotos; Status nur aus echten aktiven Vertraegen; Kontaktleiste Adresse/
+  E-Mail/Telefon/IBAN, Klick kopiert den Originalwert; Aktionen + Menue
+  "•••"), Portal-Zugang als aufklappbare Zeile, Uebersicht mit vier Karten
+  (je "Kopieren" fuer den ganzen Bereich) und rechter Spalte (Kunde seit,
+  aktive Vertraege, Beitrag, "Alle Kundendaten kopieren", Schnellaktionen).
+  KEINE eingebettete Karte (Fremdzugriff/CSP) - nur ein Link zu
+  OpenStreetMap, geladen erst auf Klick.
 - **Der Kontakt-Screenshot darf nicht an seiner Darstellung scheitern**
   (Lehre 21.08.2026, gemeldet): Derselbe Kontaktzettel (Name + zwei Daten,
   Anschrift, Handynummer, E-Mail, IBAN) wurde als Screenshot einmal erkannt

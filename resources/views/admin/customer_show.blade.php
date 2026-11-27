@@ -35,73 +35,19 @@ $auslaufendCounts = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_date))->count();
 @endphp
 
-<div class="page-header">
-    <div class="breadcrumb">
-        <a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span>
-        <a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span>
-        <span>{{ $customer->user?->name }}</span>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div>
-            <h1 class="page-title" style="display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <span>{{ $customer->user?->name }}</span>
-                @if($customer->birth_date)
-                <span style="font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--surface-soft,#F7F5EF);border:1px solid var(--line);border-radius:12px;padding:2px 10px;white-space:nowrap;">🎂 {{ \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') }}</span>
-                @endif
-                {{-- KUNDENSTATUS (nicht die Familienrolle): abgeleitet aus Alter
-                     und Familienverknuepfung, damit Anzeige und Wirklichkeit nie
-                     auseinanderlaufen. --}}
-                @php $famStatus = $customer->familyStatus(); @endphp
-                @if($famStatus['key'] !== 'eigenstaendig')
-                <span style="font-size:12.5px;font-weight:600;color:{{ $famStatus['color'] }};background:{{ $famStatus['bg'] }};border-radius:12px;padding:2px 10px;white-space:nowrap;">{{ $famStatus['label'] }}</span>
-                @endif
-            </h1>
-            <div style="font-size:14px;color:var(--ink-soft);">
-                @if(filled($customer->customer_number))
-                {{ $customer->customer_number }}@if($customer->user?->email) · {{ $customer->user?->email }}@endif
-                @else
-                {{-- KI-096: abhaengiges Kind - keine eigene Kundennummer. --}}
-                <span>Keine eigene Kundennummer (abhängiges Familienmitglied)</span>
-                @endif
-            </div>
-            @php $kinderSperre = $customer->eigenstaendigkeitsSperre(); @endphp
-            @if($kinderSperre)
-            <div style="margin-top:8px;background:#FEF3C7;border:1px solid #F0E0B0;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#92400E;max-width:640px;">
-                🧒 {{ $kinderSperre }}
-                @if($customer->familyGuardians()->isEmpty())
-                <strong>Noch kein Elternteil verknüpft</strong> – bitte unter „Familie" den Vater (sonst die Mutter) als Bezugsperson verknüpfen.
-                @endif
-                @if(blank($customer->customer_number) && $customer->age() !== null && $customer->age() >= \App\Support\FamilienAlter::selbststaendig())
-                <form method="POST" action="{{ route('admin.customer.kundennummer_vergeben', $customer->id) }}" style="margin-top:6px;"
-                      data-confirm="Eigene Kundennummer vergeben? Die Familienbeziehung bleibt bestehen.">
-                    @csrf
-                    <button type="submit" class="btn btn-emerald btn-sm">Kundennummer vergeben</button>
-                </form>
-                @endif
-            </div>
-            @endif
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button type="button" class="btn btn-ghost" data-h-click="2e6547eb33">📨 Nachricht senden</button>
-            @if(in_array(auth()->user()->role, ['admin','manager','support']) || auth()->user()->can_send_emails)
-            <a href="{{ route('admin.email.compose', ['customer_id' => $customer->id]) }}" class="btn btn-ghost">✉️ E-Mail verfassen</a>
-            @endif
-            <a href="{{ route('admin.tasks', ['customer_id' => $customer->id, 'neu' => 1]) }}" class="btn btn-ghost">✅ Aufgabe / Wiedervorlage</a>
-            <a href="{{ route('admin.customer.edit', $customer->id) }}" class="btn btn-ghost">✏️ Bearbeiten</a>
-            @if(! $kinderSperre)
-            <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-emerald">+ Vertrag hinzufügen</a>
-            @endif
-        </div>
-    </div>
-</div>
-
+@include('admin.partials.kunde_kopf', ['customer' => $customer, 'aktiveVertraege' => $aktiveVertraege])
 
 {{-- Portal-Status (echter Zustand statt "aktiv/inaktiv"-Raten) --}}
 @php $portalUser = $customer->user; $ps = $customer->portalStatus(); @endphp
-<div class="card" style="margin-bottom:20px;padding:18px 20px;">
-    <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+{{-- Kompakt: eine Zeile mit Status, Details aufklappbar (Vorlage 27.11.2026). --}}
+<details class="card kk-portal" id="kk-portal" style="margin-bottom:16px;padding:12px 18px;">
+    <summary class="kk-portal-zeile">
+        <span style="font-weight:700;">🌐 Portal-Zugang</span>
+        <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:2px 10px;font-size:12px;font-weight:600;">{{ $ps['label'] }}</span>
+        <span class="kk-portal-mehr">Details anzeigen</span>
+    </summary>
+    <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:12px;">
         <div style="min-width:260px;">
-            <div style="font-weight:700;margin-bottom:8px;">Portal-Zugang</div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
                 <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:3px 12px;font-size:12.5px;font-weight:600;">{{ $ps['label'] }}</span>
                 <span style="font-size:12.5px;color:var(--ink-soft);">Account vorhanden: <strong>{{ $portalUser && $portalUser->hasRealEmail() ? 'Ja' : 'Nein' }}</strong></span>
@@ -147,14 +93,19 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         </div>
         @endif
     </div>
-</div>
+</details>
 
 {{-- Tab-Navigation (Kundenprofil) --}}
 <style>
-.cust-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:20px;overflow-x:auto;}
-.cust-tab{flex:1;text-align:center;padding:10px 16px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;text-decoration:none;transition:.15s;border:none;background:none;}
+.cust-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;margin-bottom:18px;overflow-x:auto;scrollbar-width:thin;}
+.cust-tab{flex:1;text-align:center;padding:10px 14px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;text-decoration:none;transition:.15s;border:none;background:none;}
 .cust-tab:hover{background:var(--canvas);color:var(--ink);}
-.cust-tab.active{background:var(--tiefe-graphit);color:#fff;box-shadow:var(--tiefe-schatten-aktiv);}
+.cust-tab.active{background:linear-gradient(180deg,#19b463,#128a4b);color:#fff;box-shadow:0 2px 6px rgba(23,166,91,.35);}
+.kk-portal-zeile{display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;list-style:none;}
+.kk-portal-zeile::-webkit-details-marker{display:none;}
+.kk-portal-mehr{margin-left:auto;font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:4px 12px;}
+.kk-portal-mehr::after{content:' ▾';}
+.kk-portal[open] .kk-portal-mehr::after{content:' ▴';}
 .chat-bubble{max-width:75%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;}
 .chat-row{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;}
 .chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
@@ -180,6 +131,8 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     <button type="button" class="cust-tab" data-tab="tab-verlauf" data-h-click="8eed7ed30f">🔄 Verlauf</button>
 </div>
 <div class="tab-section" id="tab-uebersicht">
+{{-- Kundendaten in Karten + Status/Schnellaktionen (Layout 27.11.2026). --}}
+@include('admin.partials.kundendaten', ['customer' => $customer, 'aktiveVertraege' => $aktiveVertraege])
 {{-- Vertragsstruktur Icons: Klick oeffnet die Vertraege-Registerkarte,
      gefiltert auf die gewaehlte Sparte (siehe openContractType()). --}}
 <style>
@@ -265,11 +218,6 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         @endforeach
     </div>
 </div>
-
-{{-- Kundendaten auf einen Blick (ersetzt "Persönliche Daten" und die
-     Karte "Kranken-, Renten- & Steuerdaten"): alle Angaben ohne
-     Bearbeiten-Modus, je Feld kopierbar. --}}
-@include('admin.partials.kundendaten', ['customer' => $customer])
 
 <div class="grid-2">
 

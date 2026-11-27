@@ -117,6 +117,24 @@ final class Kundendatenblatt
         return implode("\n", $zeilen);
     }
 
+    /**
+     * Die gefuellten Werte EINES Bereichs ("Label: Wert") fuer den Knopf
+     * "Kopieren" an der jeweiligen Karte.
+     *
+     * @param  array{titel: string, felder: list<array{label: string, kopie: string}>}  $bereich
+     */
+    public static function bereichAlsText(array $bereich): string
+    {
+        $zeilen = [];
+        foreach ($bereich['felder'] as $f) {
+            if ($f['kopie'] !== '') {
+                $zeilen[] = $f['label'].': '.$f['kopie'];
+            }
+        }
+
+        return implode("\n", $zeilen);
+    }
+
     /** @return array{voll: string, strasse: string, nummer: string, plz: string, ort: string, land: string, geerbt: bool} */
     private static function anschrift(Customer $customer): array
     {

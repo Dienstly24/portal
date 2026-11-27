@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 27.11.2026 - Kundenakte im neuen Layout (Kopf, Kontaktleiste, Karten, Schnellaktionen)
+
+- **Task**: Betreiber-Vorlage "modernes CRM": Kopf mit Status und Kontaktleiste, Daten in Karten, rechte Spalte mit Status und Schnellaktionen.
+- **Files Changed**: neu `admin/partials/kunde_kopf.blade.php`, `admin/partials/kundendaten_zeile.blade.php`; `admin/partials/kundendaten.blade.php` (Karten-Layout), `admin/customer_show.blade.php` (Kopf, Portal aufklappbar, Reiter), `Support\Kundendatenblatt::bereichAlsText`; Test `KundendatenUndHausnummerTest`; `CLAUDE.md`, `FEATURE_MAP.md`.
+- **Database Changes**: keine. **API Changes**: keine.
+- **Potential Side Effects**: "E-Mail verfassen" steht jetzt im Menue "•••"; Portal-Zugang ist zugeklappt.
+- **Tests Performed**: Feature-Tests, Chromium Desktop 1500 px + iPhone 390 px (kein waagerechter Bildlauf, keine JS-Fehler), Kopieren im Browser geprueft.
+- **Result**: erledigt.
+
 ## 27.11.2026 - Hausnummer geht nicht mehr verloren + Kundendaten-Uebersicht mit Kopieren
 
 - **Task**: Betreiber: Hausnummer bleibt nach dem Dokumenten-Upload leer; Kundendaten nur ueber "Bearbeiten" sichtbar - gewuenscht Uebersicht mit Kopierfunktion und "Alle Kundendaten kopieren".
