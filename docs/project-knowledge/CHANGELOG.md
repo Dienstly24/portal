@@ -8,6 +8,14 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 27.11.2026 - Seitenleisten-Logo flach nach Vorlage
+
+- Task: Betreiber-Vorlage fuer das Logo der Beraterwelt-Seitenleiste.
+- Files: `public/images/logo-sidebar.png` (neu erzeugt aus `logo-white.png`: D oben gruen, unten weiss, Schrift weiss), `layouts/admin` (`?v=2` gegen alten Browser-Cache), CLAUDE.md.
+- Components: Beraterwelt-Layout. DB/API: keine. Kein Zeichen (R): eine eingetragene Marke ist nicht belegt.
+- Tests: `AssetLadungTest`, `KundendatenUndHausnummerTest`; im Browser angesehen.
+- Result: ACTIVE.
+
 ## 27.11.2026 - Kundenakte exakt nach Vorlage + Logo in der Seitenleiste
 
 - Task: Betreiber-Vorlage 1:1 (Raster, Reihenfolge, Logo), ohne Google-Karte.
