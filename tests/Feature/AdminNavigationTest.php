@@ -91,7 +91,7 @@ class AdminNavigationTest extends TestCase
 
         // "Berichte & Analyse" steht seit 26.11.2026 neben den Vertraegen
         // (Betreiber-Auftrag: in den Einstellungen sah sie niemand).
-        $this->assertSame(['kunden', 'interessenten', 'vertraege', 'berichte', 'aenderungen'], $keys($groups['kunden']));
+        $this->assertSame(['kunden', 'interessenten', 'vertraege', 'aenderungen'], $keys($groups['kunden']));
         $this->assertSame(['eingang', 'anforderungen', 'signaturen'], $keys($groups['dokumente']));
         // Die Kanal-Punkte kommen aus der DATENBANK, nicht aus dem Code:
         // "Kundenchat" ist der Portal-Kanal, jeder weitere aktive Kanal
@@ -204,7 +204,10 @@ class AdminNavigationTest extends TestCase
         // Monatsfrage "wie viele Kunden, aus welcher Sparte, welche Kunden"
         // gehoert zum Arbeitsweg, und in den Einstellungen oeffnete sie
         // niemand. Wieder um genau EINS angehoben.
-        $this->assertLessThanOrEqual(17, $sichtbar);
+        //
+        // Zurueck auf 16 seit 27.11.2026: die Berichte sind jetzt Reiter
+        // INNERHALB der Vertraege (ein Bereich statt zwei Menuepunkte).
+        $this->assertLessThanOrEqual(16, $sichtbar);
     }
 
     // ------------------------------------------------- Badges (Fall 5-7)
@@ -264,17 +267,17 @@ class AdminNavigationTest extends TestCase
         $this->assertArrayHasKey('postfach', $this->navGroups($user));
     }
 
-    public function test_berichte_stehen_fuer_jede_personalrolle_in_der_seitenleiste(): void
+    public function test_berichte_sind_reiter_der_vertraege_und_kein_eigener_menuepunkt(): void
     {
         foreach (['admin', 'manager', 'support', 'employee'] as $rolle) {
             $user = User::factory()->create(['role' => $rolle]);
-            $kunden = array_map(fn ($i) => $i->key, $this->navGroups($user)['kunden']->items);
-            $this->assertContains('berichte', $kunden, "Rolle {$rolle} muss die Berichte in der Seitenleiste sehen.");
-
-            // ... und nicht ein zweites Mal in den Einstellungen.
-            foreach ($this->nav($user)->settingsGroups() as $group) {
-                $this->assertNotContains('berichte', array_map(fn ($i) => $i->key, $group->items));
+            $alle = array_merge($this->navGroups($user), $this->nav($user)->settingsGroups());
+            foreach ($alle as $group) {
+                $this->assertNotContains('berichte', array_map(fn ($i) => $i->key, $group->items), "Rolle {$rolle}");
             }
+
+            $vertraege = collect($this->navGroups($user)['kunden']->items)->firstWhere('key', 'vertraege');
+            $this->assertContains('admin.reports*', $vertraege->activePatterns, "Rolle {$rolle}");
         }
     }
 

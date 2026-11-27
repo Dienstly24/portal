@@ -77,6 +77,7 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - C `ReportController`; S `Reporting/*` (inkl. `BerichtsListe`, Detaillisten-Registry `DashboardAnalyticsService::LISTEN`); V `admin/reports*`, `admin/reports_liste`, `partials/analytics/*`; `App\Support\Bundesland`
 - Seit 25.11.2026 (Berichte 2.0): jede Zahl fuehrt auf ihre Detailliste `/admin/reports/liste` (+ Excel/CSV, nur admin/manager); Filter Stadt/PLZ/Gesellschaft/Werber/Monat; Ranglisten Staedte, Sparten im Zeitraum, Mitarbeiter & Vermittler, Gesellschaften
 - Seit 26.11.2026: Monatsuebersicht `/admin/reports/monat` (Vertraege/Kunden/Jahresbeitrag je Sparte mit Namen, Vergleich Vormonat); "Berichte & Analyse" in der Seitenleiste (Gruppe Kunden, nicht mehr in den Einstellungen); Vertragsliste mit Filtern Sparte/Gesellschaft/Stufe/Abschlussmonat, Kennzahlen und Weg in die Berichte
+- Seit 27.11.2026: EIN Bereich - Vertraege/Analyse/Monatsuebersicht/Neukunden als Reiter (`admin/partials/vertraege_bereich`), kein eigener Menuepunkt mehr; "Diesen Monat" (neue Vertraege, Kunden mit Abschluss, neue Kunden) in der Vertragsliste
 - Tests `ReportsDashboardTest`, `BerichteDrillDownTest`, `NewCustomerReportTest`, `LeistungsmessungTest`, `VertraegeUndMonatsberichtTest` · Status **ACTIVE**
 
 ## B. Dokumente

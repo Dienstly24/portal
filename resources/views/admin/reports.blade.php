@@ -37,20 +37,12 @@
 
 <div class="page-header an-head">
     <div>
-        <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Berichte &amp; Analysen</span></div>
-        <h1 class="page-title">Berichte &amp; Analysen</h1>
+        <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.contracts') }}">Verträge</a><span class="breadcrumb-sep">›</span><span>Analyse</span></div>
+        <h1 class="page-title">Verträge – Analyse</h1>
         <div class="page-sub">Leistungskennzahlen, Vertragsentwicklung und Kundenanalyse</div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="{{ route('admin.reports') }}" class="rep-tab rep-tab-active">Übersicht</a>
-        <a href="{{ route('admin.reports.monat') }}" class="rep-tab">Monatsübersicht</a>
-        <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab">Neukunden</a>
-        <a href="{{ route('admin.contracts') }}" class="rep-tab">📄 Verträge</a>
-        @can('provisionen-verwalten')
-            <a href="{{ route('admin.provisions') }}" class="rep-tab">Vermittler-Provisionen</a>
-        @endcan
-    </div>
 </div>
+@include('admin.partials.vertraege_bereich', ['aktiv' => 'analyse', 'analyseQuery' => $f->alsQuery()])
 
 @include('admin.partials.analytics.filter_bar', ['f' => $f, 'auswahl' => $auswahl])
 
