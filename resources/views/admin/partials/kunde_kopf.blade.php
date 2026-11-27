@@ -53,7 +53,7 @@
         </div>
         <div class="kk-aktionen">
             @if(! $kkSperre)
-            <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-emerald">＋ Vertrag hinzufügen</a>
+            <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-emerald">+ Vertrag hinzufügen</a>
             @endif
             <a href="{{ route('admin.customer.edit', $customer->id) }}" class="btn btn-ghost">✏️ Bearbeiten</a>
             <button type="button" class="btn btn-ghost" data-h-click="2e6547eb33">✉️ Nachricht</button>
@@ -105,13 +105,13 @@
 </div>
 
 <style>
-.kk-kopf{background:linear-gradient(135deg,var(--surface,#FBFAF6) 0%,var(--canvas,#F1EEE5) 100%);border:1px solid var(--line);border-radius:16px;padding:18px 22px 16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(19,26,23,.05);}
+.kk-kopf{background:linear-gradient(135deg,var(--surface) 0%,var(--canvas) 100%);border:1px solid var(--line);border-radius:16px;padding:18px 22px 16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(19,26,23,.05);}
 .kk-oben{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;}
 .kk-person{display:flex;gap:16px;align-items:center;min-width:0;}
-.kk-avatar{width:64px;height:64px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--emerald,#17A65B),var(--graphite,#131A17));box-shadow:0 0 0 4px #fff,0 2px 8px rgba(19,26,23,.18);}
+.kk-avatar{width:64px;height:64px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--emerald),var(--graphite));box-shadow:0 0 0 4px #fff,0 2px 8px rgba(19,26,23,.18);}
 .kk-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
-.kk-badge{font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--canvas,#F1EEE5);color:var(--ink-soft);border:1px solid var(--line);}
-.kk-badge-ok{background:var(--emerald-soft,#E8F7EF);color:var(--emerald-dark,#128a4b);border-color:transparent;}
+.kk-badge{font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--canvas);color:var(--ink-soft);border:1px solid var(--line);}
+.kk-badge-ok{background:var(--emerald-soft);color:var(--emerald-deep);border-color:transparent;}
 .kk-name{margin:0;font-size:24px;line-height:1.2;overflow-wrap:anywhere;}
 .kk-meta{font-size:13.5px;color:var(--ink-soft);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 6px;}
 .kk-meta strong{color:var(--ink);}
@@ -124,7 +124,7 @@
 .kk-feld:first-child{border-left:0;}
 .kk-feld:hover:not(:disabled){background:var(--canvas);}
 .kk-feld:disabled{cursor:default;color:var(--ink-soft);font-weight:400;}
-.kk-feld.kd-ok{background:var(--emerald-soft,#E8F7EF);}
+.kk-feld.kd-ok{background:var(--emerald-soft);}
 .kk-icon{flex:none;}
 .kk-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .kk-hinweis{margin-top:12px;background:#FEF3C7;border:1px solid #F0E0B0;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#92400E;}

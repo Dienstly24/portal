@@ -100,7 +100,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 .cust-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;margin-bottom:18px;overflow-x:auto;scrollbar-width:thin;}
 .cust-tab{flex:1;text-align:center;padding:10px 14px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;text-decoration:none;transition:.15s;border:none;background:none;}
 .cust-tab:hover{background:var(--canvas);color:var(--ink);}
-.cust-tab.active{background:linear-gradient(180deg,#19b463,#128a4b);color:#fff;box-shadow:0 2px 6px rgba(23,166,91,.35);}
+.cust-tab.active{background:linear-gradient(180deg,var(--emerald-bright),var(--emerald-deep));color:#fff;box-shadow:0 2px 6px rgba(23,166,91,.35);}
 .kk-portal-zeile{display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;list-style:none;}
 .kk-portal-zeile::-webkit-details-marker{display:none;}
 .kk-portal-mehr{margin-left:auto;font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:4px 12px;}

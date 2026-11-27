@@ -126,11 +126,11 @@
 .kd-karte{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px rgba(19,26,23,.04);min-width:0;}
 .kd-karte-kopf{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .kd-karte-titel{font-size:16px;font-weight:700;margin:0;display:flex;align-items:center;gap:8px;color:var(--ink);flex:1;min-width:0;}
-.kd-karte-icon{width:30px;height:30px;border-radius:8px;background:var(--emerald-soft,#E8F7EF);display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex:none;}
+.kd-karte-icon{width:30px;height:30px;border-radius:8px;background:var(--emerald-soft);display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex:none;}
 .kd-kopf-knopf{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap;}
 .kd-kopf-knopf:hover{background:var(--canvas);}
-.kd-kopf-knopf.kd-ok{background:var(--emerald-soft,#E8F7EF);border-color:var(--emerald);color:var(--emerald-dark,#128a4b);}
-.kd-sicher{font-size:11.5px;font-weight:600;color:var(--emerald-dark,#128a4b);background:var(--emerald-soft,#E8F7EF);border-radius:999px;padding:2px 9px;white-space:nowrap;}
+.kd-kopf-knopf.kd-ok{background:var(--emerald-soft);border-color:var(--emerald);color:var(--emerald-deep);}
+.kd-sicher{font-size:11.5px;font-weight:600;color:var(--emerald-deep);background:var(--emerald-soft);border-radius:999px;padding:2px 9px;white-space:nowrap;}
 .kd-adresse{font-size:15px;font-weight:600;line-height:1.55;color:var(--ink);padding:4px 0 10px;border-bottom:1px solid var(--line);margin-bottom:4px;}
 .kd-liste{margin:0;}
 .kd-zeile{display:grid;grid-template-columns:minmax(100px,40%) 1fr;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);}
@@ -152,24 +152,24 @@
 .kd-mehr summary::after{content:' ▾';}
 .kd-mehr[open] summary::after{content:' ▴';}
 .kd-mehr[open] summary{margin-bottom:8px;}
-.kd-zahl{display:inline-block;margin-left:4px;font-size:11px;background:var(--emerald-soft,#E8F7EF);color:var(--emerald-dark,#128a4b);border-radius:999px;padding:0 7px;}
-.kd-karte-link{display:inline-block;margin-top:10px;font-size:12.5px;font-weight:600;color:var(--emerald-dark,#128a4b);text-decoration:none;}
+.kd-zahl{display:inline-block;margin-left:4px;font-size:11px;background:var(--emerald-soft);color:var(--emerald-deep);border-radius:999px;padding:0 7px;}
+.kd-karte-link{display:inline-block;margin-top:10px;font-size:12.5px;font-weight:600;color:var(--emerald-deep);text-decoration:none;}
 .kd-seite{display:flex;flex-direction:column;gap:16px;min-width:0;}
-.kd-status{background:linear-gradient(150deg,var(--graphite,#131A17) 0%,#16392A 100%);color:#fff;border-radius:14px;padding:18px;box-shadow:0 4px 14px rgba(19,26,23,.18);}
+.kd-status{background:linear-gradient(150deg,var(--graphite) 0%,#16392A 100%);color:#fff;border-radius:14px;padding:18px;box-shadow:0 4px 14px rgba(19,26,23,.18);}
 .kd-status-zeile{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
 .kd-status-label{font-size:12.5px;opacity:.75;}
 .kd-status-wert{font-size:22px;font-weight:700;margin-top:2px;}
-.kd-status-pill{font-size:12px;font-weight:700;background:var(--emerald,#17A65B);border-radius:999px;padding:4px 10px;white-space:nowrap;}
+.kd-status-pill{font-size:12px;font-weight:700;background:var(--emerald);border-radius:999px;padding:4px 10px;white-space:nowrap;}
 .kd-status-badge{display:inline-block;margin-top:6px;font-size:13px;font-weight:700;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:4px 12px;}
-.kd-alle-knopf{display:block;width:100%;margin-top:16px;border:0;border-radius:10px;padding:11px 12px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;color:#fff;background:linear-gradient(180deg,#19b463,#128a4b);box-shadow:0 2px 0 rgba(0,0,0,.2);}
+.kd-alle-knopf{display:block;width:100%;margin-top:16px;border:0;border-radius:10px;padding:11px 12px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;color:#fff;background:linear-gradient(180deg,var(--emerald-bright),var(--emerald-deep));box-shadow:0 2px 0 rgba(0,0,0,.2);}
 .kd-alle-knopf:hover{filter:brightness(1.06);}
-.kd-alle-knopf.kd-ok{background:#fff;color:var(--emerald-dark,#128a4b);}
+.kd-alle-knopf.kd-ok{background:#fff;color:var(--emerald-deep);}
 .kd-schnell{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
 .kd-schnell .kd-karte-titel{margin-bottom:6px;}
 .kd-schnell a,.kd-schnell button{display:flex;justify-content:space-between;align-items:center;width:100%;padding:10px 6px;border:0;border-top:1px solid var(--line);background:none;font:inherit;font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;cursor:pointer;text-align:left;}
 .kd-schnell a:hover,.kd-schnell button:hover{background:var(--canvas);}
 .kd-schnell span{color:var(--ink-soft);font-size:16px;}
-.kd-meldung{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:60;background:var(--graphite,#131A17);color:#fff;font-size:13px;font-weight:600;border-radius:999px;padding:9px 18px;box-shadow:0 6px 20px rgba(0,0,0,.25);}
+.kd-meldung{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:60;background:var(--graphite);color:#fff;font-size:13px;font-weight:600;border-radius:999px;padding:9px 18px;box-shadow:0 6px 20px rgba(0,0,0,.25);}
 .kd-layout [hidden]{display:none!important;}
 @media (max-width:1180px){.kd-layout{grid-template-columns:minmax(0,1fr)}.kd-seite{display:grid;grid-template-columns:1fr 1fr}}
 @media (max-width:760px){.kd-haupt{grid-template-columns:minmax(0,1fr)}.kd-seite{grid-template-columns:1fr}}
