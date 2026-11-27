@@ -39,6 +39,18 @@ class BrandAssets
         return self::url('logo-dunkel', $width);
     }
 
+    /**
+     * Wortmarke der Beraterwelt-Seitenleiste (Betreiber-Vorlage 27.11.2026):
+     * gruenes D-Symbol, Schrift weiss. Ein im Admin hinterlegtes helles
+     * Logo (Slot logo-hell) hat Vorrang - dann bestimmt der Betreiber.
+     */
+    public static function sidebarLogo(): string
+    {
+        $url = self::logoLight();
+
+        return $url === self::FALLBACKS['logo-hell'] ? '/images/logo-sidebar.png' : $url;
+    }
+
     /** Weisses D-Symbol fuer dunkle Seitenleisten. */
     public static function logoSymbolLight(?int $width = null): string
     {

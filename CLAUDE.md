@@ -1635,6 +1635,21 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   aktive Vertraege, Beitrag, "Alle Kundendaten kopieren", Schnellaktionen).
   KEINE eingebettete Karte (Fremdzugriff/CSP) - nur ein Link zu
   OpenStreetMap, geladen erst auf Klick.
+  **Raster wie die Vorlage (Nachtrag 27.11.2026)**: drei Spalten -
+  Persoenlich | Adresse | Status (Kunde seit, Vertraege, "Alle
+  Kundendaten kopieren"), Bank | Versicherungsdaten | Schnellaktionen,
+  Portal-Zugang (`admin/partials/portal_zugang`, aus `customer_show`
+  herausgeloest) | Verknuepfte Kunden (Familie + Beziehungen, je Akte
+  einmal), darunter Fusszeile mit "Zuletzt aktualisiert", "Kunde loeschen"
+  (nur admin, wie die Route) und "Duplikat zusammenfuehren" (ersetzt die
+  alten Knoepfe am Seitenende). Das Kartenbild in der Adresse ist eine
+  reine CSS-GRAFIK - kein Kartendienst, kein Google (Betreiber-Vorgabe,
+  Test). Kopier-Symbole je Zeile erscheinen beim Ueberfahren (Touch:
+  immer). Reiter "Verlauf" heisst "Aenderungen". Seitenleiste der
+  Beraterwelt: volle Wortmarke `BrandAssets::sidebarLogo()`
+  (`public/images/logo-sidebar.png`, gruenes D + weisse Schrift, aus
+  `logo.png` erzeugt; ein Admin-Logo im Slot logo-hell hat Vorrang),
+  die Wortmarke in der Kopfzeile entfaellt; aktiver Menuepunkt gruen.
 - **Der Kontakt-Screenshot darf nicht an seiner Darstellung scheitern**
   (Lehre 21.08.2026, gemeldet): Derselbe Kontaktzettel (Name + zwei Daten,
   Anschrift, Handynummer, E-Mail, IBAN) wurde als Screenshot einmal erkannt

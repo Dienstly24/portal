@@ -7,6 +7,8 @@
     $kkName = trim((string) ($customer->user->name ?? ''));
     $kkInitialen = collect(preg_split('/\s+/', $kkName) ?: [])->filter()->map(fn ($t) => mb_strtoupper(mb_substr($t, 0, 1)))->take(2)->implode('');
     $kkAdresse = $customer->effectiveContact('address')['value'] ?: trim((string) $customer->address);
+    // Zweizeilig wie in der Vorlage: Strasse / PLZ Ort (Rest).
+    $kkAdressTeile = array_map('trim', explode(',', $kkAdresse, 2));
     $kkMail = ($customer->user && $customer->user->hasRealEmail()) ? (string) $customer->user->email : (string) $customer->email2;
     $kkTelefon = $customer->effectiveContact('mobile')['value'] ?: $customer->effectiveContact('phone')['value'];
     $kkIban = strtoupper((string) preg_replace('/\s+/', '', (string) $customer->iban));
@@ -15,7 +17,7 @@
     $kkSperre = $customer->eigenstaendigkeitsSperre();
 @endphp
 <div class="kk-kopf">
-    <div class="breadcrumb" style="margin-bottom:12px;">
+    <div class="breadcrumb" style="margin-bottom:10px;position:relative;">
         <a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span>
         <a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span>
         <span>{{ $kkName }}</span>
@@ -23,11 +25,14 @@
 
     <div class="kk-oben">
         <div class="kk-person">
-            <div class="kk-avatar" aria-hidden="true">{{ $kkInitialen ?: '?' }}</div>
+            <div class="kk-avatar-rahmen">
+                <div class="kk-avatar" aria-hidden="true">{{ $kkInitialen ?: '?' }}</div>
+                @if($kkAktiv > 0)<span class="kk-avatar-ok" title="Aktiver Kunde">✓</span>@endif
+            </div>
             <div style="min-width:0;">
                 <div class="kk-badges">
                     @if($kkAktiv > 0)
-                    <span class="kk-badge kk-badge-ok">● Aktiv · {{ $kkAktiv }} {{ $kkAktiv === 1 ? 'Vertrag' : 'Verträge' }}</span>
+                    <span class="kk-badge kk-badge-ok"><span class="kk-badge-haken">✓</span> Aktiv</span>
                     @else
                     <span class="kk-badge">Kein aktiver Vertrag</span>
                     @endif
@@ -38,22 +43,19 @@
                 <h1 class="page-title kk-name">{{ $kkName }}</h1>
                 <div class="kk-meta">
                     @if(filled($customer->customer_number))
-                    <span>Kundennummer: <strong>{{ $customer->customer_number }}</strong></span>
+                    <span>Kundennummer: {{ $customer->customer_number }}</span>
                     @else
                     <span>Keine eigene Kundennummer (abhängiges Familienmitglied)</span>
                     @endif
                     @if($customer->birth_date)
-                    <span class="kk-punkt">·</span><span>Geburtsdatum: <strong>{{ \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') }}</strong></span>
-                    @endif
-                    @if($customer->created_at)
-                    <span class="kk-punkt">·</span><span>Kunde seit {{ $customer->created_at->lokal()->format('d.m.Y') }}</span>
+                    <span class="kk-punkt">·</span><span>Geburtsdatum: {{ \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') }}</span>
                     @endif
                 </div>
             </div>
         </div>
         <div class="kk-aktionen">
             @if(! $kkSperre)
-            <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-emerald">+ Vertrag hinzufügen</a>
+            <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-emerald">📄 Vertrag hinzufügen</a>
             @endif
             <a href="{{ route('admin.customer.edit', $customer->id) }}" class="btn btn-ghost">✏️ Bearbeiten</a>
             <button type="button" class="btn btn-ghost" data-h-click="2e6547eb33">✉️ Nachricht</button>
@@ -71,10 +73,10 @@
         </div>
     </div>
 
-    {{-- Kontaktleiste: Klick kopiert den Originalwert (IBAN ohne Leerzeichen). --}}
+{{-- Kontaktleiste: Klick kopiert den Originalwert (IBAN ohne Leerzeichen). --}}
     <div class="kk-leiste">
         <button type="button" class="kk-feld kd-kopieren" data-kopie="{{ $kkAdresse }}" @disabled($kkAdresse === '') title="Adresse kopieren">
-            <span class="kk-icon">📍</span><span class="kk-text">{{ $kkAdresse !== '' ? $kkAdresse : 'Keine Adresse' }}</span>
+            <span class="kk-icon">📍</span><span class="kk-text">@if($kkAdresse !== '')<span class="kk-zeile1">{{ $kkAdressTeile[0] }}</span>@if(isset($kkAdressTeile[1]))<span class="kk-zeile2">{{ $kkAdressTeile[1] }}</span>@endif @else Keine Adresse @endif</span>
         </button>
         <button type="button" class="kk-feld kd-kopieren" data-kopie="{{ $kkMail }}" @disabled($kkMail === '') title="E-Mail kopieren">
             <span class="kk-icon">✉️</span><span class="kk-text">{{ $kkMail !== '' ? $kkMail : 'Keine E-Mail' }}</span>
@@ -105,29 +107,39 @@
 </div>
 
 <style>
-.kk-kopf{background:linear-gradient(135deg,var(--surface) 0%,var(--canvas) 100%);border:1px solid var(--line);border-radius:16px;padding:18px 22px 16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(19,26,23,.05);}
-.kk-oben{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;}
-.kk-person{display:flex;gap:16px;align-items:center;min-width:0;}
-.kk-avatar{width:64px;height:64px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--emerald),var(--graphite));box-shadow:0 0 0 4px #fff,0 2px 8px rgba(19,26,23,.18);}
-.kk-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
-.kk-badge{font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--canvas);color:var(--ink-soft);border:1px solid var(--line);}
+.kk-kopf{position:relative;overflow:hidden;background:
+    radial-gradient(ellipse 45% 90% at 92% 10%,rgba(23,166,91,.10),transparent 70%),
+    linear-gradient(120deg,var(--surface) 0%,var(--canvas) 55%,#E9EFE9 100%);
+  border:1px solid var(--line);border-radius:20px;padding:18px 24px 18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(19,26,23,.06);}
+.kk-oben{position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;}
+.kk-person{display:flex;gap:22px;align-items:center;min-width:0;}
+.kk-avatar-rahmen{position:relative;flex:none;}
+.kk-avatar{width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--emerald),var(--graphite));box-shadow:0 0 0 6px #fff,0 6px 18px rgba(19,26,23,.22);}
+.kk-avatar-ok{position:absolute;right:2px;bottom:6px;width:34px;height:34px;border-radius:50%;background:var(--emerald);color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px #fff;}
+.kk-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.kk-badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;border-radius:999px;padding:4px 12px;background:var(--canvas);color:var(--ink-soft);border:1px solid var(--line);}
 .kk-badge-ok{background:var(--emerald-soft);color:var(--emerald-deep);border-color:transparent;}
-.kk-name{margin:0;font-size:24px;line-height:1.2;overflow-wrap:anywhere;}
-.kk-meta{font-size:13.5px;color:var(--ink-soft);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 6px;}
-.kk-meta strong{color:var(--ink);}
-.kk-aktionen{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.kk-badge-haken{width:20px;height:20px;border-radius:50%;background:var(--emerald);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;}
+.kk-name{margin:0;font-size:30px;font-weight:800;line-height:1.2;overflow-wrap:anywhere;}
+.kk-meta{font-size:15px;font-weight:600;color:var(--ink);margin-top:6px;display:flex;flex-wrap:wrap;gap:4px 8px;}
+.kk-punkt{color:var(--ink-soft);}
+.kk-aktionen{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.kk-aktionen .btn{border-radius:12px;padding:10px 16px;font-weight:700;}
+.kk-aktionen .btn-ghost{background:#fff;}
 .kk-menue{position:absolute;right:0;top:calc(100% + 6px);z-index:30;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(19,26,23,.12);min-width:230px;padding:6px;}
 .kk-menue a{display:block;padding:8px 10px;border-radius:6px;font-size:13.5px;color:var(--ink);text-decoration:none;}
 .kk-menue a:hover{background:var(--canvas);}
-.kk-leiste{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
-.kk-feld{display:flex;align-items:center;gap:10px;padding:12px 16px;border:0;border-left:1px solid var(--line);background:none;text-align:left;cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;color:var(--ink);min-width:0;}
+.kk-leiste{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:18px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(19,26,23,.06);}
+.kk-feld{display:flex;align-items:center;gap:14px;padding:14px 20px;border:0;border-left:1px solid var(--line);background:none;text-align:left;cursor:pointer;font:inherit;font-size:14px;font-weight:700;color:var(--ink);min-width:0;}
 .kk-feld:first-child{border-left:0;}
 .kk-feld:hover:not(:disabled){background:var(--canvas);}
 .kk-feld:disabled{cursor:default;color:var(--ink-soft);font-weight:400;}
 .kk-feld.kd-ok{background:var(--emerald-soft);}
-.kk-icon{flex:none;}
-.kk-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.kk-hinweis{margin-top:12px;background:#FEF3C7;border:1px solid #F0E0B0;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#92400E;}
-@media (max-width:900px){.kk-leiste{grid-template-columns:1fr 1fr}.kk-feld:nth-child(3){border-left:0}.kk-feld:nth-child(n+3){border-top:1px solid var(--line)}}
-@media (max-width:560px){.kk-leiste{grid-template-columns:1fr}.kk-feld{border-left:0}.kk-feld+.kk-feld{border-top:1px solid var(--line)}.kk-avatar{width:52px;height:52px;font-size:18px}.kk-name{font-size:20px}}
+.kk-icon{flex:none;font-size:17px;}
+.kk-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.kk-zeile1,.kk-zeile2{display:block;overflow:hidden;text-overflow:ellipsis;}
+.kk-zeile2{font-weight:500;color:var(--ink-soft);font-size:13px;}
+.kk-hinweis{position:relative;margin-top:12px;background:#FEF3C7;border:1px solid #F0E0B0;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#92400E;}
+@media (max-width:900px){.kk-leiste{grid-template-columns:1fr 1fr}.kk-feld:nth-child(3){border-left:0}.kk-feld:nth-child(n+3){border-top:1px solid var(--line)}.kk-avatar{width:84px;height:84px;font-size:28px}.kk-avatar-ok{width:26px;height:26px;font-size:13px}}
+@media (max-width:560px){.kk-leiste{grid-template-columns:1fr}.kk-feld{border-left:0}.kk-feld+.kk-feld{border-top:1px solid var(--line)}.kk-avatar{width:64px;height:64px;font-size:22px;box-shadow:0 0 0 4px #fff,0 4px 10px rgba(19,26,23,.2)}.kk-avatar-ok{width:22px;height:22px;font-size:11px;right:-2px;bottom:0}.kk-name{font-size:22px}.kk-meta{font-size:13.5px}.kk-kopf{padding:14px 14px}.kk-person{gap:14px}}
 </style>

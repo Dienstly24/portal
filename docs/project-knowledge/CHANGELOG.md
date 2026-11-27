@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 27.11.2026 - Kundenakte exakt nach Vorlage + Logo in der Seitenleiste
+
+- Task: Betreiber-Vorlage 1:1 (Raster, Reihenfolge, Logo), ohne Google-Karte.
+- Files: `admin/partials/kundendaten`, `kunde_kopf`, `kundendaten_zeile`, neu `portal_zugang`, `admin/customer_show`, `layouts/admin`, `App\Support\BrandAssets::sidebarLogo`, `public/images/logo-sidebar.png`; Tests `KundendatenUndHausnummerTest`, `AssetLadungTest`, `AbhaengigeKinderTest`.
+- Components: Kundenakte (Uebersicht), Beraterwelt-Layout. DB/API: keine.
+- Side effects: alte Knoepfe "Zusammenfuehren/Loeschen" am Seitenende entfallen (stehen in der Fusszeile der Uebersicht; Loeschen nur noch fuer admin sichtbar - die Route war schon admin-only). Kopfzeile ohne Wortmarke.
+- Tests: volle Suite gruen bis auf 6 Signaturtests ohne lokales qpdf (CI hat qpdf); Chromium Desktop 1700 px / iPhone 390 px ohne horizontales Scrollen und ohne JS-Fehler.
+- Result: ACTIVE.
+
 ## 27.11.2026 - Kundenakte im neuen Layout (Kopf, Kontaktleiste, Karten, Schnellaktionen)
 
 - **Task**: Betreiber-Vorlage "modernes CRM": Kopf mit Status und Kontaktleiste, Daten in Karten, rechte Spalte mit Status und Schnellaktionen.

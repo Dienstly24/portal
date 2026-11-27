@@ -423,12 +423,12 @@ class AbhaengigeKinderTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.customer', $kind->id))->assertOk()
             ->assertSee('Keine eigene Kundennummer (abhängiges Familienmitglied)')
-            ->assertDontSee('+ Vertrag hinzufügen');
+            ->assertDontSee('📄 Vertrag hinzufügen');
 
         $this->actingAs($admin)->get(route('admin.customer', $vater->id))->assertOk()
             ->assertSee('Lina Haddad')
             ->assertSee('ohne eigene Kundennummer')
             ->assertSee('Erinnerung „Portal vorbereiten"', false)
-            ->assertSee('+ Vertrag hinzufügen');
+            ->assertSee('📄 Vertrag hinzufügen');
     }
 }
