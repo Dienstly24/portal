@@ -8,6 +8,15 @@ API Changes · Potential Side Effects · Tests Performed · Result.
 
 ---
 
+## 28.11.2026 - Dialoge im gemeinsamen Design + PDF-Export der Vertragsliste
+
+- Task: Betreiber-Wunsch, die offenen Punkte der UI-Modernisierung in einem PR zu erledigen.
+- Files: V `admin/tasks` (Aufgaben-Dialog), `admin/documents_inbox` (Zuordnen-Dialog, Erkannter Text, Feldstatus-Farben als Tokens), `admin/contracts` (Knopf PDF); `Admin\ContractController` (`format=pdf`, `vertragsPdf`); `App\Services\Pdf\TabellenPdf` (neu); `resources/css/components.css` (Dialog-Bausteine); Test `DialogeUndPdfExportTest` (neu); CLAUDE.md, FEATURE_MAP.
+- Components: Aufgaben, Dokumenten-Eingang, Vertragsliste. DB: keine. API: keine neue Route (`contracts.export` nimmt `format=pdf`).
+- Side effects: Aktionsleiste der Dialoge steht fest unten (vorher am Ende des Formulars). Funktionen, IDs, Texte unveraendert.
+- Tests: volle Suite gruen bis auf die 6 Signaturtests ohne lokales qpdf (CI hat qpdf); `composer lint`/`composer stan` gruen; PDF mit poppler geprueft (pdfinfo/pdftotext/pdftoppm: 2 Seiten A4 quer, Umlaute, Kuerzung, Summe); Chromium Desktop 1366 px + iPhone 13: Aktionsleiste im Bild, kein horizontales Scrollen, keine JS-Fehler.
+- Result: ACTIVE.
+
 ## 27.11.2026 - Aufgaben und Dokumenten-Eingang im gemeinsamen Design
 
 - Task: Betreiber-Wunsch, beide Seiten an das neue Design der Beraterwelt anzugleichen.

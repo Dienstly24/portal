@@ -355,13 +355,19 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
 </script>
 
 {{-- Aufgaben-Modal (Anlegen + Bearbeiten) --}}
-<div class="d24-modal" id="task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;">
-    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:640px;position:relative;margin:auto 0;">
-        <button data-h-click="d085771a23" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--ink-soft);">✕</button>
-        <div id="tf-heading" style="font-size:18px;font-weight:700;margin-bottom:18px;">Neue Aufgabe</div>
+<div class="d24-modal dialog-hinter" id="task-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="tf-heading">
+    <div class="dialog">
+        <div class="dialog-kopf">
+            <div>
+                <div class="dialog-titel" id="tf-heading">Neue Aufgabe</div>
+                <div class="dialog-unter">Aufgabe oder Wiedervorlage – die Erinnerung kommt am Stichtag über die Glocke.</div>
+            </div>
+            <button type="button" class="dialog-zu" data-h-click="d085771a23" aria-label="Schließen">✕</button>
+        </div>
+        <div class="dialog-inhalt">
 
         @if($errors->any())
-        <div style="background:#F9E3E3;color:#A32D2D;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:16px;">
+        <div class="dialog-meldung dialog-meldung-fehler">
             @foreach($errors->all() as $err)<div>• {{ $err }}</div>@endforeach
         </div>
         @endif
@@ -374,7 +380,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
 
             <div class="field"><label>Titel *</label><input type="text" name="title" id="tf-title" required maxlength="200" placeholder="Was ist zu tun? z. B. „Kunde nachfassen: Angebot KFZ&#8220;" aria-label="Titel"></div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="dialog-raster">
                 <div class="field"><label>Typ</label>
                     <select name="type" id="tf-type" aria-label="Typ">
                         @foreach(\App\Models\Task::TYPES as $tKey => $tDef)
@@ -391,17 +397,16 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                 </div>
             </div>
 
-            <div class="field" style="margin-bottom:10px;"><label>Fällig am</label>
+            <div class="field"><label>Fällig am</label>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                     <input type="date" name="due_date" id="tf-due" aria-label="Fällig am" style="width:170px;" data-h-change="abdcfeee46">
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;" id="tf-due-chips">
+                    <div class="schnellwahl" id="tf-due-chips">
                         @foreach([0=>'Heute',1=>'Morgen',3=>'+3 Tage',7=>'+1 Woche',10=>'+10 Tage',20=>'+20 Tage',30=>'+1 Monat'] as $d=>$lbl)
-                        <button type="button" class="due-chip" data-days="{{ $d }}" data-h-click="task-faellig" data-tage="{{ $d }}"
-                            style="border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--ink);">{{ $lbl }}</button>
+                        <button type="button" class="due-chip" data-days="{{ $d }}" data-h-click="task-faellig" data-tage="{{ $d }}">{{ $lbl }}</button>
                         @endforeach
                     </div>
                 </div>
-                <div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">Für Wiedervorlagen einfach „+10 Tage" / „+20 Tage" wählen – die Erinnerung kommt am Stichtag automatisch über die Glocke.</div>
+                <div class="dialog-hinweis">Für Wiedervorlagen einfach „+10 Tage" / „+20 Tage" wählen – die Erinnerung kommt am Stichtag automatisch über die Glocke.</div>
             </div>
 
             <div class="field"><label>Zuweisen an *</label>
@@ -414,7 +419,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
 
             <div class="field" style="position:relative;">
                 <label>Kunde (optional)</label>
-                <div id="tk-picked" style="display:none;align-items:center;gap:8px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:9px 12px;">
+                <div id="tk-picked" class="kundenwahl-gewaehlt" style="display:none;">
                     <span style="font-size:14px;">👤</span>
                     <span style="flex:1;min-width:0;font-size:13.5px;">
                         <strong id="tk-picked-name"></strong>
@@ -423,19 +428,19 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                     <button type="button" data-h-click="607c69ec0a" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:15px;" title="Kunde entfernen">✕</button>
                 </div>
                 <input type="text" id="tk-search" autocomplete="off" placeholder="Kunde suchen: Name, Nummer, E-Mail, Firma, Kennzeichen…" aria-label="Kunde suchen: Name, Nummer, E-Mail, Firma, Kennzeichen">
-                <div id="tk-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:280px;overflow-y:auto;z-index:50;margin-top:4px;"></div>
+                <div id="tk-results" class="kundenwahl-treffer" style="display:none;"></div>
                 <input type="hidden" name="customer_id" id="tf-customer-id">
             </div>
 
             @if($canAutoEmail)
-            <div id="tf-ae-wrap" style="display:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px;background:var(--surface);">
+            <div id="tf-ae-wrap" class="dialog-abschnitt" style="display:none;">
                 <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;font-weight:600;">
                     <input type="checkbox" name="auto_email" value="1" id="tf-ae" data-h-change="315059b22f" style="width:auto;">
                     ⏱️✉️ E-Mail automatisch an den Kunden senden
                 </label>
-                <div id="tf-ae-hint" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">Die E-Mail geht am gewählten Tag ab 08:00 Uhr automatisch raus – z. B. eine Erinnerung oder Unterlagen-Anforderung. Wird die Aufgabe vorher erledigt, wird nichts gesendet.</div>
+                <div id="tf-ae-hint" class="dialog-hinweis">Die E-Mail geht am gewählten Tag ab 08:00 Uhr automatisch raus – z. B. eine Erinnerung oder Unterlagen-Anforderung. Wird die Aufgabe vorher erledigt, wird nichts gesendet.</div>
                 <div id="tf-ae-fields" style="display:none;margin-top:12px;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div class="dialog-raster">
                         <div class="field" style="margin-bottom:12px;"><label>Vorlage</label>
                             <select id="tf-ae-template" data-h-change="13317bb20f" aria-label="Vorlage">
                                 <option value="">– Frei schreiben –</option>
@@ -447,33 +452,33 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                         <div class="field" style="margin-bottom:12px;"><label>Senden am *</label>
                             <div style="display:flex;gap:6px;align-items:center;">
                                 <input type="date" name="auto_email_send_on" id="tf-ae-date" aria-label="E-Mail senden am" style="flex:1;">
-                                <button type="button" data-h-click="2e2af50239" title="Sendetermin = Fälligkeitstag" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer;white-space:nowrap;">= Fällig am</button>
+                                <button type="button" data-h-click="2e2af50239" title="Sendetermin = Fälligkeitstag" class="btn btn-ghost btn-sm" style="white-space:nowrap;">= Fällig am</button>
                             </div>
                         </div>
                     </div>
                     <div class="field" style="margin-bottom:12px;"><label>Betreff *</label><input type="text" name="auto_email_subject" id="tf-ae-subject" maxlength="200" placeholder="z. B. Kurze Erinnerung: Ihre Unterlagen" aria-label="Betreff"></div>
                     <div class="field" style="margin-bottom:8px;"><label>E-Mail-Text *</label><textarea name="auto_email_body" id="tf-ae-body" style="min-height:130px;" placeholder="{{ $mustache('anrede') }},&#10;&#10;…" aria-label=",&#10;&#10;"></textarea></div>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <div class="schnellwahl schnellwahl-mono" style="align-items:center;">
                         <span class="muted-2xs">Platzhalter:</span>
                         @foreach($placeholders as $ph => $phLabel)
-                        <button type="button" data-h-click="7b9cae84d2" data-a0="{{ $mustache($ph) }}" title="{{ $phLabel }}"
-                            style="border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 9px;font-size:11.5px;cursor:pointer;color:var(--ink-soft);font-family:monospace;">{{ $mustache($ph) }}</button>
+                        <button type="button" data-h-click="7b9cae84d2" data-a0="{{ $mustache($ph) }}" title="{{ $phLabel }}">{{ $mustache($ph) }}</button>
                         @endforeach
                     </div>
-                    <div style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">Platzhalter werden beim Versand automatisch mit den Kundendaten gefüllt.</div>
+                    <div class="dialog-hinweis">Platzhalter werden beim Versand automatisch mit den Kundendaten gefüllt.</div>
                 </div>
             </div>
-            <div id="tf-ae-sent" style="display:none;background:var(--emerald-soft);color:#0F7A43;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:16px;"></div>
-            <div id="tf-ae-unavailable" style="display:none;background:var(--canvas);color:var(--ink-soft);border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:16px;">ℹ️ Automatische E-Mail nicht möglich: Der ausgewählte Kunde hat keine echte E-Mail-Adresse.</div>
+            <div id="tf-ae-sent" class="dialog-meldung dialog-meldung-ok" style="display:none;"></div>
+            <div id="tf-ae-unavailable" class="dialog-meldung dialog-meldung-info" style="display:none;">ℹ️ Automatische E-Mail nicht möglich: Der ausgewählte Kunde hat keine echte E-Mail-Adresse.</div>
             @endif
 
             <div class="field"><label>Beschreibung</label><textarea name="description" id="tf-description" maxlength="5000" placeholder="Details zur Aufgabe…" style="min-height:80px;" aria-label="Beschreibung"></textarea></div>
 
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+            <div class="dialog-aktionen">
                 <button type="button" data-h-click="d085771a23" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-primary" id="tf-submit">Aufgabe erstellen</button>
             </div>
         </form>
+        </div>
     </div>
 </div>
 
@@ -577,11 +582,11 @@ function pickDue(days, chip) {
     // Ortszeit statt toISOString(): das rechnet in UTC und lieferte kurz
     // nach Mitternacht den Vortag.
     el('tf-due').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    document.querySelectorAll('.due-chip').forEach(c => { c.style.background = '#fff'; c.style.borderColor = 'var(--line)'; c.style.color = 'var(--ink)'; c.style.fontWeight = '400'; });
-    if (chip) { chip.style.background = 'var(--emerald)'; chip.style.borderColor = 'var(--emerald)'; chip.style.color = '#fff'; chip.style.fontWeight = '600'; }
+    document.querySelectorAll('.due-chip').forEach(c => c.classList.remove('aktiv'));
+    if (chip) chip.classList.add('aktiv');
 }
 function clearDueChips() {
-    document.querySelectorAll('.due-chip').forEach(c => { c.style.background = '#fff'; c.style.borderColor = 'var(--line)'; c.style.color = 'var(--ink)'; c.style.fontWeight = '400'; });
+    document.querySelectorAll('.due-chip').forEach(c => c.classList.remove('aktiv'));
 }
 
 /* ---------- Kunden-Sofortsuche ---------- */

@@ -247,31 +247,36 @@
      arbeitet aber mit diesem Text, und der kann an genau einer Stelle anders
      aussehen. Ohne ihn ist jede Fehlersuche Raten. Kostenlos, ohne KI, und der
      Text wird NICHT gespeichert. --}}
-<div class="d24-modal" id="ocr-text-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;align-items:center;justify-content:center;padding:20px;">
-    <div class="d24-modal-box" style="background:var(--surface);border-radius:14px;max-width:900px;width:100%;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;">
-        <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px;">
+<div class="d24-modal dialog-hinter" id="ocr-text-modal" style="display:none;z-index:210;" role="dialog" aria-modal="true">
+    <div class="dialog dialog-breit" style="display:flex;flex-direction:column;overflow:hidden;">
+        <div class="dialog-kopf">
             <div style="flex:1;min-width:0;">
-                <div style="font-weight:600;font-size:16px;">🔎 Erkannter Text (das, womit die Erkennung gearbeitet hat)</div>
-                <div id="ocr-text-source" style="font-size:12px;color:var(--ink-soft);margin-top:3px;"></div>
+                <div class="dialog-titel">🔎 Erkannter Text (das, womit die Erkennung gearbeitet hat)</div>
+                <div id="ocr-text-source" class="dialog-unter"></div>
             </div>
             <button type="button" class="btn btn-ghost btn-sm" data-h-click="466c2de1a6">Kopieren</button>
             <button type="button" class="btn btn-ghost btn-sm" data-h-click="81bc6bbfae">Schließen</button>
         </div>
-        <div style="padding:10px 20px 0;font-size:12px;color:var(--ink-soft);" id="ocr-text-note"></div>
-        <pre id="ocr-text-body" style="margin:12px 20px 20px;padding:14px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;overflow:auto;flex:1;white-space:pre;font-size:12.5px;line-height:1.55;"></pre>
+        <div style="padding:10px 22px 0;font-size:12px;color:var(--ink-soft);" id="ocr-text-note"></div>
+        <pre id="ocr-text-body" style="margin:12px 22px 20px;padding:14px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;overflow:auto;flex:1;white-space:pre;font-size:12.5px;line-height:1.55;"></pre>
     </div>
 </div>
 
-<div class="d24-modal" id="doc-review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:26px;width:100%;max-width:620px;position:relative;max-height:92vh;overflow-y:auto;">
-        <button type="button" data-h-click="d10e859b20" style="position:absolute;top:14px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
-        <div style="font-size:17px;font-weight:700;margin-bottom:4px;" id="review-title">Dokument zuordnen</div>
-        <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;" id="review-doc-name"></div>
+<div class="d24-modal dialog-hinter" id="doc-review-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="review-title">
+    <div class="dialog">
+        <div class="dialog-kopf">
+            <div style="min-width:0;">
+                <div class="dialog-titel" id="review-title">Dokument zuordnen</div>
+                <div class="dialog-unter" id="review-doc-name"></div>
+            </div>
+            <button type="button" class="dialog-zu" data-h-click="d10e859b20" aria-label="Schließen">✕</button>
+        </div>
+        <div class="dialog-inhalt">
 
         {{-- Unsicherheits-Hinweis: warnt bei niedriger Konfidenz/OCR und listet
              wichtige Angaben, die NICHT sicher gelesen wurden - nichts wird
              geraten, der Mitarbeiter ergaenzt sie bewusst. --}}
-        <div id="review-uncertainty" style="display:none;background:#FEF6E7;border:1px solid #E4A11B;border-radius:10px;padding:10px 12px;font-size:13px;color:#8A5A00;margin-bottom:14px;">
+        <div id="review-uncertainty" class="dialog-meldung dialog-meldung-warn" style="display:none;">
             <div id="review-uncertainty-head" style="font-weight:600;margin-bottom:4px;"></div>
             <div id="review-uncertainty-missing"></div>
         </div>
@@ -282,8 +287,8 @@
              Oeffnen geladen - der Mitarbeiter soll nicht selbst suchen
              muessen. Jeder Vorschlag nennt seinen Grund; ausgewaehlt wird
              immer bewusst per Klick. --}}
-        <div id="review-suggestions" style="display:none;border:1px solid var(--line);background:#F7F5EF;border-radius:10px;padding:11px 12px;margin-bottom:12px;">
-            <div id="review-suggestions-head" style="font-weight:700;font-size:13.5px;margin-bottom:7px;"></div>
+        <div id="review-suggestions" class="dialog-abschnitt" style="display:none;">
+            <div id="review-suggestions-head" class="dialog-abschnitt-titel"></div>
             <div id="review-suggestions-list" style="display:grid;gap:6px;"></div>
             <div id="review-suggestions-note" style="font-size:12px;color:var(--ink-soft);margin-top:7px;"></div>
         </div>
@@ -293,28 +298,28 @@
             <div class="field" style="margin-bottom:6px;">
                 <label>Kunde suchen (Name, Kundennummer, E-Mail, Telefon)</label>
                 <input type="text" id="review-customer-q" autocomplete="off" placeholder="Mind. 2 Zeichen…"
-                    style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Kunde suchen (Name, Kundennummer, E-Mail, Telefon)">
+                    class="dialog-feld" aria-label="Kunde suchen (Name, Kundennummer, E-Mail, Telefon)">
             </div>
             <div id="review-customer-results" style="margin-bottom:10px;"></div>
-            <div id="review-customer-chosen" style="display:none;background:var(--emerald-soft);border:1px solid var(--emerald);border-radius:8px;padding:9px 12px;font-size:13.5px;margin-bottom:12px;"></div>
+            <div id="review-customer-chosen" class="dialog-meldung dialog-meldung-ok" style="display:none;font-size:13.5px;"></div>
         </div>
 
         {{-- Neuanlage-Hinweis (Modus: neuer Kunde) --}}
-        <div id="review-create-block" style="display:none;background:#E6F1FB;border:1px solid #185FA5;border-radius:8px;padding:10px 12px;font-size:13.5px;margin-bottom:12px;"></div>
+        <div id="review-create-block" class="dialog-meldung dialog-meldung-info" style="display:none;font-size:13.5px;"></div>
 
         {{-- Name des neuen Kunden: vorbefuellt aus dem Dokument, aber IMMER
              editierbar - so laesst sich ein Kunde auch anlegen, wenn der Name
              nicht (sicher) gelesen wurde (Mitarbeiter tippt ihn aus dem
              Dokument ab). --}}
         <div id="review-name-block" style="display:none;margin-bottom:12px;">
-            <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Name des Kunden *</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="dialog-abschnitt-titel">Name des Kunden *</div>
+            <div class="dialog-raster" style="gap:8px;">
                 <input type="text" id="review-first-name" placeholder="Vorname"
-                    style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Vorname">
+                    class="dialog-feld" aria-label="Vorname">
                 <input type="text" id="review-last-name" placeholder="Nachname"
-                    style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Nachname">
+                    class="dialog-feld" aria-label="Nachname">
             </div>
-            <div id="review-name-hint" style="display:none;font-size:12px;color:#8A5A00;margin-top:5px;">
+            <div id="review-name-hint" class="dialog-hinweis" style="display:none;color:color-mix(in srgb, var(--status-warning) 75%, var(--ink));">
                 ℹ Der Name wurde nicht automatisch gelesen – bitte aus dem Dokument eintragen (👁 Anzeigen).
             </div>
             @if(in_array(auth()->user()->role, ['admin','manager']))
@@ -322,8 +327,8 @@
                  (Neukunden-Bericht/Provision). Nur Verwaltung; nachtraeglich
                  aenderbar im Neukunden-Bericht. --}}
             <div style="margin-top:10px;">
-                <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Geworben von <span style="font-weight:400;color:var(--ink-soft);">(optional – für Neukunden-Bericht &amp; Provision)</span></div>
-                <select id="review-werber" aria-label="Werber des neuen Kunden" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <div class="dialog-abschnitt-titel">Geworben von <small>(optional – für Neukunden-Bericht &amp; Provision)</small></div>
+                <select id="review-werber" aria-label="Werber des neuen Kunden" class="dialog-feld">
                     <option value="">— Kein Werber —</option>
                     <optgroup label="Mitarbeiter">
                         @foreach(\App\Models\User::whereIn('role', ['admin','manager','support','employee'])->orderBy('name')->get() as $e)
@@ -341,7 +346,7 @@
         </div>
 
         {{-- Krankenkassen-Fall (Familie + Wechsel), nur im Vorgang-Modus bei >= 2 Personen --}}
-        <div id="review-family-section" style="display:none;border:1.5px solid var(--emerald);border-radius:10px;padding:12px;margin-bottom:12px;background:#F6FBF8;">
+        <div id="review-family-section" class="dialog-abschnitt dialog-abschnitt-gruen" style="display:none;">
             <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;font-weight:700;">
                 <input type="checkbox" id="family-enabled" style="margin-top:2px;">
                 <span>🏥 Krankenkassen-Fall einrichten (Familie + Wechsel)</span>
@@ -358,31 +363,31 @@
                 </div>
                 <div id="family-jobstart-wrap" style="display:none;margin-bottom:8px;">
                     <label style="font-size:12.5px;">Arbeitsbeginn</label>
-                    <input type="date" id="family-jobstart" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Arbeitsbeginn">
+                    <input type="date" id="family-jobstart" class="dialog-feld" aria-label="Arbeitsbeginn">
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                <div class="dialog-raster" style="gap:8px;margin-bottom:8px;">
                     <div>
                         <label style="font-size:12.5px;">Bisherige Kasse</label>
-                        <input type="text" id="family-old-insurer" placeholder="z.B. AOK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Bisherige Kasse">
+                        <input type="text" id="family-old-insurer" placeholder="z.B. AOK" class="dialog-feld" aria-label="Bisherige Kasse">
                     </div>
                     <div>
                         <label style="font-size:12.5px;">Neue Kasse *</label>
-                        <input type="text" id="family-new-insurer" placeholder="z.B. TK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Neue Kasse">
+                        <input type="text" id="family-new-insurer" placeholder="z.B. TK" class="dialog-feld" aria-label="Neue Kasse">
                     </div>
                 </div>
-                <div id="family-effective-preview" style="font-size:12.5px;color:var(--emerald);font-weight:600;"></div>
+                <div id="family-effective-preview" style="font-size:12.5px;color:var(--emerald-ink);font-weight:600;"></div>
             </div>
         </div>
 
         {{-- Extrahierte Daten --}}
         <div id="review-extract-section" style="display:none;">
-            <div style="font-weight:700;font-size:13.5px;margin:6px 0 8px;">Erkannte Daten übernehmen <span style="font-weight:400;color:var(--ink-soft);">(nur leere Felder werden befüllt)</span></div>
+            <div class="dialog-abschnitt-titel" style="margin-top:6px;">Erkannte Daten übernehmen <small>(nur leere Felder werden befüllt)</small></div>
             <div id="review-apply-fields" style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:12px;"></div>
         </div>
 
         {{-- Zaehlerfoto: erkannter Stand + Hinweis auf die Verbrauchshistorie --}}
-        <div id="review-meter-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#F1EEE5;">
-            <div style="font-size:13.5px;font-weight:700;">📊 Zählerstand erkannt</div>
+        <div id="review-meter-section" class="dialog-abschnitt" style="display:none;">
+            <div class="dialog-abschnitt-titel" style="margin-bottom:0;">📊 Zählerstand erkannt</div>
             <div id="review-meter-info" style="color:var(--ink-soft);font-size:12.5px;margin-top:4px;"></div>
             <div style="color:var(--ink-soft);font-size:12px;margin-top:6px;">
                 Beim Zuordnen wird der Stand automatisch in die Verbrauchshistorie des passenden Energievertrags übernommen.
@@ -396,7 +401,7 @@
         <div id="review-identity-note" style="display:none;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;"></div>
 
         {{-- Vertrag --}}
-        <div id="review-contract-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">
+        <div id="review-contract-section" class="dialog-abschnitt" style="display:none;">
             <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;">
                 <input type="checkbox" id="review-create-contract" style="margin-top:2px;">
                 <span><strong>Vertrag anlegen/verknüpfen</strong><br><span id="review-contract-info" style="color:var(--ink-soft);font-size:12.5px;"></span><span id="review-contract-weitere" style="display:none;margin-top:6px;font-size:12.5px;"></span></span>
@@ -405,15 +410,15 @@
 
         <div class="field">
             <label>Sichtbarkeit des Dokuments</label>
-            <select id="review-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Sichtbarkeit des Dokuments">
+            <select id="review-visibility" class="dialog-feld" aria-label="Sichtbarkeit des Dokuments">
                 <option value="internal">🔒 Nur intern</option>
                 <option value="customer">👤 Kundensichtbar</option>
             </select>
         </div>
 
-        <div id="review-error" style="display:none;background:#FBE9E9;color:#B3261E;padding:9px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;"></div>
+        <div id="review-error" class="dialog-meldung dialog-meldung-fehler" style="display:none;"></div>
 
-        <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <div class="dialog-aktionen">
             <button type="button" class="btn btn-ghost" data-h-click="d10e859b20">Abbrechen</button>
             <button type="button" class="btn btn-emerald" id="review-submit" data-h-click="368883223d">Zuordnen &amp; übernehmen</button>
         </div>
@@ -421,8 +426,8 @@
 
         {{-- Erfolg: NICHT zwangsweise weiterleiten. Der Mitarbeiter entscheidet,
              ob er zur Kundenakte springt oder im Eingang weiterarbeitet. --}}
-        <div id="review-success" style="display:none;text-align:center;padding:10px 4px;">
-            <div style="font-size:42px;margin-bottom:8px;">✅</div>
+        <div id="review-success" class="dialog-erfolg" style="display:none;">
+            <div class="dialog-erfolg-symbol">✓</div>
             <div id="review-success-msg" style="font-size:15.5px;font-weight:700;margin-bottom:6px;"></div>
             <div id="review-success-sub" style="font-size:13px;color:var(--ink-soft);margin-bottom:20px;"></div>
             <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
@@ -430,6 +435,7 @@
                 <a id="review-success-link" href="#" class="btn btn-emerald">Zur Kundenakte →</a>
             </div>
         </div>
+        </div>{{-- /dialog-inhalt --}}
     </div>
 </div>
 
@@ -502,10 +508,10 @@ window.docReview = (function() {
     // der Mitarbeiter musste daraufhin alles kontrollieren, also genau das,
     // was die Automatik ersparen soll.
     var STATUS_STYLE = {
-        sicher:      { text: '✓ sicher',            color: 'var(--emerald)', bg: '#E8F7EF' },
-        pruefen:     { text: '⚠ bitte prüfen',      color: '#8A5A00', bg: '#FEF6E7' },
-        widerspruch: { text: '⚠ widersprüchlich',   color: '#B42318', bg: '#FDECEA' },
-        fehlt:       { text: '– nicht erkannt',     color: '#5F6B62', bg: '#F1EEE5' }
+        sicher:      { text: '✓ sicher',            color: 'var(--emerald-ink)', bg: 'var(--emerald-soft)' },
+        pruefen:     { text: '⚠ bitte prüfen',      color: 'color-mix(in srgb, var(--status-warning) 75%, var(--ink))', bg: 'color-mix(in srgb, var(--status-warning) 14%, var(--surface))' },
+        widerspruch: { text: '⚠ widersprüchlich',   color: 'color-mix(in srgb, var(--status-danger) 85%, var(--ink))', bg: 'color-mix(in srgb, var(--status-danger) 12%, var(--surface))' },
+        fehlt:       { text: '– nicht erkannt',     color: 'var(--ink-soft)', bg: 'var(--canvas)' }
     };
 
     // Ein Anzeigeblock kann mehrere Felder buendeln ("Adresse"). Dann gilt
@@ -673,7 +679,7 @@ window.docReview = (function() {
         wrap.innerHTML = '';
         persons.forEach(function(p, i) {
             var row = document.createElement('div');
-            row.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;font-size:13px;';
+            row.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);font-size:13px;';
             var radio = document.createElement('input');
             radio.type = 'radio'; radio.name = 'family-haupt'; radio.value = i;
             radio.checked = (i === (batch.haupt_suggest || 0));
@@ -1097,7 +1103,7 @@ window.docReview = (function() {
         var clickable = mode === 'assign' || mode === 'create' || mode === 'batch';
         var row = document.createElement(clickable ? 'button' : 'div');
         row.style.cssText = 'display:block;width:100%;text-align:start;border:1px solid ' + (s.score > 90 ? 'var(--emerald)' : 'var(--line)')
-            + ';background:#fff;border-radius:8px;padding:9px 11px;font-size:13px;'
+            + ';background:var(--surface);border-radius:8px;padding:9px 11px;font-size:13px;'
             + (clickable ? 'cursor:pointer;' : '');
         if (clickable) row.type = 'button';
 
@@ -1162,7 +1168,7 @@ window.docReview = (function() {
             list.forEach(function(c) {
                 var btn = document.createElement('button');
                 btn.type = 'button';
-                btn.style.cssText = 'display:block;width:100%;text-align:start;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 11px;font-size:13px;margin-bottom:5px;cursor:pointer;';
+                btn.style.cssText = 'display:block;width:100%;text-align:start;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 11px;font-size:13px;margin-bottom:5px;cursor:pointer;';
                 btn.textContent = (c.name || '—') + ' · ' + (c.number || '') + (c.email ? ' · ' + c.email : '');
                 btn.onclick = function() {
                     chooseCustomer(c.id, (c.name || '—') + ' (' + (c.number || '') + ')');

@@ -331,7 +331,8 @@ Fachliche Begruendungen stehen in `CLAUDE.md` unter dem genannten Abschnitt.
 - Interessenten: Filter Quelle/Zustaendig/Kunde, `POST admin/interessenten/{id}/zustaendig` (`assignLead`), `POST admin/interessenten/{id}/kunde` (`convertLead`, Duplikatschutz)
 - Layout: schmale Seitenleiste (`nav-schmal`), Rueckmeldungen als Toast (`ui.js` Abschnitt 10), Auswahl/Spalten (`ui.js` Abschnitt 11); Bausteine in `components.css`
 - Aufgaben + Dokumenten-Eingang angeglichen (Kacheln, Reiter, Filterleiste, Karten); `TaskController` liefert `counts.today`
-- Tests `UiModernisierungTest`, `ImprovementRoundTest`, `EingangUndAufgabenDesignTest` · Status **ACTIVE** (27.11.2026)
+- Dialoge Aufgabe/Dokument zuordnen auf Bausteinen `.dialog*` (28.11.2026); PDF-Export der Vertragsliste (`format=pdf`, `App\Services\Pdf\TabellenPdf`)
+- Tests `UiModernisierungTest`, `ImprovementRoundTest`, `EingangUndAufgabenDesignTest`, `DialogeUndPdfExportTest` · Status **ACTIVE** (28.11.2026)
 
 ## J. Entfernt / tot
 
