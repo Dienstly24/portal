@@ -22,11 +22,13 @@ use App\Services\ContractSwitchService;
 use App\Services\Energy\MeterReadingService;
 use App\Services\Kfz\SfReferenceService;
 use App\Services\Kfz\SfReferenceValidator;
+use App\Services\Pdf\TabellenPdf;
 use App\Services\Reporting\AnalyticsFilters;
 use App\Services\Reporting\DashboardAnalyticsService;
 use App\Services\VehicleOverlapGuard;
 use App\Services\Vermittler\VermittlerLinkService;
 use App\Services\Vertrag\VertragBeteiligteService;
+use App\Support\LocalTime;
 use App\Support\XlsxWriter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -243,7 +245,7 @@ class ContractController extends Controller
         abort_unless(in_array(auth()->user()->role, ['admin', 'manager'], true), 403);
 
         $ids = $this->visibleCustomerIds();
-        $format = $request->input('format') === 'csv' ? 'csv' : 'xlsx';
+        $format = in_array($request->input('format'), ['csv', 'pdf'], true) ? (string) $request->input('format') : 'xlsx';
         $auswahl = collect((array) $request->input('vertraege', []))
             ->filter(fn ($v) => is_string($v) && $v !== '')->unique()->take(5000)->values()->all();
 
@@ -297,6 +299,13 @@ class ContractController extends Controller
         ]);
 
         $dateiname = 'dienstly24-vertraege-'.now()->format('Y-m-d');
+        if ($format === 'pdf') {
+            return response($this->vertragsPdf($zeilen, $beschreibung), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.$dateiname.'.pdf"',
+                'Cache-Control' => 'no-store, private',
+            ]);
+        }
         if ($format === 'xlsx' && XlsxWriter::available()) {
             return response(XlsxWriter::create('Verträge', array_merge([$kopf], $zeilen)), 200, [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -315,6 +324,45 @@ class ContractController extends Controller
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$dateiname.'.csv"',
         ]);
+    }
+
+    /**
+     * PDF der Vertragsliste (A4 quer). Dieselben Zeilen wie Excel/CSV, nur
+     * ohne Referenz-Nr. (passt sonst nicht auf die Seite). Die Summe des
+     * Jahresbeitrags ist die Summe der GEZEIGTEN Zeilen - nichts geschaetzt.
+     *
+     * @param  list<list<string|float>>  $zeilen
+     * @param  array<string,string>  $beschreibung
+     */
+    private function vertragsPdf(array $zeilen, array $beschreibung): string
+    {
+        $geld = fn ($w) => is_float($w) ? number_format($w, 2, ',', '.').' €' : (string) $w;
+        $spalten = [
+            ['Kd.-Nr.', 50], ['Kunde', 100], ['Sparte', 62], ['Gesellschaft', 86], ['Vertrags-Nr.', 80],
+            ['Status', 80], ['Stufe', 36], ['Herkunft', 52], ['Beginn', 46], ['Ablauf', 46],
+            ['Beitrag', 52, 'r'], ['Zahlweise', 50], ['Jahresbeitrag', 58, 'r'],
+        ];
+        $summe = 0.0;
+        $pdfZeilen = [];
+        foreach ($zeilen as $z) {
+            if (is_float($z[13])) {
+                $summe += $z[13];
+            }
+            $pdfZeilen[] = [(string) $z[0], (string) $z[1], (string) $z[2], (string) $z[3], (string) $z[4],
+                (string) $z[6], (string) $z[7], (string) $z[8], (string) $z[9], (string) $z[10],
+                $geld($z[11]), (string) $z[12], $geld($z[13])];
+        }
+
+        $umfang = ($beschreibung['umfang'] ?? '') === 'auswahl'
+            ? 'Auswahl'
+            : 'Alle Treffer der Ansicht ('.match ($beschreibung['gruppe'] ?? '') {
+                Contract::GROUP_ACTIVE => 'Aktiv', Contract::GROUP_PENDING => 'In Bearbeitung',
+                Contract::GROUP_HISTORY => 'Historie', default => 'Alle',
+            }.')';
+        $untertitel = 'Stand '.LocalTime::for(now())?->format('d.m.Y H:i').' · '.$umfang.' · '.count($zeilen).' Verträge · erstellt von '.auth()->user()->name;
+
+        return TabellenPdf::erzeuge('Verträge', $untertitel, $spalten, $pdfZeilen,
+            ['Summe', '', '', '', '', '', '', '', '', '', '', '', number_format($summe, 2, ',', '.').' €']);
     }
 
     /**

@@ -5759,10 +5759,28 @@ neue Seitenfassung derselben Idee.
   Anmeldeseite definiert `.chip` selbst). Listenbereiche ohne feste
   Hex-Farben (Waechter-Test). Texte unveraendert ("KI empfohlen – wartet
   auf Freigabe", "Überfällig · N Tg."). Tests: `EingangUndAufgabenDesignTest`.
-- Offen (bewusst nicht in diesem PR): PDF-Export der Vertragsliste,
-  Aktivitaeten-Feed (ActivityLog-Aktionen haben keine lesbaren Texte),
-  Dialoge von Aufgaben/Eingang (Bearbeiten-Modal, Pruefmaske) im neuen
-  Stil.
+- **Dialoge + PDF-Export (Nachtrag 28.11.2026)**: Aufgaben-Dialog
+  (Anlegen/Bearbeiten), "Dokument zuordnen" und "Erkannter Text" nutzen
+  die Bausteine `.dialog-hinter`/`.dialog`/`.dialog-kopf`/`.dialog-inhalt`/
+  `.dialog-aktionen` (Kopf und Aktionsleiste stehen fest, nur der Inhalt
+  scrollt; Telefon: von unten, Knoepfe volle Breite), dazu
+  `.dialog-abschnitt`, `.dialog-meldung-*`, `.dialog-feld`, `.schnellwahl`
+  (aktiv per Klasse `aktiv`, nicht per Inline-Stil). Der Hintergrund behaelt
+  `d24-modal` (ESC/Klick daneben schliessen), der Kasten bewusst NICHT
+  `d24-modal-box` - deren `!important`-Regeln in `responsive.css` wuerden
+  Kopf und Leiste einruecken. Sichtbar geschaltet wird weiter per
+  `style.display`; die Klassen setzen kein `display:none`. IDs und JS
+  unveraendert. Vertragsliste: **PDF** (A4 quer) neben Excel/CSV, gleiche
+  Zeilen, gleiche Rechte (admin/manager), ActivityLog `format: pdf`.
+  Erzeugt von `App\Services\Pdf\TabellenPdf` OHNE Fremdpaket (Helvetica-
+  Breiten aus `PdfStamper`, WinAnsi aus `PdfSyntax`): Kopf je Seite,
+  "Seite x von y", zu lange Zellen mit "…" gekuerzt, Summe des
+  Jahresbeitrags = Summe der gezeigten Zeilen. Ohne Referenz-Nr. (passt
+  nicht auf die Seite). Test: `DialogeUndPdfExportTest`.
+- Offen: Aktivitaeten-Feed (ActivityLog-Aktionen haben keine lesbaren
+  Texte); die uebrigen Dialoge der Beraterwelt (Team-Chat, Ankuendigungen,
+  Tarifrechner, Banner, Familie) tragen noch Inline-Masse und koennen auf
+  dieselben Bausteine umziehen.
 
 ## Offene Themen / wartet auf den Betreiber
 

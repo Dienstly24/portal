@@ -386,3 +386,56 @@ a.aufgaben-hinweis:hover { text-decoration: underline; }
 .tabelle-schlicht th:first-child, .tabelle-schlicht td:first-child { padding-inline-start: 20px; }
 .tabelle-schlicht th:last-child, .tabelle-schlicht td:last-child { padding-inline-end: 20px; }
 .ablagezone-aktiv { border-color: var(--emerald); background: var(--emerald-soft); }
+
+/* ===================================================================
+ * Dialoge (28.11.2026): Aufgabe anlegen/bearbeiten, Dokument zuordnen.
+ * Kopf und Aktionsleiste stehen fest, nur der Inhalt scrollt - die Knoepfe
+ * sind bei langen Formularen immer erreichbar. Sichtbar geschaltet wird
+ * weiterhin per style.display (JS), die Klassen setzen KEIN display:none.
+ * =================================================================== */
+.dialog-hinter { position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; padding: 20px; background: color-mix(in srgb, var(--graphite-black) 55%, transparent); backdrop-filter: blur(2px); }
+.dialog { position: relative; width: 100%; max-width: 640px; max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px color-mix(in srgb, var(--graphite-black) 30%, transparent); }
+.dialog-breit { max-width: 900px; }
+.dialog-kopf { position: sticky; top: 0; z-index: 2; display: flex; align-items: flex-start; gap: 12px; padding: 18px 22px 14px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.dialog-titel { font-size: 17px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.dialog-unter { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; word-break: break-word; }
+.dialog-zu { margin-inline-start: auto; flex: none; width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-soft); color: var(--ink-soft); font-size: 16px; line-height: 1; cursor: pointer; }
+.dialog-zu:hover { background: var(--canvas); color: var(--ink); }
+.dialog-inhalt { padding: 18px 22px; }
+.dialog-aktionen { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; padding: 12px 22px; margin: 6px -22px -18px; background: var(--surface); border-top: 1px solid var(--line); }
+.dialog-abschnitt { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: var(--surface-soft); }
+.dialog-abschnitt-titel { font-weight: 700; font-size: 13.5px; margin-bottom: 7px; color: var(--ink); }
+.dialog-abschnitt-titel small { font-weight: 400; font-size: 12.5px; color: var(--ink-soft); }
+.dialog-abschnitt-gruen { border-color: color-mix(in srgb, var(--emerald) 45%, var(--line)); background: color-mix(in srgb, var(--emerald) 6%, var(--surface)); }
+.dialog-raster { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dialog-raster > * { min-width: 0; }
+.dialog-hinweis { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+.dialog-meldung { border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; border: 1px solid transparent; }
+.dialog-meldung-warn { background: color-mix(in srgb, var(--status-warning) 12%, var(--surface)); border-color: color-mix(in srgb, var(--status-warning) 40%, var(--surface)); color: color-mix(in srgb, var(--status-warning) 75%, var(--ink)); }
+.dialog-meldung-fehler { background: color-mix(in srgb, var(--status-danger) 10%, var(--surface)); border-color: color-mix(in srgb, var(--status-danger) 30%, var(--surface)); color: color-mix(in srgb, var(--status-danger) 85%, var(--ink)); }
+.dialog-meldung-info { background: color-mix(in srgb, var(--status-info) 9%, var(--surface)); border-color: color-mix(in srgb, var(--status-info) 35%, var(--surface)); color: var(--ink); }
+.dialog-meldung-ok { background: var(--emerald-soft); border-color: color-mix(in srgb, var(--emerald) 45%, var(--surface)); color: var(--emerald-ink); }
+.dialog-feld { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; font: inherit; font-size: 14px; background: var(--surface); color: var(--ink); }
+.dialog-feld:focus { outline: none; border-color: var(--emerald); box-shadow: 0 0 0 3px color-mix(in srgb, var(--emerald) 18%, transparent); }
+.dialog-erfolg { text-align: center; padding: 26px 22px; }
+.dialog-erfolg-symbol { width: 60px; height: 60px; margin: 0 auto 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; background: var(--emerald-soft); color: var(--emerald-deep); }
+/* Schnellwahl im Dialog (Faellig am / Platzhalter) */
+.schnellwahl { display: flex; gap: 6px; flex-wrap: wrap; }
+.schnellwahl button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
+.schnellwahl button:hover { background: var(--surface-soft); }
+.schnellwahl button.aktiv { background: var(--emerald); border-color: var(--emerald); color: #fff; font-weight: 600; }
+.schnellwahl-mono button { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--ink-soft); padding: 3px 9px; }
+.kundenwahl-treffer { position: absolute; top: 100%; inset-inline: 0; margin-top: 4px; z-index: 50; max-height: 280px; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 28px color-mix(in srgb, var(--graphite-black) 16%, transparent); }
+.kundenwahl-gewaehlt { align-items: center; gap: 8px; background: var(--emerald-soft); border: 1px solid color-mix(in srgb, var(--emerald) 45%, var(--line)); border-radius: 10px; padding: 9px 12px; }
+@media (max-width: 600px) {
+    .dialog-hinter { padding: 0; align-items: flex-end; }
+    .dialog { max-height: 94vh; max-height: 94dvh; border-radius: 16px 16px 0 0; }
+    .dialog-raster { grid-template-columns: 1fr; }
+    .dialog-kopf, .dialog-inhalt { padding-inline: 16px; }
+    .dialog-aktionen { padding-inline: 16px; margin-inline: -16px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+    .dialog-aktionen > .btn { flex: 1 1 auto; justify-content: center; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+    .dialog { max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); }
+    .dialog-kopf { padding-top: 12px; padding-bottom: 10px; }
+}

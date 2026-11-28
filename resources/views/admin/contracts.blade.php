@@ -189,6 +189,7 @@
             @foreach($basisQuery + ['sort' => $sortierung, 'richtung' => $richtung] as $ek => $ev)<input type="hidden" name="{{ $ek }}" value="{{ $ev }}">@endforeach
             <button type="submit" name="format" value="xlsx" class="btn btn-ghost btn-sm" title="Alle {{ $anzahl }} Treffer dieser Ansicht als Excel">⬇ Excel ({{ $anzahl }})</button>
             <button type="submit" name="format" value="csv" class="btn btn-ghost btn-sm" title="Alle Treffer als CSV">CSV</button>
+            <button type="submit" name="format" value="pdf" class="btn btn-ghost btn-sm" title="Alle Treffer als PDF (A4 quer)">PDF</button>
         </form>
         @endif
     </div>
@@ -202,6 +203,7 @@
     <span class="auswahl-zahl"><span data-auswahl-zahl>0</span> ausgewählt</span>
     <button type="submit" name="format" value="xlsx" class="btn btn-primary btn-sm">⬇ Auswahl als Excel</button>
     <button type="submit" name="format" value="csv" class="btn btn-ghost btn-sm">CSV</button>
+    <button type="submit" name="format" value="pdf" class="btn btn-ghost btn-sm">PDF</button>
     <button type="button" class="btn btn-ghost btn-sm" data-auswahl-aufheben>Auswahl aufheben</button>
 </form>
 @endif
