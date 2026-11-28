@@ -335,3 +335,54 @@ td.zelle-wahl, th.zelle-wahl { width: 36px; padding-inline: 14px 4px; }
 .vf-feld { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--ink-soft); min-width: 0; flex: 1 1 160px; }
 .vf-feld select, .vf-feld input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
 .vf-knoepfe { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* Etiketten (kleine Zustandsmarken in Listen) + Aufgaben-/Eingangskarten
+   (UI-Modernisierung 27.11.2026, Angleichung Aufgaben + Dokumenten-Eingang).
+   Bewusst NICHT ".chip": die Anmeldeseite definiert ".chip" selbst. */
+.etikett { display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; background: var(--surface-soft); color: var(--ink-soft); border: 1px solid var(--line); }
+.etikett-rot { background: color-mix(in srgb, var(--status-danger) 12%, var(--surface)); color: color-mix(in srgb, var(--status-danger) 85%, var(--ink)); border-color: color-mix(in srgb, var(--status-danger) 30%, var(--surface)); }
+.etikett-blau { background: color-mix(in srgb, var(--status-info) 10%, var(--surface)); color: var(--status-info); border-color: color-mix(in srgb, var(--status-info) 28%, var(--surface)); }
+.etikett-gruen { background: var(--emerald-soft); color: var(--emerald-deep); border-color: color-mix(in srgb, var(--emerald) 28%, var(--surface)); }
+.etikett-gold { background: color-mix(in srgb, var(--gold) 16%, var(--surface)); color: color-mix(in srgb, var(--gold) 70%, var(--ink)); border-color: color-mix(in srgb, var(--gold) 40%, var(--surface)); }
+.etikett-gelb { background: color-mix(in srgb, var(--status-warning) 14%, var(--surface)); color: color-mix(in srgb, var(--status-warning) 75%, var(--ink)); border-color: color-mix(in srgb, var(--status-warning) 35%, var(--surface)); }
+.etikett-lila { background: color-mix(in srgb, var(--status-info) 6%, color-mix(in srgb, var(--gold) 6%, var(--surface))); color: var(--ink); }
+.initialen-xs { width: 20px; height: 20px; font-size: 9.5px; }
+.liste-anzahl { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+.leer-karte { text-align: center; padding: 44px 24px; color: var(--ink-soft); }
+.leer-symbol { width: 52px; height: 52px; margin: 0 auto 12px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: var(--emerald-soft); color: var(--emerald-deep); }
+a.aufgaben-hinweis { text-decoration: none; font-weight: 600; }
+a.aufgaben-hinweis:hover { text-decoration: underline; }
+
+.aufgabe-karte { padding: 14px 18px; margin: 0; border-inline-start: 4px solid transparent; transition: box-shadow .12s, border-color .12s; }
+.aufgabe-karte:hover { box-shadow: 0 6px 18px rgba(22, 33, 28, .07); }
+.aufgabe-ueberfaellig { border-inline-start-color: var(--status-danger); }
+.aufgabe-erledigt { opacity: .78; }
+.aufgabe-typ { width: 40px; height: 40px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 19px; background: var(--surface-soft); border: 1px solid var(--line); }
+.aufgabe-ueberfaellig .aufgabe-typ { background: color-mix(in srgb, var(--status-danger) 10%, var(--surface)); }
+.aufgabe-datum { font-size: 12px; color: var(--ink-soft); }
+.aufgabe-kunde { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); text-decoration: none; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px 2px 3px; font-weight: 600; }
+.aufgabe-kunde:hover { border-color: var(--emerald); }
+
+/* Faelligkeits-Auswahl: verbundene Knoepfe (Submit mit name="due") */
+.faellig-wahl { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--surface); }
+.faellig-wahl button { padding: 8px 12px; border: 0; border-inline-end: 1px solid var(--line); background: transparent; font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; white-space: nowrap; }
+.faellig-wahl button:last-child { border-inline-end: 0; }
+.faellig-wahl button:hover { background: var(--surface-soft); }
+.faellig-wahl button.aktiv { background: var(--tiefe-smaragd); color: #fff; font-weight: 600; }
+
+/* Dokumenten-Eingang */
+.ablagezone { border: 2px dashed var(--line); border-radius: 14px; padding: 28px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; background: var(--surface); }
+.ablagezone:hover, .ablagezone:focus-visible { border-color: var(--emerald); background: var(--emerald-soft); outline: none; }
+.ablagezone-symbol { width: 54px; height: 54px; margin: 0 auto 10px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: var(--emerald-soft); color: var(--emerald-deep); }
+.eingang-zeile { padding: 14px 20px; border-bottom: 1px solid var(--line); transition: background .12s; }
+.eingang-zeile:hover { background: var(--surface-soft); }
+.eingang-datei { width: 36px; height: 36px; border-radius: 9px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--surface-soft); border: 1px solid var(--line); color: var(--ink-soft); }
+.vorgang-box { margin: 14px 16px; border: 1.5px solid color-mix(in srgb, var(--status-info) 55%, var(--line)); border-radius: 12px; overflow: hidden; }
+.vorgang-kopf { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 11px 16px; background: color-mix(in srgb, var(--status-info) 8%, var(--surface)); }
+.vorgang-titel { font-weight: 700; font-size: 13.5px; color: var(--status-info); }
+.tabelle-schlicht { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tabelle-schlicht th { text-align: start; padding: 10px 12px; }
+.tabelle-schlicht td { padding: 10px 12px; }
+.tabelle-schlicht th:first-child, .tabelle-schlicht td:first-child { padding-inline-start: 20px; }
+.tabelle-schlicht th:last-child, .tabelle-schlicht td:last-child { padding-inline-end: 20px; }
+.ablagezone-aktiv { border-color: var(--emerald); background: var(--emerald-soft); }

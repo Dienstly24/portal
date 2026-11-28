@@ -5747,10 +5747,22 @@ neue Seitenfassung derselben Idee.
   "Zuletzt geoeffnete Kunden" jetzt im eigenen Abschnitt
   (`data-zuletzt-geoeffnet`), weil das Dashboard zusaetzlich "Neueste
   Kunden" zeigt.
+- **Aufgaben + Dokumenten-Eingang angeglichen (Nachtrag 27.11.2026)**:
+  Kopf mit Aktionen, Kennzahl-Kacheln (Aufgaben: meine offenen / heute
+  faellig / ueberfaellig / Kunden-Aufgaben - `counts.today` hat DIESELBE
+  Bedingung wie der Filter `due=today`; Eingang: nicht zugeordnet /
+  Vorgaenge / wird analysiert / KI-Freigabe offen - gezaehlt aus der Liste
+  DIESER Seite, keine zweite Abfrage), `tab-row`, `vf-leiste`,
+  `.faellig-wahl`, `.aufgabe-karte`, `.eingang-zeile`, `.vorgang-box`,
+  `.ablagezone` (Hervorhebung beim Ziehen per Klasse statt Inline-Stil),
+  `.tabelle-schlicht` und `.etikett-*` (bewusst NICHT `.chip` - die
+  Anmeldeseite definiert `.chip` selbst). Listenbereiche ohne feste
+  Hex-Farben (Waechter-Test). Texte unveraendert ("KI empfohlen – wartet
+  auf Freigabe", "Überfällig · N Tg."). Tests: `EingangUndAufgabenDesignTest`.
 - Offen (bewusst nicht in diesem PR): PDF-Export der Vertragsliste,
   Aktivitaeten-Feed (ActivityLog-Aktionen haben keine lesbaren Texte),
-  Angleichung von Dokumenten-Eingang und Aufgabenliste an die neuen
-  Bausteine.
+  Dialoge von Aufgaben/Eingang (Bearbeiten-Modal, Pruefmaske) im neuen
+  Stil.
 
 ## Offene Themen / wartet auf den Betreiber
 
